@@ -40,6 +40,7 @@ class ArcgisAuditedUploadService
         bool $withoutAttachments = false,
         bool $attachmentsOnly = false,
         ?CarbonInterface $changedSince = null,
+        bool $skipCounts = false,
     ): array {
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
@@ -96,11 +97,19 @@ class ArcgisAuditedUploadService
             })
             ->orderBy('objectid');
 
-        $summary['buildings_to_sync'] = $this->candidateCount($buildingQuery);
-        $summary['units_to_sync'] = $this->candidateCount($unitQuery);
+        if ($skipCounts) {
+            $summary['candidate_counts_skipped'] = 1;
 
-        echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
-        echo 'Units to sync: '.$summary['units_to_sync']."\n";
+            echo "Candidate counts skipped.\n";
+        } else {
+            echo "Counting sync candidates...\n";
+
+            $summary['buildings_to_sync'] = $this->candidateCount($buildingQuery);
+            $summary['units_to_sync'] = $this->candidateCount($unitQuery);
+
+            echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
+            echo 'Units to sync: '.$summary['units_to_sync']."\n";
+        }
 
         foreach ($buildingQuery->cursor() as $building) {
             try {

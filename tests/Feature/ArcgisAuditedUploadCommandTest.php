@@ -1118,6 +1118,41 @@ it('can upload features without copying attachments', function () {
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addAttachment'));
 });
 
+it('can skip candidate counts before syncing', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+    });
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+    ]);
+
+    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(skipCounts: true);
+
+    expect($summary['candidate_counts_skipped'])->toBe(1);
+    expect($summary)->not->toHaveKey('buildings_to_sync');
+    expect($summary)->not->toHaveKey('units_to_sync');
+});
+
 it('can copy attachments only for existing target features', function () {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
