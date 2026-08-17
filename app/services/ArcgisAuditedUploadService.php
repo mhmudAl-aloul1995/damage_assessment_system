@@ -60,14 +60,20 @@ class ArcgisAuditedUploadService
 
         echo "Uploading buildings...\n";
 
+        if ($changedSince !== null) {
+            $this->uploadChangedSince(
+                $summary,
+                $buildingsLimit,
+                ! $withoutAttachments,
+                $attachmentsOnly,
+                $changedSince,
+                $skipCounts,
+            );
+
+            return $summary;
+        }
+
         $buildingQuery = VBuildingAudited::query()
-            ->when($changedSince !== null, function (Builder $query) use ($changedSince): void {
-                $query->where(function (Builder $changedQuery) use ($changedSince): void {
-                    $changedQuery
-                        ->where('editdate', '>=', $changedSince)
-                        ->orWhereIn('globalid', $this->editedGlobalIdsQuery('building_table', $changedSince));
-                });
-            })
             ->orderBy('objectid');
 
         if ($buildingsLimit !== null) {
@@ -85,14 +91,7 @@ class ArcgisAuditedUploadService
                 ->all();
 
         $unitQuery = VHousingUnitAudited::query()
-            ->when($changedSince !== null, function (Builder $query) use ($changedSince): void {
-                $query->where(function (Builder $changedQuery) use ($changedSince): void {
-                    $changedQuery
-                        ->where('editdate', '>=', $changedSince)
-                        ->orWhereIn('globalid', $this->editedGlobalIdsQuery('housing_table', $changedSince));
-                });
-            })
-            ->when($changedSince === null && $buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
+            ->when($buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
                 $query->whereIn('parentglobalid', $buildingGlobalIds);
             })
             ->orderBy('objectid');
@@ -154,6 +153,132 @@ class ArcgisAuditedUploadService
         }
 
         return $summary;
+    }
+
+    private function uploadChangedSince(
+        array &$summary,
+        ?int $buildingsLimit,
+        bool $copyAttachments,
+        bool $attachmentsOnly,
+        CarbonInterface $changedSince,
+        bool $skipCounts,
+    ): void {
+        echo "Loading changed building ids...\n";
+
+        $buildingGlobalIds = $this->changedCandidateGlobalIds(
+            Building::query(),
+            'building_table',
+            $changedSince,
+            $buildingsLimit,
+        );
+
+        echo "Loading changed unit ids...\n";
+
+        $unitGlobalIds = $this->changedCandidateGlobalIds(
+            HousingUnit::query(),
+            'housing_table',
+            $changedSince,
+        );
+
+        if ($skipCounts) {
+            $summary['candidate_counts_skipped'] = 1;
+
+            echo "Candidate counts skipped.\n";
+        } else {
+            $summary['buildings_to_sync'] = count($buildingGlobalIds);
+            $summary['units_to_sync'] = count($unitGlobalIds);
+
+            echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
+            echo 'Units to sync: '.$summary['units_to_sync']."\n";
+        }
+
+        foreach ($buildingGlobalIds as $buildingGlobalId) {
+            $building = VBuildingAudited::query()
+                ->where('globalid', $buildingGlobalId)
+                ->first();
+
+            if ($building === null) {
+                continue;
+            }
+
+            try {
+                echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
+
+                $this->uploadBuilding($building, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+
+                echo "Building uploaded/copied successfully.\n";
+            } catch (Throwable $exception) {
+                $summary['errors']++;
+
+                echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
+                echo $exception->getMessage()."\n";
+
+                Log::error('Failed uploading audited building to ArcGIS.', [
+                    'objectid' => $building->getAttribute('objectid'),
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        echo "Uploading housing units...\n";
+
+        foreach ($unitGlobalIds as $unitGlobalId) {
+            $unit = VHousingUnitAudited::query()
+                ->where('globalid', $unitGlobalId)
+                ->first();
+
+            if ($unit === null) {
+                continue;
+            }
+
+            try {
+                echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+
+                $this->uploadUnit($unit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+
+                echo "Unit uploaded/copied successfully.\n";
+            } catch (Throwable $exception) {
+                $summary['errors']++;
+
+                echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+                echo $exception->getMessage()."\n";
+
+                Log::error('Failed uploading audited housing unit to ArcGIS.', [
+                    'objectid' => $unit->getAttribute('objectid'),
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function changedCandidateGlobalIds(
+        Builder $sourceQuery,
+        string $type,
+        CarbonInterface $changedSince,
+        ?int $limit = null
+    ): array {
+        $sourceGlobalIds = (clone $sourceQuery)
+            ->where('editdate', '>=', $changedSince)
+            ->orderBy('objectid')
+            ->pluck('globalid');
+
+        $editedGlobalIds = EditAssessment::query()
+            ->where('type', $type)
+            ->where('updated_at', '>=', $changedSince)
+            ->orderBy('id')
+            ->pluck('global_id');
+
+        $globalIds = $sourceGlobalIds
+            ->merge($editedGlobalIds)
+            ->filter(fn (mixed $globalId): bool => is_string($globalId) && $globalId !== '')
+            ->unique()
+            ->values();
+
+        if ($limit !== null) {
+            $globalIds = $globalIds->take($limit)->values();
+        }
+
+        return $globalIds->all();
     }
 
     private function editedGlobalIdsQuery(string $type, CarbonInterface $changedSince): Builder

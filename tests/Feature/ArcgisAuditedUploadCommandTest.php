@@ -534,12 +534,31 @@ it('uploads only records edited on or after the changed since date', function ()
     ]);
 
     DB::table('buildings')->insert([
-        'objectid' => 301,
-        'globalid' => 'building-parent-for-edited-unit',
-        'building_name' => 'Parent For Edited Unit',
-        'governorate' => 'Gaza',
-        'municipalitie' => 'Gaza',
-        'neighborhood' => 'Rimal',
+        [
+            'objectid' => 301,
+            'globalid' => 'building-parent-for-edited-unit',
+            'building_name' => 'Parent For Edited Unit',
+            'governorate' => 'Gaza',
+            'municipalitie' => 'Gaza',
+            'neighborhood' => 'Rimal',
+            'editdate' => null,
+        ],
+        [
+            'objectid' => 102,
+            'globalid' => 'building-new-by-editdate',
+            'building_name' => null,
+            'governorate' => null,
+            'municipalitie' => null,
+            'neighborhood' => null,
+            'editdate' => '2026-07-28 00:00:00',
+        ],
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 202,
+        'globalid' => 'unit-new-by-editdate',
+        'parentglobalid' => 'building-parent-for-edited-unit',
+        'editdate' => '2026-07-28 00:00:00',
     ]);
 
     DB::table('edit_assessments')->insert([
