@@ -167,6 +167,12 @@ class ArcgisAuditedUploadService
         bool $skipCounts,
         bool $onlyAuditEdits,
     ): void {
+        if ($onlyAuditEdits) {
+            $this->uploadOnlyAuditEdits($summary, $buildingsLimit, $copyAttachments, $attachmentsOnly, $changedSince, $skipCounts);
+
+            return;
+        }
+
         echo "Loading changed building ids...\n";
 
         $buildingGlobalIds = $this->changedCandidateGlobalIds(
@@ -288,6 +294,259 @@ class ArcgisAuditedUploadService
         }
 
         return $globalIds->all();
+    }
+
+    private function uploadOnlyAuditEdits(
+        array &$summary,
+        ?int $buildingsLimit,
+        bool $copyAttachments,
+        bool $attachmentsOnly,
+        CarbonInterface $changedSince,
+        bool $skipCounts,
+    ): void {
+        echo "Loading building audit edits...\n";
+
+        $buildingEdits = $this->auditEditsByGlobalId('building_table', $changedSince, $buildingsLimit);
+
+        echo "Loading unit audit edits...\n";
+
+        $unitEdits = $this->auditEditsByGlobalId('housing_table', $changedSince);
+
+        if ($skipCounts) {
+            $summary['candidate_counts_skipped'] = 1;
+
+            echo "Candidate counts skipped.\n";
+        } else {
+            $summary['buildings_to_sync'] = count($buildingEdits);
+            $summary['units_to_sync'] = count($unitEdits);
+
+            echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
+            echo 'Units to sync: '.$summary['units_to_sync']."\n";
+        }
+
+        foreach ($buildingEdits as $globalId => $fields) {
+            try {
+                $this->uploadBuildingAuditEdits($globalId, $fields, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+            } catch (Throwable $exception) {
+                $summary['errors']++;
+
+                echo "Failed building globalid: {$globalId}\n";
+                echo $exception->getMessage()."\n";
+
+                Log::error('Failed uploading audited building edits to ArcGIS.', [
+                    'globalid' => $globalId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        echo "Uploading housing units...\n";
+
+        foreach ($unitEdits as $globalId => $fields) {
+            try {
+                $this->uploadUnitAuditEdits($globalId, $fields, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+            } catch (Throwable $exception) {
+                $summary['errors']++;
+
+                echo "Failed unit globalid: {$globalId}\n";
+                echo $exception->getMessage()."\n";
+
+                Log::error('Failed uploading audited housing unit edits to ArcGIS.', [
+                    'globalid' => $globalId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function auditEditsByGlobalId(string $type, CarbonInterface $changedSince, ?int $limit = null): array
+    {
+        $edits = [];
+
+        EditAssessment::query()
+            ->where('type', $type)
+            ->where('updated_at', '>=', $changedSince)
+            ->orderBy('id')
+            ->get(['global_id', 'field_name', 'field_value'])
+            ->each(function (EditAssessment $edit) use (&$edits): void {
+                $globalId = $edit->getAttribute('global_id');
+                $fieldName = $edit->getAttribute('field_name');
+
+                if (! is_string($globalId) || $globalId === '' || ! is_string($fieldName) || $fieldName === '') {
+                    return;
+                }
+
+                $edits[$globalId][$fieldName] = $edit->getAttribute('field_value');
+            });
+
+        if ($limit === null) {
+            return $edits;
+        }
+
+        return array_slice($edits, 0, $limit, preserve_keys: true);
+    }
+
+    private function uploadBuildingAuditEdits(
+        string $globalId,
+        array $fields,
+        array &$summary,
+        bool $copyAttachments,
+        bool $attachmentsOnly,
+        CarbonInterface $changedSince,
+    ): void {
+        $targetLayerId = $this->layerId('target_buildings_layer');
+        $sourceLayerId = $this->layerId('source_buildings_layer');
+        $sourceObjectId = Building::query()->where('globalid', $globalId)->value('objectid');
+
+        echo 'Building '.($sourceObjectId === null ? "GLOBALID: {$globalId}" : "OBJECTID: {$sourceObjectId}")."\n";
+        echo "Checking target building exists...\n";
+
+        $targetFeature = $this->targetFeatureWithToken($targetLayerId, [
+            'old_objectid_B' => $sourceObjectId,
+            'old_global_id_B' => $globalId,
+        ]);
+        $targetObjectId = $targetFeature['object_id'] ?? null;
+
+        if ($targetObjectId === null) {
+            if ($attachmentsOnly) {
+                echo "Building not found in target. Skipping attachments.\n";
+                $summary['features_skipped']++;
+
+                return;
+            }
+
+            $building = VBuildingAudited::query()->where('globalid', $globalId)->first();
+
+            if ($building === null) {
+                echo "Building not found in audited view. Skipping add.\n";
+                $summary['features_skipped']++;
+
+                return;
+            }
+
+            $this->uploadBuilding($building, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+
+            return;
+        }
+
+        echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
+
+        if (! $attachmentsOnly) {
+            echo 'Updating building audit fields: '.implode(', ', array_keys($fields))."\n";
+
+            $this->updateFeature(
+                $targetLayerId,
+                $targetObjectId,
+                $targetFeature['object_id_field'],
+                fn (string $token): array => $this->auditEditFeature($fields, false, $token),
+            );
+
+            $summary['buildings_updated']++;
+            $summary['features_partially_updated']++;
+        }
+
+        $this->copyAuditEditAttachments($sourceLayerId, $targetLayerId, $sourceObjectId, $targetObjectId, $copyAttachments, $summary, 'building');
+    }
+
+    private function uploadUnitAuditEdits(
+        string $globalId,
+        array $fields,
+        array &$summary,
+        bool $copyAttachments,
+        bool $attachmentsOnly,
+        CarbonInterface $changedSince,
+    ): void {
+        $targetLayerId = $this->layerId('target_units_layer');
+        $sourceLayerId = $this->layerId('source_units_layer');
+        $sourceObjectId = HousingUnit::query()->where('globalid', $globalId)->value('objectid');
+
+        echo 'Unit '.($sourceObjectId === null ? "GLOBALID: {$globalId}" : "OBJECTID: {$sourceObjectId}")."\n";
+        echo "Checking target unit exists...\n";
+
+        $targetFeature = $this->targetFeatureWithToken($targetLayerId, [
+            'old_objectid_U' => $sourceObjectId,
+            'old_global_id_U' => $globalId,
+        ]);
+        $targetObjectId = $targetFeature['object_id'] ?? null;
+
+        if ($targetObjectId === null) {
+            if ($attachmentsOnly) {
+                echo "Unit not found in target. Skipping attachments.\n";
+                $summary['features_skipped']++;
+
+                return;
+            }
+
+            $unit = VHousingUnitAudited::query()->where('globalid', $globalId)->first();
+
+            if ($unit === null) {
+                echo "Unit not found in audited view. Skipping add.\n";
+                $summary['features_skipped']++;
+
+                return;
+            }
+
+            $this->uploadUnit($unit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+
+            return;
+        }
+
+        echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
+
+        if (! $attachmentsOnly) {
+            echo 'Updating unit audit fields: '.implode(', ', array_keys($fields))."\n";
+
+            $this->updateFeature(
+                $targetLayerId,
+                $targetObjectId,
+                $targetFeature['object_id_field'],
+                fn (string $token): array => $this->auditEditFeature($fields, true, $token),
+            );
+
+            $summary['units_updated']++;
+            $summary['features_partially_updated']++;
+        }
+
+        $this->copyAuditEditAttachments($sourceLayerId, $targetLayerId, $sourceObjectId, $targetObjectId, $copyAttachments, $summary, 'unit');
+    }
+
+    private function auditEditFeature(array $fields, bool $isUnit, string $token): array
+    {
+        $attributes = $this->moveCommentsRecommendations($fields);
+
+        if ($isUnit && array_key_exists('parentglobalid', $attributes)) {
+            $parentGlobalId = $attributes['parentglobalid'];
+
+            if (is_string($parentGlobalId) && $parentGlobalId !== '') {
+                $attributes['parentglobalid'] = $this->targetBuildingGlobalId($parentGlobalId, $token);
+            }
+        }
+
+        return ['attributes' => $attributes];
+    }
+
+    private function copyAuditEditAttachments(
+        int|string $sourceLayerId,
+        int|string $targetLayerId,
+        mixed $sourceObjectId,
+        int $targetObjectId,
+        bool $copyAttachments,
+        array &$summary,
+        string $type,
+    ): void {
+        if (! $copyAttachments) {
+            echo "Skipping {$type} attachments.\n";
+
+            return;
+        }
+
+        echo 'Copying '.$type." attachments...\n";
+
+        $attachmentsSummary = $this->copyAttachments($sourceLayerId, $targetLayerId, $sourceObjectId, $targetObjectId);
+
+        $summary['attachments_uploaded'] += $attachmentsSummary['uploaded'];
+        $summary['attachments_skipped'] += $attachmentsSummary['skipped'];
+        $summary['errors'] += $attachmentsSummary['errors'];
     }
 
     private function editedGlobalIdsQuery(string $type, CarbonInterface $changedSince): Builder
