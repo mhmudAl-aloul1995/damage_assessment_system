@@ -243,6 +243,69 @@ it('continues exporting when ArcGIS attachment lookup has a connection failure',
     }
 });
 
+it('resumes an existing export by skipping object ids already recorded in the index', function () {
+    Cache::forget('arcgis_token');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/19/attachments*' => Http::response([
+            'attachmentInfos' => [
+                [
+                    'id' => 1900,
+                    'name' => 'ownership_image.jpg',
+                    'contentType' => 'image/jpeg',
+                ],
+            ],
+        ]),
+    ]);
+
+    $inputPath = storage_path('app/testing-unit-resume-objectids.txt');
+    $outputPath = storage_path('app/public/exports/testing_unit_resume');
+    $zipPath = storage_path('app/public/exports/testing_unit_resume.zip');
+
+    File::put($inputPath, "18\n19");
+    File::deleteDirectory($outputPath);
+    File::delete($zipPath);
+    File::ensureDirectoryExists($outputPath);
+    File::put($outputPath.'/attachments-index.csv', implode("\n", [
+        'objectid,attachment_id,matched_type,original_name,content_type,status,local_path,public_url,arcgis_attachments_url,message,boq_pdf_path',
+        '18,1800,ownership,ownership_image.jpg,image/jpeg,online_only,,,https://example.test/18/attachments/1800,,',
+    ])."\n");
+
+    try {
+        $this->artisan('arcgis:download-housing-unit-attachments', [
+            'file' => $inputPath,
+            '--output' => 'testing_unit_resume',
+            '--exclude-damage' => true,
+            '--attachments-url-only' => true,
+            '--resume' => true,
+        ])->assertSuccessful();
+
+        Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/FeatureServer/1/18/attachments'));
+
+        $csv = File::get($outputPath.'/attachments-index.csv');
+        expect($csv)
+            ->toContain('18,1800,ownership')
+            ->toContain('19,1900,ownership');
+
+        $spreadsheet = IOFactory::load($outputPath.'/attachments-index.xlsx');
+        $sheet = $spreadsheet->getActiveSheet();
+
+        expect($sheet->getCell('A2')->getValue())->toBe(18);
+        expect($sheet->getCell('C2')->getHyperlink()->getUrl())->toBe('https://example.test/18/attachments/1800');
+        expect($sheet->getCell('A3')->getValue())->toBe(19);
+        expect($sheet->getCell('C3')->getHyperlink()->getUrl())->toContain('/FeatureServer/1/19/attachments/1900?token=arcgis-token');
+
+        $spreadsheet->disconnectWorksheets();
+    } finally {
+        File::delete($inputPath);
+        File::deleteDirectory($outputPath);
+        File::delete($zipPath);
+    }
+});
+
 it('downloads all housing unit attachments except damage photos when requested', function () {
     Cache::forget('arcgis_token');
 

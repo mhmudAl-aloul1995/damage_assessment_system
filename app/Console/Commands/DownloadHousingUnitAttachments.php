@@ -37,6 +37,7 @@ class DownloadHousingUnitAttachments extends Command
         {--include-boq-pdf : Generate a local BOQ PDF from v_housing_units_audited and link it in Excel}
         {--boq-pdf-url : Link to the existing online BOQ PDF export instead of generating local PDF files}
         {--limit= : Process only the first N ObjectIDs}
+        {--resume : Continue an existing output by skipping ObjectIDs already recorded in attachments-index.csv}
         {--force : Re-download files that already exist}';
 
     /**
@@ -86,7 +87,32 @@ class DownloadHousingUnitAttachments extends Command
         $indexPath = $outputDirectory.'/attachments-index.csv';
         $xlsxIndexPath = $outputDirectory.'/attachments-index.xlsx';
         $htmlIndexPath = $outputDirectory.'/index.html';
-        $indexHandle = fopen($indexPath, 'w');
+        $resume = (bool) $this->option('resume');
+        $shouldAppendIndex = $resume && File::exists($indexPath);
+
+        if ($shouldAppendIndex) {
+            $processedObjectIds = $this->processedObjectIdsFromCsv($indexPath);
+            $originalObjectIdsCount = count($objectIds);
+            $objectIds = array_values(array_filter(
+                $objectIds,
+                fn (string $objectId): bool => ! in_array($objectId, $processedObjectIds, true)
+            ));
+            $this->info('Resume: skipping '.($originalObjectIdsCount - count($objectIds)).' ObjectIDs already recorded in the existing index.');
+
+            if ($objectIds === []) {
+                $this->info('Resume: no remaining ObjectIDs to process.');
+                $this->writeExcelIndexFromCsv($indexPath, $xlsxIndexPath);
+                File::put($htmlIndexPath, $this->htmlIndex($this->htmlRowsFromCsv($indexPath)));
+                $zipPath = $this->createZipArchive($outputDirectory, $outputName);
+                $this->info("Excel index: {$xlsxIndexPath}");
+                $this->info("HTML index: {$htmlIndexPath}");
+                $this->info("ZIP archive: {$zipPath}");
+
+                return self::SUCCESS;
+            }
+        }
+
+        $indexHandle = fopen($indexPath, $shouldAppendIndex ? 'a' : 'w');
 
         if ($indexHandle === false) {
             $this->error("Unable to create index file: {$indexPath}");
@@ -94,19 +120,21 @@ class DownloadHousingUnitAttachments extends Command
             return self::FAILURE;
         }
 
-        fputcsv($indexHandle, [
-            'objectid',
-            'attachment_id',
-            'matched_type',
-            'original_name',
-            'content_type',
-            'status',
-            'local_path',
-            'public_url',
-            'arcgis_attachments_url',
-            'message',
-            'boq_pdf_path',
-        ]);
+        if (! $shouldAppendIndex) {
+            fputcsv($indexHandle, [
+                'objectid',
+                'attachment_id',
+                'matched_type',
+                'original_name',
+                'content_type',
+                'status',
+                'local_path',
+                'public_url',
+                'arcgis_attachments_url',
+                'message',
+                'boq_pdf_path',
+            ]);
+        }
 
         $htmlRows = [];
         $this->info('ObjectIDs: '.count($objectIds));
@@ -257,7 +285,7 @@ class DownloadHousingUnitAttachments extends Command
         $bar->finish();
         fclose($indexHandle);
         $this->writeExcelIndexFromCsv($indexPath, $xlsxIndexPath);
-        File::put($htmlIndexPath, $this->htmlIndex($htmlRows));
+        File::put($htmlIndexPath, $this->htmlIndex($this->htmlRowsFromCsv($indexPath)));
         $zipPath = $this->createZipArchive($outputDirectory, $outputName);
 
         $this->newLine(2);
@@ -900,6 +928,79 @@ class DownloadHousingUnitAttachments extends Command
         return collect(explode('/', str_replace('\\', '/', $path)))
             ->map(fn (string $segment): string => rawurlencode($segment))
             ->implode('/');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function processedObjectIdsFromCsv(string $csvPath): array
+    {
+        $handle = fopen($csvPath, 'r');
+
+        if ($handle === false) {
+            return [];
+        }
+
+        $processed = [];
+        $rowNumber = 0;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNumber++;
+
+            if ($rowNumber === 1) {
+                continue;
+            }
+
+            $objectId = (string) ($row[0] ?? '');
+            $status = (string) ($row[5] ?? '');
+
+            if (! filled($objectId) || in_array($status, ['failed', 'failed_request'], true)) {
+                continue;
+            }
+
+            $processed[$objectId] = true;
+        }
+
+        fclose($handle);
+
+        return array_map('strval', array_keys($processed));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function htmlRowsFromCsv(string $csvPath): array
+    {
+        $handle = fopen($csvPath, 'r');
+
+        if ($handle === false) {
+            return [];
+        }
+
+        $rows = [];
+        $rowNumber = 0;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNumber++;
+
+            if ($rowNumber === 1) {
+                continue;
+            }
+
+            $rows[] = $this->htmlRow(
+                (string) ($row[0] ?? ''),
+                (string) ($row[2] ?? ''),
+                (string) ($row[3] ?? ''),
+                (string) ($row[4] ?? ''),
+                (string) ($row[5] ?? ''),
+                (string) (($row[7] ?? '') ?: ($row[8] ?? '')),
+                (string) ($row[9] ?? '')
+            );
+        }
+
+        fclose($handle);
+
+        return $rows;
     }
 
     private function writeExcelIndexFromCsv(string $csvPath, string $xlsxPath): void
