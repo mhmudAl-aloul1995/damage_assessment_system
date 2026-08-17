@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Building;
+use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use App\Models\VBuildingAudited;
 use App\Models\VHousingUnitAudited;
+use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Client\PendingRequest;
@@ -35,6 +37,7 @@ class ArcgisAuditedUploadService
         ?int $buildingsLimit = null,
         bool $withoutAttachments = false,
         bool $attachmentsOnly = false,
+        ?CarbonInterface $changedSince = null,
     ): array {
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
@@ -44,13 +47,25 @@ class ArcgisAuditedUploadService
         $summary['without_attachments'] = $withoutAttachments ? 1 : 0;
         $summary['attachments_only'] = $attachmentsOnly ? 1 : 0;
 
+        if ($changedSince !== null) {
+            $summary['changed_since'] = $changedSince->format('Y-m-d H:i:s');
+        }
+
         echo "Generating token...\n";
         $this->refreshToken();
         echo "Token generated successfully.\n";
 
         echo "Uploading buildings...\n";
 
-        $buildingQuery = VBuildingAudited::query()->orderBy('objectid');
+        $buildingQuery = VBuildingAudited::query()
+            ->when($changedSince !== null, function (Builder $query) use ($changedSince): void {
+                $query->where(function (Builder $changedQuery) use ($changedSince): void {
+                    $changedQuery
+                        ->where('editdate', '>=', $changedSince)
+                        ->orWhereIn('globalid', $this->editedGlobalIdsQuery('building_table', $changedSince));
+                });
+            })
+            ->orderBy('objectid');
 
         if ($buildingsLimit !== null) {
             $buildingQuery->limit($buildingsLimit);
@@ -87,7 +102,14 @@ class ArcgisAuditedUploadService
         echo "Uploading housing units...\n";
 
         $unitQuery = VHousingUnitAudited::query()
-            ->when($buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
+            ->when($changedSince !== null, function (Builder $query) use ($changedSince): void {
+                $query->where(function (Builder $changedQuery) use ($changedSince): void {
+                    $changedQuery
+                        ->where('editdate', '>=', $changedSince)
+                        ->orWhereIn('globalid', $this->editedGlobalIdsQuery('housing_table', $changedSince));
+                });
+            })
+            ->when($changedSince === null && $buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
                 $query->whereIn('parentglobalid', array_values(array_unique($buildingGlobalIds)));
             })
             ->orderBy('objectid');
@@ -113,6 +135,15 @@ class ArcgisAuditedUploadService
         }
 
         return $summary;
+    }
+
+    private function editedGlobalIdsQuery(string $type, CarbonInterface $changedSince): Builder
+    {
+        return EditAssessment::query()
+            ->select('global_id')
+            ->where('type', $type)
+            ->where('updated_at', '>=', $changedSince)
+            ->distinct();
     }
 
     public function generateToken(): string

@@ -457,6 +457,223 @@ it('can upload only a limited number of buildings with their housing units', fun
     expect($unitUploads)->toBe(5);
 });
 
+it('uploads only records edited on or after the changed since date', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('building_damage_status')->nullable();
+        $table->dateTime('editdate')->nullable();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('parentglobalid')->nullable();
+        $table->string('unit_damage_status')->nullable();
+        $table->dateTime('editdate')->nullable();
+    });
+
+    DB::table('v_buildings_audited')->insert([
+        [
+            'objectid' => 100,
+            'globalid' => 'building-edited-on-boundary',
+            'building_damage_status' => 'major',
+            'editdate' => '2026-07-27 10:00:00',
+        ],
+        [
+            'objectid' => 101,
+            'globalid' => 'building-before-boundary',
+            'building_damage_status' => 'minor',
+            'editdate' => '2026-07-27 23:59:59',
+        ],
+        [
+            'objectid' => 102,
+            'globalid' => 'building-new-by-editdate',
+            'building_damage_status' => 'new',
+            'editdate' => '2026-07-28 00:00:00',
+        ],
+    ]);
+
+    DB::table('v_housing_units_audited')->insert([
+        [
+            'objectid' => 200,
+            'globalid' => 'unit-under-edited-building-without-own-edit',
+            'parentglobalid' => 'building-edited-on-boundary',
+            'unit_damage_status' => 'not-uploaded',
+            'editdate' => '2026-07-27 10:00:00',
+        ],
+        [
+            'objectid' => 201,
+            'globalid' => 'unit-edited-after-boundary',
+            'parentglobalid' => 'building-parent-for-edited-unit',
+            'unit_damage_status' => 'uploaded',
+            'editdate' => '2026-07-27 10:00:00',
+        ],
+        [
+            'objectid' => 202,
+            'globalid' => 'unit-new-by-editdate',
+            'parentglobalid' => 'building-parent-for-edited-unit',
+            'unit_damage_status' => 'new',
+            'editdate' => '2026-07-28 00:00:00',
+        ],
+    ]);
+
+    DB::table('buildings')->insert([
+        'objectid' => 301,
+        'globalid' => 'building-parent-for-edited-unit',
+        'building_name' => 'Parent For Edited Unit',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        [
+            'global_id' => 'building-edited-on-boundary',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'major',
+            'created_at' => '2026-07-28 00:00:00',
+            'updated_at' => '2026-07-28 00:00:00',
+        ],
+        [
+            'global_id' => 'building-before-boundary',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'minor',
+            'created_at' => '2026-07-27 23:59:59',
+            'updated_at' => '2026-07-27 23:59:59',
+        ],
+        [
+            'global_id' => 'unit-edited-after-boundary',
+            'type' => 'housing_table',
+            'field_name' => 'unit_damage_status',
+            'field_value' => 'uploaded',
+            'created_at' => '2026-07-28 12:00:00',
+            'updated_at' => '2026-07-28 12:00:00',
+        ],
+    ]);
+
+    $buildingUploads = 0;
+    $unitUploads = 0;
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'globalid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'building_damage_status'],
+                ['name' => 'editdate'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'globalid'],
+                ['name' => 'parentglobalid'],
+                ['name' => 'unit_damage_status'],
+                ['name' => 'editdate'],
+                ['name' => 'unit_governorate'],
+                ['name' => 'unit_municipalitie'],
+                ['name' => 'unit_neighborhood'],
+                ['name' => 'unit_building_name'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if ($request['where'] === "old_global_id_B = 'building-parent-for-edited-unit'") {
+                return Http::response([
+                    'features' => [
+                        ['attributes' => ['globalid' => 'target-building-parent-for-edited-unit']],
+                    ],
+                ]);
+            }
+
+            return Http::response(['features' => []]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => function ($request) use (&$buildingUploads) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes']['old_objectid_B'])->toBeIn([100, 102]);
+            expect($features[0]['attributes']['old_global_id_B'])->toBeIn([
+                'building-edited-on-boundary',
+                'building-new-by-editdate',
+            ]);
+            expect($features[0]['attributes']['is_audited'])->toBe(1);
+
+            $buildingUploads++;
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9100],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/addFeatures' => function ($request) use (&$unitUploads) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes']['old_objectid_U'])->toBeIn([201, 202]);
+            expect($features[0]['attributes']['old_global_id_U'])->toBeIn([
+                'unit-edited-after-boundary',
+                'unit-new-by-editdate',
+            ]);
+            expect($features[0]['attributes'])->toMatchArray([
+                'parentglobalid' => 'target-building-parent-for-edited-unit',
+                'unit_governorate' => 'Gaza',
+                'unit_municipalitie' => 'Gaza',
+                'unit_neighborhood' => 'Rimal',
+                'unit_building_name' => 'Parent For Edited Unit',
+                'is_audited' => 1,
+            ]);
+
+            $unitUploads++;
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9200],
+                ],
+            ]);
+        },
+    ]);
+
+    $this->artisan('arcgis:upload-audited', [
+        '--changed-since' => '2026-07-28',
+        '--without-attachments' => true,
+    ])->assertSuccessful();
+
+    expect($buildingUploads)->toBe(2);
+    expect($unitUploads)->toBe(2);
+
+    Http::assertNotSent(fn ($request): bool => str_contains((string) $request->body(), 'unit-under-edited-building-without-own-edit'));
+    Http::assertNotSent(fn ($request): bool => str_contains((string) $request->body(), 'building-before-boundary'));
+});
+
 it('uses building old global id when the target layer does not have building old objectid', function () {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

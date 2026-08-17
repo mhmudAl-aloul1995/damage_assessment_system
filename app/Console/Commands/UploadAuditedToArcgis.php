@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\ArcgisAuditedUploadService;
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 
@@ -10,6 +11,7 @@ class UploadAuditedToArcgis extends Command
 {
     protected $signature = 'arcgis:upload-audited
         {--buildings-limit= : Upload only the first N audited buildings and their housing units.}
+        {--changed-since= : Upload only buildings or housing units with editdate or audit edits on or after this date/time.}
         {--without-attachments : Upload or update features without copying attachments.}
         {--attachments-only : Copy missing attachments for existing uploaded features only.}';
 
@@ -33,10 +35,12 @@ class UploadAuditedToArcgis extends Command
         try {
             $this->info('Processing...');
             $buildingsLimit = $this->option('buildings-limit');
+            $changedSince = $this->changedSinceOption();
             $summary = $arcgisAuditedUploadService->upload(
                 is_numeric($buildingsLimit) ? (int) $buildingsLimit : null,
                 (bool) $this->option('without-attachments'),
                 (bool) $this->option('attachments-only'),
+                $changedSince,
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');
@@ -78,5 +82,16 @@ class UploadAuditedToArcgis extends Command
         $this->info('Completed successfully.');
 
         return self::SUCCESS;
+    }
+
+    private function changedSinceOption(): ?CarbonImmutable
+    {
+        $changedSince = $this->option('changed-since');
+
+        if (! is_string($changedSince) || trim($changedSince) === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse($changedSince)->startOfSecond();
     }
 }
