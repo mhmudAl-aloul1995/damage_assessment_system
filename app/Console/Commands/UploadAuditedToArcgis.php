@@ -12,6 +12,7 @@ class UploadAuditedToArcgis extends Command
     protected $signature = 'arcgis:upload-audited
         {--buildings-limit= : Upload only the first N audited buildings and their housing units.}
         {--changed-since= : Upload only buildings or housing units with editdate or audit edits on or after this date/time.}
+        {--only-audit-edits : With --changed-since, ignore editdate and sync only records changed in edit_assessments.}
         {--skip-counts : Start syncing immediately without counting candidates first.}
         {--without-attachments : Upload or update features without copying attachments.}
         {--attachments-only : Copy missing attachments for existing uploaded features only.}';
@@ -43,6 +44,7 @@ class UploadAuditedToArcgis extends Command
                 (bool) $this->option('attachments-only'),
                 $changedSince,
                 (bool) $this->option('skip-counts'),
+                (bool) $this->option('only-audit-edits'),
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');

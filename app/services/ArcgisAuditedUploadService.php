@@ -41,6 +41,7 @@ class ArcgisAuditedUploadService
         bool $attachmentsOnly = false,
         ?CarbonInterface $changedSince = null,
         bool $skipCounts = false,
+        bool $onlyAuditEdits = false,
     ): array {
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
@@ -52,6 +53,7 @@ class ArcgisAuditedUploadService
 
         if ($changedSince !== null) {
             $summary['changed_since'] = $changedSince->format('Y-m-d H:i:s');
+            $summary['only_audit_edits'] = $onlyAuditEdits ? 1 : 0;
         }
 
         echo "Generating token...\n";
@@ -68,6 +70,7 @@ class ArcgisAuditedUploadService
                 $attachmentsOnly,
                 $changedSince,
                 $skipCounts,
+                $onlyAuditEdits,
             );
 
             return $summary;
@@ -162,6 +165,7 @@ class ArcgisAuditedUploadService
         bool $attachmentsOnly,
         CarbonInterface $changedSince,
         bool $skipCounts,
+        bool $onlyAuditEdits,
     ): void {
         echo "Loading changed building ids...\n";
 
@@ -169,6 +173,7 @@ class ArcgisAuditedUploadService
             Building::query(),
             'building_table',
             $changedSince,
+            $onlyAuditEdits,
             $buildingsLimit,
         );
 
@@ -178,6 +183,7 @@ class ArcgisAuditedUploadService
             HousingUnit::query(),
             'housing_table',
             $changedSince,
+            $onlyAuditEdits,
         );
 
         if ($skipCounts) {
@@ -255,12 +261,15 @@ class ArcgisAuditedUploadService
         Builder $sourceQuery,
         string $type,
         CarbonInterface $changedSince,
+        bool $onlyAuditEdits,
         ?int $limit = null
     ): array {
-        $sourceGlobalIds = (clone $sourceQuery)
-            ->where('editdate', '>=', $changedSince)
-            ->orderBy('objectid')
-            ->pluck('globalid');
+        $sourceGlobalIds = $onlyAuditEdits
+            ? collect()
+            : (clone $sourceQuery)
+                ->where('editdate', '>=', $changedSince)
+                ->orderBy('objectid')
+                ->pluck('globalid');
 
         $editedGlobalIds = EditAssessment::query()
             ->where('type', $type)
@@ -912,6 +921,12 @@ class ArcgisAuditedUploadService
 
         echo 'Attachments found: '.count($attachments)."\n";
 
+        if ($attachments === []) {
+            return ['uploaded' => 0, 'skipped' => 0, 'errors' => 0];
+        }
+
+        $targetAttachments = $this->targetAttachmentInfos($targetLayerId, $targetObjectId);
+
         foreach ($attachments as $attachmentInfo) {
             try {
                 $attachmentId = $attachmentInfo['id'] ?? null;
@@ -925,7 +940,7 @@ class ArcgisAuditedUploadService
                     continue;
                 }
 
-                if ($this->targetAttachmentExists($targetLayerId, $targetObjectId, $name, $size)) {
+                if ($this->attachmentExists($targetAttachments, $name, $size)) {
                     echo "Attachment already exists: {$name}\n";
 
                     continue;
@@ -1011,13 +1026,9 @@ class ArcgisAuditedUploadService
         });
     }
 
-    private function targetAttachmentExists(
-        int|string $layerId,
-        int $objectId,
-        string $name,
-        ?int $size
-    ): bool {
-        return $this->withTokenRetry(function (string $token) use ($layerId, $objectId, $name, $size): bool {
+    private function targetAttachmentInfos(int|string $layerId, int $objectId): array
+    {
+        return $this->withTokenRetry(function (string $token) use ($layerId, $objectId): array {
             $response = $this->http()->get($this->targetLayerUrl($layerId).'/'.$objectId.'/attachments', [
                 'f' => 'json',
                 'token' => $token,
@@ -1026,27 +1037,32 @@ class ArcgisAuditedUploadService
             $this->throwIfArcgisError($response, 'ArcGIS target attachment lookup failed');
 
             if (! $response->successful()) {
-                return false;
+                return [];
             }
 
             $attachmentInfos = $response->json('attachmentInfos') ?? [];
 
             if (! is_array($attachmentInfos)) {
-                return false;
+                return [];
             }
 
-            foreach ($attachmentInfos as $attachmentInfo) {
-                if (($attachmentInfo['name'] ?? null) !== $name) {
-                    continue;
-                }
-
-                if ($size === null || ! isset($attachmentInfo['size']) || (int) $attachmentInfo['size'] === $size) {
-                    return true;
-                }
-            }
-
-            return false;
+            return $attachmentInfos;
         });
+    }
+
+    private function attachmentExists(array $attachmentInfos, string $name, ?int $size): bool
+    {
+        foreach ($attachmentInfos as $attachmentInfo) {
+            if (($attachmentInfo['name'] ?? null) !== $name) {
+                continue;
+            }
+
+            if ($size === null || ! isset($attachmentInfo['size']) || (int) $attachmentInfo['size'] === $size) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function downloadAttachment(
