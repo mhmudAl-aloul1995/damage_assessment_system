@@ -205,6 +205,44 @@ it('refreshes an expired ArcGIS token instead of marking housing unit attachment
     }
 });
 
+it('continues exporting when ArcGIS attachment lookup has a connection failure', function () {
+    Cache::forget('arcgis_token');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://services2.arcgis.com/VoOot7GfoaREFqQk/ArcGIS/rest/services/service_796c0e16447342c38cef2b67cd0bd723/FeatureServer/1/17/attachments' => Http::failedConnection('Could not resolve host: services2.arcgis.com'),
+    ]);
+
+    $inputPath = storage_path('app/testing-unit-connection-failure-objectids.txt');
+    $outputPath = storage_path('app/public/exports/testing_unit_connection_failure');
+    $zipPath = storage_path('app/public/exports/testing_unit_connection_failure.zip');
+
+    File::put($inputPath, '17');
+    File::deleteDirectory($outputPath);
+    File::delete($zipPath);
+
+    try {
+        $this->artisan('arcgis:download-housing-unit-attachments', [
+            'file' => $inputPath,
+            '--output' => 'testing_unit_connection_failure',
+            '--exclude-damage' => true,
+            '--attachments-url-only' => true,
+        ])->assertFailed();
+
+        expect(File::exists($outputPath.'/attachments-index.xlsx'))->toBeTrue();
+        expect(File::exists($zipPath))->toBeTrue();
+        expect(File::get($outputPath.'/attachments-index.csv'))
+            ->toContain('failed_request')
+            ->toContain('ArcGIS connection failed after retries');
+    } finally {
+        File::delete($inputPath);
+        File::deleteDirectory($outputPath);
+        File::delete($zipPath);
+    }
+});
+
 it('downloads all housing unit attachments except damage photos when requested', function () {
     Cache::forget('arcgis_token');
 

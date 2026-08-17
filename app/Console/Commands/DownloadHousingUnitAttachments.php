@@ -7,6 +7,7 @@ use App\Models\VHousingUnitAudited;
 use App\services\ArcgisService;
 use App\Support\BrowsershotConfiguration;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
@@ -472,8 +473,23 @@ class DownloadHousingUnitAttachments extends Command
      */
     private function getHousingUnitAttachments(ArcgisService $arcgis, string $objectId, string $token): array
     {
-        for ($attempt = 1; $attempt <= 2; $attempt++) {
-            $result = $arcgis->getAttachmentsResult($objectId, 1, $token);
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            try {
+                $result = $arcgis->getAttachmentsResult($objectId, 1, $token);
+            } catch (ConnectionException $exception) {
+                if ($attempt < 3) {
+                    sleep($attempt * 2);
+
+                    continue;
+                }
+
+                return [
+                    'success' => false,
+                    'attachments' => [],
+                    'message' => 'ArcGIS connection failed after retries: '.$exception->getMessage(),
+                    'token' => $token,
+                ];
+            }
 
             if ($result['success'] ?? false) {
                 return [
@@ -484,7 +500,7 @@ class DownloadHousingUnitAttachments extends Command
                 ];
             }
 
-            if (! ($result['token_expired'] ?? false) || $attempt === 2) {
+            if (! ($result['token_expired'] ?? false) || $attempt === 3) {
                 return [
                     'success' => false,
                     'attachments' => [],
@@ -510,8 +526,23 @@ class DownloadHousingUnitAttachments extends Command
      */
     private function downloadHousingUnitAttachment(ArcgisService $arcgis, string $objectId, int|string $attachmentId, string $token): array
     {
-        for ($attempt = 1; $attempt <= 2; $attempt++) {
-            $download = $arcgis->downloadAttachment($objectId, 1, $attachmentId, $token);
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            try {
+                $download = $arcgis->downloadAttachment($objectId, 1, $attachmentId, $token);
+            } catch (ConnectionException $exception) {
+                if ($attempt < 3) {
+                    sleep($attempt * 2);
+
+                    continue;
+                }
+
+                return [
+                    'success' => false,
+                    'message' => 'ArcGIS download connection failed after retries: '.$exception->getMessage(),
+                    'body' => null,
+                    'token' => $token,
+                ];
+            }
 
             if ($download['success'] ?? false) {
                 return [
@@ -520,7 +551,7 @@ class DownloadHousingUnitAttachments extends Command
                 ];
             }
 
-            if (! ($download['token_expired'] ?? false) || $attempt === 2) {
+            if (! ($download['token_expired'] ?? false) || $attempt === 3) {
                 return [
                     ...$download,
                     'token' => $token,
