@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ArcgisLayerSyncController;
 use App\Http\Controllers\Admin\LocalDatabaseImportController;
 use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
 use App\Http\Controllers\LocaleController;
@@ -244,6 +245,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/system-logs/data', [SystemLogController::class, 'data'])
         ->middleware('role_or_permission:Database Officer|system-logs.view')
         ->name('system.logs.data');
+    Route::post('/system-logs/sync-arcgis-layers', [ArcgisLayerSyncController::class, 'store'])
+        ->middleware('role:Database Officer')
+        ->name('system.logs.sync-arcgis-layers');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

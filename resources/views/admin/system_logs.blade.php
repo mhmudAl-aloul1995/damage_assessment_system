@@ -10,6 +10,23 @@
             <div class="card-title">
                 <h3 class="fw-bold m-0">System Logs</h3>
             </div>
+
+            @role('Database Officer')
+                <div class="card-toolbar">
+                    <button type="button"
+                        class="btn btn-primary d-inline-flex align-items-center gap-2"
+                        data-arcgis-force-sync
+                        data-sync-default-label="{{ __('ui.arcgis_sync.button_force') }}"
+                        data-sync-url="{{ route('system.logs.sync-arcgis-layers') }}">
+                        <i class="ki-duotone ki-arrows-circle fs-2">
+                            <span class="path1"></span>
+                            <span class="path2"></span>
+                        </i>
+                        <span data-sync-label>{{ __('ui.arcgis_sync.button_force') }}</span>
+                        <span class="spinner-border spinner-border-sm d-none" data-sync-spinner aria-hidden="true"></span>
+                    </button>
+                </div>
+            @endrole
         </div>
 
         <div class="card-body pt-0">

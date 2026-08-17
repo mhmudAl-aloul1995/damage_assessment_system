@@ -92,6 +92,17 @@ return [
         'try_again' => 'حاول مجددًا',
         'yes_delete' => 'نعم، احذف',
     ],
+    'arcgis_sync' => [
+        'button' => 'مزامنة ArcGIS',
+        'button_force' => 'مزامنة ArcGIS بالقوة',
+        'running' => 'جاري المزامنة...',
+        'confirm_title' => 'تشغيل مزامنة ArcGIS بالقوة؟',
+        'confirm_text' => 'سيتم تشغيل sync:arcgis-layers --force وقد تستغرق العملية عدة دقائق.',
+        'confirm_button' => 'نعم، ابدأ المزامنة',
+        'started' => 'بدأت مزامنة ArcGIS. يرجى إبقاء الصفحة مفتوحة.',
+        'completed' => 'اكتملت مزامنة ArcGIS بنجاح.',
+        'failed' => 'فشلت مزامنة ArcGIS. يرجى مراجعة سجلات النظام.',
+    ],
     'auth' => [
         'sign_in' => 'تسجيل الدخول',
         'email' => 'البريد الإلكتروني',

@@ -92,6 +92,17 @@ return [
         'try_again' => 'Try again',
         'yes_delete' => 'Yes, delete!',
     ],
+    'arcgis_sync' => [
+        'button' => 'Sync ArcGIS',
+        'button_force' => 'Force Sync ArcGIS',
+        'running' => 'Syncing...',
+        'confirm_title' => 'Force ArcGIS sync?',
+        'confirm_text' => 'This will run sync:arcgis-layers --force and may take a few minutes.',
+        'confirm_button' => 'Yes, sync now',
+        'started' => 'ArcGIS sync is running. Please keep this page open.',
+        'completed' => 'ArcGIS sync completed successfully.',
+        'failed' => 'ArcGIS sync failed. Please check the system logs.',
+    ],
     'auth' => [
         'sign_in' => 'Sign In',
         'email' => 'Email',

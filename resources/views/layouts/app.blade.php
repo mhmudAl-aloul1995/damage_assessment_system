@@ -1087,6 +1087,36 @@
 							<!--end::Search-->
 						</div>
 
+						@if($user?->hasRole('Database Officer'))
+							<div class="app-navbar-item ms-1 ms-md-4">
+								<button type="button"
+									class="btn btn-sm btn-light-primary d-none d-md-inline-flex align-items-center gap-2"
+									data-arcgis-force-sync
+									data-sync-default-label="{{ __('ui.arcgis_sync.button') }}"
+									data-sync-url="{{ route('system.logs.sync-arcgis-layers') }}">
+									<i class="ki-duotone ki-arrows-circle fs-3">
+										<span class="path1"></span>
+										<span class="path2"></span>
+									</i>
+									<span data-sync-label>{{ __('ui.arcgis_sync.button') }}</span>
+									<span class="spinner-border spinner-border-sm d-none" data-sync-spinner aria-hidden="true"></span>
+								</button>
+
+								<button type="button"
+									class="btn btn-icon btn-light-primary d-inline-flex d-md-none w-35px h-35px"
+									data-arcgis-force-sync
+									data-sync-default-label="{{ __('ui.arcgis_sync.button') }}"
+									data-sync-url="{{ route('system.logs.sync-arcgis-layers') }}"
+									title="{{ __('ui.arcgis_sync.button_force') }}">
+									<i class="ki-duotone ki-arrows-circle fs-2">
+										<span class="path1"></span>
+										<span class="path2"></span>
+									</i>
+									<span class="spinner-border spinner-border-sm d-none" data-sync-spinner aria-hidden="true"></span>
+								</button>
+							</div>
+						@endif
+
 						<div class="app-navbar-item ms-1 ms-md-4">
 							<div class="position-relative">
 								<button type="button"
@@ -1704,6 +1734,77 @@
 					if (locale) {
 						localStorage.setItem('preferred_locale', locale);
 					}
+				});
+			});
+
+			const arcgisSyncButtons = $('[data-arcgis-force-sync]');
+			const arcgisSyncText = {
+				running: @json(__('ui.arcgis_sync.running')),
+				confirmTitle: @json(__('ui.arcgis_sync.confirm_title')),
+				confirmText: @json(__('ui.arcgis_sync.confirm_text')),
+				confirmButton: @json(__('ui.arcgis_sync.confirm_button')),
+				cancelButton: @json(__('ui.buttons.cancel')),
+				started: @json(__('ui.arcgis_sync.started')),
+				completed: @json(__('ui.arcgis_sync.completed')),
+				failed: @json(__('ui.arcgis_sync.failed')),
+			};
+
+			const setArcgisSyncLoading = (isLoading) => {
+				arcgisSyncButtons.prop('disabled', isLoading);
+				arcgisSyncButtons.find('[data-sync-spinner]').toggleClass('d-none', !isLoading);
+				arcgisSyncButtons.each(function () {
+					const currentButton = $(this);
+					const label = currentButton.data('sync-default-label') || '';
+
+					currentButton.find('[data-sync-label]').text(isLoading ? arcgisSyncText.running : label);
+				});
+			};
+
+			arcgisSyncButtons.on('click', function () {
+				const button = $(this);
+				const syncUrl = button.data('sync-url');
+
+				if (!syncUrl) {
+					return;
+				}
+
+				Swal.fire({
+					title: arcgisSyncText.confirmTitle,
+					text: arcgisSyncText.confirmText,
+					icon: 'warning',
+					showCancelButton: true,
+					confirmButtonText: arcgisSyncText.confirmButton,
+					cancelButtonText: arcgisSyncText.cancelButton,
+					customClass: {
+						confirmButton: 'btn btn-primary',
+						cancelButton: 'btn btn-light',
+					},
+					buttonsStyling: false,
+				}).then(function (result) {
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					setArcgisSyncLoading(true);
+					toastr.info(arcgisSyncText.started);
+
+					$.ajax({
+						url: syncUrl,
+						method: 'POST',
+						headers: {
+							'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+						},
+					}).done(function (response) {
+						toastr.success(response.message || arcgisSyncText.completed);
+
+						if ($.fn.DataTable && $.fn.DataTable.isDataTable('#kt_logs_table')) {
+							$('#kt_logs_table').DataTable().ajax.reload(null, false);
+						}
+					}).fail(function (xhr) {
+						toastr.error(xhr.responseJSON?.message || arcgisSyncText.failed);
+					}).always(function () {
+						setArcgisSyncLoading(false);
+					});
 				});
 			});
 
