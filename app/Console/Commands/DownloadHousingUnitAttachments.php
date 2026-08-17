@@ -89,15 +89,17 @@ class DownloadHousingUnitAttachments extends Command
         $htmlIndexPath = $outputDirectory.'/index.html';
         $resume = (bool) $this->option('resume');
         $shouldAppendIndex = $resume && File::exists($indexPath);
+        $totalObjectIdsCount = count($objectIds);
+        $alreadyProcessedCount = 0;
 
         if ($shouldAppendIndex) {
             $processedObjectIds = $this->processedObjectIdsFromCsv($indexPath);
-            $originalObjectIdsCount = count($objectIds);
             $objectIds = array_values(array_filter(
                 $objectIds,
                 fn (string $objectId): bool => ! in_array($objectId, $processedObjectIds, true)
             ));
-            $this->info('Resume: skipping '.($originalObjectIdsCount - count($objectIds)).' ObjectIDs already recorded in the existing index.');
+            $alreadyProcessedCount = $totalObjectIdsCount - count($objectIds);
+            $this->info('Resume: skipping '.$alreadyProcessedCount.' ObjectIDs already recorded in the existing index.');
 
             if ($objectIds === []) {
                 $this->info('Resume: no remaining ObjectIDs to process.');
@@ -137,7 +139,9 @@ class DownloadHousingUnitAttachments extends Command
         }
 
         $htmlRows = [];
-        $this->info('ObjectIDs: '.count($objectIds));
+        $this->info('Total ObjectIDs: '.$totalObjectIdsCount);
+        $this->info('Already processed: '.$alreadyProcessedCount);
+        $this->info('Remaining ObjectIDs: '.count($objectIds));
         $this->info($excludeDamage ? 'Mode: all attachments except damage photos' : 'Types: '.implode(', ', $types));
         $this->info($attachmentsUrlOnly ? 'Attachments: ArcGIS links only' : 'Attachments: download files');
         $this->info($includeBoqPdf ? 'BOQ PDF: '.($useBoqPdfUrl ? 'online export links' : 'local files') : 'BOQ PDF: disabled');
@@ -149,8 +153,9 @@ class DownloadHousingUnitAttachments extends Command
         $missing = 0;
         $failed = 0;
 
-        $bar = $this->output->createProgressBar(count($objectIds));
+        $bar = $this->output->createProgressBar($totalObjectIdsCount);
         $bar->start();
+        $bar->setProgress($alreadyProcessedCount);
 
         foreach ($objectIds as $objectId) {
             $boqPdfRelativePath = $includeBoqPdf

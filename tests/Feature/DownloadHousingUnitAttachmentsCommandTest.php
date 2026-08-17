@@ -281,7 +281,12 @@ it('resumes an existing export by skipping object ids already recorded in the in
             '--exclude-damage' => true,
             '--attachments-url-only' => true,
             '--resume' => true,
-        ])->assertSuccessful();
+        ])
+            ->expectsOutput('Resume: skipping 1 ObjectIDs already recorded in the existing index.')
+            ->expectsOutput('Total ObjectIDs: 2')
+            ->expectsOutput('Already processed: 1')
+            ->expectsOutput('Remaining ObjectIDs: 1')
+            ->assertSuccessful();
 
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/FeatureServer/1/18/attachments'));
 
