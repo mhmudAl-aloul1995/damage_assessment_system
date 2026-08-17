@@ -3,13 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Models\Assessment;
-use App\Models\VHousingUnitAudited;
+use App\Models\HousingUnit;
 use App\services\ArcgisService;
 use App\Support\BrowsershotConfiguration;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
@@ -21,7 +22,16 @@ use Spatie\LaravelPdf\Facades\Pdf;
 
 class DownloadHousingUnitAttachments extends Command
 {
-    private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
+    private const HOUSING_EXPORT_SOURCE_TABLE = 'housing_units + edit_assessments';
+
+    /** @var array<int, string>|null */
+    private ?array $housingUnitColumns = null;
+
+    /** @var array<int, string>|null */
+    private ?array $housingBoqColumns = null;
+
+    /** @var Collection<string, Assessment>|null */
+    private ?Collection $assessmentHints = null;
 
     /**
      * The name and signature of the console command.
@@ -34,7 +44,7 @@ class DownloadHousingUnitAttachments extends Command
         {--types=ownership,permit : Comma separated attachment types: identity,ownership,permit}
         {--exclude-damage : Download all housing unit attachments except damage photos}
         {--attachments-url-only : Add direct ArcGIS attachment links to Excel without downloading files to the server}
-        {--include-boq-pdf : Generate a local BOQ PDF from v_housing_units_audited and link it in Excel}
+        {--include-boq-pdf : Generate a local BOQ PDF from housing_units plus edit_assessments and link it in Excel}
         {--boq-pdf-url : Link to the existing online BOQ PDF export instead of generating local PDF files}
         {--limit= : Process only the first N ObjectIDs}
         {--resume : Continue an existing output by skipping ObjectIDs already recorded in attachments-index.csv}
@@ -380,7 +390,7 @@ class DownloadHousingUnitAttachments extends Command
             return '';
         }
 
-        $housingUnit = VHousingUnitAudited::query()
+        $housingUnit = HousingUnit::query()
             ->with('building:globalid,objectid')
             ->where('objectid', $objectId)
             ->first($selectColumns);
@@ -389,10 +399,9 @@ class DownloadHousingUnitAttachments extends Command
             return '';
         }
 
-        $assessmentHints = Assessment::query()
-            ->whereIn('name', $boqColumns)
-            ->get(['name', 'hint', 'label'])
-            ->keyBy('name');
+        $this->applyEditedHousingValues($housingUnit, $selectColumns);
+
+        $assessmentHints = $this->assessmentHints($boqColumns);
 
         $housing = collect([$housingUnit]);
         $boqRows = $this->housingBoqRows($housing, $boqColumns, $assessmentHints);
@@ -430,7 +439,7 @@ class DownloadHousingUnitAttachments extends Command
 
     private function boqPdfExportUrl(string $objectId): string
     {
-        $housingUnit = VHousingUnitAudited::query()
+        $housingUnit = HousingUnit::query()
             ->where('objectid', $objectId)
             ->first(['objectid', 'globalid']);
 
@@ -450,7 +459,7 @@ class DownloadHousingUnitAttachments extends Command
      */
     private function housingBoqSelectColumns(array $boqColumns): array
     {
-        $availableColumns = $this->housingAuditedColumns();
+        $availableColumns = $this->housingUnitColumns();
 
         return array_values(array_intersect(array_unique(array_merge([
             'objectid',
@@ -473,32 +482,74 @@ class DownloadHousingUnitAttachments extends Command
      */
     private function housingBoqColumns(): array
     {
-        return collect($this->housingAuditedColumns())
+        if ($this->housingBoqColumns !== null) {
+            return $this->housingBoqColumns;
+        }
+
+        $this->housingBoqColumns = collect($this->housingUnitColumns())
             ->filter(fn (string $column): bool => $this->isHousingBoqColumn($column))
             ->values()
             ->all();
+
+        return $this->housingBoqColumns;
     }
 
     /**
      * @return array<int, string>
      */
-    private function housingAuditedColumns(): array
+    private function housingUnitColumns(): array
     {
-        try {
-            $columns = Schema::getColumnListing(self::HOUSING_EXPORT_SOURCE_TABLE);
-        } catch (\Throwable) {
-            $columns = [];
-        }
-
-        if ($columns !== []) {
-            return $columns;
+        if ($this->housingUnitColumns !== null) {
+            return $this->housingUnitColumns;
         }
 
         try {
-            return Schema::getColumnListing('housing_units');
+            $this->housingUnitColumns = Schema::getColumnListing('housing_units');
         } catch (\Throwable) {
-            return [];
+            $this->housingUnitColumns = [];
         }
+
+        return $this->housingUnitColumns;
+    }
+
+    /**
+     * @param  array<int, string>  $columns
+     */
+    private function applyEditedHousingValues(HousingUnit $housingUnit, array $columns): void
+    {
+        if (! filled($housingUnit->globalid)) {
+            return;
+        }
+
+        $edits = DB::table('edit_assessments')
+            ->where('type', 'housing_table')
+            ->where('global_id', $housingUnit->globalid)
+            ->whereIn('field_name', $columns)
+            ->orderByDesc('id')
+            ->get(['field_name', 'field_value'])
+            ->unique('field_name');
+
+        foreach ($edits as $edit) {
+            $housingUnit->setAttribute((string) $edit->field_name, $edit->field_value);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $boqColumns
+     * @return Collection<string, Assessment>
+     */
+    private function assessmentHints(array $boqColumns): Collection
+    {
+        if ($this->assessmentHints !== null) {
+            return $this->assessmentHints;
+        }
+
+        $this->assessmentHints = Assessment::query()
+            ->whereIn('name', $boqColumns)
+            ->get(['name', 'hint', 'label'])
+            ->keyBy('name');
+
+        return $this->assessmentHints;
     }
 
     /**
@@ -659,7 +710,7 @@ class DownloadHousingUnitAttachments extends Command
     }
 
     /**
-     * @param  Collection<int, VHousingUnitAudited>  $housing
+     * @param  Collection<int, HousingUnit>  $housing
      * @param  array<int, string>  $boqColumns
      * @param  Collection<string, Assessment>  $assessmentHints
      * @return Collection<int, array<string, mixed>>
@@ -705,7 +756,7 @@ class DownloadHousingUnitAttachments extends Command
         return $rows->values();
     }
 
-    private function housingBoqRow(VHousingUnitAudited $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
+    private function housingBoqRow(HousingUnit $housingUnit, string $column, string $description, string $quantity, string $itemCode, string $section): array
     {
         return [
             'building_objectid' => $housingUnit->building?->objectid ?? '-',
@@ -818,7 +869,7 @@ class DownloadHousingUnitAttachments extends Command
         return 'Miscellaneous Works';
     }
 
-    private function housingUnitOwnerName(VHousingUnitAudited $housingUnit): string
+    private function housingUnitOwnerName(HousingUnit $housingUnit): string
     {
         $name = collect([
             $housingUnit->q_9_3_1_first_name,
@@ -831,7 +882,7 @@ class DownloadHousingUnitAttachments extends Command
     }
 
     /**
-     * @param  Collection<int, VHousingUnitAudited>  $housing
+     * @param  Collection<int, HousingUnit>  $housing
      * @param  Collection<int, array<string, mixed>>  $boqRows
      * @return array<string, mixed>
      */
@@ -845,7 +896,7 @@ class DownloadHousingUnitAttachments extends Command
         ];
     }
 
-    private function boqPdfFileName(VHousingUnitAudited $housingUnit): string
+    private function boqPdfFileName(HousingUnit $housingUnit): string
     {
         $ownerName = $this->safeExportFileSegment($this->housingUnitOwnerName($housingUnit)) ?? 'unit';
         $objectId = $this->safeExportFileSegment((string) ($housingUnit->objectid ?? '')) ?? (string) $housingUnit->getKey();

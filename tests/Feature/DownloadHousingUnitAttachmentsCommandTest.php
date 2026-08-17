@@ -1,12 +1,11 @@
 <?php
 
 use App\Models\Assessment;
-use Illuminate\Database\Schema\Blueprint;
+use App\Models\HousingUnit;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -445,24 +444,24 @@ it('adds ArcGIS attachment links without downloading files when requested', func
     }
 });
 
-it('adds a local BOQ PDF link generated from the audited housing units view', function () {
+it('adds a local BOQ PDF link generated from housing units with edit assessment values', function () {
     Cache::forget('arcgis_token');
     Pdf::fake();
 
-    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
-        $table->integer('objectid')->primary();
-        $table->string('globalid')->nullable();
-        $table->string('parentglobalid')->nullable();
-        $table->string('unit_owner')->nullable();
-        $table->string('dm1')->nullable();
-    });
-
-    DB::table('v_housing_units_audited')->insert([
+    HousingUnit::query()->create([
         'objectid' => 14,
         'globalid' => 'housing-unit-boq-pdf',
         'unit_owner' => 'BOQ Owner',
-        'dm1' => '4',
+        'dm1' => '1',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        'global_id' => 'housing-unit-boq-pdf',
+        'type' => 'housing_table',
+        'field_name' => 'dm1',
+        'field_value' => '4',
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     Assessment::query()->create([
@@ -507,6 +506,12 @@ it('adds a local BOQ PDF link generated from the audited housing units view', fu
         expect($sheet->getCell('B2')->getValue())->toBe('فتح جدول الكميات');
         expect($sheet->getCell('B2')->getHyperlink()->getUrl())->toBe('boq_pdfs/boq-BOQ-Owner-14.pdf');
 
+        Pdf::assertSaved(function ($pdf): bool {
+            return $pdf->contains('BOQ Owner')
+                && $pdf->contains('4')
+                && ! $pdf->contains('v_housing_units_audited');
+        });
+
         $spreadsheet->disconnectWorksheets();
     } finally {
         File::delete($inputPath);
@@ -518,13 +523,7 @@ it('adds a local BOQ PDF link generated from the audited housing units view', fu
 it('adds an online BOQ PDF export link without generating local PDF files', function () {
     Cache::forget('arcgis_token');
 
-    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
-        $table->integer('objectid')->primary();
-        $table->string('globalid')->nullable();
-    });
-
-    DB::table('v_housing_units_audited')->insert([
+    HousingUnit::query()->create([
         'objectid' => 15,
         'globalid' => 'housing-unit-online-boq-pdf',
     ]);
