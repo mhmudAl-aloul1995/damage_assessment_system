@@ -662,16 +662,190 @@ it('uploads only records edited on or after the changed since date', function ()
         },
     ]);
 
-    $this->artisan('arcgis:upload-audited', [
-        '--changed-since' => '2026-07-28',
-        '--without-attachments' => true,
-    ])->assertSuccessful();
+    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(
+        withoutAttachments: true,
+        changedSince: \Carbon\CarbonImmutable::parse('2026-07-28'),
+    );
 
     expect($buildingUploads)->toBe(2);
     expect($unitUploads)->toBe(2);
+    expect($summary['buildings_to_sync'])->toBe(2);
+    expect($summary['units_to_sync'])->toBe(2);
 
     Http::assertNotSent(fn ($request): bool => str_contains((string) $request->body(), 'unit-under-edited-building-without-own-edit'));
     Http::assertNotSent(fn ($request): bool => str_contains((string) $request->body(), 'building-before-boundary'));
+});
+
+it('partially updates existing target features from audit edits and still copies new attachments', function () {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('building_damage_status')->nullable();
+        $table->string('municipalitie')->nullable();
+        $table->dateTime('editdate')->nullable();
+    });
+
+    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+        $table->integer('objectid')->primary();
+        $table->string('globalid')->nullable();
+        $table->string('parentglobalid')->nullable();
+        $table->string('unit_damage_status')->nullable();
+        $table->string('housing_unit_number')->nullable();
+        $table->dateTime('editdate')->nullable();
+    });
+
+    DB::table('v_buildings_audited')->insert([
+        'objectid' => 700,
+        'globalid' => 'existing-building-audit-only',
+        'building_damage_status' => 'major',
+        'municipalitie' => 'Should Not Be Sent',
+        'editdate' => '2026-07-27 10:00:00',
+    ]);
+
+    DB::table('v_housing_units_audited')->insert([
+        'objectid' => 800,
+        'globalid' => 'existing-unit-audit-only',
+        'parentglobalid' => 'existing-building-audit-only',
+        'unit_damage_status' => 'minor',
+        'housing_unit_number' => 'Should Not Be Sent',
+        'editdate' => '2026-07-27 10:00:00',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        [
+            'global_id' => 'existing-building-audit-only',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'major',
+            'created_at' => '2026-07-28 08:00:00',
+            'updated_at' => '2026-07-28 08:00:00',
+        ],
+        [
+            'global_id' => 'existing-unit-audit-only',
+            'type' => 'housing_table',
+            'field_name' => 'unit_damage_status',
+            'field_value' => 'minor',
+            'created_at' => '2026-07-28 09:00:00',
+            'updated_at' => '2026-07-28 09:00:00',
+        ],
+    ]);
+
+    $buildingUpdateRequests = 0;
+    $unitUpdateRequests = 0;
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'building_damage_status'],
+                ['name' => 'municipalitie'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'unit_damage_status'],
+                ['name' => 'housing_unit_number'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['objectid' => 9700]],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['objectid' => 9800]],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures' => function ($request) use (&$buildingUpdateRequests) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toBe([
+                'building_damage_status' => 'major',
+                'objectid' => 9700,
+            ]);
+
+            $buildingUpdateRequests++;
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9700],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/updateFeatures' => function ($request) use (&$unitUpdateRequests) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toBe([
+                'unit_damage_status' => 'minor',
+                'objectid' => 9800,
+            ]);
+
+            $unitUpdateRequests++;
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9800],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9700/attachments*' => Http::response(['attachmentInfos' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9800/attachments*' => Http::response(['attachmentInfos' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/700/attachments?*' => Http::response([
+            'attachmentInfos' => [
+                ['id' => 1701, 'name' => 'new-building-photo.jpg', 'size' => 7],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/800/attachments?*' => Http::response([
+            'attachmentInfos' => [
+                ['id' => 1801, 'name' => 'new-unit-photo.jpg', 'size' => 8],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/700/attachments/1701*' => Http::response('building-image'),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/800/attachments/1801*' => Http::response('unit-image'),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9700/addAttachment*' => Http::response([
+            'addAttachmentResult' => ['success' => true],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/9800/addAttachment*' => Http::response([
+            'addAttachmentResult' => ['success' => true],
+        ]),
+    ]);
+
+    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(
+        changedSince: \Carbon\CarbonImmutable::parse('2026-07-28'),
+    );
+
+    expect($buildingUpdateRequests)->toBe(1);
+    expect($unitUpdateRequests)->toBe(1);
+    expect($summary['features_partially_updated'])->toBe(2);
+    expect($summary['attachments_uploaded'])->toBe(2);
+
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addFeatures'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'SOURCE/FeatureServer/10/query'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'SOURCE/FeatureServer/11/query'));
 });
 
 it('uses building old global id when the target layer does not have building old objectid', function () {

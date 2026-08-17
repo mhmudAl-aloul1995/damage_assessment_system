@@ -9,11 +9,13 @@ use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use App\Models\VBuildingAudited;
 use App\Models\VHousingUnitAudited;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -72,18 +74,39 @@ class ArcgisAuditedUploadService
             $summary['buildings_limit'] = $buildingsLimit;
         }
 
-        $buildingGlobalIds = [];
+        $buildingGlobalIds = $buildingsLimit === null
+            ? []
+            : (clone $buildingQuery)
+                ->pluck('globalid')
+                ->filter(fn (mixed $globalId): bool => is_string($globalId) && $globalId !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+        $unitQuery = VHousingUnitAudited::query()
+            ->when($changedSince !== null, function (Builder $query) use ($changedSince): void {
+                $query->where(function (Builder $changedQuery) use ($changedSince): void {
+                    $changedQuery
+                        ->where('editdate', '>=', $changedSince)
+                        ->orWhereIn('globalid', $this->editedGlobalIdsQuery('housing_table', $changedSince));
+                });
+            })
+            ->when($changedSince === null && $buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
+                $query->whereIn('parentglobalid', $buildingGlobalIds);
+            })
+            ->orderBy('objectid');
+
+        $summary['buildings_to_sync'] = $this->candidateCount($buildingQuery);
+        $summary['units_to_sync'] = $this->candidateCount($unitQuery);
+
+        echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
+        echo 'Units to sync: '.$summary['units_to_sync']."\n";
 
         foreach ($buildingQuery->cursor() as $building) {
             try {
                 echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
-                $this->uploadBuilding($building, $summary, ! $withoutAttachments, $attachmentsOnly);
-                $buildingGlobalId = $building->getAttribute('globalid');
-
-                if (is_string($buildingGlobalId) && $buildingGlobalId !== '') {
-                    $buildingGlobalIds[] = $buildingGlobalId;
-                }
+                $this->uploadBuilding($building, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
 
                 echo "Building uploaded/copied successfully.\n";
             } catch (Throwable $exception) {
@@ -101,24 +124,11 @@ class ArcgisAuditedUploadService
 
         echo "Uploading housing units...\n";
 
-        $unitQuery = VHousingUnitAudited::query()
-            ->when($changedSince !== null, function (Builder $query) use ($changedSince): void {
-                $query->where(function (Builder $changedQuery) use ($changedSince): void {
-                    $changedQuery
-                        ->where('editdate', '>=', $changedSince)
-                        ->orWhereIn('globalid', $this->editedGlobalIdsQuery('housing_table', $changedSince));
-                });
-            })
-            ->when($changedSince === null && $buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
-                $query->whereIn('parentglobalid', array_values(array_unique($buildingGlobalIds)));
-            })
-            ->orderBy('objectid');
-
         foreach ($unitQuery->cursor() as $unit) {
             try {
                 echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
-                $this->uploadUnit($unit, $summary, ! $withoutAttachments, $attachmentsOnly);
+                $this->uploadUnit($unit, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
 
                 echo "Unit uploaded/copied successfully.\n";
             } catch (Throwable $exception) {
@@ -144,6 +154,55 @@ class ArcgisAuditedUploadService
             ->where('type', $type)
             ->where('updated_at', '>=', $changedSince)
             ->distinct();
+    }
+
+    private function candidateCount(Builder $query): int
+    {
+        return (int) DB::query()
+            ->fromSub((clone $query)->toBase(), 'sync_candidates')
+            ->count();
+    }
+
+    private function partialAuditFieldNames(
+        string $type,
+        mixed $globalId,
+        VBuildingAudited|VHousingUnitAudited $auditedRecord,
+        ?CarbonInterface $changedSince
+    ): array {
+        if ($changedSince === null || ! is_string($globalId) || $globalId === '') {
+            return [];
+        }
+
+        if ($this->recordEditdateIsOnOrAfter($auditedRecord, $changedSince)) {
+            return [];
+        }
+
+        return EditAssessment::query()
+            ->where('type', $type)
+            ->where('global_id', $globalId)
+            ->where('updated_at', '>=', $changedSince)
+            ->distinct()
+            ->pluck('field_name')
+            ->filter(fn (mixed $fieldName): bool => is_string($fieldName) && $fieldName !== '')
+            ->values()
+            ->all();
+    }
+
+    private function recordEditdateIsOnOrAfter(
+        VBuildingAudited|VHousingUnitAudited $auditedRecord,
+        CarbonInterface $changedSince
+    ): bool {
+        $editdate = $auditedRecord->getAttribute('editdate');
+
+        if ($editdate === null || $editdate === '') {
+            return false;
+        }
+
+        try {
+            return CarbonImmutable::parse($editdate)->greaterThanOrEqualTo($changedSince);
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     public function generateToken(): string
@@ -175,9 +234,7 @@ class ArcgisAuditedUploadService
 
     public function buildingFeature(VBuildingAudited $building, string $token): array
     {
-        $attributes = collect($building->getAttributes())
-            ->except(['objectid', 'OBJECTID', 'globalid', 'GlobalID', 'GLOBALID', 'shape', 'created_at', 'updated_at'])
-            ->toArray();
+        $attributes = $this->auditedAttributes($building->getAttributes());
 
         $attributes['old_objectid_B'] = $building->objectid;
         $attributes['old_global_id_B'] = $building->getAttribute('globalid');
@@ -201,9 +258,7 @@ class ArcgisAuditedUploadService
 
     public function unitFeature(VHousingUnitAudited $unit, string $token): array
     {
-        $attributes = collect($unit->getAttributes())
-            ->except(['objectid', 'OBJECTID', 'globalid', 'GlobalID', 'GLOBALID', 'shape', 'created_at', 'updated_at'])
-            ->toArray();
+        $attributes = $this->auditedAttributes($unit->getAttributes());
 
         $attributes['old_objectid_U'] = $unit->objectid;
         $attributes['old_global_id_U'] = $unit->getAttribute('globalid');
@@ -230,6 +285,48 @@ class ArcgisAuditedUploadService
         }
 
         return $feature;
+    }
+
+    private function buildingPartialFeature(VBuildingAudited $building, array $fieldNames): array
+    {
+        $attributes = $this->auditedAttributes($building->getAttributes(), $fieldNames);
+        $attributes = $this->moveCommentsRecommendations($attributes);
+
+        return ['attributes' => $attributes];
+    }
+
+    private function unitPartialFeature(VHousingUnitAudited $unit, array $fieldNames, string $token): array
+    {
+        $attributes = $this->auditedAttributes($unit->getAttributes(), $fieldNames);
+        $attributes = $this->moveCommentsRecommendations($attributes);
+
+        if (array_key_exists('parentglobalid', array_change_key_case(array_flip($fieldNames), CASE_LOWER))) {
+            $parentGlobalId = $unit->getAttribute('parentglobalid');
+
+            if (is_string($parentGlobalId) && $parentGlobalId !== '') {
+                $attributes['parentglobalid'] = $this->targetBuildingGlobalId($parentGlobalId, $token);
+            }
+        }
+
+        return ['attributes' => $attributes];
+    }
+
+    private function auditedAttributes(array $attributes, array $onlyFields = []): array
+    {
+        $attributes = collect($attributes)
+            ->except(['objectid', 'OBJECTID', 'globalid', 'GlobalID', 'GLOBALID', 'shape', 'created_at', 'updated_at']);
+
+        if ($onlyFields !== []) {
+            $allowedFields = collect($onlyFields)
+                ->mapWithKeys(fn (string $field): array => [strtolower($field) => true])
+                ->all();
+
+            $attributes = $attributes->filter(
+                fn (mixed $value, string $field): bool => array_key_exists(strtolower($field), $allowedFields)
+            );
+        }
+
+        return $attributes->toArray();
     }
 
     private function applyUnitAttributes(array $attributes, VHousingUnitAudited $unit): array
@@ -283,6 +380,7 @@ class ArcgisAuditedUploadService
         array &$summary,
         bool $copyAttachments,
         bool $attachmentsOnly,
+        ?CarbonInterface $changedSince,
     ): void {
         $targetLayerId = $this->layerId('target_buildings_layer');
         $sourceLayerId = $this->layerId('source_buildings_layer');
@@ -311,16 +409,24 @@ class ArcgisAuditedUploadService
             $summary['buildings_uploaded']++;
         } elseif (! $attachmentsOnly) {
             echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
-            echo "Updating building feature...\n";
+
+            $partialFieldNames = $this->partialAuditFieldNames('building_table', $building->getAttribute('globalid'), $building, $changedSince);
+
+            echo $partialFieldNames === []
+                ? "Updating building feature...\n"
+                : 'Updating building audit fields: '.implode(', ', $partialFieldNames)."\n";
 
             $this->updateFeature(
                 $targetLayerId,
                 $targetObjectId,
                 $targetFeature['object_id_field'],
-                fn (string $token): array => $this->buildingFeature($building, $token),
+                $partialFieldNames === []
+                    ? fn (string $token): array => $this->buildingFeature($building, $token)
+                    : fn (string $token): array => $this->buildingPartialFeature($building, $partialFieldNames),
             );
 
             $summary['buildings_updated']++;
+            $summary['features_partially_updated'] += $partialFieldNames === [] ? 0 : 1;
         } else {
             echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
         }
@@ -350,6 +456,7 @@ class ArcgisAuditedUploadService
         array &$summary,
         bool $copyAttachments,
         bool $attachmentsOnly,
+        ?CarbonInterface $changedSince,
     ): void {
         $targetLayerId = $this->layerId('target_units_layer');
         $sourceLayerId = $this->layerId('source_units_layer');
@@ -382,16 +489,24 @@ class ArcgisAuditedUploadService
         } elseif (! $attachmentsOnly) {
 
             echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
-            echo "Updating unit feature...\n";
+
+            $partialFieldNames = $this->partialAuditFieldNames('housing_table', $unit->getAttribute('globalid'), $unit, $changedSince);
+
+            echo $partialFieldNames === []
+                ? "Updating unit feature...\n"
+                : 'Updating unit audit fields: '.implode(', ', $partialFieldNames)."\n";
 
             $this->updateFeature(
                 $targetLayerId,
                 $targetObjectId,
                 $targetFeature['object_id_field'],
-                fn (string $token): array => $this->unitFeature($unit, $token),
+                $partialFieldNames === []
+                    ? fn (string $token): array => $this->unitFeature($unit, $token)
+                    : fn (string $token): array => $this->unitPartialFeature($unit, $partialFieldNames, $token),
             );
 
             $summary['units_updated']++;
+            $summary['features_partially_updated'] += $partialFieldNames === [] ? 0 : 1;
         } else {
             echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
         }
@@ -989,6 +1104,7 @@ class ArcgisAuditedUploadService
             'attachments_uploaded' => 0,
             'attachments_skipped' => 0,
             'features_skipped' => 0,
+            'features_partially_updated' => 0,
             'errors' => 0,
         ];
     }
