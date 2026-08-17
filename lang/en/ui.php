@@ -99,7 +99,7 @@ return [
         'confirm_title' => 'Force ArcGIS sync?',
         'confirm_text' => 'This will run sync:arcgis-layers --force and may take a few minutes.',
         'confirm_button' => 'Yes, sync now',
-        'started' => 'ArcGIS sync is running. Please keep this page open.',
+        'started' => 'ArcGIS sync has started. You can follow progress in the system logs.',
         'completed' => 'ArcGIS sync completed successfully.',
         'failed' => 'ArcGIS sync failed. Please check the system logs.',
     ],

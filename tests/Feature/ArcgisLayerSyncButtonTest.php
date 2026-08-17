@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Process;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -42,32 +42,38 @@ it('blocks ArcGIS force sync for users without the database officer role', funct
 
     $user->givePermissionTo($permission);
 
-    Artisan::shouldReceive('call')->never();
+    Process::fake();
 
     $this->actingAs($user)
         ->postJson(route('system.logs.sync-arcgis-layers'))
         ->assertForbidden();
+
+    Process::assertNothingRan();
 });
 
-it('runs sync arcgis layers with force for database officers', function (): void {
+it('starts sync arcgis layers with force in the background for database officers', function (): void {
     $user = User::factory()->create();
     $databaseOfficer = Role::findOrCreate('Database Officer', 'web');
 
     $user->assignRole($databaseOfficer);
 
-    Artisan::shouldReceive('call')
-        ->once()
-        ->with('sync:arcgis-layers', ['--force' => true])
-        ->andReturn(0);
-
-    Artisan::shouldReceive('output')
-        ->once()
-        ->andReturn('Sync finished.');
+    Process::fake([
+        '*' => Process::result(),
+    ]);
 
     $this->actingAs($user)
         ->postJson(route('system.logs.sync-arcgis-layers'))
-        ->assertOk()
+        ->assertAccepted()
         ->assertJson([
-            'message' => __('ui.arcgis_sync.completed'),
+            'message' => __('ui.arcgis_sync.started'),
         ]);
+
+    Process::assertRan(function ($process): bool {
+        $command = is_array($process->command)
+            ? implode(' ', $process->command)
+            : $process->command;
+
+        return str_contains($command, 'sync:arcgis-layers')
+            && str_contains($command, '--force');
+    });
 });
