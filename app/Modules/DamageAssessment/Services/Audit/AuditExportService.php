@@ -14,7 +14,11 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AuditExportService
 {
-    private const ACCEPTED_BUILDING_STATUS = 'final_approval';
+    private const ACCEPTED_BUILDING_STATUS_NAMES = [
+        'accepted_by_engineer',
+        'accepted_by_lawyer',
+        'final_approval',
+    ];
 
     private const UNEVALUATED_UNIT_STATUS_NAMES = [
         'assigned_to_engineer',
@@ -329,7 +333,7 @@ class AuditExportService
                     ->from('building_statuses as accepted_building_statuses')
                     ->join('assessment_statuses as accepted_statuses', 'accepted_building_statuses.status_id', '=', 'accepted_statuses.id')
                     ->whereColumn('accepted_building_statuses.building_id', 'buildings.objectid')
-                    ->where(DB::raw('LOWER(TRIM(accepted_statuses.name))'), self::ACCEPTED_BUILDING_STATUS);
+                    ->whereIn(DB::raw('LOWER(TRIM(accepted_statuses.name))'), self::ACCEPTED_BUILDING_STATUS_NAMES);
             })
             ->whereExists(function ($unitQuery): void {
                 $unitQuery->selectRaw('1')

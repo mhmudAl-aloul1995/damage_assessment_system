@@ -332,12 +332,28 @@ it('filters accepted buildings that contain unevaluated housing units', function
         'order_step' => 1,
     ]);
 
+    $acceptedByEngineerStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'مقبول هندسيا',
+        'stage' => 'engineer',
+        'order_step' => 2,
+    ]);
+
+    $acceptedByLawyerStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_lawyer',
+        'label_en' => 'Accepted By Lawyer',
+        'label_ar' => 'مقبول قانونيا',
+        'stage' => 'lawyer',
+        'order_step' => 3,
+    ]);
+
     $needReviewStatus = AssessmentStatus::query()->create([
         'name' => 'need_review',
         'label_en' => 'Need Review',
         'label_ar' => 'بحاجة مراجعة',
         'stage' => 'engineer',
-        'order_step' => 2,
+        'order_step' => 4,
     ]);
 
     $assignedStatus = AssessmentStatus::query()->create([
@@ -345,15 +361,7 @@ it('filters accepted buildings that contain unevaluated housing units', function
         'label_en' => 'Assigned To Lawyer',
         'label_ar' => 'محول للمحامي',
         'stage' => 'lawyer',
-        'order_step' => 3,
-    ]);
-
-    $acceptedUnitStatus = AssessmentStatus::query()->create([
-        'name' => 'accepted_by_engineer',
-        'label_en' => 'Accepted By Engineer',
-        'label_ar' => 'مقبول هندسيا',
-        'stage' => 'engineer',
-        'order_step' => 4,
+        'order_step' => 5,
     ]);
 
     $acceptedWithPendingUnit = Building::query()->create([
@@ -384,8 +392,22 @@ it('filters accepted buildings that contain unevaluated housing units', function
         'field_status' => 'COMPLETED',
     ]);
 
-    $notAcceptedWithReviewUnit = Building::query()->create([
+    $engineerAcceptedWithPendingUnit = Building::query()->create([
         'objectid' => 7405,
+        'globalid' => 'engineer-accepted-building-with-pending-unit',
+        'building_name' => 'Engineer Accepted With Pending Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $lawyerAcceptedWithReviewUnit = Building::query()->create([
+        'objectid' => 7406,
+        'globalid' => 'lawyer-accepted-building-with-review-unit',
+        'building_name' => 'Lawyer Accepted With Review Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $notAcceptedWithReviewUnit = Building::query()->create([
+        'objectid' => 7407,
         'globalid' => 'not-accepted-building-with-review-unit',
         'building_name' => 'Not Accepted With Review Unit',
         'field_status' => 'COMPLETED',
@@ -399,6 +421,20 @@ it('filters accepted buildings that contain unevaluated housing units', function
             'type' => 'Team Leader',
         ]);
     }
+
+    BuildingStatus::query()->create([
+        'building_id' => $engineerAcceptedWithPendingUnit->objectid,
+        'status_id' => $acceptedByEngineerStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    BuildingStatus::query()->create([
+        'building_id' => $lawyerAcceptedWithReviewUnit->objectid,
+        'status_id' => $acceptedByLawyerStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
+    ]);
 
     HousingUnit::query()->create([
         'objectid' => 8401,
@@ -424,8 +460,20 @@ it('filters accepted buildings that contain unevaluated housing units', function
         'parentglobalid' => $acceptedWithAcceptedUnit->globalid,
     ]);
 
-    $notAcceptedReviewUnit = HousingUnit::query()->create([
+    HousingUnit::query()->create([
         'objectid' => 8405,
+        'globalid' => 'engineer-accepted-pending-unit',
+        'parentglobalid' => $engineerAcceptedWithPendingUnit->globalid,
+    ]);
+
+    $lawyerAcceptedReviewUnit = HousingUnit::query()->create([
+        'objectid' => 8406,
+        'globalid' => 'lawyer-accepted-review-unit',
+        'parentglobalid' => $lawyerAcceptedWithReviewUnit->globalid,
+    ]);
+
+    $notAcceptedReviewUnit = HousingUnit::query()->create([
+        'objectid' => 8407,
         'globalid' => 'not-accepted-review-unit',
         'parentglobalid' => $notAcceptedWithReviewUnit->globalid,
     ]);
@@ -446,7 +494,14 @@ it('filters accepted buildings that contain unevaluated housing units', function
 
     HousingStatus::query()->create([
         'housing_id' => $acceptedUnit->objectid,
-        'status_id' => $acceptedUnitStatus->id,
+        'status_id' => $acceptedByEngineerStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $lawyerAcceptedReviewUnit->objectid,
+        'status_id' => $needReviewStatus->id,
         'user_id' => $user->id,
         'type' => 'QC/QA Engineer',
     ]);
@@ -483,6 +538,12 @@ it('filters accepted buildings that contain unevaluated housing units', function
         ])
         ->assertJsonFragment([
             'globalid' => $acceptedWithAssignedUnit->globalid,
+        ])
+        ->assertJsonFragment([
+            'globalid' => $engineerAcceptedWithPendingUnit->globalid,
+        ])
+        ->assertJsonFragment([
+            'globalid' => $lawyerAcceptedWithReviewUnit->globalid,
         ])
         ->assertJsonMissing([
             'globalid' => $acceptedWithAcceptedUnit->globalid,
