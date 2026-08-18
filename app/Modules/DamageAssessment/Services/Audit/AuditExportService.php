@@ -14,6 +14,14 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AuditExportService
 {
+    private const ACCEPTED_BUILDING_STATUS = 'final_approval';
+
+    private const UNEVALUATED_UNIT_STATUS_NAMES = [
+        'assigned_to_engineer',
+        'assigned_to_lawyer',
+        'need_review',
+    ];
+
     public function export(AuditExportRequest $request): BinaryFileResponse
     {
         $buildingColumns = $this->selectedColumns(
@@ -185,6 +193,10 @@ class AuditExportService
         $this->applyStatusValuesFilter($query, 'engineerStatus', $this->filterValues($request, 'eng_status', $statusMap));
         $this->applyStatusValuesFilter($query, 'lawyerStatus', $this->filterValues($request, 'legal_status', $statusMap));
 
+        if ($request->boolean('accepted_with_unevaluated_units')) {
+            $this->applyAcceptedWithUnevaluatedUnitsFilter($query);
+        }
+
         $damageStatuses = $this->filterValues($request, 'damage_status');
         if ($damageStatuses !== []) {
             $query->whereIn('building_damage_status', $damageStatuses);
@@ -307,6 +319,38 @@ class AuditExportService
                 $statusQuery->whereNotNull('notes')->where('notes', '<>', '');
             });
         }
+    }
+
+    private function applyAcceptedWithUnevaluatedUnitsFilter(Builder $query): void
+    {
+        $query
+            ->whereExists(function ($statusQuery): void {
+                $statusQuery->selectRaw('1')
+                    ->from('building_statuses as accepted_building_statuses')
+                    ->join('assessment_statuses as accepted_statuses', 'accepted_building_statuses.status_id', '=', 'accepted_statuses.id')
+                    ->whereColumn('accepted_building_statuses.building_id', 'buildings.objectid')
+                    ->where(DB::raw('LOWER(TRIM(accepted_statuses.name))'), self::ACCEPTED_BUILDING_STATUS);
+            })
+            ->whereExists(function ($unitQuery): void {
+                $unitQuery->selectRaw('1')
+                    ->from('housing_units as unevaluated_units')
+                    ->whereColumn('unevaluated_units.parentglobalid', 'buildings.globalid')
+                    ->where(function ($unitStatusQuery): void {
+                        $unitStatusQuery
+                            ->whereNotExists(function ($housingStatusQuery): void {
+                                $housingStatusQuery->selectRaw('1')
+                                    ->from('housing_statuses as any_housing_status')
+                                    ->whereColumn('any_housing_status.housing_id', 'unevaluated_units.objectid');
+                            })
+                            ->orWhereExists(function ($housingStatusQuery): void {
+                                $housingStatusQuery->selectRaw('1')
+                                    ->from('housing_statuses as unevaluated_housing_statuses')
+                                    ->join('assessment_statuses as unevaluated_statuses', 'unevaluated_housing_statuses.status_id', '=', 'unevaluated_statuses.id')
+                                    ->whereColumn('unevaluated_housing_statuses.housing_id', 'unevaluated_units.objectid')
+                                    ->whereIn(DB::raw('LOWER(TRIM(unevaluated_statuses.name))'), self::UNEVALUATED_UNIT_STATUS_NAMES);
+                            });
+                    });
+            });
     }
 
     /**

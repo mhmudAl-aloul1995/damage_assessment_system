@@ -394,12 +394,13 @@
 						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
 						</button>
-						<button type="button" id="toggle_danger_rows" class="btn btn-light-danger btn-sm"
-							data-show-only-danger="false">
-
-							إظهار الصفوف الخطرة
+						@if(! $isFieldEngineerAudit)
+						<button type="button" id="toggle_accepted_with_unevaluated_units" class="btn btn-light-danger btn-sm"
+							data-filter-active="false">
+							مقبول وبداخله وحدات غير مقيمة
 							<i class="ki-duotone ki-information-5"></i>
 						</button>
+						@endif
 						@if(! $isFieldEngineerAudit && ! $hideAuditManagementActions)
 						<button type="button" id="toggle_select_column" class="btn btn-light-primary btn-sm"
 							data-select-visible="false">
@@ -969,7 +970,7 @@
 		$(document).ready(function () {
 
 
-			let showOnlyDangerRows = false;
+			let acceptedWithUnevaluatedUnits = false;
 			let housingUnitAttachmentUnits = [];
 			const buildingAttachmentRoutes = {
 				index: @json(route('audit.building.attachments.index', ['building' => '__BUILDING__'])),
@@ -1657,6 +1658,7 @@
 					field_engineer: $('#filter_field_engineer').val(),
 					damage_status: $('#filter_damage_status').val(),
 					legal_challenge: $('#filter_legal_challenge').val(),
+					accepted_with_unevaluated_units: acceptedWithUnevaluatedUnits ? 1 : '',
 					filter_from_date: $('#filter_from_date').val(),
 					filter_to_date: $('#filter_to_date').val(),
 					status_from_date: $('#filter_status_from_date').val(),
@@ -2150,61 +2152,26 @@
 				});
 			});
 
-			$('#toggle_danger_rows').on('click', function () {
+			const renderAcceptedWithUnevaluatedUnitsButton = function () {
+				const button = $('#toggle_accepted_with_unevaluated_units');
 
-				const button = $(this);
-
-				showOnlyDangerRows = !showOnlyDangerRows;
-
-				$('#kt_datatable_audits tbody tr').each(function () {
-
-					const isDanger = $(this).hasClass('table-danger');
-
-					if (showOnlyDangerRows) {
-
-						if (isDanger) {
-							$(this).show();
-						} else {
-							$(this).hide();
-						}
-
-					} else {
-
-						$(this).show();
-
-					}
-				});
-
-				button.attr(
-					'data-show-only-danger',
-					showOnlyDangerRows ? 'true' : 'false'
-				);
-
-				button
-					.toggleClass('btn-light-danger btn-danger');
-
-				button.html(
-					showOnlyDangerRows
-						? 'إظهار الكل <i class="ki-duotone ki-eye"></i>'
-						: 'إظهار الصفوف الخطرة <i class="ki-duotone ki-information-5"></i>'
-				);
-			});
-			table.on('draw', function () {
-
-				if (!showOnlyDangerRows) {
+				if (!button.length) {
 					return;
 				}
 
-				$('#kt_datatable_audits tbody tr').each(function () {
+				button.attr('data-filter-active', acceptedWithUnevaluatedUnits ? 'true' : 'false');
+				button.toggleClass('btn-light-danger btn-danger', acceptedWithUnevaluatedUnits);
+				button.html(
+					acceptedWithUnevaluatedUnits
+						? 'إظهار الكل <i class="ki-duotone ki-eye"></i>'
+						: 'مقبول وبداخله وحدات غير مقيمة <i class="ki-duotone ki-information-5"></i>'
+				);
+			};
 
-					const isDanger = $(this).hasClass('table-danger');
-
-					if (isDanger) {
-						$(this).show();
-					} else {
-						$(this).hide();
-					}
-				});
+			$('#toggle_accepted_with_unevaluated_units').on('click', function () {
+				acceptedWithUnevaluatedUnits = !acceptedWithUnevaluatedUnits;
+				renderAcceptedWithUnevaluatedUnitsButton();
+				table.ajax.reload(null, true);
 			});
 			$('#toggle_select_column').on('click', function () {
 				const button = $(this);
@@ -2259,6 +2226,8 @@
 							$('#filter_final_status').val(null).trigger('change');
 							$('#filter_area').val(''); */
 				isResettingFilters = true;
+				acceptedWithUnevaluatedUnits = false;
+				renderAcceptedWithUnevaluatedUnitsButton();
 				$('select').val(null).trigger('change');
 				$('input').val('');
 				$('#filter_field_status').val('COMPLETED').trigger('change');

@@ -299,6 +299,202 @@ it('includes the housing units status progress in the audit table response', fun
     DB::purge('mysql');
 });
 
+it('filters accepted buildings that contain unevaluated housing units', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    config()->set('database.default', 'mysql');
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    Http::fake([
+        '*' => Http::response(['token' => 'fake-token']),
+    ]);
+
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $finalStatus = AssessmentStatus::query()->create([
+        'name' => 'final_approval',
+        'label_en' => 'Final Approval',
+        'label_ar' => 'مقبول',
+        'stage' => 'team_leader',
+        'order_step' => 1,
+    ]);
+
+    $needReviewStatus = AssessmentStatus::query()->create([
+        'name' => 'need_review',
+        'label_en' => 'Need Review',
+        'label_ar' => 'بحاجة مراجعة',
+        'stage' => 'engineer',
+        'order_step' => 2,
+    ]);
+
+    $assignedStatus = AssessmentStatus::query()->create([
+        'name' => 'assigned_to_lawyer',
+        'label_en' => 'Assigned To Lawyer',
+        'label_ar' => 'محول للمحامي',
+        'stage' => 'lawyer',
+        'order_step' => 3,
+    ]);
+
+    $acceptedUnitStatus = AssessmentStatus::query()->create([
+        'name' => 'accepted_by_engineer',
+        'label_en' => 'Accepted By Engineer',
+        'label_ar' => 'مقبول هندسيا',
+        'stage' => 'engineer',
+        'order_step' => 4,
+    ]);
+
+    $acceptedWithPendingUnit = Building::query()->create([
+        'objectid' => 7401,
+        'globalid' => 'accepted-building-with-pending-unit',
+        'building_name' => 'Accepted With Pending Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $acceptedWithReviewUnit = Building::query()->create([
+        'objectid' => 7402,
+        'globalid' => 'accepted-building-with-review-unit',
+        'building_name' => 'Accepted With Review Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $acceptedWithAssignedUnit = Building::query()->create([
+        'objectid' => 7403,
+        'globalid' => 'accepted-building-with-assigned-unit',
+        'building_name' => 'Accepted With Assigned Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $acceptedWithAcceptedUnit = Building::query()->create([
+        'objectid' => 7404,
+        'globalid' => 'accepted-building-with-accepted-unit',
+        'building_name' => 'Accepted With Accepted Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $notAcceptedWithReviewUnit = Building::query()->create([
+        'objectid' => 7405,
+        'globalid' => 'not-accepted-building-with-review-unit',
+        'building_name' => 'Not Accepted With Review Unit',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    foreach ([$acceptedWithPendingUnit, $acceptedWithReviewUnit, $acceptedWithAssignedUnit, $acceptedWithAcceptedUnit] as $building) {
+        BuildingStatus::query()->create([
+            'building_id' => $building->objectid,
+            'status_id' => $finalStatus->id,
+            'user_id' => $user->id,
+            'type' => 'Team Leader',
+        ]);
+    }
+
+    HousingUnit::query()->create([
+        'objectid' => 8401,
+        'globalid' => 'pending-unit',
+        'parentglobalid' => $acceptedWithPendingUnit->globalid,
+    ]);
+
+    $reviewUnit = HousingUnit::query()->create([
+        'objectid' => 8402,
+        'globalid' => 'review-unit',
+        'parentglobalid' => $acceptedWithReviewUnit->globalid,
+    ]);
+
+    $assignedUnit = HousingUnit::query()->create([
+        'objectid' => 8403,
+        'globalid' => 'assigned-unit',
+        'parentglobalid' => $acceptedWithAssignedUnit->globalid,
+    ]);
+
+    $acceptedUnit = HousingUnit::query()->create([
+        'objectid' => 8404,
+        'globalid' => 'accepted-unit',
+        'parentglobalid' => $acceptedWithAcceptedUnit->globalid,
+    ]);
+
+    $notAcceptedReviewUnit = HousingUnit::query()->create([
+        'objectid' => 8405,
+        'globalid' => 'not-accepted-review-unit',
+        'parentglobalid' => $notAcceptedWithReviewUnit->globalid,
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $reviewUnit->objectid,
+        'status_id' => $needReviewStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $assignedUnit->objectid,
+        'status_id' => $assignedStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $acceptedUnit->objectid,
+        'status_id' => $acceptedUnitStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    HousingStatus::query()->create([
+        'housing_id' => $notAcceptedReviewUnit->objectid,
+        'status_id' => $needReviewStatus->id,
+        'user_id' => $user->id,
+        'type' => 'QC/QA Engineer',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('id="toggle_accepted_with_unevaluated_units"', false)
+        ->assertSee('مقبول وبداخله وحدات غير مقيمة');
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'accepted_with_unevaluated_units' => '1',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('error')
+        ->assertJsonFragment([
+            'globalid' => $acceptedWithPendingUnit->globalid,
+        ])
+        ->assertJsonFragment([
+            'globalid' => $acceptedWithReviewUnit->globalid,
+        ])
+        ->assertJsonFragment([
+            'globalid' => $acceptedWithAssignedUnit->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $acceptedWithAcceptedUnit->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $notAcceptedWithReviewUnit->globalid,
+        ]);
+
+    config()->set('database.default', 'sqlite');
+    DB::purge('mysql');
+});
+
 it('exports requested legal and engineering audit notes with auditor names', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     config()->set('database.default', 'mysql');
