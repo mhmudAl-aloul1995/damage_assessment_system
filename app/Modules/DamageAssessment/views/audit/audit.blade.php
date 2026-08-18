@@ -122,9 +122,13 @@
 			width: 100% !important;
 		}
 
+		#engineerChangeLogModal .modal-dialog {
+			max-width: min(1800px, 96vw);
+		}
+
 		.engineer-change-log-value {
 			display: block;
-			max-width: 280px;
+			max-width: 420px;
 			white-space: normal;
 			overflow-wrap: anywhere;
 			line-height: 1.45;
@@ -420,6 +424,11 @@
 							data-filter-active="false">
 							مقبول وبداخله وحدات غير مقيمة
 							<i class="ki-duotone ki-information-5"></i>
+						</button>
+						<button type="button" id="toggle_floor_area_mismatch" class="btn btn-light-warning btn-sm"
+							data-filter-active="false">
+							مخالف لمساحات الطوابق
+							<i class="ki-duotone ki-chart-line-down"></i>
 						</button>
 						<button type="button" id="btn_engineer_change_log" class="btn btn-light-info btn-sm">
 							تغييرات مهندسي التدقيق
@@ -962,7 +971,7 @@
 
 	@if(! $isFieldEngineerAudit)
 	<div class="modal fade" id="engineerChangeLogModal" tabindex="-1" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
+		<div class="modal-dialog modal-dialog-centered">
 			<div class="modal-content">
 				<div class="modal-header">
 					<div>
@@ -1070,6 +1079,7 @@
 
 
 			let acceptedWithUnevaluatedUnits = false;
+			let floorAreaMismatch = false;
 			let housingUnitAttachmentUnits = [];
 			const buildingAttachmentRoutes = {
 				index: @json(route('audit.building.attachments.index', ['building' => '__BUILDING__'])),
@@ -1758,6 +1768,7 @@
 					damage_status: $('#filter_damage_status').val(),
 					legal_challenge: $('#filter_legal_challenge').val(),
 					accepted_with_unevaluated_units: acceptedWithUnevaluatedUnits ? 1 : '',
+					floor_area_mismatch: floorAreaMismatch ? 1 : '',
 					filter_from_date: $('#filter_from_date').val(),
 					filter_to_date: $('#filter_to_date').val(),
 					status_from_date: $('#filter_status_from_date').val(),
@@ -2430,6 +2441,28 @@
 				renderAcceptedWithUnevaluatedUnitsButton();
 				table.ajax.reload(null, true);
 			});
+
+			const renderFloorAreaMismatchButton = function () {
+				const button = $('#toggle_floor_area_mismatch');
+
+				if (!button.length) {
+					return;
+				}
+
+				button.attr('data-filter-active', floorAreaMismatch ? 'true' : 'false');
+				button.toggleClass('btn-light-warning btn-warning', floorAreaMismatch);
+				button.html(
+					floorAreaMismatch
+						? 'إظهار الكل <i class="ki-duotone ki-eye"></i>'
+						: 'مخالف لمساحات الطوابق <i class="ki-duotone ki-chart-line-down"></i>'
+				);
+			};
+
+			$('#toggle_floor_area_mismatch').on('click', function () {
+				floorAreaMismatch = !floorAreaMismatch;
+				renderFloorAreaMismatchButton();
+				table.ajax.reload(null, true);
+			});
 			$('#toggle_select_column').on('click', function () {
 				const button = $(this);
 				const selectColumn = table.column(0);
@@ -2484,7 +2517,9 @@
 							$('#filter_area').val(''); */
 				isResettingFilters = true;
 				acceptedWithUnevaluatedUnits = false;
+				floorAreaMismatch = false;
 				renderAcceptedWithUnevaluatedUnitsButton();
+				renderFloorAreaMismatchButton();
 				$('select').val(null).trigger('change');
 				$('input').val('');
 				$('#filter_field_status').val('COMPLETED').trigger('change');

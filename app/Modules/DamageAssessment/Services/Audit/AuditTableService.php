@@ -51,6 +51,10 @@ class AuditTableService
             $this->applyAcceptedWithUnevaluatedUnitsFilter($query);
         }
 
+        if ($request->boolean('floor_area_mismatch')) {
+            $this->applyFloorAreaMismatchFilter($query);
+        }
+
         $damageStatuses = $this->filterValues($request, 'damage_status');
         if ($damageStatuses !== []) {
             $query->whereIn('building_damage_status', $damageStatuses);
@@ -229,5 +233,75 @@ class AuditTableService
                             });
                     });
             });
+    }
+
+    private function applyFloorAreaMismatchFilter(Builder $query): void
+    {
+        $query
+            ->whereRaw($this->buildingFullDamageSql())
+            ->where(function (Builder $mismatchQuery): void {
+                $mismatchQuery
+                    ->whereRaw($this->floorAreaMismatchSql('0', 'ground_floor_area__m2'))
+                    ->orWhereRaw($this->floorAreaMismatchSql('1', 'floor_area_m2'));
+            });
+    }
+
+    private function buildingFullDamageSql(): string
+    {
+        return "LOWER(TRIM(COALESCE((
+            SELECT damage_status_edits.field_value
+            FROM edit_assessments AS damage_status_edits
+            WHERE damage_status_edits.type = 'building_table'
+                AND damage_status_edits.field_name = 'building_damage_status'
+                AND damage_status_edits.global_id = buildings.globalid
+            ORDER BY damage_status_edits.id DESC
+            LIMIT 1
+        ), buildings.building_damage_status, ''))) = 'fully_damaged'";
+    }
+
+    private function floorAreaMismatchSql(string $floorNumber, string $buildingAreaField): string
+    {
+        $floorValue = $this->sqlQuote($floorNumber);
+        $buildingAreaFieldValue = $this->sqlQuote($buildingAreaField);
+
+        return "ABS(
+            COALESCE((
+                SELECT SUM(CAST(COALESCE((
+                    SELECT area_edits.field_value
+                    FROM edit_assessments AS area_edits
+                    WHERE area_edits.type = 'housing_table'
+                        AND area_edits.field_name = 'damaged_area_m2'
+                        AND area_edits.global_id = floor_area_units.globalid
+                    ORDER BY area_edits.id DESC
+                    LIMIT 1
+                ), floor_area_units.damaged_area_m2, 0) AS REAL))
+                FROM housing_units AS floor_area_units
+                WHERE floor_area_units.parentglobalid = buildings.globalid
+                    AND LOWER(TRIM(COALESCE((
+                        SELECT floor_edits.field_value
+                        FROM edit_assessments AS floor_edits
+                        WHERE floor_edits.type = 'housing_table'
+                            AND floor_edits.field_name = 'floor_number'
+                            AND floor_edits.global_id = floor_area_units.globalid
+                        ORDER BY floor_edits.id DESC
+                        LIMIT 1
+                    ), floor_area_units.floor_number, ''))) = {$floorValue}
+            ), 0)
+            -
+            CAST(COALESCE((
+                SELECT building_area_edits.field_value
+                FROM edit_assessments AS building_area_edits
+                WHERE building_area_edits.type = 'building_table'
+                    AND building_area_edits.field_name = {$buildingAreaFieldValue}
+                    AND building_area_edits.global_id = buildings.globalid
+                ORDER BY building_area_edits.id DESC
+                LIMIT 1
+            ), buildings.{$buildingAreaField}, 0) AS REAL)
+        ) > 0.01";
+    }
+
+    private function sqlQuote(string $value): string
+    {
+        return DB::getPdo()->quote($value);
     }
 }

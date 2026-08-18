@@ -7,6 +7,7 @@ use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
+use App\Models\EditAssessment;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -552,6 +553,164 @@ it('filters accepted buildings that contain unevaluated housing units', function
         ])
         ->assertJsonMissing([
             'globalid' => $notAcceptedWithReviewUnit->globalid,
+        ]);
+
+    config()->set('database.default', 'sqlite');
+    DB::purge('mysql');
+});
+
+it('filters buildings with mismatched unit floor areas and excludes roof units', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    config()->set('database.default', 'mysql');
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    Http::fake([
+        '*' => Http::response(['token' => 'fake-token']),
+    ]);
+
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $mismatchedBuilding = Building::query()->create([
+        'objectid' => 7451,
+        'globalid' => 'floor-area-mismatch-building',
+        'building_name' => 'Floor Area Mismatch Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'ground_floor_area__m2' => '100',
+        'floor_area_m2' => '80',
+    ]);
+
+    $matchedBuilding = Building::query()->create([
+        'objectid' => 7452,
+        'globalid' => 'floor-area-matched-building',
+        'building_name' => 'Floor Area Matched Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'ground_floor_area__m2' => '100',
+        'floor_area_m2' => '80',
+    ]);
+
+    $partialMismatchedBuilding = Building::query()->create([
+        'objectid' => 7453,
+        'globalid' => 'partial-floor-area-mismatch-building',
+        'building_name' => 'Partial Floor Area Mismatch Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partially_damaged',
+        'ground_floor_area__m2' => '100',
+        'floor_area_m2' => '80',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8451,
+        'globalid' => 'mismatch-ground-unit',
+        'parentglobalid' => $mismatchedBuilding->globalid,
+        'floor_number' => '0',
+        'damaged_area_m2' => '90',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8452,
+        'globalid' => 'mismatch-repeated-unit',
+        'parentglobalid' => $mismatchedBuilding->globalid,
+        'floor_number' => '1',
+        'damaged_area_m2' => '80',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8453,
+        'globalid' => 'mismatch-roof-unit',
+        'parentglobalid' => $mismatchedBuilding->globalid,
+        'floor_number' => 'roof',
+        'damaged_area_m2' => '10',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8454,
+        'globalid' => 'matched-ground-unit',
+        'parentglobalid' => $matchedBuilding->globalid,
+        'floor_number' => '0',
+        'damaged_area_m2' => '100',
+    ]);
+
+    $matchedRepeatedUnit = HousingUnit::query()->create([
+        'objectid' => 8455,
+        'globalid' => 'matched-repeated-unit',
+        'parentglobalid' => $matchedBuilding->globalid,
+        'floor_number' => '2',
+        'damaged_area_m2' => '70',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8456,
+        'globalid' => 'matched-roof-unit',
+        'parentglobalid' => $matchedBuilding->globalid,
+        'floor_number' => 'roof',
+        'damaged_area_m2' => '999',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 8457,
+        'globalid' => 'partial-mismatch-ground-unit',
+        'parentglobalid' => $partialMismatchedBuilding->globalid,
+        'floor_number' => '0',
+        'damaged_area_m2' => '50',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $matchedRepeatedUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'floor_number',
+        'field_value' => '1',
+        'user_id' => $user->id,
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $matchedRepeatedUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'damaged_area_m2',
+        'field_value' => '80',
+        'user_id' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('id="toggle_floor_area_mismatch"', false)
+        ->assertSee('مخالف لمساحات الطوابق');
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'floor_area_mismatch' => '1',
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('error')
+        ->assertJsonFragment([
+            'globalid' => $mismatchedBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $matchedBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $partialMismatchedBuilding->globalid,
         ]);
 
     config()->set('database.default', 'sqlite');
