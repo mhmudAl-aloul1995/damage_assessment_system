@@ -1316,6 +1316,84 @@ it('returns the latest housing status for read only field engineers', function (
         ->assertJsonPath('data.0.current_legal_status', 'legal_notes');
 });
 
+it('summarizes ground and repeated floor unit areas against building floor areas', function () {
+    $role = Role::query()->firstOrCreate([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $building = Building::query()->create([
+        'objectid' => 9640,
+        'globalid' => 'floor-area-summary-building',
+        'building_name' => 'Floor Area Summary Building',
+        'ground_floor_area__m2' => '100',
+        'floor_area_m2' => '55',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9641,
+        'globalid' => 'floor-area-summary-ground-a',
+        'parentglobalid' => $building->globalid,
+        'floor_number' => '0',
+        'housing_unit_number' => '1',
+        'damaged_area_m2' => '40',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9642,
+        'globalid' => 'floor-area-summary-ground-b',
+        'parentglobalid' => $building->globalid,
+        'floor_number' => '0',
+        'housing_unit_number' => '2',
+        'damaged_area_m2' => '60',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9643,
+        'globalid' => 'floor-area-summary-repeated',
+        'parentglobalid' => $building->globalid,
+        'floor_number' => '2',
+        'housing_unit_number' => '1',
+        'damaged_area_m2' => '10',
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => 'floor-area-summary-repeated',
+        'type' => 'housing_table',
+        'field_name' => 'floor_number',
+        'field_value' => '1',
+        'user_id' => $user->id,
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => 'floor-area-summary-repeated',
+        'type' => 'housing_table',
+        'field_name' => 'damaged_area_m2',
+        'field_value' => '55',
+        'user_id' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('housing.units.by.building', ['globalid' => $building->globalid]))
+        ->assertOk()
+        ->assertJsonPath('floor_area_summary.ground.floor_number', '0')
+        ->assertJsonPath('floor_area_summary.ground.actual', 100)
+        ->assertJsonPath('floor_area_summary.ground.expected', 100)
+        ->assertJsonPath('floor_area_summary.ground.matches', true)
+        ->assertJsonPath('floor_area_summary.repeated.floor_number', '1')
+        ->assertJsonPath('floor_area_summary.repeated.actual', 55)
+        ->assertJsonPath('floor_area_summary.repeated.expected', 55)
+        ->assertJsonPath('floor_area_summary.repeated.matches', true)
+        ->assertJsonFragment([
+            'globalid' => 'floor-area-summary-repeated',
+            'floor_number' => '1',
+            'damaged_area_m2' => '55',
+        ]);
+});
+
 it('can undo a scheduled housing unit deletion before it is committed', function () {
     Role::query()->create([
         'name' => 'Database Officer',

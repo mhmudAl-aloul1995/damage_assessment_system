@@ -118,6 +118,27 @@
 			min-height: 1rem;
 		}
 
+		#engineer_change_log_table {
+			width: 100% !important;
+		}
+
+		.engineer-change-log-value {
+			display: block;
+			max-width: 280px;
+			white-space: normal;
+			overflow-wrap: anywhere;
+			line-height: 1.45;
+		}
+
+		.engineer-change-log-field-code {
+			display: block;
+			direction: ltr;
+			unicode-bidi: plaintext;
+			font-size: .78rem;
+			color: var(--bs-gray-600);
+			margin-top: .2rem;
+		}
+
 		#kt_datatable_audits_wrapper table.dataTable .audit-select-cell {
 			min-width: 64px;
 			width: 64px;
@@ -399,6 +420,10 @@
 							data-filter-active="false">
 							مقبول وبداخله وحدات غير مقيمة
 							<i class="ki-duotone ki-information-5"></i>
+						</button>
+						<button type="button" id="btn_engineer_change_log" class="btn btn-light-info btn-sm">
+							تغييرات مهندسي التدقيق
+							<i class="ki-duotone ki-notepad-edit"></i>
 						</button>
 						@endif
 						@if(! $isFieldEngineerAudit && ! $hideAuditManagementActions)
@@ -934,6 +959,80 @@
 			</div>
 		</div>
 	</div>
+
+	@if(! $isFieldEngineerAudit)
+	<div class="modal fade" id="engineerChangeLogModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
+			<div class="modal-content">
+				<div class="modal-header">
+					<div>
+						<h2 class="fw-bold mb-1">تغييرات مهندسي التدقيق</h2>
+						<div class="text-muted fs-7">تغييرات الاستبيان على المباني والوحدات</div>
+					</div>
+					<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+						<i class="ki-duotone ki-cross fs-1"></i>
+					</div>
+				</div>
+
+				<div class="modal-body">
+					<div class="row g-4 mb-6">
+						<div class="col-lg-3 col-md-6">
+							<label class="form-label fw-semibold">اسم المهندس</label>
+							<select id="engineer_change_log_engineer" class="form-select form-select-solid"
+								data-control="select2" data-dropdown-parent="#engineerChangeLogModal"
+								data-placeholder="كل المهندسين">
+								<option value="">كل المهندسين</option>
+							</select>
+						</div>
+						<div class="col-lg-3 col-md-6">
+							<label class="form-label fw-semibold">اسم الحقل</label>
+							<select id="engineer_change_log_field" class="form-select form-select-solid"
+								data-control="select2" data-dropdown-parent="#engineerChangeLogModal"
+								data-placeholder="كل الحقول">
+								<option value="">كل الحقول</option>
+							</select>
+						</div>
+						<div class="col-lg-3 col-md-6">
+							<label class="form-label fw-semibold">نوع السجل</label>
+							<select id="engineer_change_log_type" class="form-select form-select-solid">
+								<option value="">مبنى ووحدة</option>
+								<option value="building_table">مبنى</option>
+								<option value="housing_table">وحدة</option>
+							</select>
+						</div>
+						<div class="col-lg-3 col-md-6">
+							<label class="form-label fw-semibold">بحث</label>
+							<input type="text" id="engineer_change_log_search" class="form-control form-control-solid"
+								placeholder="ابحث في القيم أو رقم السجل">
+						</div>
+					</div>
+
+					<div class="table-responsive">
+						<table class="table align-middle table-row-dashed fs-6 gy-4" id="engineer_change_log_table">
+							<thead>
+								<tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
+									<th>النوع</th>
+									<th>السجل</th>
+									<th>المهندس</th>
+									<th>اسم الحقل</th>
+									<th>قبل</th>
+									<th>بعد</th>
+									<th>التاريخ</th>
+									<th>فتح</th>
+								</tr>
+							</thead>
+							<tbody class="text-gray-700 fw-semibold"></tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	@endif
 
 	<div class="modal fade" id="failedUnitsModal" tabindex="-1">
 		<div class="modal-dialog modal-dialog-centered mw-900px">
@@ -1679,6 +1778,164 @@
 					params.append(key, value);
 				}
 			};
+
+			@if(! $isFieldEngineerAudit)
+			let engineerChangeLogTable = null;
+			let engineerChangeLogOptionsLoaded = false;
+			let engineerChangeLogSearchTimer = null;
+			const engineerChangeLogRoute = @json(route('audit.engineer-change-log'));
+
+			const renderEngineerChangeLogValue = function (value) {
+				return `<span class="engineer-change-log-value">${escapeAuditCell(value)}</span>`;
+			};
+
+			const loadEngineerChangeLogOptions = function () {
+				if (engineerChangeLogOptionsLoaded) {
+					return $.Deferred().resolve().promise();
+				}
+
+				return $.get(engineerChangeLogRoute, { options: 1 }).done(function (response) {
+					const engineerSelect = $('#engineer_change_log_engineer');
+					const fieldSelect = $('#engineer_change_log_field');
+
+					(response.engineers || []).forEach(function (engineer) {
+						engineerSelect.append(new Option(engineer.name, engineer.id, false, false));
+					});
+
+					(response.fields || []).forEach(function (field) {
+						const label = field.label && field.label !== field.name
+							? `${field.label} (${field.name})`
+							: field.name;
+
+						fieldSelect.append(new Option(label, field.name, false, false));
+					});
+
+					$('#engineer_change_log_engineer, #engineer_change_log_field').select2({
+						dir: 'rtl',
+						width: '100%',
+						dropdownParent: $('#engineerChangeLogModal'),
+						allowClear: true
+					});
+
+					$('#engineer_change_log_type').select2({
+						dir: 'rtl',
+						width: '100%',
+						dropdownParent: $('#engineerChangeLogModal'),
+						minimumResultsForSearch: Infinity
+					});
+
+					engineerChangeLogOptionsLoaded = true;
+				});
+			};
+
+			const initEngineerChangeLogTable = function () {
+				if (engineerChangeLogTable) {
+					engineerChangeLogTable.ajax.reload();
+					return;
+				}
+
+				engineerChangeLogTable = $('#engineer_change_log_table').DataTable({
+					processing: true,
+					serverSide: true,
+					searching: false,
+					ordering: false,
+					pageLength: 10,
+					lengthMenu: [[10, 25, 50], [10, 25, 50]],
+					scrollX: true,
+					ajax: {
+						url: engineerChangeLogRoute,
+						data: function (data) {
+							data.engineer_id = $('#engineer_change_log_engineer').val();
+							data.field_name = $('#engineer_change_log_field').val();
+							data.record_type = $('#engineer_change_log_type').val();
+							data.search_value = $('#engineer_change_log_search').val();
+						}
+					},
+					columns: [
+						{
+							data: 'record_type_label',
+							render: function (data, type, row) {
+								const badgeClass = row.record_type === 'housing_table' ? 'badge-light-info' : 'badge-light-primary';
+
+								return `<span class="badge ${badgeClass}">${escapeAuditCell(data)}</span>`;
+							}
+						},
+						{
+							data: null,
+							render: function (data, type, row) {
+								const buildingName = row.building_name ? escapeAuditCell(row.building_name) : '-';
+								const unitNumber = row.housing_unit_number ? `<div class="text-muted fs-8">وحدة: ${escapeAuditCell(row.housing_unit_number)}</div>` : '';
+
+								return `<div>${buildingName}</div><div class="text-muted fs-8 audit-cell-ltr">ObjectID: ${escapeAuditCell(row.objectid)}</div>${unitNumber}`;
+							}
+						},
+						{
+							data: 'engineer_name',
+							render: renderAuditTextCell
+						},
+						{
+							data: null,
+							render: function (data, type, row) {
+								return `<span>${escapeAuditCell(row.field_label)}</span><span class="engineer-change-log-field-code">${escapeAuditCell(row.field_name)}</span>`;
+							}
+						},
+						{
+							data: 'old_value',
+							render: renderEngineerChangeLogValue
+						},
+						{
+							data: 'new_value',
+							render: renderEngineerChangeLogValue
+						},
+						{
+							data: 'edited_at',
+							render: function (data) {
+								return `<span class="audit-cell-date">${escapeAuditCell(data)}</span>`;
+							}
+						},
+						{
+							data: 'assessment_url',
+							className: 'text-center',
+							render: function (data) {
+								if (!data) {
+									return '-';
+								}
+
+								return `<a href="${escapeAuditCell(data)}" target="_blank" class="btn btn-icon btn-light btn-sm" title="فتح الاستبيان"><i class="ki-duotone ki-exit-right fs-3"></i></a>`;
+							}
+						}
+					],
+					language: {
+						emptyTable: 'لا توجد تغييرات مطابقة',
+						zeroRecords: 'لا توجد تغييرات مطابقة',
+						processing: 'جاري التحميل...'
+					}
+				});
+			};
+
+			$('#btn_engineer_change_log').on('click', function () {
+				$('#engineerChangeLogModal').modal('show');
+			});
+
+			$('#engineerChangeLogModal').on('shown.bs.modal', function () {
+				loadEngineerChangeLogOptions().done(initEngineerChangeLogTable);
+			});
+
+			$('#engineer_change_log_engineer, #engineer_change_log_field, #engineer_change_log_type').on('change', function () {
+				if (engineerChangeLogTable) {
+					engineerChangeLogTable.ajax.reload();
+				}
+			});
+
+			$('#engineer_change_log_search').on('input', function () {
+				clearTimeout(engineerChangeLogSearchTimer);
+				engineerChangeLogSearchTimer = setTimeout(function () {
+					if (engineerChangeLogTable) {
+						engineerChangeLogTable.ajax.reload();
+					}
+				}, 350);
+			});
+			@endif
 
 			$('#audit_export_type').select2({
 				dir: 'rtl',

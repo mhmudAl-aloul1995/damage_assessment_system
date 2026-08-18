@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Assessment;
+use App\Models\AssessmentEditHistory;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
@@ -554,6 +556,153 @@ it('filters accepted buildings that contain unevaluated housing units', function
 
     config()->set('database.default', 'sqlite');
     DB::purge('mysql');
+});
+
+it('shows and filters engineer audit questionnaire changes', function () {
+    $databaseOfficerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    $engineerRole = Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($databaseOfficerRole);
+
+    $engineer = User::factory()->create([
+        'name' => 'Engineer Change Auditor',
+    ]);
+    $engineer->assignRole($engineerRole);
+
+    $otherEngineer = User::factory()->create([
+        'name' => 'Other Change Auditor',
+    ]);
+    $otherEngineer->assignRole($engineerRole);
+
+    $nonAuditor = User::factory()->create([
+        'name' => 'Non Auditor User',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'building_name',
+        'label' => 'اسم المبنى',
+    ]);
+    Assessment::query()->create([
+        'name' => 'unit_owner',
+        'label' => 'اسم مالك الوحدة',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 7401,
+        'globalid' => 'engineer-change-log-building',
+        'building_name' => 'Engineer Change Log Building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8401,
+        'globalid' => 'engineer-change-log-housing-unit',
+        'parentglobalid' => $building->globalid,
+        'housing_unit_number' => 'A-1',
+    ]);
+
+    AssessmentEditHistory::query()->create([
+        'global_id' => $building->globalid,
+        'objectid' => $building->objectid,
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'old_value' => 'Old Building Name',
+        'new_value' => 'New Building Name',
+        'edited_by' => $engineer->id,
+        'created_at' => '2026-08-18 10:00:00',
+        'updated_at' => '2026-08-18 10:00:00',
+    ]);
+
+    AssessmentEditHistory::query()->create([
+        'global_id' => $housingUnit->globalid,
+        'objectid' => $housingUnit->objectid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_owner',
+        'old_value' => 'Old Owner',
+        'new_value' => 'New Owner',
+        'edited_by' => $engineer->id,
+        'created_at' => '2026-08-18 11:00:00',
+        'updated_at' => '2026-08-18 11:00:00',
+    ]);
+
+    AssessmentEditHistory::query()->create([
+        'global_id' => $building->globalid,
+        'objectid' => $building->objectid,
+        'type' => 'building_table',
+        'field_name' => 'owner_name',
+        'old_value' => 'Hidden Old Owner',
+        'new_value' => 'Hidden New Owner',
+        'edited_by' => $nonAuditor->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('id="btn_engineer_change_log"', false)
+        ->assertSee('id="engineerChangeLogModal"', false)
+        ->assertSee('اسم الحقل');
+
+    $this->actingAs($user)
+        ->getJson(route('audit.engineer-change-log', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('recordsTotal', 2)
+        ->assertJsonPath('recordsFiltered', 2)
+        ->assertJsonFragment([
+            'record_type_label' => 'مبنى',
+            'field_name' => 'building_name',
+            'field_label' => 'اسم المبنى',
+            'engineer_name' => 'Engineer Change Auditor',
+        ])
+        ->assertJsonFragment([
+            'record_type_label' => 'وحدة',
+            'field_name' => 'unit_owner',
+            'field_label' => 'اسم مالك الوحدة',
+            'housing_unit_number' => 'A-1',
+        ])
+        ->assertJsonMissing([
+            'field_name' => 'owner_name',
+        ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.engineer-change-log', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'field_name' => 'unit_owner',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 1)
+        ->assertJsonFragment([
+            'field_name' => 'unit_owner',
+        ])
+        ->assertJsonMissing([
+            'field_name' => 'building_name',
+        ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.engineer-change-log', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'engineer_id' => $otherEngineer->id,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('recordsFiltered', 0);
 });
 
 it('exports requested legal and engineering audit notes with auditor names', function () {

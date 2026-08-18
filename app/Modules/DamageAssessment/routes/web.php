@@ -6,6 +6,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Audit\AssessmentEditHistoryCon
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AssessmentInlineEditController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditDashboardController;
+use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditEngineerChangeLogController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditExportController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditReviewerController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditStatusHistoryController;
@@ -292,6 +293,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/audit', [auditController::class, 'index'])->name('audit.index');
     Route::get('/field-engineer-audit', [auditController::class, 'fieldEngineerAudit'])->name('audit.fieldEngineer');
     Route::get('/audit/export', AuditExportController::class)->name('audit.export');
+    Route::get('/audit/engineer-change-log', AuditEngineerChangeLogController::class)->name('audit.engineer-change-log');
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
     Route::get('/audit/lawyer-assignments', LawyerAuditAssignmentController::class)
         ->name('audit.lawyer-assignments');

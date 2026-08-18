@@ -55,12 +55,12 @@
         }
 
         /* أعمدة الحالات تكون أضيق */
-        #housing_table th:nth-child(9),
-        #housing_table td:nth-child(9),
         #housing_table th:nth-child(10),
         #housing_table td:nth-child(10),
         #housing_table th:nth-child(11),
-        #housing_table td:nth-child(11) {
+        #housing_table td:nth-child(11),
+        #housing_table th:nth-child(12),
+        #housing_table td:nth-child(12) {
             width: 140px !important;
             max-width: 140px !important;
         }
@@ -822,6 +822,40 @@
                         </div>
 
                         <div class="card-body pt-0 pb-4">
+                            <div class="row g-3 mb-5" id="floor_area_summary">
+                                <div class="col-12 col-xl-6">
+                                    <div class="summary-box bg-light-primary h-100">
+                                        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                                            <div>
+                                                <div class="summary-title">مطابقة الطابق الأرضي 0</div>
+                                                <div class="summary-value text-primary">
+                                                    <span id="ground_floor_units_area">--</span>
+                                                    <span class="text-muted fs-7">/</span>
+                                                    <span id="ground_floor_expected_area">--</span>
+                                                </div>
+                                            </div>
+                                            <span id="ground_floor_area_badge" class="badge badge-light">--</span>
+                                        </div>
+                                        <div id="ground_floor_area_difference" class="text-muted fs-8 mt-2">--</div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-6">
+                                    <div class="summary-box bg-light-info h-100">
+                                        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                                            <div>
+                                                <div class="summary-title">مطابقة الطابق المتكرر 1</div>
+                                                <div class="summary-value text-info">
+                                                    <span id="repeated_floor_units_area">--</span>
+                                                    <span class="text-muted fs-7">/</span>
+                                                    <span id="repeated_floor_expected_area">--</span>
+                                                </div>
+                                            </div>
+                                            <span id="repeated_floor_area_badge" class="badge badge-light">--</span>
+                                        </div>
+                                        <div id="repeated_floor_area_difference" class="text-muted fs-8 mt-2">--</div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="table-responsive">
                                 <table class="table align-middle table-row-bordered table-rounded gs-7 gy-4"
                                     id="housing_table">
@@ -836,6 +870,7 @@
                                             <th class="px-2 py-3">رقم الوحدة</th>
                                             <th class="px-2 py-3">اسم المالك</th>
                                             <th class="px-2 py-3">اتجاه الوحدة</th>
+                                            <th class="px-2 py-3">مساحة الوحدة</th>
                                             <th class="px-2 py-3">التحديات القانونية</th>
                                             <th class="px-2 py-3">التدقيق القانوني</th>
                                             <th class="px-2 py-3">التدقيق الهندسي</th>
@@ -2854,6 +2889,34 @@
             var table = document.getElementById('housing_table');
             var datatable;
 
+            function formatAssessmentArea(value) {
+                let number = Number(value || 0);
+                return number.toLocaleString('en-US', { maximumFractionDigits: 2 });
+            }
+
+            function renderFloorAreaComparison(prefix, comparison) {
+                comparison = comparison || {};
+
+                $('#' + prefix + '_floor_units_area').text(formatAssessmentArea(comparison.actual));
+                $('#' + prefix + '_floor_expected_area').text(formatAssessmentArea(comparison.expected));
+
+                let difference = Number(comparison.difference || 0);
+                let matches = Boolean(comparison.matches);
+                let badge = $('#' + prefix + '_floor_area_badge');
+
+                badge
+                    .removeClass('badge-light badge-light-success badge-light-danger')
+                    .addClass(matches ? 'badge-light-success' : 'badge-light-danger')
+                    .text(matches ? 'مطابق' : 'غير مطابق');
+
+                $('#' + prefix + '_floor_area_difference').text('الفرق: ' + formatAssessmentArea(Math.abs(difference)) + ' م²');
+            }
+
+            function renderFloorAreaSummary(summary) {
+                renderFloorAreaComparison('ground', summary?.ground);
+                renderFloorAreaComparison('repeated', summary?.repeated);
+            }
+
             var initTable = function () {
                 datatable = $(table).DataTable({
                     processing: true,
@@ -2866,7 +2929,12 @@
                     pageLength: 25,
                     ajax: {
                         url: "{{ route('housing.units.by.building') }}",
-                        data: function (d) { d.globalid = '{{ $buildingGlobalid }}'; }
+                        data: function (d) { d.globalid = '{{ $buildingGlobalid }}'; },
+                        dataSrc: function (json) {
+                            renderFloorAreaSummary(json.floor_area_summary || {});
+
+                            return json.data || [];
+                        }
                     },
                     autoWidth: true,
                     scrollX: false,
@@ -2892,6 +2960,7 @@
                         { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-2 py-3' },
                         { data: 'owner_name', name: 'owner_name', className: 'text-start px-2 py-3 min-w-280px' },
                         { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-2 py-3' },
+                        { data: 'damaged_area_m2', name: 'damaged_area_m2', className: 'text-center px-2 py-3' },
                         {
                             data: 'legal_challenge_label',
                             name: 'legal_challenge_label',

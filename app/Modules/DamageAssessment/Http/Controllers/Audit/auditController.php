@@ -4151,34 +4151,9 @@ class auditController extends Controller
             'unit_damage_status',
         ])->get()->groupBy('list_name');
 
-        $latestIds = DB::table('edit_assessments')
-            ->selectRaw('MAX(id) as id')
-            ->where('type', 'housing_table')
-            ->where('field_name', 'housing_unit_number')
-            ->groupBy('global_id');
-
-        $lastUnitNumber = DB::table('edit_assessments as ea')
-            ->joinSub($latestIds, 'latest', function ($join) {
-                $join->on('ea.id', '=', 'latest.id');
-            })
-            ->select(
-                'ea.global_id',
-                'ea.field_value'
-            );
-        $latestFloorIds = DB::table('edit_assessments')
-            ->selectRaw('MAX(id) as id')
-            ->where('type', 'housing_table')
-            ->where('field_name', 'floor_number')
-            ->groupBy('global_id');
-
-        $lastFloorNumber = DB::table('edit_assessments as ea')
-            ->joinSub($latestFloorIds, 'latest_floor', function ($join) {
-                $join->on('ea.id', '=', 'latest_floor.id');
-            })
-            ->select(
-                'ea.global_id',
-                'ea.field_value'
-            );
+        $lastUnitNumber = $this->latestHousingEditValueSubquery('housing_unit_number', 'latest_unit_number');
+        $lastFloorNumber = $this->latestHousingEditValueSubquery('floor_number', 'latest_floor');
+        $lastDamagedArea = $this->latestHousingEditValueSubquery('damaged_area_m2', 'latest_damaged_area');
 
         /*
         |--------------------------------------------------------------------------
@@ -4193,6 +4168,9 @@ class auditController extends Controller
             ->leftJoinSub($lastFloorNumber, 'last_floor_number', function ($join) {
                 $join->on('housing_units.globalid', '=', 'last_floor_number.global_id');
             })
+            ->leftJoinSub($lastDamagedArea, 'last_damaged_area', function ($join) {
+                $join->on('housing_units.globalid', '=', 'last_damaged_area.global_id');
+            })
             ->select('housing_units.*')
             ->selectRaw('
           COALESCE(
@@ -4203,7 +4181,12 @@ class auditController extends Controller
 COALESCE(
     last_floor_number.field_value,
     housing_units.floor_number
-) as latest_floor_number
+) as latest_floor_number,
+
+COALESCE(
+    last_damaged_area.field_value,
+    housing_units.damaged_area_m2
+) as latest_damaged_area_m2
         ');
 
         if ($request->globalid) {
@@ -4212,6 +4195,8 @@ COALESCE(
                 $request->globalid
             );
         }
+
+        $floorAreaSummary = $this->housingFloorAreaSummary($request->globalid, clone $query);
 
         /*
         |--------------------------------------------------------------------------
@@ -4245,6 +4230,9 @@ COALESCE(
             })
             ->editColumn('housing_unit_number', function ($row) {
                 return $row->latest_housing_unit_number ?? '-';
+            })
+            ->editColumn('damaged_area_m2', function ($row) {
+                return $row->latest_damaged_area_m2 ?? '-';
             })
 
             ->editColumn('owner_name', function ($row) {
@@ -4312,8 +4300,96 @@ COALESCE(
                 'engineering_audit_status',
                 'final_approval_status',
             ])
+            ->with('floor_area_summary', $floorAreaSummary)
 
             ->make(true);
+    }
+
+    private function latestHousingEditValueSubquery(string $fieldName, string $latestAlias): \Illuminate\Database\Query\Builder
+    {
+        $latestIds = DB::table('edit_assessments')
+            ->selectRaw('MAX(id) as id')
+            ->where('type', 'housing_table')
+            ->where('field_name', $fieldName)
+            ->groupBy('global_id');
+
+        return DB::table('edit_assessments as ea')
+            ->joinSub($latestIds, $latestAlias, function ($join) use ($latestAlias): void {
+                $join->on('ea.id', '=', $latestAlias.'.id');
+            })
+            ->select(
+                'ea.global_id',
+                'ea.field_value'
+            );
+    }
+
+    private function housingFloorAreaSummary(?string $buildingGlobalId, Builder $query): array
+    {
+        $building = $buildingGlobalId
+            ? Building::query()->with('edits')->where('globalid', $buildingGlobalId)->first()
+            : null;
+
+        $units = $query->get();
+
+        $sumForFloor = function (int $floorNumber) use ($units): float {
+            return round((float) $units
+                ->filter(fn ($unit): bool => (int) $this->numericAssessmentValue($unit->latest_floor_number ?? $unit->floor_number ?? null) === $floorNumber)
+                ->sum(fn ($unit): float => $this->numericAssessmentValue($unit->latest_damaged_area_m2 ?? $unit->damaged_area_m2 ?? null)), 2);
+        };
+
+        $groundExpected = $this->numericAssessmentValue($building?->ground_floor_area__m2);
+        $repeatedExpected = $this->numericAssessmentValue($building?->floor_area_m2);
+
+        return [
+            'ground' => $this->floorAreaComparison('0', $sumForFloor(0), $groundExpected),
+            'repeated' => $this->floorAreaComparison('1', $sumForFloor(1), $repeatedExpected),
+        ];
+    }
+
+    private function floorAreaComparison(string $floorNumber, float $actual, float $expected): array
+    {
+        $difference = round($actual - $expected, 2);
+
+        return [
+            'floor_number' => $floorNumber,
+            'actual' => $actual,
+            'expected' => $expected,
+            'difference' => $difference,
+            'matches' => abs($difference) <= 0.01,
+        ];
+    }
+
+    private function numericAssessmentValue(mixed $value): float
+    {
+        if ($value === null || $value === '') {
+            return 0.0;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        $normalized = strtr((string) $value, [
+            '٠' => '0',
+            '١' => '1',
+            '٢' => '2',
+            '٣' => '3',
+            '٤' => '4',
+            '٥' => '5',
+            '٦' => '6',
+            '٧' => '7',
+            '٨' => '8',
+            '٩' => '9',
+            '٫' => '.',
+            '٬' => '',
+            ',' => '',
+        ]);
+
+        if (preg_match('/-?\d+(?:\.\d+)?/', $normalized, $matches) === 1) {
+            return (float) $matches[0];
+        }
+
+        return 0.0;
     }
 
     public function updateBuildingLegalChallenge(UpdateBuildingLegalChallengeRequest $request)
