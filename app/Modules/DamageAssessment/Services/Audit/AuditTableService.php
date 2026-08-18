@@ -266,7 +266,7 @@ class AuditTableService
 
         return "ABS(
             COALESCE((
-                SELECT SUM(CAST(COALESCE((
+                SELECT SUM(COALESCE((
                     SELECT area_edits.field_value
                     FROM edit_assessments AS area_edits
                     WHERE area_edits.type = 'housing_table'
@@ -274,7 +274,7 @@ class AuditTableService
                         AND area_edits.global_id = floor_area_units.globalid
                     ORDER BY area_edits.id DESC
                     LIMIT 1
-                ), floor_area_units.damaged_area_m2, 0) AS REAL))
+                ), floor_area_units.damaged_area_m2, 0) + 0)
                 FROM housing_units AS floor_area_units
                 WHERE floor_area_units.parentglobalid = buildings.globalid
                     AND LOWER(TRIM(COALESCE((
@@ -288,7 +288,7 @@ class AuditTableService
                     ), floor_area_units.floor_number, ''))) = {$floorValue}
             ), 0)
             -
-            CAST(COALESCE((
+            (COALESCE((
                 SELECT building_area_edits.field_value
                 FROM edit_assessments AS building_area_edits
                 WHERE building_area_edits.type = 'building_table'
@@ -296,7 +296,7 @@ class AuditTableService
                     AND building_area_edits.global_id = buildings.globalid
                 ORDER BY building_area_edits.id DESC
                 LIMIT 1
-            ), buildings.{$buildingAreaField}, 0) AS REAL)
+            ), buildings.{$buildingAreaField}, 0) + 0)
         ) > 0.01";
     }
 
