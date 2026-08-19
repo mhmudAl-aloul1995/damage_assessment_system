@@ -7,14 +7,14 @@ namespace App\Services;
 use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\HousingUnit;
-use App\Models\VBuildingAudited;
-use App\Models\VHousingUnitAudited;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -76,7 +76,7 @@ class ArcgisAuditedUploadService
             return $summary;
         }
 
-        $buildingQuery = VBuildingAudited::query()
+        $buildingQuery = Building::query()
             ->orderBy('objectid');
 
         if ($buildingsLimit !== null) {
@@ -93,7 +93,7 @@ class ArcgisAuditedUploadService
                 ->values()
                 ->all();
 
-        $unitQuery = VHousingUnitAudited::query()
+        $unitQuery = HousingUnit::query()
             ->when($buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
                 $query->whereIn('parentglobalid', $buildingGlobalIds);
             })
@@ -113,7 +113,7 @@ class ArcgisAuditedUploadService
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
         }
 
-        foreach ($buildingQuery->cursor() as $building) {
+        $this->eachAuditedRecord($buildingQuery, 'building_table', function (Building $building) use (&$summary, $withoutAttachments, $attachmentsOnly, $changedSince): void {
             try {
                 echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
@@ -131,11 +131,11 @@ class ArcgisAuditedUploadService
                     'message' => $exception->getMessage(),
                 ]);
             }
-        }
+        });
 
         echo "Uploading housing units...\n";
 
-        foreach ($unitQuery->cursor() as $unit) {
+        $this->eachAuditedRecord($unitQuery, 'housing_table', function (HousingUnit $unit) use (&$summary, $withoutAttachments, $attachmentsOnly, $changedSince): void {
             try {
                 echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
@@ -153,7 +153,7 @@ class ArcgisAuditedUploadService
                     'message' => $exception->getMessage(),
                 ]);
             }
-        }
+        });
 
         return $summary;
     }
@@ -205,9 +205,7 @@ class ArcgisAuditedUploadService
         }
 
         foreach ($buildingGlobalIds as $buildingGlobalId) {
-            $building = VBuildingAudited::query()
-                ->where('globalid', $buildingGlobalId)
-                ->first();
+            $building = $this->auditedBuildingByGlobalId($buildingGlobalId);
 
             if ($building === null) {
                 continue;
@@ -235,9 +233,7 @@ class ArcgisAuditedUploadService
         echo "Uploading housing units...\n";
 
         foreach ($unitGlobalIds as $unitGlobalId) {
-            $unit = VHousingUnitAudited::query()
-                ->where('globalid', $unitGlobalId)
-                ->first();
+            $unit = $this->auditedUnitByGlobalId($unitGlobalId);
 
             if ($unit === null) {
                 continue;
@@ -415,10 +411,10 @@ class ArcgisAuditedUploadService
                 return;
             }
 
-            $building = VBuildingAudited::query()->where('globalid', $globalId)->first();
+            $building = $this->auditedBuildingByGlobalId($globalId);
 
             if ($building === null) {
-                echo "Building not found in audited view. Skipping add.\n";
+                echo "Building not found in local source table. Skipping add.\n";
                 $summary['features_skipped']++;
 
                 return;
@@ -477,10 +473,10 @@ class ArcgisAuditedUploadService
                 return;
             }
 
-            $unit = VHousingUnitAudited::query()->where('globalid', $globalId)->first();
+            $unit = $this->auditedUnitByGlobalId($globalId);
 
             if ($unit === null) {
-                echo "Unit not found in audited view. Skipping add.\n";
+                echo "Unit not found in local source table. Skipping add.\n";
                 $summary['features_skipped']++;
 
                 return;
@@ -565,10 +561,208 @@ class ArcgisAuditedUploadService
             ->count();
     }
 
+    private function eachAuditedRecord(Builder $query, string $type, Closure $callback): void
+    {
+        if ($query->getQuery()->limit !== null) {
+            $this->applyLatestAuditEdits($query->get(), $type)
+                ->each($callback);
+
+            return;
+        }
+
+        $query
+            ->chunk(500, function (Collection $records) use ($type, $callback): void {
+                $this->applyLatestAuditEdits($records, $type)
+                    ->each($callback);
+            });
+    }
+
+    private function auditedBuildingByGlobalId(string $globalId): ?Building
+    {
+        $building = Building::query()
+            ->where('globalid', $globalId)
+            ->first();
+
+        if (! $building instanceof Building) {
+            return null;
+        }
+
+        return $this->applyLatestAuditEdits(collect([$building]), 'building_table')->first();
+    }
+
+    private function auditedUnitByGlobalId(string $globalId): ?HousingUnit
+    {
+        $unit = HousingUnit::query()
+            ->where('globalid', $globalId)
+            ->first();
+
+        if (! $unit instanceof HousingUnit) {
+            return null;
+        }
+
+        return $this->applyLatestAuditEdits(collect([$unit]), 'housing_table')->first();
+    }
+
+    /**
+     * @param  Collection<int, Model>  $records
+     * @return Collection<int, Model>
+     */
+    private function applyLatestAuditEdits(Collection $records, string $type): Collection
+    {
+        $globalIds = $records
+            ->pluck('globalid')
+            ->filter(fn (mixed $globalId): bool => is_string($globalId) && $globalId !== '')
+            ->unique()
+            ->values();
+
+        if ($globalIds->isEmpty()) {
+            return $records;
+        }
+
+        $editsByGlobalId = [];
+        $latestAuditByGlobalId = [];
+        $latestStatusByGlobalId = [];
+
+        EditAssessment::query()
+            ->where('type', $type)
+            ->whereIn('global_id', $globalIds)
+            ->orderBy('id')
+            ->get(['global_id', 'field_name', 'field_value', 'user_id', 'updated_at'])
+            ->each(function (EditAssessment $edit) use (&$editsByGlobalId, &$latestAuditByGlobalId, &$latestStatusByGlobalId): void {
+                $globalId = $edit->getAttribute('global_id');
+                $fieldName = $edit->getAttribute('field_name');
+
+                if (! is_string($globalId) || $globalId === '' || ! is_string($fieldName) || $fieldName === '') {
+                    return;
+                }
+
+                $editsByGlobalId[$globalId][$fieldName] = $edit->getAttribute('field_value');
+                $latestAuditByGlobalId[$globalId] = $edit;
+
+                if ($fieldName === 'field_status') {
+                    $latestStatusByGlobalId[$globalId] = $edit;
+                }
+            });
+
+        $buildingStatusRows = $type === 'building_table'
+            ? $this->assessmentStatusesByName()
+            : [];
+
+        $auditedUnitObjectIds = $type === 'housing_table'
+            ? $this->auditedUnitObjectIds($records)
+            : [];
+
+        return $records->map(function (Model $record) use ($type, $editsByGlobalId, $latestAuditByGlobalId, $latestStatusByGlobalId, $buildingStatusRows, $auditedUnitObjectIds): Model {
+            $globalId = $record->getAttribute('globalid');
+
+            if (is_string($globalId) && $globalId !== '') {
+                foreach ($editsByGlobalId[$globalId] ?? [] as $fieldName => $fieldValue) {
+                    $record->setAttribute($fieldName, $fieldValue);
+                }
+
+                $latestAudit = $latestAuditByGlobalId[$globalId] ?? null;
+
+                if ($latestAudit instanceof EditAssessment) {
+                    $record->setAttribute('last_audit_user_id', $latestAudit->getAttribute('user_id'));
+                    $record->setAttribute('last_audit_at', $latestAudit->getAttribute('updated_at'));
+                }
+
+                $latestStatus = $latestStatusByGlobalId[$globalId] ?? null;
+
+                if ($latestStatus instanceof EditAssessment) {
+                    $record->setAttribute('last_status_user_id', $latestStatus->getAttribute('user_id'));
+                    $record->setAttribute('last_status_at', $latestStatus->getAttribute('updated_at'));
+                }
+            }
+
+            if ($type === 'building_table') {
+                $record->setAttribute('is_audited', isset($latestAuditByGlobalId[(string) $globalId]) ? 1 : 0);
+                $this->applyAssessmentStatusAttributes($record, $buildingStatusRows);
+            }
+
+            if ($type === 'housing_table') {
+                $record->setAttribute('is_audited', isset($auditedUnitObjectIds[(string) $record->getAttribute('objectid')]) ? 1 : 0);
+            }
+
+            return $record;
+        });
+    }
+
+    /**
+     * @return array<string, object>
+     */
+    private function assessmentStatusesByName(): array
+    {
+        return DB::table('assessment_statuses')
+            ->get(['id', 'name', 'label_en', 'label_ar', 'stage', 'order_step'])
+            ->mapWithKeys(fn (object $status): array => [strtolower(trim((string) $status->name)) => $status])
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, Model>  $units
+     * @return array<string, bool>
+     */
+    private function auditedUnitObjectIds(Collection $units): array
+    {
+        $objectIds = $units
+            ->pluck('objectid')
+            ->filter(fn (mixed $objectId): bool => $objectId !== null && $objectId !== '')
+            ->values();
+
+        if ($objectIds->isEmpty()) {
+            return [];
+        }
+
+        $auditedStatusIds = DB::table('assessment_statuses')
+            ->whereIn(DB::raw('LOWER(TRIM(name))'), [
+                'need_review',
+                'accepted_by_engineer',
+                'rejected_by_engineer',
+            ])
+            ->pluck('id');
+
+        if ($auditedStatusIds->isEmpty()) {
+            return [];
+        }
+
+        return DB::table('housing_statuses')
+            ->whereIn('housing_id', $objectIds)
+            ->whereIn('status_id', $auditedStatusIds)
+            ->pluck('housing_id')
+            ->mapWithKeys(fn (mixed $objectId): array => [(string) $objectId => true])
+            ->all();
+    }
+
+    /**
+     * @param  array<string, object>  $statusesByName
+     */
+    private function applyAssessmentStatusAttributes(Model $building, array $statusesByName): void
+    {
+        $fieldStatus = $building->getAttribute('field_status');
+
+        if (! is_string($fieldStatus) || trim($fieldStatus) === '') {
+            return;
+        }
+
+        $status = $statusesByName[strtolower(trim($fieldStatus))] ?? null;
+
+        if (! $status instanceof \stdClass) {
+            return;
+        }
+
+        $building->setAttribute('audit_status_id', $status->id);
+        $building->setAttribute('audit_status_name', $status->name);
+        $building->setAttribute('audit_status_label_en', $status->label_en);
+        $building->setAttribute('audit_status_label_ar', $status->label_ar);
+        $building->setAttribute('audit_status_stage', $status->stage);
+        $building->setAttribute('audit_status_order_step', $status->order_step);
+    }
+
     private function partialAuditFieldNames(
         string $type,
         mixed $globalId,
-        VBuildingAudited|VHousingUnitAudited $auditedRecord,
+        Model $auditedRecord,
         ?CarbonInterface $changedSince
     ): array {
         if ($changedSince === null || ! is_string($globalId) || $globalId === '') {
@@ -591,7 +785,7 @@ class ArcgisAuditedUploadService
     }
 
     private function recordEditdateIsOnOrAfter(
-        VBuildingAudited|VHousingUnitAudited $auditedRecord,
+        Model $auditedRecord,
         CarbonInterface $changedSince
     ): bool {
         $editdate = $auditedRecord->getAttribute('editdate');
@@ -634,7 +828,7 @@ class ArcgisAuditedUploadService
         return $this->token;
     }
 
-    public function buildingFeature(VBuildingAudited $building, string $token): array
+    public function buildingFeature(Model $building, string $token): array
     {
         $attributes = $this->auditedAttributes($building->getAttributes());
 
@@ -658,7 +852,7 @@ class ArcgisAuditedUploadService
         return $feature;
     }
 
-    public function unitFeature(VHousingUnitAudited $unit, string $token): array
+    public function unitFeature(Model $unit, string $token): array
     {
         $attributes = $this->auditedAttributes($unit->getAttributes());
 
@@ -689,7 +883,7 @@ class ArcgisAuditedUploadService
         return $feature;
     }
 
-    private function buildingPartialFeature(VBuildingAudited $building, array $fieldNames): array
+    private function buildingPartialFeature(Model $building, array $fieldNames): array
     {
         $attributes = $this->auditedAttributes($building->getAttributes(), $fieldNames);
         $attributes = $this->moveCommentsRecommendations($attributes);
@@ -697,7 +891,7 @@ class ArcgisAuditedUploadService
         return ['attributes' => $attributes];
     }
 
-    private function unitPartialFeature(VHousingUnitAudited $unit, array $fieldNames, string $token): array
+    private function unitPartialFeature(Model $unit, array $fieldNames, string $token): array
     {
         $attributes = $this->auditedAttributes($unit->getAttributes(), $fieldNames);
         $attributes = $this->moveCommentsRecommendations($attributes);
@@ -731,7 +925,7 @@ class ArcgisAuditedUploadService
         return $attributes->toArray();
     }
 
-    private function applyUnitAttributes(array $attributes, VHousingUnitAudited $unit): array
+    private function applyUnitAttributes(array $attributes, Model $unit): array
     {
         $parentGlobalId = $unit->getAttribute('parentglobalid');
 
@@ -778,7 +972,7 @@ class ArcgisAuditedUploadService
     }
 
     private function uploadBuilding(
-        VBuildingAudited $building,
+        Model $building,
         array &$summary,
         bool $copyAttachments,
         bool $attachmentsOnly,
@@ -854,7 +1048,7 @@ class ArcgisAuditedUploadService
     }
 
     private function uploadUnit(
-        VHousingUnitAudited $unit,
+        Model $unit,
         array &$summary,
         bool $copyAttachments,
         bool $attachmentsOnly,

@@ -5,6 +5,138 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
+it('uploads base table records with the latest audit edit values without audited views', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::statement('DROP VIEW IF EXISTS v_buildings_audited');
+    DB::statement('DROP VIEW IF EXISTS v_housing_units_audited');
+    Schema::dropIfExists('v_buildings_audited');
+    Schema::dropIfExists('v_housing_units_audited');
+
+    DB::table('buildings')->insert([
+        'objectid' => 7100,
+        'globalid' => 'base-building-globalid',
+        'building_damage_status' => 'minor',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 7200,
+        'globalid' => 'base-unit-globalid',
+        'parentglobalid' => 'base-building-globalid',
+        'unit_damage_status' => 'minor',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        [
+            'global_id' => 'base-building-globalid',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'major',
+            'created_at' => now()->subMinute(),
+            'updated_at' => now()->subMinute(),
+        ],
+        [
+            'global_id' => 'base-building-globalid',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'destroyed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'global_id' => 'base-unit-globalid',
+            'type' => 'housing_table',
+            'field_name' => 'unit_damage_status',
+            'field_value' => 'severe',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'globalid'],
+                ['name' => 'building_damage_status'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'globalid'],
+                ['name' => 'parentglobalid'],
+                ['name' => 'unit_damage_status'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if ($request['where'] === "old_global_id_B = 'base-building-globalid'") {
+                return Http::response([
+                    'features' => [
+                        ['attributes' => ['globalid' => 'target-building-globalid']],
+                    ],
+                ]);
+            }
+
+            return Http::response(['features' => []]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toMatchArray([
+                'old_objectid_B' => 7100,
+                'old_global_id_B' => 'base-building-globalid',
+                'building_damage_status' => 'destroyed',
+                'is_audited' => 1,
+            ]);
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9100],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/addFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toMatchArray([
+                'old_objectid_U' => 7200,
+                'old_global_id_U' => 'base-unit-globalid',
+                'parentglobalid' => 'target-building-globalid',
+                'unit_damage_status' => 'severe',
+            ]);
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9200],
+                ],
+            ]);
+        },
+    ]);
+
+    $this->artisan('arcgis:upload-audited', ['--without-attachments' => true])->assertSuccessful();
+});
+
 it('uploads audited views to arcgis and copies attachments', function () {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
