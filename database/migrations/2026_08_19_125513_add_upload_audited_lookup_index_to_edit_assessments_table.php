@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('edit_assessments', function (Blueprint $table): void {
-            $table->index(['type', 'global_id', 'field_name', 'id'], 'edit_assessments_audited_lookup_index');
+            $table->index(['type', 'global_id', 'id'], 'edit_assessments_audited_lookup_index');
             $table->index(['type', 'updated_at', 'global_id'], 'edit_assessments_audited_changed_index');
         });
     }
