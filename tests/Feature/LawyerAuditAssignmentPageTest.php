@@ -114,7 +114,7 @@ it('allows only restricted lawyers and database officers to open the lawyer assi
         ->assertForbidden();
 });
 
-it('keeps restricted lawyers read only on the assessment page and write endpoints', function () {
+it('allows assigned lawyer assignment users to update legal audit status', function () {
     Role::query()->create([
         'name' => 'Legal Auditor',
         'guard_name' => 'web',
@@ -135,8 +135,8 @@ it('keeps restricted lawyers read only on the assessment page and write endpoint
 
     $building = Building::query()->create([
         'objectid' => 99001,
-        'globalid' => 'readonly-lawyer-building',
-        'building_name' => 'Read Only Lawyer Building',
+        'globalid' => 'assigned-lawyer-building',
+        'building_name' => 'Assigned Lawyer Building',
     ]);
 
     AssignedAssessmentUser::query()->create([
@@ -148,8 +148,8 @@ it('keeps restricted lawyers read only on the assessment page and write endpoint
     $this->actingAs($lawyer)
         ->get("damage-assessment/showAssessmentAudit/{$building->globalid}")
         ->assertOk()
-        ->assertDontSee('btn_building_legal_challenge', false)
-        ->assertDontSee('data-status="accepted" data-audit-type="Legal Auditor"', false);
+        ->assertSee('btn_building_legal_challenge', false)
+        ->assertSee('data-status="accepted" data-audit-type="Legal Auditor"', false);
 
     $this->actingAs($lawyer)
         ->postJson(route('building.assessment.set.status'), [
@@ -157,10 +157,15 @@ it('keeps restricted lawyers read only on the assessment page and write endpoint
             'status' => 'accepted',
             'audit_type' => 'Legal Auditor',
         ])
-        ->assertForbidden();
+        ->assertOk()
+        ->assertJsonPath('status', true)
+        ->assertJsonPath('data.type', 'Legal Auditor')
+        ->assertJsonPath('data.status_name', 'accepted_by_lawyer');
 
-    $this->assertDatabaseMissing('building_statuses', [
+    $this->assertDatabaseHas('building_statuses', [
         'building_id' => $building->objectid,
         'status_id' => $status->id,
+        'user_id' => $lawyer->id,
+        'type' => 'Legal Auditor',
     ]);
 });

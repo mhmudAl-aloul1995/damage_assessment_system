@@ -51,12 +51,12 @@ class RestrictedLawyerAuditAccess
 
     public static function isRestrictedLawyer(?User $user): bool
     {
-        return self::restrictedLawyerNameFor($user) !== null;
+        return false;
     }
 
     public static function canViewAssignments(?User $user): bool
     {
-        return self::isRestrictedLawyer($user)
+        return self::restrictedLawyerNameFor($user) !== null
             || ($user?->hasRole('Database Officer') ?? false);
     }
 
