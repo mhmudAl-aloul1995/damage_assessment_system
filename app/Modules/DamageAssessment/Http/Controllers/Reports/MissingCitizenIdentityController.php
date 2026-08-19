@@ -26,7 +26,7 @@ class MissingCitizenIdentityController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer');
+        $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer|Legal Auditor');
     }
 
     public function index(): ViewContract
