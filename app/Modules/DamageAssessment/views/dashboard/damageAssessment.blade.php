@@ -318,6 +318,18 @@
 			display: flex;
 		}
 
+		.damage-dashboard-stats>.dashboard-summary-col-cso {
+			order: 3;
+		}
+
+		.damage-dashboard-stats>.dashboard-summary-col-public {
+			order: 4;
+		}
+
+		.damage-dashboard-stats>.dashboard-summary-col-road {
+			order: 5;
+		}
+
 		@media (min-width: 1200px) {
 			.damage-dashboard-stats>.dashboard-summary-col {
 				flex: 0 0 20%;
@@ -1732,7 +1744,7 @@
 			</div>
 			<!--end::Mixed Widget 1-->
 		</div>
-		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col dashboard-summary-col-public">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: rgb(191 152 7);"
@@ -1756,21 +1768,6 @@
 					</div>
 					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
 						style="margin-top: -100px">
-						<div class="d-flex align-items-center mb-6">
-							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check-circle"><span
-											class="path1"></span><span class="path2"></span></i></span>
-							</div>
-							<div class="d-flex align-items-center flex-wrap w-100">
-								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['cso_surveys']['completed'] }}"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.completed') }}</a>
-								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $csoSurveyStats['completed'] }}
-								</div>
-							</div>
-						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-cross"><span
@@ -1898,7 +1895,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col dashboard-summary-col-road">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: #0f766e;"
@@ -2079,7 +2076,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col dashboard-summary-col-cso">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: #315f72;"
@@ -2102,6 +2099,21 @@
 					</div>
 					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
 						style="margin-top: -100px">
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check-circle"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['completed'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.completed') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['completed'] }}
+								</div>
+							</div>
+						</div>
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-cross"><span
