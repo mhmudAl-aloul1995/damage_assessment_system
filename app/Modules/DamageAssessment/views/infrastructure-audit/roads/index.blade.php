@@ -21,7 +21,7 @@
                 <button type="button" id="bulk_assign_btn" class="btn btn-light-info">إسناد المحدد</button>
                 @endrole
                 <button type="button" id="open_roads_map_modal_btn" class="btn btn-light-primary" data-bs-toggle="modal"
-                    data-bs-target="#inf_roads_map_modal">خريطة مرافق الطرق</button>
+                    data-bs-target="#inf_roads_map_modal">خريطة الطرق</button>
                 <button type="button" id="open_export_modal_btn" class="btn btn-light-success" data-bs-toggle="modal"
                     data-bs-target="#inf_roads_export_modal">تصدير تقرير</button>
                 <button type="button" id="reset_filters_btn" class="btn btn-light">إعادة تعيين الفلاتر</button>
@@ -123,7 +123,7 @@
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">خريطة مرافق الطرق حسب فلاتر التدقيق</h5>
+                    <h5 class="modal-title">خريطة الطرق حسب فلاتر التدقيق</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
