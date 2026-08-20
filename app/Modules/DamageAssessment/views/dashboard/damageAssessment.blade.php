@@ -294,15 +294,15 @@
 			.damage-dashboard-stats {
 				--summary-header-height: 190px;
 				--summary-body-offset: 44px;
-				--summary-label-size: 0.8rem;
-				--summary-number-size: 0.82rem;
+				--summary-label-size: 0.86rem;
+				--summary-number-size: 0.88rem;
 				--summary-total-size: clamp(1.85rem, 1.25rem + 1.35vw, 2.45rem);
 				--summary-gap: 0.35rem;
 				--summary-body-inline-space: 0.65rem;
 				--summary-body-padding-x: 0.75rem;
 				--summary-body-padding-y: 0.75rem;
-				--summary-item-min-height: 2.28rem;
-				--summary-row-gap: 0.5rem;
+				--summary-item-min-height: 2.36rem;
+				--summary-row-gap: 0.55rem;
 				flex-wrap: nowrap;
 			}
 		}
