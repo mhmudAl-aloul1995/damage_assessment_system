@@ -56,6 +56,27 @@ test('it shows cso survey listing and details like other survey pages', function
         'length' => 10,
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Al-Rimal',
+        'q' => 'Civil Support',
+        'columns' => [
+            ['data' => 'objectid', 'name' => 'objectid', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'organization_name', 'name' => 'organization_name', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'building_name', 'name' => 'building_name', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'municipalitie', 'name' => 'municipalitie', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'neighborhood', 'name' => 'neighborhood', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'building_damage_status', 'name' => 'building_damage_status', 'searchable' => 'false', 'orderable' => 'false'],
+            ['data' => 'creationdate', 'name' => 'creationdate', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'organizations_count', 'name' => 'organizations_count', 'searchable' => 'false', 'orderable' => 'true'],
+            ['data' => 'units_count', 'name' => 'units_count', 'searchable' => 'false', 'orderable' => 'true'],
+            ['data' => 'assignedto', 'name' => 'assignedto', 'searchable' => 'false', 'orderable' => 'false'],
+            ['data' => 'actions', 'name' => 'actions', 'searchable' => 'false', 'orderable' => 'false'],
+        ],
+        'order' => [
+            ['column' => 0, 'dir' => 'desc'],
+        ],
+        'search' => [
+            'value' => '',
+            'regex' => 'false',
+        ],
     ]));
 
     $dataResponse->assertOk()

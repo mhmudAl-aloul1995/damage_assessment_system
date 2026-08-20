@@ -108,7 +108,7 @@ class CsoSurveyController extends Controller
             $query->has('units');
         }
 
-        $search = trim((string) $request->input('search.value', $request->input('search', '')));
+        $search = trim((string) $request->input('search.value', $request->input('q', '')));
 
         if ($search !== '') {
             $query->where(function (Builder $nested) use ($search): void {

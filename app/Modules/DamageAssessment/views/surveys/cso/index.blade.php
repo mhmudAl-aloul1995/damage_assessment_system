@@ -157,7 +157,7 @@
                     operational_status: $('#filter_operational_status').val() || queryParams.get('operational_status'),
                     from_date: $('#filter_from_date').val() || queryParams.get('from_date'),
                     to_date: $('#filter_to_date').val() || queryParams.get('to_date'),
-                    search: $('#filter_search').val() || queryParams.get('search'),
+                    q: $('#filter_search').val() || queryParams.get('q'),
                     damaged_only: queryParams.get('damaged_only'),
                     with_organizations: queryParams.get('with_organizations'),
                     with_units: queryParams.get('with_units'),
@@ -170,7 +170,22 @@
                 ajax: {
                     url: '{{ route('cso-surveys.data') }}',
                     data: function (d) {
-                        Object.assign(d, currentFilters());
+                        const filters = currentFilters();
+
+                        d.municipalitie = filters.municipalitie;
+                        d.neighborhood = filters.neighborhood;
+                        d.assignedto = filters.assignedto;
+                        d.building_damage_status = filters.building_damage_status;
+                        d.operational_status = filters.operational_status;
+                        d.from_date = filters.from_date;
+                        d.to_date = filters.to_date;
+                        d.q = filters.q;
+                        d.damaged_only = filters.damaged_only;
+                        d.with_organizations = filters.with_organizations;
+                        d.with_units = filters.with_units;
+                    },
+                    error: function (xhr) {
+                        toastr.error(xhr.responseJSON?.message || 'Could not load CSO surveys data');
                     }
                 },
                 order: [[0, 'desc']],
