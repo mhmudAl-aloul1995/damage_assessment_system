@@ -7,6 +7,7 @@ return [
     ],
     'damage_assessment' => [
         'title' => 'Damage Assessment',
+        'monitoring' => 'Monitoring',
         'dashboard' => 'Dashboard',
         'assessments' => 'Assessments',
         'buildings' => 'Buildings',
@@ -17,6 +18,11 @@ return [
         'road_facilities' => 'Road Facilities',
         'cso_surveys' => 'Civil Society Organizations',
         'engineers' => 'Researchers',
+        'groups' => [
+            'records' => 'Survey Records',
+            'infrastructure' => 'Infrastructure Surveys',
+            'field_operations' => 'Field Operations',
+        ],
     ],
     'hud' => [
         'title' => 'LIVE GIS HUD',
@@ -64,6 +70,11 @@ return [
         'dashboard' => 'Audit Dashboard',
         'home' => 'Home',
         'building_audit' => 'Building Audit',
+        'area_manager_review' => 'Area Manager Review',
+        'groups' => [
+            'damage_review' => 'Damage Review',
+            'infrastructure_review' => 'Infrastructure Review',
+        ],
     ],
     'attendance' => [
         'title' => 'Attendance',

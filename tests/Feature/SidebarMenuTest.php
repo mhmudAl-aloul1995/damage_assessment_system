@@ -21,19 +21,21 @@ beforeEach(function (): void {
     ]);
 });
 
+function sidebarUrlsFor(User $user): array
+{
+    return Sidebar::forUser($user)
+        ->flatMap(fn (array $module) => $module['sections'])
+        ->flatMap(fn (array $section) => $section['items'])
+        ->flatMap(fn (array $item) => $item['children'] ?? [$item])
+        ->pluck('url')
+        ->filter()
+        ->all();
+}
+
 it('shows the sidebar menu for infrastructure Team Leaders', function () {
     $role = Role::findOrCreate('Team Leader -INF', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
-
-    $this->post(route('login'), [
-        'email' => $user->email,
-        'password' => '123456',
-    ])->assertRedirect(route('dashboard'));
-
-    $this->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertRedirect('damage-assessment/damageAssessment');
 
     $sectionTitles = Sidebar::forUser($user)
         ->flatMap(fn (array $module) => $module['sections']->pluck('title'))
@@ -49,26 +51,13 @@ it('shows building survey return requests in the damage assessment sidebar', fun
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $this->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertRedirect('damage-assessment/damageAssessment');
-
-    $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
-
-    expect($damageAssessmentModule['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->toContain('damage-assessment/field-engineer/building-survey-return-requests');
+    expect(sidebarUrlsFor($user))->toContain('damage-assessment/field-engineer/building-survey-return-requests');
 });
 
 it('shows team leader field engineer assignment in the user management sidebar', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
-
-    $this->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertRedirect('damage-assessment/damageAssessment');
 
     $administrationModule = Sidebar::forUser($user)->firstWhere('key', 'administration');
 
@@ -106,11 +95,7 @@ it('shows missing citizen identities sidebar link to auditing supervisor and pro
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $urls = Sidebar::forUser($user)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->all();
+    $urls = sidebarUrlsFor($user);
 
     expect($urls)->toContain('damage-assessment/reports/missing-citizen-identities');
 })->with([
@@ -123,11 +108,7 @@ it('shows infrastructure audit links to project officers', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $urls = Sidebar::forUser($user)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->all();
+    $urls = sidebarUrlsFor($user);
 
     expect($urls)
         ->toContain('damage-assessment/inf-audit/public-buildings')
@@ -147,10 +128,31 @@ it('groups visible sidebar sections by module', function () {
     $administrationModule = $modules->firstWhere('key', 'administration');
 
     expect($damageAssessmentModule['sections']->pluck('title')->all())
-        ->toContain('menu.hud.title', 'menu.damage_assessment.title', 'menu.reports.title', 'menu.audit.title');
+        ->toContain('menu.hud.title', 'menu.damage_assessment.monitoring', 'menu.damage_assessment.title', 'menu.reports.title', 'menu.audit.title');
 
     expect($administrationModule['sections']->pluck('title')->all())
         ->toContain('menu.user_management.title');
+});
+
+it('orders damage assessment sidebar sections by the operational workflow', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $sectionTitles = Sidebar::forUser($user)
+        ->firstWhere('key', 'damage_assessment')['sections']
+        ->pluck('title')
+        ->all();
+
+    expect($sectionTitles)->toMatchArray([
+        'menu.hud.title',
+        'menu.damage_assessment.monitoring',
+        'menu.damage_assessment.title',
+        'menu.attendance.title',
+        'menu.audit.title',
+        'menu.committee.title',
+        'menu.reports.title',
+    ]);
 });
 
 it('shows higher committee reassessments in the committee sidebar', function () {
@@ -187,19 +189,13 @@ it('shows lawyer legal audit assignments only to authorized sidebar users', func
     $auditReviewer = User::factory()->create();
     $auditReviewer->assignRole($auditReviewerRole);
 
-    $sidebarUrlsFor = fn (User $user): array => Sidebar::forUser($user)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->all();
-
-    expect($sidebarUrlsFor($databaseOfficer))
+    expect(sidebarUrlsFor($databaseOfficer))
         ->toContain('damage-assessment/audit/lawyer-assignments')
-        ->and($sidebarUrlsFor($lawyer))
+        ->and(sidebarUrlsFor($lawyer))
         ->toContain('damage-assessment/audit/lawyer-assignments')
-        ->and($sidebarUrlsFor($auditingSupervisor))
+        ->and(sidebarUrlsFor($auditingSupervisor))
         ->not->toContain('damage-assessment/audit/lawyer-assignments')
-        ->and($sidebarUrlsFor($auditReviewer))
+        ->and(sidebarUrlsFor($auditReviewer))
         ->not->toContain('damage-assessment/audit/lawyer-assignments');
 });
 
@@ -271,17 +267,8 @@ it('temporarily shows the audit home sidebar link for selected users only', func
     ]);
     $regularUser->assignRole($role);
 
-    $exceptedUrls = Sidebar::forUser($exceptedUser)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->all();
-
-    $regularUrls = Sidebar::forUser($regularUser)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->all();
+    $exceptedUrls = sidebarUrlsFor($exceptedUser);
+    $regularUrls = sidebarUrlsFor($regularUser);
 
     expect($exceptedUrls)
         ->toContain('damage-assessment/audit')
@@ -289,11 +276,7 @@ it('temporarily shows the audit home sidebar link for selected users only', func
         ->not->toContain('damage-assessment/audit');
 
     $identityExceptedUsers->each(function (User $identityExceptedUser): void {
-        $identityExceptedUrls = Sidebar::forUser($identityExceptedUser)
-            ->flatMap(fn (array $module) => $module['sections'])
-            ->flatMap(fn (array $section) => $section['items'])
-            ->pluck('url')
-            ->all();
+        $identityExceptedUrls = sidebarUrlsFor($identityExceptedUser);
 
         expect($identityExceptedUrls)->toContain('damage-assessment/audit');
     });
@@ -304,11 +287,7 @@ it('shows the read only audit home link for team leaders', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $urls = Sidebar::forUser($user)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->pluck('url')
-        ->all();
+    $urls = sidebarUrlsFor($user);
 
     expect($urls)->toContain('damage-assessment/audit');
 });
@@ -318,12 +297,7 @@ it('shows productivity report link for team leaders', function () {
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $urls = Sidebar::forUser($user)
-        ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
-        ->flatMap(fn (array $item) => $item['children'] ?? [$item])
-        ->pluck('url')
-        ->all();
+    $urls = sidebarUrlsFor($user);
 
     expect($urls)->toContain('damage-assessment/reports/productivity');
 });

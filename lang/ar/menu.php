@@ -7,6 +7,7 @@ return [
     ],
     'damage_assessment' => [
         'title' => 'حصر الأضرار',
+        'monitoring' => 'المتابعة',
         'dashboard' => 'الرئيسية',
         'assessments' => 'الاستبيانات',
         'buildings' => 'المباني',
@@ -17,6 +18,11 @@ return [
         'road_facilities' => 'الطرق',
         'cso_surveys' => 'منظمات المجتمع المدني',
         'engineers' => 'الباحثين',
+        'groups' => [
+            'records' => 'سجلات الحصر',
+            'infrastructure' => 'حصر البنية التحتية',
+            'field_operations' => 'التشغيل الميداني',
+        ],
     ],
     'hud' => [
         'title' => 'لوحة GIS المباشرة',
@@ -65,6 +71,10 @@ return [
         'home' => 'الرئيسية',
         'building_audit' => 'تدقيق المبنى',
         'area_manager_review' => 'مراجعة مدير المنطقة',
+        'groups' => [
+            'damage_review' => 'تدقيق الأضرار',
+            'infrastructure_review' => 'تدقيق البنية التحتية',
+        ],
     ],
     'attendance' => [
         'title' => 'الحضور والغياب',
