@@ -81,7 +81,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,
                 COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,
                 COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,
-                COALESCE(SUM(security_situation = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as assessment_obstacle,
                 COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
                 COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
                 COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
@@ -121,8 +121,8 @@ class DamageAssessmentController extends Controller
             'fully_damaged' => $data['buildings']->fully_damaged,
             'partially_damaged' => $data['buildings']->partially_damaged,
             'committee_review' => $data['buildings']->committee_review,
-            'security_unsafe' => $data['buildings']->security_unsafe,
-            'assessed_total' => (int) $data['buildings']->fully_damaged + (int) $data['buildings']->partially_damaged + (int) $data['buildings']->committee_review + (int) $data['buildings']->security_unsafe,
+            'assessment_obstacle' => $data['buildings']->assessment_obstacle,
+            'assessed_total' => (int) $data['buildings']->fully_damaged + (int) $data['buildings']->partially_damaged + (int) $data['buildings']->committee_review + (int) $data['buildings']->assessment_obstacle,
             'uxo' => $data['buildings']->uxo,
             'bodies' => $data['buildings']->bodies,
             'debris' => $data['buildings']->debris,
@@ -264,7 +264,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as fully_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
-                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' OR LOWER(TRIM(COALESCE(security_situation, ''))) = 'unsafe' THEN 1 ELSE 0 END), 0) as obstacle_buildings,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings,
                 COALESCE(SUM(CAST(building_debris_qty AS DECIMAL(15, 2))), 0) as rubble_quantity
             ")
             ->first();
@@ -288,7 +288,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
-                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' OR LOWER(TRIM(COALESCE(security_situation, ''))) = 'unsafe' THEN 1 ELSE 0 END), 0) as obstacle_buildings
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings
             ")
             ->groupBy('municipality_name')
             ->get()
@@ -556,7 +556,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as fully_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
-                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' OR LOWER(TRIM(COALESCE(security_situation, ''))) = 'unsafe' THEN 1 ELSE 0 END), 0) as obstacle_buildings,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings,
                 COALESCE(SUM(CAST(building_debris_qty AS DECIMAL(15, 2))), 0) as rubble_quantity
             ")
             ->first();
@@ -580,7 +580,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
-                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' OR LOWER(TRIM(COALESCE(security_situation, ''))) = 'unsafe' THEN 1 ELSE 0 END), 0) as obstacle_buildings
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings
             ")
             ->groupBy('municipality_name')
             ->get()
@@ -607,7 +607,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END), 0) as destroyed_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END), 0) as partially_damaged_buildings,
                 COALESCE(SUM(CASE WHEN building_damage_status = 'committee_review' THEN 1 ELSE 0 END), 0) as committee_review_buildings,
-                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' OR LOWER(TRIM(COALESCE(security_situation, ''))) = 'unsafe' THEN 1 ELSE 0 END), 0) as obstacle_buildings
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as obstacle_buildings
             ")
             ->groupBy('municipality_name', 'neighborhood_name')
             ->get()
@@ -1055,7 +1055,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,
                 COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,
                 COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,
-                COALESCE(SUM(security_situation = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as assessment_obstacle,
                 COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
                 COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
                 COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
@@ -1083,8 +1083,8 @@ class DamageAssessmentController extends Controller
                 'fully_damaged' => (int) $buildings->fully_damaged,
                 'partially_damaged' => (int) $buildings->partially_damaged,
                 'committee_review' => (int) $buildings->committee_review,
-                'security_unsafe' => (int) $buildings->security_unsafe,
-                'assessed_total' => (int) $buildings->fully_damaged + (int) $buildings->partially_damaged + (int) $buildings->committee_review + (int) $buildings->security_unsafe,
+                'assessment_obstacle' => (int) $buildings->assessment_obstacle,
+                'assessed_total' => (int) $buildings->fully_damaged + (int) $buildings->partially_damaged + (int) $buildings->committee_review + (int) $buildings->assessment_obstacle,
                 'uxo' => (int) $buildings->uxo,
                 'bodies' => (int) $buildings->bodies,
                 'debris' => (int) $buildings->debris,

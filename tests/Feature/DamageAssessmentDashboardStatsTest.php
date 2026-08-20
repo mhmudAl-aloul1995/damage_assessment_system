@@ -528,6 +528,14 @@ it('counts assessed buildings from damaged committee review and blocked assessme
         'objectid' => 914,
         'globalid' => 'assessed-building-blocked',
         'field_status' => 'Not_Completed',
+        'assessment_obstacle' => 'yes',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 915,
+        'globalid' => 'assessed-building-unsafe-without-obstacle',
+        'field_status' => 'Not_Completed',
+        'assessment_obstacle' => 'no',
         'security_situation' => 'Unsafe',
     ]);
 
@@ -539,7 +547,7 @@ it('counts assessed buildings from damaged committee review and blocked assessme
                 && (int) $buildingStats['fully_damaged'] === 1
                 && (int) $buildingStats['partially_damaged'] === 1
                 && (int) $buildingStats['committee_review'] === 1
-                && (int) $buildingStats['security_unsafe'] === 1
+                && (int) $buildingStats['assessment_obstacle'] === 1
                 && (int) $buildingStats['assessed_total'] === 4;
         });
 });
@@ -646,6 +654,7 @@ it('returns latest dashboard stats as json', function () {
         'building_name' => 'Latest Building',
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
+        'assessment_obstacle' => 'yes',
         'security_situation' => 'Safe',
         'uxo_present' => 'no3',
         'bodies_present' => 'no3',
@@ -670,6 +679,7 @@ it('returns latest dashboard stats as json', function () {
         ->assertOk()
         ->assertJsonPath('buildingStats.completed', 1)
         ->assertJsonPath('buildingStats.fully_damaged', 1)
+        ->assertJsonPath('buildingStats.assessment_obstacle', 1)
         ->assertJsonPath('unitStats.total_units', 1)
         ->assertJsonPath('unitStats.damaged_total', 0)
         ->assertJsonPath('unitStats.committee_review', 1);

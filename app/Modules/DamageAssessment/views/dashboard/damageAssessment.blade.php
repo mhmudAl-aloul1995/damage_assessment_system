@@ -10,7 +10,7 @@
 				'fully_damaged' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'fully_damaged']),
 				'partially_damaged' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'partially_damaged']),
 				'committee_review' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'committee_review']),
-				'assessment_blocked' => url('damage-assessment/building') . '?' . http_build_query(['security_situation' => 'Unsafe']),
+				'assessment_blocked' => url('damage-assessment/building') . '?' . http_build_query(['assessment_obstacle' => 'yes']),
 				'bodies_present' => url('damage-assessment/building') . '?' . http_build_query(['bodies_present' => 'yes3']),
 				'uxo_present' => url('damage-assessment/building') . '?' . http_build_query(['uxo_present' => 'yes3']),
 				'debris_blocking' => url('damage-assessment/building') . '?' . http_build_query(['building_debris_exist' => 'yes']),
@@ -972,7 +972,7 @@
 									<a href="{{ $dashboardStatLinks['buildings']['assessment_blocked'] }}"
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.assessment_blocked') }}</a>
 								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['security_unsafe'] }}
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['assessment_obstacle'] }}
 								</div>
 							</div>
 						</div>
@@ -1208,7 +1208,7 @@
 								<!--begin::Label-->
 								<div class="d-flex align-items-center">
 									<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-										{{ $buildingStats['security_unsafe'] }}
+										{{ $buildingStats['assessment_obstacle'] }}
 									</div>
 									<i class="ki-duotone  fs-5 text-danger ms-1">
 										<span class="path1"></span>
@@ -2486,7 +2486,7 @@
 									{{ $buildingStats['fully_damaged'] ?? 0 }},
 									{{ $buildingStats['partially_damaged'] ?? 0 }},
 									{{ $buildingStats['committee_review'] ?? 0 }},
-				{{ $buildingStats['security_unsafe'] ?? 0 }}
+				{{ $buildingStats['assessment_obstacle'] ?? 0 }}
 			],
 			chart: {
 				type: 'donut',
@@ -3625,7 +3625,7 @@
 					newBuildingData.fully_damaged ?? 0,
 					newBuildingData.partially_damaged ?? 0,
 					newBuildingData.committee_review ?? 0,
-					newBuildingData.security_unsafe ?? 0
+					newBuildingData.assessment_obstacle ?? 0
 				]);
 			}
 
