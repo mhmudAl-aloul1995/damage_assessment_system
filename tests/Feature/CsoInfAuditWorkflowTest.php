@@ -6,6 +6,8 @@ use App\Models\CsoSurvey;
 use App\Models\CsoSurveyAuditHistory;
 use App\Models\CsoSurveyAuditStatus;
 use App\Models\CsoSurveyFilter;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
 use App\Models\InfAuditAssignment;
 use App\Models\InfEditAssessment;
 use App\Models\User;
@@ -67,6 +69,28 @@ test('database officer can assign and inf engineer can audit cso surveys', funct
 
     $survey = CsoSurvey::query()->firstOrFail();
 
+    $organization = CsoSurveyOrganization::query()->create([
+        'objectid' => 8101,
+        'globalid' => 'cso-child-organization-global-id',
+        'parentglobalid' => $survey->globalid,
+        'organization_name_en' => 'Women Support Association Branch',
+        'operational_status' => 'partial',
+        'raw_payload' => [
+            'organization_name_en' => 'Women Support Association Branch',
+        ],
+    ]);
+
+    CsoSurveyUnit::query()->create([
+        'objectid' => 9101,
+        'globalid' => 'cso-child-unit-global-id',
+        'parentglobalid' => $survey->globalid,
+        'unit_name' => 'Ground floor unit',
+        'unit_damage_status' => 'minor_damage',
+        'raw_payload' => [
+            'unit_name' => 'Ground floor unit',
+        ],
+    ]);
+
     $this->actingAs($officer)
         ->get(route('inf-audit.cso.index'))
         ->assertOk()
@@ -100,6 +124,8 @@ test('database officer can assign and inf engineer can audit cso surveys', funct
         ->get(route('inf-audit.cso.show', $survey))
         ->assertOk()
         ->assertSee('Women Support Association')
+        ->assertSee('Women Support Association Branch')
+        ->assertSee('Ground floor unit')
         ->assertSee('Sunny');
 
     $this->actingAs($engineer)
@@ -113,6 +139,18 @@ test('database officer can assign and inf engineer can audit cso surveys', funct
         ->assertOk();
 
     expect(InfEditAssessment::query()->where('table_type', 'cso_survey_table')->where('field_name', 'weather')->exists())->toBeTrue();
+
+    $this->actingAs($engineer)
+        ->postJson(route('inf-audit.cso.field-update', $survey), [
+            'table_type' => 'cso_survey_organization_table',
+            'auditable_id' => $organization->id,
+            'field_name' => 'organization_name_en',
+            'field_value' => 'Women Support Association Branch Verified',
+            'notes' => 'Verified child record',
+        ])
+        ->assertOk();
+
+    expect(InfEditAssessment::query()->where('table_type', 'cso_survey_organization_table')->where('field_name', 'organization_name_en')->exists())->toBeTrue();
 
     $this->actingAs($engineer)
         ->postJson(route('inf-audit.cso.status', $survey), [

@@ -12,6 +12,8 @@ use App\Models\CsoSurvey;
 use App\Models\CsoSurveyAuditHistory;
 use App\Models\CsoSurveyAuditStatus;
 use App\Models\CsoSurveyFilter;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
 use App\Models\InfAuditAssignment;
 use App\Models\InfAuditStatus;
 use App\Models\InfEditAssessment;
@@ -30,6 +32,10 @@ use Yajra\DataTables\Facades\DataTables;
 class InfAuditCsoSurveyController extends Controller
 {
     private const TABLE_TYPE = 'cso_survey_table';
+
+    private const ORGANIZATION_TABLE_TYPE = 'cso_survey_organization_table';
+
+    private const UNIT_TABLE_TYPE = 'cso_survey_unit_table';
 
     private const FINAL_STATUS_NAMES = ['final_approval', 'accepted_final', 'final'];
 
@@ -144,6 +150,8 @@ class InfAuditCsoSurveyController extends Controller
             'infAuditAssignment.user',
             'infAuditStatus.status',
             'infAuditStatus.assignee',
+            'organizations' => fn ($query) => $query->orderBy('objectid'),
+            'units' => fn ($query) => $query->orderBy('objectid'),
         ]);
 
         $this->authorizeRecord($cso);
@@ -152,7 +160,7 @@ class InfAuditCsoSurveyController extends Controller
             ...$this->indexData(),
             'survey' => $cso,
             'sections' => $this->surveySections($cso),
-            'childGroups' => [],
+            'childGroups' => $this->childGroups($cso),
             'assignment' => $this->assignment($cso->globalid),
             'editHistories' => $this->editHistories($cso),
             'arcgisAttachments' => $this->arcgisAttachments($cso),
@@ -162,7 +170,7 @@ class InfAuditCsoSurveyController extends Controller
             'backRoute' => route('inf-audit.cso.index'),
             'title' => 'تدقيق منظمات المجتمع المدني',
             'mainSectionTitle' => 'بيانات استبيان CSO',
-            'childSectionTitle' => 'بيانات تابعة',
+            'childSectionTitle' => 'المنظمات والوحدات التابعة',
         ]);
     }
 
@@ -245,15 +253,17 @@ class InfAuditCsoSurveyController extends Controller
 
         $this->authorizeFieldEdit($cso);
 
-        $field = $this->fieldMeta($data['field_name']);
-        $oldValue = $this->displayValue($cso, $field);
+        $tableType = $data['table_type'];
+        $record = $this->editableRecord($cso, $tableType, (int) $data['auditable_id']);
+        $field = $this->fieldMeta($data['field_name'], $tableType);
+        $oldValue = $this->displayValue($record, $field, $tableType);
 
         InfEditAssessment::query()->create([
-            'auditable_type' => 'cso_survey',
-            'auditable_id' => $cso->id,
-            'global_id' => $cso->globalid,
-            'objectid' => $cso->objectid,
-            'table_type' => self::TABLE_TYPE,
+            'auditable_type' => $this->auditableType($tableType),
+            'auditable_id' => $record->id,
+            'global_id' => $record->globalid,
+            'objectid' => $record->objectid,
+            'table_type' => $tableType,
             'field_name' => $data['field_name'],
             'field_value' => $data['field_value'] ?? null,
             'old_value' => $oldValue,
@@ -263,9 +273,9 @@ class InfAuditCsoSurveyController extends Controller
 
         return response()->json([
             'message' => 'تم حفظ التعديل بنجاح.',
-            'display_value' => $this->displayValue($cso, $field),
-            'raw_value' => $this->rawValue($cso, $data['field_name']),
-            'history' => $this->historyPayload($this->fieldHistory($cso, $data['field_name'])),
+            'display_value' => $this->displayValue($record, $field, $tableType),
+            'raw_value' => $this->rawValue($record, $data['field_name'], $tableType),
+            'history' => $this->historyPayload($this->fieldHistory($record, $data['field_name'], $tableType)),
         ]);
     }
 
@@ -295,9 +305,17 @@ class InfAuditCsoSurveyController extends Controller
 
     private function editHistories(CsoSurvey $survey): array
     {
+        $globalIds = collect([$survey->globalid])
+            ->merge($survey->organizations->pluck('globalid'))
+            ->merge($survey->units->pluck('globalid'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         return InfEditAssessment::query()
             ->with('user')
-            ->where('global_id', $survey->globalid)
+            ->whereIn('global_id', $globalIds)
             ->latest()
             ->get()
             ->all();
@@ -305,28 +323,73 @@ class InfAuditCsoSurveyController extends Controller
 
     private function surveySections(CsoSurvey $survey): array
     {
+        $repeatSectionNames = array_merge(
+            CsoSurveyLayout::repeatSectionNames('CSO_Organizations'),
+            CsoSurveyLayout::repeatSectionNames('Unit_Information'),
+            ['CSO_Organizations', 'Unit_Information'],
+        );
+
         return collect(CsoSurveyLayout::sections())
-            ->reject(fn (array $section): bool => ($section['type'] ?? 'group') === 'repeat')
+            ->reject(fn (array $section): bool => in_array($section['name'] ?? '', $repeatSectionNames, true))
             ->map(fn (array $section): array => [
                 'title' => $section['label'] ?: $section['name'],
-                'rows' => $this->rows($survey, $section['fields'] ?? []),
+                'rows' => $this->rows($survey, $section['fields'] ?? [], self::TABLE_TYPE),
             ])
             ->filter(fn (array $section): bool => $section['rows'] !== [])
             ->values()
             ->all();
     }
 
-    private function rows(CsoSurvey $survey, array $fields): array
+    private function childGroups(CsoSurvey $survey): array
+    {
+        $organizationSections = CsoSurveyLayout::repeatSections('CSO_Organizations');
+        $unitSections = CsoSurveyLayout::repeatSections('Unit_Information');
+
+        $organizations = $survey->organizations
+            ->values()
+            ->map(fn (CsoSurveyOrganization $organization, int $index): array => [
+                'title' => 'CSO Organization '.($index + 1).' - '.($organization->organization_name_en ?: $organization->organization_name_ar ?: $organization->organization_acronym ?: $organization->objectid),
+                'sections' => $this->childSections($organization, $organizationSections, self::ORGANIZATION_TABLE_TYPE),
+            ])
+            ->filter(fn (array $group): bool => $group['sections'] !== []);
+
+        $units = $survey->units
+            ->values()
+            ->map(fn (CsoSurveyUnit $unit, int $index): array => [
+                'title' => 'Unit Information '.($index + 1).' - '.($unit->unit_name ?: $unit->objectid),
+                'sections' => $this->childSections($unit, $unitSections, self::UNIT_TABLE_TYPE),
+            ])
+            ->filter(fn (array $group): bool => $group['sections'] !== []);
+
+        return $organizations
+            ->merge($units)
+            ->values()
+            ->all();
+    }
+
+    private function childSections(object $record, array $sections, string $tableType): array
+    {
+        return collect($sections)
+            ->map(fn (array $section): array => [
+                'title' => $section['label'] ?: $section['name'],
+                'rows' => $this->rows($record, $section['fields'] ?? [], $tableType),
+            ])
+            ->filter(fn (array $section): bool => $section['rows'] !== [])
+            ->values()
+            ->all();
+    }
+
+    private function rows(object $record, array $fields, string $tableType): array
     {
         return collect($fields)
             ->reject(fn (array $field): bool => in_array($field['type'] ?? null, ['calculate'], true))
-            ->map(function (array $field) use ($survey): array {
-                $rawValue = $this->rawValue($survey, $field['name']);
-                $history = $this->fieldHistory($survey, $field['name']);
+            ->map(function (array $field) use ($record, $tableType): array {
+                $rawValue = $this->rawValue($record, $field['name'], $tableType);
+                $history = $this->fieldHistory($record, $field['name'], $tableType);
 
                 return [
-                    'record_id' => $survey->id,
-                    'table_type' => self::TABLE_TYPE,
+                    'record_id' => $record->id,
+                    'table_type' => $tableType,
                     'field_name' => $field['name'],
                     'field_type' => $field['type'] ?? null,
                     'list_name' => $field['list_name'] ?? null,
@@ -336,7 +399,7 @@ class InfAuditCsoSurveyController extends Controller
                     'has_answer' => filled($rawValue),
                     'is_edited' => $history !== [],
                     'options' => $this->fieldOptions($field['list_name'] ?? null),
-                    'history_id' => 'inf_history_'.md5(self::TABLE_TYPE.'|'.$survey->id.'|'.$field['name']),
+                    'history_id' => 'inf_history_'.md5($tableType.'|'.$record->id.'|'.$field['name']),
                     'history' => $history,
                 ];
             })
@@ -344,29 +407,29 @@ class InfAuditCsoSurveyController extends Controller
             ->all();
     }
 
-    private function displayValue(CsoSurvey $survey, array $field): string
+    private function displayValue(object $record, array $field, string $tableType): string
     {
-        return $this->formatValue($this->rawValue($survey, $field['name']), $field);
+        return $this->formatValue($this->rawValue($record, $field['name'], $tableType), $field);
     }
 
-    private function rawValue(CsoSurvey $survey, string $fieldName): ?string
+    private function rawValue(object $record, string $fieldName, string $tableType): ?string
     {
         $edit = InfEditAssessment::query()
-            ->where('table_type', self::TABLE_TYPE)
+            ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
-            ->where(function ($query) use ($survey): void {
-                if (filled($survey->objectid)) {
-                    $query->where('objectid', $survey->objectid);
+            ->where(function ($query) use ($record): void {
+                if (filled($record->objectid)) {
+                    $query->where('objectid', $record->objectid);
                 }
 
-                if (filled($survey->globalid)) {
-                    $query->orWhere('global_id', $survey->globalid);
+                if (filled($record->globalid)) {
+                    $query->orWhere('global_id', $record->globalid);
                 }
             })
             ->latest()
             ->first();
 
-        $value = $edit?->field_value ?? data_get($survey, $fieldName) ?? $this->payloadValue($survey->raw_payload ?? [], $fieldName);
+        $value = $edit?->field_value ?? data_get($record, $fieldName) ?? $this->payloadValue($record->raw_payload ?? [], $fieldName);
 
         if ($value === null || $value === '') {
             return null;
@@ -405,21 +468,21 @@ class InfAuditCsoSurveyController extends Controller
             ->value('label') ?: $value;
     }
 
-    private function fieldHistory(CsoSurvey $survey, string $fieldName): array
+    private function fieldHistory(object $record, string $fieldName, string $tableType): array
     {
-        $field = $this->fieldMeta($fieldName);
+        $field = $this->fieldMeta($fieldName, $tableType);
 
         return InfEditAssessment::query()
             ->with('user')
-            ->where('table_type', self::TABLE_TYPE)
+            ->where('table_type', $tableType)
             ->where('field_name', $fieldName)
-            ->where(function ($query) use ($survey): void {
-                if (filled($survey->objectid)) {
-                    $query->where('objectid', $survey->objectid);
+            ->where(function ($query) use ($record): void {
+                if (filled($record->objectid)) {
+                    $query->where('objectid', $record->objectid);
                 }
 
-                if (filled($survey->globalid)) {
-                    $query->orWhere('global_id', $survey->globalid);
+                if (filled($record->globalid)) {
+                    $query->orWhere('global_id', $record->globalid);
                 }
             })
             ->latest()
@@ -431,9 +494,15 @@ class InfAuditCsoSurveyController extends Controller
             ->all();
     }
 
-    private function fieldMeta(string $fieldName): array
+    private function fieldMeta(string $fieldName, string $tableType): array
     {
-        foreach (CsoSurveyLayout::sections() as $section) {
+        $sections = match ($tableType) {
+            self::ORGANIZATION_TABLE_TYPE => CsoSurveyLayout::repeatSections('CSO_Organizations'),
+            self::UNIT_TABLE_TYPE => CsoSurveyLayout::repeatSections('Unit_Information'),
+            default => CsoSurveyLayout::sections(),
+        };
+
+        foreach ($sections as $section) {
             foreach ($section['fields'] ?? [] as $field) {
                 if (($field['name'] ?? null) === $fieldName) {
                     return $field;
@@ -448,6 +517,31 @@ class InfAuditCsoSurveyController extends Controller
             'hint' => null,
             'list_name' => null,
         ];
+    }
+
+    private function editableRecord(CsoSurvey $survey, string $tableType, int $id): object
+    {
+        return match ($tableType) {
+            self::TABLE_TYPE => (int) $survey->id === $id ? $survey : abort(404),
+            self::ORGANIZATION_TABLE_TYPE => CsoSurveyOrganization::query()
+                ->whereKey($id)
+                ->where('parentglobalid', $survey->globalid)
+                ->firstOrFail(),
+            self::UNIT_TABLE_TYPE => CsoSurveyUnit::query()
+                ->whereKey($id)
+                ->where('parentglobalid', $survey->globalid)
+                ->firstOrFail(),
+            default => abort(404),
+        };
+    }
+
+    private function auditableType(string $tableType): string
+    {
+        return match ($tableType) {
+            self::ORGANIZATION_TABLE_TYPE => 'cso_survey_organization',
+            self::UNIT_TABLE_TYPE => 'cso_survey_unit',
+            default => 'cso_survey',
+        };
     }
 
     private function formatValue(mixed $value, array $field): string
@@ -594,7 +688,7 @@ class InfAuditCsoSurveyController extends Controller
             return [];
         }
 
-        $layerUrl = (string) config('services.arcgis.cso_survey_layer_url');
+        $layerUrl = $this->featureServerLayerUrl((string) config('services.arcgis.cso_survey_layer_url'), 0);
 
         if ($layerUrl === '') {
             return [];
@@ -676,5 +770,21 @@ class InfAuditCsoSurveyController extends Controller
         }
 
         return null;
+    }
+
+    private function featureServerLayerUrl(string $url, int $layer): string
+    {
+        $url = rtrim($url, '/');
+        $url = preg_replace('#/query$#i', '', $url) ?: $url;
+
+        if (preg_match('#/featureserver$#i', $url)) {
+            return $url.'/'.$layer;
+        }
+
+        if (preg_match('#/featureserver/\d+$#i', $url)) {
+            return preg_replace('#/featureserver/\d+$#i', '/FeatureServer/'.$layer, $url) ?: $url;
+        }
+
+        return $url;
     }
 }

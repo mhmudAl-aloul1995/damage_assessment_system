@@ -79,13 +79,33 @@ class SyncArcGISLayers extends Command
             ],
         ];
 
-        if (filled(config('services.arcgis.cso_survey_layer_url'))) {
+        $csoSurveyLayerUrl = config('services.arcgis.cso_survey_layer_url');
+
+        if (filled($csoSurveyLayerUrl)) {
             $layers['cso_surveys'] = [
                 'table' => 'cso_surveys',
-                'url' => config('services.arcgis.cso_survey_layer_url'),
+                'url' => $this->featureServerLayerUrl((string) $csoSurveyLayerUrl, 0),
                 'unique' => 'objectid',
+                'returnGeometry' => true,
+                'outSR' => 4326,
                 'map' => [
                     'organization_name' => 'organization_name_en',
+                ],
+            ];
+            $layers['cso_survey_organizations'] = [
+                'table' => 'cso_survey_organizations',
+                'url' => $this->featureServerLayerUrl((string) $csoSurveyLayerUrl, 1),
+                'unique' => 'objectid',
+                'map' => [
+                    'parentglobalid' => 'parentglobalid',
+                ],
+            ];
+            $layers['cso_survey_units'] = [
+                'table' => 'cso_survey_units',
+                'url' => $this->featureServerLayerUrl((string) $csoSurveyLayerUrl, 2),
+                'unique' => 'objectid',
+                'map' => [
+                    'parentglobalid' => 'parentglobalid',
                 ],
             ];
         }
@@ -504,6 +524,22 @@ class SyncArcGISLayers extends Command
 
         if (preg_match('#/featureserver/\d+$#i', $url)) {
             return $url.'/query';
+        }
+
+        return $url;
+    }
+
+    private function featureServerLayerUrl(string $url, int $layer): string
+    {
+        $url = rtrim($url, '/');
+        $url = preg_replace('#/query$#i', '', $url) ?: $url;
+
+        if (preg_match('#/featureserver$#i', $url)) {
+            return $url.'/'.$layer;
+        }
+
+        if (preg_match('#/featureserver/\d+$#i', $url)) {
+            return preg_replace('#/featureserver/\d+$#i', '/FeatureServer/'.$layer, $url) ?: $url;
         }
 
         return $url;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CsoSurvey extends Model
@@ -33,6 +34,16 @@ class CsoSurvey extends Model
     public function infAuditStatus(): HasOne
     {
         return $this->hasOne(CsoSurveyAuditStatus::class)->latestOfMany();
+    }
+
+    public function organizations(): HasMany
+    {
+        return $this->hasMany(CsoSurveyOrganization::class, 'parentglobalid', 'globalid');
+    }
+
+    public function units(): HasMany
+    {
+        return $this->hasMany(CsoSurveyUnit::class, 'parentglobalid', 'globalid');
     }
 
     public function infAuditAssignment(): HasOne

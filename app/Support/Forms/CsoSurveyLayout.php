@@ -6,6 +6,72 @@ namespace App\Support\Forms;
 
 class CsoSurveyLayout extends StaticSurveyLayout
 {
+    private const ORGANIZATION_SECTION_NAMES = [
+        'cso_identity',
+        'cso_operational_status',
+        'cso_management_contacts',
+        'cso_profile_capacity',
+    ];
+
+    private const UNIT_INFORMATION_SECTION_NAMES = [
+        'unit_security_info',
+        'unit_technical_information',
+        'tech_boq',
+        'p11',
+        'p12',
+        'p13',
+        'p14',
+        'p15',
+        'p16',
+        'p17',
+        'p18',
+        'p19',
+        'p20',
+        'p21',
+        'p22',
+        'p23',
+        'p24',
+        'p25',
+        'p26',
+        'p27',
+        'photos_final_comments',
+    ];
+
+    public static function section(string $name): array
+    {
+        if ($name === 'CSO_Organizations') {
+            return static::repeatSection($name, self::ORGANIZATION_SECTION_NAMES);
+        }
+
+        if ($name === 'Unit_Information') {
+            return static::repeatSection($name, self::UNIT_INFORMATION_SECTION_NAMES);
+        }
+
+        return parent::section($name);
+    }
+
+    public static function repeatSections(string $name): array
+    {
+        if ($name === 'CSO_Organizations') {
+            return static::sectionsForNames(self::ORGANIZATION_SECTION_NAMES);
+        }
+
+        if ($name === 'Unit_Information') {
+            return static::sectionsForNames(self::UNIT_INFORMATION_SECTION_NAMES);
+        }
+
+        return parent::repeatSections($name);
+    }
+
+    public static function repeatSectionNames(string $name): array
+    {
+        return match ($name) {
+            'CSO_Organizations' => self::ORGANIZATION_SECTION_NAMES,
+            'Unit_Information' => self::UNIT_INFORMATION_SECTION_NAMES,
+            default => [],
+        };
+    }
+
     public static function choices(): array
     {
         $choices = [];
@@ -15,6 +81,30 @@ class CsoSurveyLayout extends StaticSurveyLayout
         }
 
         return $choices;
+    }
+
+    private static function repeatSection(string $name, array $sectionNames): array
+    {
+        $section = parent::section($name);
+        $section['fields'] = collect($sectionNames)
+            ->flatMap(fn (string $sectionName): array => static::sections()[$sectionName]['fields'] ?? [])
+            ->values()
+            ->all();
+
+        return $section;
+    }
+
+    private static function sectionsForNames(array $sectionNames): array
+    {
+        return collect($sectionNames)
+            ->mapWithKeys(fn (string $sectionName): array => [$sectionName => static::sections()[$sectionName] ?? [
+                'type' => 'group',
+                'name' => $sectionName,
+                'label' => $sectionName,
+                'hint' => null,
+                'fields' => [],
+            ]])
+            ->all();
     }
 
     public static function sections(): array
