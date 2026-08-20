@@ -15,6 +15,7 @@ return [
         'building_survey_return_requests' => 'طلبات إرجاع الاستبيان',
         'public_buildings' => 'المباني العامة',
         'road_facilities' => 'الطرق',
+        'cso_surveys' => 'منظمات المجتمع المدني',
         'engineers' => 'الباحثين',
     ],
     'hud' => [

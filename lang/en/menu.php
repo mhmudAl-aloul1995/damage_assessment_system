@@ -15,6 +15,7 @@ return [
         'building_survey_return_requests' => 'Building Survey Return Requests',
         'public_buildings' => 'Public Buildings',
         'road_facilities' => 'Road Facilities',
+        'cso_surveys' => 'Civil Society Organizations',
         'engineers' => 'Researchers',
     ],
     'hud' => [

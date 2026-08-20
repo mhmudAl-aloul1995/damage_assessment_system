@@ -38,6 +38,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Reports\phcPdfReportController
 use App\Modules\DamageAssessment\Http\Controllers\Reports\ReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Reports\SurveyReportController;
 use App\Modules\DamageAssessment\Http\Controllers\Surveys\Buildings\BuildingController;
+use App\Modules\DamageAssessment\Http\Controllers\Surveys\CsoSurveys\CsoSurveyController;
 use App\Modules\DamageAssessment\Http\Controllers\Surveys\HousingUnits\HousingUnitController;
 use App\Modules\DamageAssessment\Http\Controllers\Surveys\PublicBuildings\PublicBuildingController;
 use App\Modules\DamageAssessment\Http\Controllers\Surveys\RoadFacilities\RoadFacilityController;
@@ -156,6 +157,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/road-facilities/export/{format}', [RoadFacilityController::class, 'export'])->name('road-facilities.export');
     Route::get('/road-facilities/neighborhood-lengths/export', [RoadFacilityController::class, 'exportNeighborhoodLengths'])->name('road-facilities.neighborhood-lengths.export');
     Route::get('/road-facilities/{roadFacility:globalid}', [RoadFacilityController::class, 'show'])->name('road-facilities.show');
+    Route::get('/cso-surveys', [CsoSurveyController::class, 'index'])->name('cso-surveys.index');
+    Route::get('/cso-surveys/data', [CsoSurveyController::class, 'data'])->name('cso-surveys.data');
+    Route::get('/cso-surveys/{csoSurvey:globalid}', [CsoSurveyController::class, 'show'])->name('cso-surveys.show');
 
     Route::prefix('inf-audit')->name('inf-audit.')->group(function () {
         Route::get('/public-buildings', [InfAuditPublicBuildingController::class, 'index'])->name('public-buildings.index');
