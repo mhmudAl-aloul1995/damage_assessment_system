@@ -68,12 +68,7 @@ return [
                         'pattern' => 'damage-assessment/building*',
                         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
                     ],
-                    [
-                        'title' => 'menu.damage_assessment.missing_citizen_identities',
-                        'url' => 'damage-assessment/reports/missing-citizen-identities',
-                        'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
-                        'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor'],
-                    ],
+
                     [
                         'title' => 'menu.damage_assessment.housing_units',
                         'url' => 'damage-assessment/housing',
@@ -86,6 +81,12 @@ return [
                         'url' => 'damage-assessment/cso-surveys',
                         'pattern' => 'damage-assessment/cso-surveys*',
                         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+                    ],
+                    [
+                        'title' => 'menu.damage_assessment.missing_citizen_identities',
+                        'url' => 'damage-assessment/reports/missing-citizen-identities',
+                        'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
+                        'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor'],
                     ],
                 ],
             ],
