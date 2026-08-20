@@ -81,6 +81,19 @@ it('shows the road facility survey page with all dynamic road filters and export
         'raw_payload' => ['network_item' => 'fittings'],
     ]);
 
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 9203,
+        'globalid' => 'road-facility-survey-9203',
+        'governorate' => 'Gaza',
+        'str_name' => 'Clear Street',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'Engineer Roads',
+        'field_status' => 'COMPLETED',
+        'road_damage_level' => '',
+        'submissiondate' => '2026-03-06 10:00:00',
+    ]);
+
     $indexResponse = $this->actingAs($user)->get(route('road-facilities.index'));
     $indexResponse->assertOk();
     $indexResponse->assertSee('Road Facilities Filters');
@@ -119,6 +132,16 @@ it('shows the road facility survey page with all dynamic road filters and export
     $dataResponse->assertOk();
     $dataResponse->assertSee('Coastal Road');
     $dataResponse->assertDontSee('Northern Street');
+
+    $undamagedResponse = $this->actingAs($user)->get(route('road-facilities.data', [
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'undamaged_only' => 1,
+    ]));
+    $undamagedResponse->assertOk();
+    $undamagedResponse->assertSee('Clear Street');
+    $undamagedResponse->assertDontSee('Coastal Road');
 
     $csvResponse = $this->actingAs($user)->get(route('road-facilities.export', [
         'format' => 'csv',

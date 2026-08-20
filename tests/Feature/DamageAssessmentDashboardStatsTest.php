@@ -103,6 +103,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Assigned Staff')
         ->assertSee('Occupied')
         ->assertSee('Street Length')
+        ->assertSee('Undamaged')
         ->assertSee('11.10 كم')
         ->assertSee('Bodies')
         ->assertSee('UXO')
@@ -119,6 +120,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Date range')
         ->assertViewHas('publicBuildingStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
         ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['total_surveys'] === 2)
+        ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['undamaged_roads'] === 1)
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');

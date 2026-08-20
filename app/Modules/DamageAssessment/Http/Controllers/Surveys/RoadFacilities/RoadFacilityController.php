@@ -254,6 +254,13 @@ class RoadFacilityController extends Controller
                 ->where('road_damage_level', '!=', '');
         }
 
+        if ($request->boolean('undamaged_only')) {
+            $query->where(function (Builder $nested): void {
+                $nested->whereNull('road_damage_level')
+                    ->orWhere('road_damage_level', '');
+            });
+        }
+
         if ($request->boolean('with_items')) {
             $query->has('items');
         }

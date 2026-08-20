@@ -176,6 +176,7 @@
                     to_date: $('#filter_to_date').val() || queryParams.get('to_date'),
                     search: $('#filter_search').val() || queryParams.get('search'),
                     damaged_only: queryParams.get('damaged_only'),
+                    undamaged_only: queryParams.get('undamaged_only'),
                     with_items: queryParams.get('with_items'),
                     has_municipality: queryParams.get('has_municipality'),
                     has_neighborhood: queryParams.get('has_neighborhood'),
@@ -217,6 +218,7 @@
                         d.to_date = filters.to_date;
                         d.search = filters.search;
                         d.damaged_only = filters.damaged_only;
+                        d.undamaged_only = filters.undamaged_only;
                         d.with_items = filters.with_items;
                         d.has_municipality = filters.has_municipality;
                         d.has_neighborhood = filters.has_neighborhood;

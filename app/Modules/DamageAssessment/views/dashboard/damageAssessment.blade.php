@@ -38,6 +38,7 @@
 			],
 			'road_facilities' => [
 				'damaged' => route('road-facilities.index') . '?' . http_build_query(['damaged_only' => 1]),
+				'undamaged' => route('road-facilities.index') . '?' . http_build_query(['undamaged_only' => 1]),
 				'items' => route('road-facilities.index') . '?' . http_build_query(['with_items' => 1]),
 				'municipalities' => route('road-facilities.index') . '?' . http_build_query(['has_municipality' => 1]),
 				'neighborhoods' => route('road-facilities.index') . '?' . http_build_query(['has_neighborhood' => 1]),
@@ -1846,6 +1847,21 @@
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									{{ $roadFacilityStats['damaged_roads'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check-circle"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['road_facilities']['undamaged'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.undamaged') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $roadFacilityStats['undamaged_roads'] }}
 								</div>
 							</div>
 						</div>
