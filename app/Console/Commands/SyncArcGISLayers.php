@@ -629,9 +629,9 @@ class SyncArcGISLayers extends Command
                 return;
             }
 
-            Schema::table($table, function (Blueprint $schema) use ($missingFields): void {
+            Schema::table($table, function (Blueprint $schema) use ($missingFields, $table): void {
                 foreach ($missingFields as $column => $field) {
-                    $this->addArcgisMetadataColumn($schema, $column, $field);
+                    $this->addArcgisMetadataColumn($schema, $column, $field, $table);
                 }
             });
 
@@ -643,9 +643,9 @@ class SyncArcGISLayers extends Command
         }
     }
 
-    private function addArcgisMetadataColumn(Blueprint $schema, string $column, array $field): void
+    private function addArcgisMetadataColumn(Blueprint $schema, string $column, array $field, string $table): void
     {
-        match ($this->laravelColumnTypeForArcgisField($field)) {
+        match ($this->laravelColumnTypeForArcgisField($field, $table)) {
             'integer' => $schema->integer($column)->nullable(),
             'double' => $schema->double($column)->nullable(),
             'timestamp' => $schema->timestamp($column)->nullable(),
@@ -654,11 +654,15 @@ class SyncArcGISLayers extends Command
         };
     }
 
-    private function laravelColumnTypeForArcgisField(array $field): string
+    private function laravelColumnTypeForArcgisField(array $field, string $table): string
     {
         $type = $field['type'] ?? null;
 
         if ($type === 'esriFieldTypeString') {
+            if (str_starts_with($table, 'cso_')) {
+                return 'text';
+            }
+
             return (int) ($field['length'] ?? 255) > 255 ? 'text' : 'string';
         }
 
