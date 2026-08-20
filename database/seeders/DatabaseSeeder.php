@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             InfAuditStatusesSeeder::class,
             FilterSeeder::class,
             PublicBuildingFilterSeeder::class,
+            CsoSurveyFilterSeeder::class,
             RolesAndPermissionsSeeder::class,
             BuildingSeeder::class,
             HousingSeeder::class,

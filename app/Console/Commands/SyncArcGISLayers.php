@@ -79,6 +79,17 @@ class SyncArcGISLayers extends Command
             ],
         ];
 
+        if (filled(config('services.arcgis.cso_survey_layer_url'))) {
+            $layers['cso_surveys'] = [
+                'table' => 'cso_surveys',
+                'url' => config('services.arcgis.cso_survey_layer_url'),
+                'unique' => 'objectid',
+                'map' => [
+                    'organization_name' => 'organization_name_en',
+                ],
+            ];
+        }
+
         $tableOnly = $this->argument('table');
 
         if ($tableOnly) {
@@ -346,6 +357,10 @@ class SyncArcGISLayers extends Command
 
                     if (in_array('all_data', $tableColumns, true)) {
                         $row['all_data'] = json_encode($attributes, JSON_UNESCAPED_UNICODE);
+                    }
+
+                    if (in_array('raw_payload', $tableColumns, true)) {
+                        $row['raw_payload'] = json_encode($attributes, JSON_UNESCAPED_UNICODE);
                     }
 
                     $newHash = $this->makeHash($row);

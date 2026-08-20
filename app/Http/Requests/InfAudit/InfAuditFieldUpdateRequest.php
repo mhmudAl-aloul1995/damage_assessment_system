@@ -28,6 +28,7 @@ class InfAuditFieldUpdateRequest extends FormRequest
                     'public_building_unit_table',
                     'road_facility_table',
                     'road_facility_item_table',
+                    'cso_survey_table',
                 ]),
             ],
             'auditable_id' => ['required', 'integer'],

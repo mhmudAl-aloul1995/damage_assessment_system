@@ -86,6 +86,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'inf-audit.roads.update-status',
             'inf-audit.roads.update-fields',
             'inf-audit.roads.create-child',
+            'inf-audit.cso.view',
+            'inf-audit.cso.assign',
+            'inf-audit.cso.update-status',
+            'inf-audit.cso.update-fields',
             'reports.view',
             'reports.export',
             'reports.damage-statistics.view',
@@ -302,12 +306,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'inf-audit.roads.update-status',
             'inf-audit.roads.update-fields',
             'inf-audit.roads.create-child',
+            'inf-audit.cso.view',
+            'inf-audit.cso.update-status',
+            'inf-audit.cso.update-fields',
         ]);
         $infTeamLeader->givePermissionTo([
             'inf-audit.public-buildings.view',
             'inf-audit.public-buildings.assign',
             'inf-audit.roads.view',
             'inf-audit.roads.assign',
+            'inf-audit.cso.view',
+            'inf-audit.cso.assign',
             'reports.public-buildings.view',
             'reports.road-facilities.view',
         ]);

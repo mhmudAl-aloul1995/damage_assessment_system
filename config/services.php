@@ -106,6 +106,8 @@ return [
             'ARCGIS_ROAD_FACILITY_SURVEY_ITEMS_LAYER_URL',
             'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_8d4df706500f47a8864206fd1b251739_form/FeatureServer/1'
         ),
+
+        'cso_survey_layer_url' => env('ARCGIS_CSO_SURVEY_LAYER_URL', ''),
     ],
     'committee_decisions' => [
         'arcgis' => [

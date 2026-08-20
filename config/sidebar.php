@@ -62,7 +62,7 @@ return [
                 'title' => 'menu.damage_assessment.missing_citizen_identities',
                 'url' => 'damage-assessment/reports/missing-citizen-identities',
                 'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
-                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer','Legal Auditor'],
+                'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor'],
             ],
             [
                 'title' => 'menu.damage_assessment.public_buildings',
@@ -114,6 +114,12 @@ return [
                 'title' => 'menu.inf_audit.roads',
                 'url' => 'damage-assessment/inf-audit/roads',
                 'pattern' => 'damage-assessment/inf-audit/roads*',
+                'roles' => ['Inf - QC/QA Engineer', 'Team Leader -INF', 'Database Officer', 'Project Officer'],
+            ],
+            [
+                'title' => 'menu.inf_audit.cso',
+                'url' => 'damage-assessment/inf-audit/cso',
+                'pattern' => 'damage-assessment/inf-audit/cso*',
                 'roles' => ['Inf - QC/QA Engineer', 'Team Leader -INF', 'Database Officer', 'Project Officer'],
             ],
         ],

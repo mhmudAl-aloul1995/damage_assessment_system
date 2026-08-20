@@ -1,0 +1,194 @@
+@extends('layouts.app')
+
+@section('title', 'تدقيق منظمات المجتمع المدني')
+@section('pageName', 'تدقيق منظمات المجتمع المدني')
+
+@section('content')
+    <div class="card card-flush">
+        <div class="card-header pt-6">
+            <div class="card-title">
+                <h2 class="fw-bold mb-0">تدقيق منظمات المجتمع المدني</h2>
+            </div>
+            <div class="card-toolbar d-flex gap-2 flex-wrap">
+                @role('Database Officer|Team Leader -INF')
+                    <select id="bulk_assign_engineer" class="form-select form-select-solid w-250px" data-placeholder="اختر المدقق">
+                        <option value=""></option>
+                        @foreach ($engineers as $engineer)
+                            <option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button" id="bulk_assign_btn" class="btn btn-light-info">إسناد المحدد</button>
+                @endrole
+                <button type="button" id="reset_filters_btn" class="btn btn-light">إعادة تعيين الفلاتر</button>
+                <button class="btn btn-light-primary" onclick="$('#inf_cso_table').DataTable().ajax.reload(null, false)">تحديث</button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3 mb-6">
+                <div class="col-md-2">
+                    <input id="filter_objectid" type="text" class="form-control form-control-solid audit-filter" placeholder="ObjectID">
+                </div>
+                <div class="col-md-2">
+                    <select id="filter_municipalitie" class="form-select form-select-solid audit-filter audit-select" data-placeholder="البلدية">
+                        <option value="">كل البلديات</option>
+                        @foreach ($municipalities as $municipality)
+                            <option value="{{ $municipality }}">{{ $municipality }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="filter_neighborhood" class="form-select form-select-solid audit-filter audit-select" data-placeholder="الحي">
+                        <option value="">كل الأحياء</option>
+                        @foreach ($neighborhoods as $neighborhood)
+                            <option value="{{ $neighborhood }}">{{ $neighborhood }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="filter_status" class="form-select form-select-solid audit-filter audit-select" data-placeholder="الحالة">
+                        <option value="">كل الحالات</option>
+                        @foreach ($statuses as $status)
+                            <option value="{{ $status->name }}">{{ $status->label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="filter_auditor" class="form-select form-select-solid audit-filter audit-select" data-placeholder="المدقق">
+                        <option value="">كل المدققين</option>
+                        @foreach ($engineers as $engineer)
+                            <option value="{{ $engineer->id }}">{{ $engineer->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="filter_field_engineer" class="form-select form-select-solid audit-filter audit-select" data-placeholder="المهندس الميداني">
+                        <option value="">كل المهندسين الميدانيين</option>
+                        @foreach ($fieldEngineers as $fieldEngineer)
+                            <option value="{{ $fieldEngineer['value'] }}">{{ $fieldEngineer['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input id="filter_from_date" type="date" class="form-control form-control-solid audit-filter">
+                </div>
+                <div class="col-md-2">
+                    <input id="filter_to_date" type="date" class="form-control form-control-solid audit-filter">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table id="inf_cso_table" class="table table-row-bordered align-middle gy-4">
+                    <thead>
+                        <tr class="fw-bold text-gray-800">
+                            <th class="w-40px">
+                                <input type="checkbox" id="inf_audit_select_all" class="form-check-input">
+                            </th>
+                            <th>ObjectID</th>
+                            <th>المهندس الميداني</th>
+                            <th>المنظمة</th>
+                            <th>المبنى</th>
+                            <th>البلدية</th>
+                            <th>الحي</th>
+                            <th>حالة الضرر</th>
+                            <th>الحالة</th>
+                            <th>المدقق</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@section('script')
+    <script>
+        $(function () {
+            $('.audit-select').select2({ width: '100%', allowClear: true });
+
+            const table = $('#inf_cso_table').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: @json(route('inf-audit.cso.data')),
+                    data: function (d) {
+                        d.objectid = $('#filter_objectid').val();
+                        d.municipalitie = $('#filter_municipalitie').val();
+                        d.neighborhood = $('#filter_neighborhood').val();
+                        d.status = $('#filter_status').val();
+                        d.auditor = $('#filter_auditor').val();
+                        d.field_engineer = $('#filter_field_engineer').val();
+                        d.from_date = $('#filter_from_date').val();
+                        d.to_date = $('#filter_to_date').val();
+                    }
+                },
+                columns: [
+                    { data: 'selection', name: 'selection', orderable: false, searchable: false },
+                    { data: 'objectid', name: 'objectid' },
+                    { data: 'field_engineer', name: 'field_engineer', defaultContent: '-' },
+                    { data: 'organization_name', name: 'organization_name', defaultContent: '-' },
+                    { data: 'building_name', name: 'building_name', defaultContent: '-' },
+                    { data: 'municipalitie', name: 'municipalitie', defaultContent: '-' },
+                    { data: 'neighborhood', name: 'neighborhood', defaultContent: '-' },
+                    { data: 'building_damage_status', name: 'building_damage_status', defaultContent: '-' },
+                    { data: 'audit_status', name: 'audit_status', orderable: false, searchable: false },
+                    { data: 'auditor', name: 'auditor', orderable: false, searchable: false },
+                    { data: 'actions', name: 'actions', orderable: false, searchable: false },
+                ],
+                order: [[1, 'desc']]
+            });
+
+            $('.audit-filter').on('change', function () {
+                table.ajax.reload();
+            });
+
+            $('#filter_objectid').on('input', function () {
+                table.ajax.reload();
+            });
+
+            $('#reset_filters_btn').on('click', function () {
+                $('.audit-filter').val('').trigger('change.select2');
+                table.search('');
+                table.ajax.reload();
+            });
+
+            $('#bulk_assign_engineer').select2({ width: '250px', allowClear: true });
+
+            $('#inf_audit_select_all').on('change', function () {
+                $('.inf-audit-row-check').prop('checked', $(this).is(':checked'));
+            });
+
+            $('#inf_cso_table').on('draw.dt', function () {
+                $('#inf_audit_select_all').prop('checked', false);
+            });
+
+            $('#bulk_assign_btn').on('click', function () {
+                const ids = $('.inf-audit-row-check:checked').map(function () {
+                    return $(this).val();
+                }).get();
+
+                if (ids.length === 0) {
+                    toastr.warning('يرجى اختيار سجل واحد على الأقل');
+                    return;
+                }
+
+                if (!$('#bulk_assign_engineer').val()) {
+                    toastr.warning('يرجى اختيار المدقق');
+                    return;
+                }
+
+                $.post(@json(route('inf-audit.cso.assign')), {
+                    _token: @json(csrf_token()),
+                    ids: ids,
+                    assigned_to: $('#bulk_assign_engineer').val()
+                }).done(function (response) {
+                    toastr.success(response.message || 'تم الإسناد بنجاح');
+                    table.ajax.reload(null, false);
+                }).fail(function (xhr) {
+                    toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الإسناد');
+                });
+            });
+        });
+    </script>
+@endsection

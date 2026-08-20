@@ -37,7 +37,7 @@
         <div class="card-header pt-6">
             <div class="card-title">
                 <div>
-                    <h2 class="fw-bold mb-1">{{ $survey->building_name ?? $survey->str_name ?? $survey->objectid }}</h2>
+                    <h2 class="fw-bold mb-1">{{ $survey->organization_name ?? $survey->building_name ?? $survey->str_name ?? $survey->objectid }}</h2>
                     <div class="text-muted">ObjectID: {{ $survey->objectid }} | GlobalID: {{ $survey->globalid }}</div>
                 </div>
             </div>

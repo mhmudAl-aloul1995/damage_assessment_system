@@ -56,6 +56,7 @@ return [
         'title' => 'Inf Audit',
         'public_buildings' => 'Public Buildings Audit',
         'roads' => 'Road Facilities Audit',
+        'cso' => 'Civil Society Organizations Audit',
     ],
     'audit' => [
         'title' => 'Audit',

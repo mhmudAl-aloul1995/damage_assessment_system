@@ -21,6 +21,7 @@ use App\Modules\DamageAssessment\Http\Controllers\FieldOperations\BuildingSurvey
 use App\Modules\DamageAssessment\Http\Controllers\FieldOperations\EngineerController;
 use App\Modules\DamageAssessment\Http\Controllers\Imports\BuildingImportController;
 use App\Modules\DamageAssessment\Http\Controllers\Imports\HousingUnitImportController;
+use App\Modules\DamageAssessment\Http\Controllers\InfrastructureAudit\InfAuditCsoSurveyController;
 use App\Modules\DamageAssessment\Http\Controllers\InfrastructureAudit\InfAuditPublicBuildingController;
 use App\Modules\DamageAssessment\Http\Controllers\InfrastructureAudit\InfAuditRoadFacilityController;
 use App\Modules\DamageAssessment\Http\Controllers\Integrations\ArcGISController;
@@ -175,6 +176,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/roads/{road:globalid}/status', [InfAuditRoadFacilityController::class, 'updateStatus'])->name('roads.status');
         Route::post('/roads/{road:globalid}/children', [InfAuditRoadFacilityController::class, 'storeChild'])->name('roads.children.store');
         Route::post('/roads/{road:globalid}/field-update', [InfAuditRoadFacilityController::class, 'updateField'])->name('roads.field-update');
+
+        Route::get('/cso', [InfAuditCsoSurveyController::class, 'index'])->name('cso.index');
+        Route::get('/cso/data', [InfAuditCsoSurveyController::class, 'data'])->name('cso.data');
+        Route::post('/cso/assign', [InfAuditCsoSurveyController::class, 'bulkAssign'])->name('cso.assign');
+        Route::get('/cso/{cso:globalid}', [InfAuditCsoSurveyController::class, 'show'])->name('cso.show');
+        Route::post('/cso/{cso:globalid}/status', [InfAuditCsoSurveyController::class, 'updateStatus'])->name('cso.status');
+        Route::post('/cso/{cso:globalid}/field-update', [InfAuditCsoSurveyController::class, 'updateField'])->name('cso.field-update');
     });
 
     Route::prefix('reports')
