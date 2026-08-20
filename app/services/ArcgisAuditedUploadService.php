@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\HousingUnit;
@@ -76,7 +78,7 @@ class ArcgisAuditedUploadService
             return $summary;
         }
 
-        $buildingQuery = Building::query()
+        $buildingQuery = AuditedBuilding::query()
             ->orderBy('objectid');
 
         if ($buildingsLimit !== null) {
@@ -93,7 +95,7 @@ class ArcgisAuditedUploadService
                 ->values()
                 ->all();
 
-        $unitQuery = HousingUnit::query()
+        $unitQuery = AuditedHousingUnit::query()
             ->when($buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
                 $query->whereIn('parentglobalid', $buildingGlobalIds);
             })
@@ -113,7 +115,7 @@ class ArcgisAuditedUploadService
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
         }
 
-        $this->eachAuditedRecord($buildingQuery, 'building_table', function (Building $building) use (&$summary, $withoutAttachments, $attachmentsOnly, $changedSince): void {
+        foreach ($buildingQuery->cursor() as $building) {
             try {
                 echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
@@ -131,11 +133,11 @@ class ArcgisAuditedUploadService
                     'message' => $exception->getMessage(),
                 ]);
             }
-        });
+        }
 
         echo "Uploading housing units...\n";
 
-        $this->eachAuditedRecord($unitQuery, 'housing_table', function (HousingUnit $unit) use (&$summary, $withoutAttachments, $attachmentsOnly, $changedSince): void {
+        foreach ($unitQuery->cursor() as $unit) {
             try {
                 echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
@@ -153,7 +155,7 @@ class ArcgisAuditedUploadService
                     'message' => $exception->getMessage(),
                 ]);
             }
-        });
+        }
 
         return $summary;
     }
@@ -577,30 +579,30 @@ class ArcgisAuditedUploadService
             });
     }
 
-    private function auditedBuildingByGlobalId(string $globalId): ?Building
+    private function auditedBuildingByGlobalId(string $globalId): ?AuditedBuilding
     {
-        $building = Building::query()
+        $building = AuditedBuilding::query()
             ->where('globalid', $globalId)
             ->first();
 
-        if (! $building instanceof Building) {
+        if (! $building instanceof AuditedBuilding) {
             return null;
         }
 
-        return $this->applyLatestAuditEdits(collect([$building]), 'building_table')->first();
+        return $building;
     }
 
-    private function auditedUnitByGlobalId(string $globalId): ?HousingUnit
+    private function auditedUnitByGlobalId(string $globalId): ?AuditedHousingUnit
     {
-        $unit = HousingUnit::query()
+        $unit = AuditedHousingUnit::query()
             ->where('globalid', $globalId)
             ->first();
 
-        if (! $unit instanceof HousingUnit) {
+        if (! $unit instanceof AuditedHousingUnit) {
             return null;
         }
 
-        return $this->applyLatestAuditEdits(collect([$unit]), 'housing_table')->first();
+        return $unit;
     }
 
     /**

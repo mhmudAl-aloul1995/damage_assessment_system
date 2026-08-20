@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\ArcgisAuditedCacheService;
 use App\Services\ArcgisAuditedUploadService;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -15,12 +16,15 @@ class UploadAuditedToArcgis extends Command
         {--only-audit-edits : With --changed-since, ignore editdate and sync only records changed in edit_assessments.}
         {--skip-counts : Start syncing immediately without counting candidates first.}
         {--without-attachments : Upload or update features without copying attachments.}
-        {--attachments-only : Copy missing attachments for existing uploaded features only.}';
+        {--attachments-only : Copy missing attachments for existing uploaded features only.}
+        {--refresh-cache : Refresh audited cache tables before uploading.}';
 
-    protected $description = 'Upload audited building and housing unit views to ArcGIS and copy attachments.';
+    protected $description = 'Upload audited building and housing unit cache tables to ArcGIS and copy attachments.';
 
-    public function handle(ArcgisAuditedUploadService $arcgisAuditedUploadService): int
-    {
+    public function handle(
+        ArcgisAuditedUploadService $arcgisAuditedUploadService,
+        ArcgisAuditedCacheService $cacheService,
+    ): int {
         $startedAt = now();
 
         $this->newLine();
@@ -37,6 +41,15 @@ class UploadAuditedToArcgis extends Command
         try {
             $this->info('Processing...');
             $buildingsLimit = $this->option('buildings-limit');
+
+            if ((bool) $this->option('refresh-cache')) {
+                $this->info('Refreshing audited cache...');
+                $cacheSummary = $cacheService->refresh(is_numeric($buildingsLimit) ? (int) $buildingsLimit : null);
+                $this->line('Cached buildings: '.$cacheSummary['buildings_cached']);
+                $this->line('Cached housing units: '.$cacheSummary['housing_units_cached']);
+                $this->newLine();
+            }
+
             $changedSince = $this->changedSinceOption();
             $summary = $arcgisAuditedUploadService->upload(
                 is_numeric($buildingsLimit) ? (int) $buildingsLimit : null,

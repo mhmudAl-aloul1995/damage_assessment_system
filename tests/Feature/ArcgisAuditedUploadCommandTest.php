@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
-it('uploads base table records with the latest audit edit values without audited views', function (): void {
+it('uploads cached base table records with the latest audit edit values without audited views', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
     config()->set('services.arcgis.referer', 'http://localhost');
@@ -134,7 +134,10 @@ it('uploads base table records with the latest audit edit values without audited
         },
     ]);
 
-    $this->artisan('arcgis:upload-audited', ['--without-attachments' => true])->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', [
+        '--refresh-cache' => true,
+        '--without-attachments' => true,
+    ])->assertSuccessful();
 });
 
 it('uploads audited views to arcgis and copies attachments', function () {
