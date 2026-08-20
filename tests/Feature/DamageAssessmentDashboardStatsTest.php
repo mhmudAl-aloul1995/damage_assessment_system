@@ -109,6 +109,9 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'organization_name' => 'Civil Support Organization',
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'partial_damage',
+        'raw_payload' => [
+            'assessment_obstacle' => 'yes',
+        ],
     ]);
 
     $csoSurveyWithoutOrganization = CsoSurvey::query()->create([
@@ -198,6 +201,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_units'] === 2)
         ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['without_units'] === 1)
         ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['without_organization'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['assessment_blocked'] === 1)
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');

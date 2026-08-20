@@ -270,11 +270,8 @@ class DamageAssessmentController extends Controller
                 ->distinct()
                 ->count('neighborhood'),
 
-            'assigned_staff' => $this->dashboardCsoSurveyQuery($request)
-                ->whereNotNull('assignedto')
-                ->where('assignedto', '!=', '')
-                ->distinct()
-                ->count('assignedto'),
+            'assessment_blocked' => $this->dashboardCsoAssessmentBlockedQuery($request)
+                ->count(),
         ];
         $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
         $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
@@ -2216,6 +2213,27 @@ class DamageAssessmentController extends Controller
         $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
 
         return $query;
+    }
+
+    private function dashboardCsoAssessmentBlockedQuery(Request $request): Builder
+    {
+        $query = $this->dashboardCsoSurveyQuery($request);
+
+        return $query->where(function (Builder $query): void {
+            if (Schema::hasColumn('cso_surveys', 'assessment_obstacle')) {
+                $query->whereRaw("LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = ?", ['yes']);
+            }
+
+            if (Schema::hasColumn('cso_surveys', 'security_situation')) {
+                $query->orWhereRaw("LOWER(TRIM(COALESCE(security_situation, ''))) = ?", ['unsafe']);
+            }
+
+            $query
+                ->orWhere('raw_payload->assessment_obstacle', 'yes')
+                ->orWhere('raw_payload->Assessment_Obstacle', 'yes')
+                ->orWhere('raw_payload->security_situation', 'Unsafe')
+                ->orWhere('raw_payload->Security_Situation', 'Unsafe');
+        });
     }
 
     private function dashboardCompletedRoadLengthKilometers(Request $request): float

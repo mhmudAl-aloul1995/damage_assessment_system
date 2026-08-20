@@ -55,6 +55,7 @@
 				'units' => route('cso-surveys.index') . '?' . http_build_query(['with_units' => 1]),
 				'without_units' => route('cso-surveys.index') . '?' . http_build_query(['without_units' => 1]),
 				'without_organization' => route('cso-surveys.index') . '?' . http_build_query(['without_organization' => 1]),
+				'assessment_blocked' => route('cso-surveys.index') . '?' . http_build_query(['assessment_blocked' => 1]),
 			],
 		];
 		$housingUnitsTarget = 67500;
@@ -2229,11 +2230,11 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['cso_surveys']['index'] }}"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.assigned_staff') }}</a>
+									<a href="{{ $dashboardStatLinks['cso_surveys']['assessment_blocked'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.assessment_blocked') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $csoSurveyStats['assigned_staff'] }}
+									{{ $csoSurveyStats['assessment_blocked'] }}
 								</div>
 							</div>
 						</div>
