@@ -823,6 +823,28 @@ class ArcgisAuditedUploadService
         return $data['token'];
     }
 
+    public function syncAuditEditField(string $type, string $globalId, string $fieldName, mixed $fieldValue): void
+    {
+        if (! in_array($type, ['building_table', 'housing_table'], true)) {
+            throw new RuntimeException("Unsupported audited edit type {$type}.");
+        }
+
+        if ($fieldName === '') {
+            throw new RuntimeException('Audited edit field name is required.');
+        }
+
+        $summary = $this->emptySummary();
+        $fields = [$fieldName => $fieldValue];
+
+        if ($type === 'building_table') {
+            $this->uploadBuildingAuditEdits($globalId, $fields, $summary, false, false, CarbonImmutable::now());
+
+            return;
+        }
+
+        $this->uploadUnitAuditEdits($globalId, $fields, $summary, false, false, CarbonImmutable::now());
+    }
+
     private function refreshToken(): string
     {
         $this->token = $this->generateToken();

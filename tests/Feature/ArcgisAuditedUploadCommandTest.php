@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\ArcgisAuditedUploadService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -138,6 +139,65 @@ it('uploads cached base table records with the latest audit edit values without 
         '--refresh-cache' => true,
         '--without-attachments' => true,
     ])->assertSuccessful();
+});
+
+it('syncs the submitted audit field value directly to the audited arcgis layer', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::table('buildings')->insert([
+        'objectid' => 8301,
+        'globalid' => 'direct-sync-building-globalid',
+        'building_name' => 'Original Building',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'building_name'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['objectid' => 9301]],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toBe([
+                'building_name' => 'Direct Submitted Building',
+                'objectid' => 9301,
+            ]);
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9301],
+                ],
+            ]);
+        },
+    ]);
+
+    app(ArcgisAuditedUploadService::class)->syncAuditEditField(
+        'building_table',
+        'direct-sync-building-globalid',
+        'building_name',
+        'Direct Submitted Building',
+    );
+
+    Http::assertSentCount(4);
 });
 
 it('uploads audited views to arcgis and copies attachments', function () {

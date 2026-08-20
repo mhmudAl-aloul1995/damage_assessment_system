@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\AssessmentEditHistory;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
@@ -35,7 +36,7 @@ class AssessmentEditService
             $newValue = implode(',', $newValue);
         }
 
-        return DB::transaction(function () use ($modelClass, $type, $globalId, $fieldName, $newValue, $request): array {
+        $result = DB::transaction(function () use ($modelClass, $type, $globalId, $fieldName, $newValue, $request): array {
             /** @var Building|HousingUnit $record */
             $record = $modelClass::query()
                 ->where('globalid', $globalId)
@@ -92,6 +93,14 @@ class AssessmentEditService
                 'new_value' => $newValue,
             ];
         });
+
+        if ($result['changed'] && $this->shouldSyncInlineAuditEditToArcgis()) {
+            SyncAuditEditToArcgis::dispatch($type, $globalId, $fieldName, $newValue)
+                ->afterCommit()
+                ->onQueue('arcgis');
+        }
+
+        return $result;
     }
 
     private function originalValue(Model $record, string $fieldName): mixed
@@ -134,5 +143,18 @@ class AssessmentEditService
             ->first();
 
         return $archiveObject?->return_request_id;
+    }
+
+    private function shouldSyncInlineAuditEditToArcgis(): bool
+    {
+        foreach (['username', 'password', 'referer', 'target_service', 'source_service'] as $key) {
+            $value = config('services.arcgis.'.$key);
+
+            if (! is_string($value) || trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

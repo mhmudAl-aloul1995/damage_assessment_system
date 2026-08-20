@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
@@ -15,6 +16,7 @@ use App\Models\User;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 use Spatie\Permission\Models\Role;
@@ -143,6 +145,14 @@ it('exports the assessment page as a pdf with attachments', function () {
 });
 
 it('returns inline edit metadata and field history when saving an audit edit', function () {
+    Queue::fake();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+
     $user = User::factory()->create([
         'name' => 'Audit Editor',
     ]);
@@ -186,6 +196,13 @@ it('returns inline edit metadata and field history when saving an audit edit', f
         'new_value' => 'Updated Building',
         'edited_by' => $user->id,
     ]);
+
+    Queue::assertPushed(SyncAuditEditToArcgis::class, function (SyncAuditEditToArcgis $job) use ($building): bool {
+        return $job->type === 'building_table'
+            && $job->globalId === $building->globalid
+            && $job->fieldName === 'building_name'
+            && $job->fieldValue === 'Updated Building';
+    });
 });
 
 it('shows inline edit history cards to area managers without edit controls', function () {
