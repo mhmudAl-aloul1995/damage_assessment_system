@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
+use App\Models\CsoSurvey;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
 use App\Models\EditAssessment;
 use App\Models\Filter;
 use App\Models\HousingUnit;
@@ -226,6 +229,41 @@ class DamageAssessmentController extends Controller
                 ->where('uxo_present', 'yes')
                 ->count(),
         ];
+        $csoSurveyStats = [
+            'total_surveys' => $this->dashboardCsoSurveyQuery($request)
+                ->count(),
+
+            'damaged_buildings' => $this->dashboardCsoSurveyQuery($request)
+                ->whereNotNull('building_damage_status')
+                ->where('building_damage_status', '!=', '')
+                ->count(),
+
+            'total_organizations' => (int) CsoSurveyOrganization::query()
+                ->whereIn('parentglobalid', $this->dashboardCsoSurveyQuery($request)->select('globalid'))
+                ->count(),
+
+            'total_units' => (int) CsoSurveyUnit::query()
+                ->whereIn('parentglobalid', $this->dashboardCsoSurveyQuery($request)->select('globalid'))
+                ->count(),
+
+            'municipalities' => $this->dashboardCsoSurveyQuery($request)
+                ->whereNotNull('municipalitie')
+                ->where('municipalitie', '!=', '')
+                ->distinct()
+                ->count('municipalitie'),
+
+            'neighborhoods' => $this->dashboardCsoSurveyQuery($request)
+                ->whereNotNull('neighborhood')
+                ->where('neighborhood', '!=', '')
+                ->distinct()
+                ->count('neighborhood'),
+
+            'assigned_staff' => $this->dashboardCsoSurveyQuery($request)
+                ->whereNotNull('assignedto')
+                ->where('assignedto', '!=', '')
+                ->distinct()
+                ->count('assignedto'),
+        ];
         $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
         $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
         $governorates = $this->dashboardGovernorates();
@@ -240,6 +278,7 @@ class DamageAssessmentController extends Controller
                 'buildingStats',
                 'publicBuildingStats',
                 'roadFacilityStats',
+                'csoSurveyStats',
                 'publicBuildingLayerUrl',
                 'roadFacilityLayerUrl',
                 'governorates',
@@ -2154,6 +2193,14 @@ class DamageAssessmentController extends Controller
     private function dashboardRoadFacilityQuery(Request $request): Builder
     {
         $query = RoadFacilitySurvey::query();
+        $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
+
+        return $query;
+    }
+
+    private function dashboardCsoSurveyQuery(Request $request): Builder
+    {
+        $query = CsoSurvey::query();
         $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
 
         return $query;

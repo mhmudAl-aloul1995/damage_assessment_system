@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\Building;
+use App\Models\CsoSurvey;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
@@ -95,10 +98,38 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'road_damage_level' => 'moderate',
     ]);
 
+    $csoSurvey = CsoSurvey::query()->create([
+        'objectid' => 3001,
+        'globalid' => 'dashboard-cso-global-id',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'CSO Team 1',
+        'creationdate' => Carbon::today()->toDateString(),
+        'organization_name' => 'Civil Support Organization',
+        'building_damage_status' => 'partial_damage',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 3101,
+        'globalid' => 'dashboard-cso-organization-global-id',
+        'parentglobalid' => $csoSurvey->globalid,
+        'organization_name_en' => 'Civil Support Organization',
+    ]);
+
+    CsoSurveyUnit::query()->create([
+        'objectid' => 3201,
+        'globalid' => 'dashboard-cso-unit-global-id',
+        'parentglobalid' => $csoSurvey->globalid,
+        'unit_name' => 'Ground Floor Unit',
+    ]);
+
     $response = $this->actingAs($user)->get('/damage-assessment/damageAssessment');
 
     $response
         ->assertOk()
+        ->assertSee('Civil Society Organizations')
+        ->assertSee('Organizations')
         ->assertSee('Neighborhoods')
         ->assertSee('Assigned Staff')
         ->assertSee('Occupied')
@@ -121,6 +152,9 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertViewHas('publicBuildingStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
         ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['total_surveys'] === 2)
         ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['undamaged_roads'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_organizations'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_units'] === 1)
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');

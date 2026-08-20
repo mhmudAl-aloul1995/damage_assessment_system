@@ -47,6 +47,12 @@
 				'buried_bodies' => route('road-facilities.index') . '?' . http_build_query(['buried_bodies_only' => 1]),
 				'uxo' => route('road-facilities.index') . '?' . http_build_query(['uxo_only' => 1]),
 			],
+			'cso_surveys' => [
+				'index' => route('cso-surveys.index'),
+				'damaged' => route('cso-surveys.index') . '?' . http_build_query(['damaged_only' => 1]),
+				'organizations' => route('cso-surveys.index') . '?' . http_build_query(['with_organizations' => 1]),
+				'units' => route('cso-surveys.index') . '?' . http_build_query(['with_units' => 1]),
+			],
 		];
 		$housingUnitsTarget = 67500;
 		$housingUnitsTargetReached = (int) ($unitStats['damaged_total'] ?? 0) >= $housingUnitsTarget;
@@ -286,6 +292,17 @@
 
 		.damage-dashboard-stats>[class*="col-"] {
 			display: flex;
+		}
+
+		.damage-dashboard-stats>.dashboard-summary-col {
+			display: flex;
+		}
+
+		@media (min-width: 1400px) {
+			.damage-dashboard-stats>.dashboard-summary-col {
+				flex: 0 0 20%;
+				max-width: 20%;
+			}
 		}
 
 		.damage-dashboard-stats .dashboard-summary-card {
@@ -876,8 +893,7 @@
 
 	<div class="row g-5 g-xl-8 damage-dashboard-stats">
 		<!--begin::Col-->
-		<!-- 1. Changed to responsive column: col-sm-6 col-lg-6 col-xxl-3 -->
-		<div class="col-sm-6 col-lg-6 col-xxl-3 mb-5">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col mb-5">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<!-- 2. Changed h-275px to min-h-275px to allow expansion if text wraps -->
@@ -1232,7 +1248,7 @@
 
 
 		<!--begin::Col-->
-		<div class="col-sm-6 col-lg-6 col-xxl-3">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
 			<!--begin::Mixed Widget 1-->
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card @if ($housingUnitsTargetReached) housing-target-achieved @endif">
 				<!--begin::Body-->
@@ -1659,7 +1675,7 @@
 			</div>
 			<!--end::Mixed Widget 1-->
 		</div>
-		<div class="col-sm-6 col-lg-6 col-xxl-3">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: rgb(191 152 7);"
@@ -1810,7 +1826,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-lg-6 col-xxl-3">
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
 			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: #0f766e;"
@@ -1984,6 +2000,125 @@
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									{{ $roadFacilityStats['uxo_locations'] }}
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
+				<div class="card-body p-0">
+					<div style="background-color: #315f72;"
+						class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
+						<div class="d-flex flex-stack">
+							<h3 class="m-0 text-white fw-bold fs-3">{{ __('ui.damage_dashboard.cso_surveys') }}</h3>
+							<div class="ms-1">
+								<button type="button"
+									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
+									data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
+									<i class="ki-duotone ki-category fs-7 fs-lg-6"><span class="path1"></span><span
+											class="path2"></span><span class="path3"></span><span class="path4"></span></i>
+								</button>
+							</div>
+						</div>
+						<div class="d-flex text-center flex-column text-white pt-8">
+							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_cso_surveys') }}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $csoSurveyStats['total_surveys'] }}</span>
+						</div>
+					</div>
+					<div class="bg-body shadow-sm card-rounded mx-9 mb-9 px-6 py-9 position-relative z-index-1 dashboard-summary-body"
+						style="margin-top: -100px">
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-cross"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['damaged'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.damaged') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['damaged_buildings'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-people"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span><span
+											class="path4"></span><span class="path5"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['organizations'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.organizations') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['total_organizations'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home-2"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['units'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.units') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['total_units'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-map"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['index'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.municipalities') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['municipalities'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-geolocation"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['index'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.neighborhoods') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['neighborhoods'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-profile-user"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span><span
+											class="path4"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['index'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.assigned_staff') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['assigned_staff'] }}
 								</div>
 							</div>
 						</div>
