@@ -279,12 +279,12 @@
 			--summary-header-height: 230px;
 			--summary-body-height: 560px;
 			--summary-body-offset: 68px;
-			--summary-label-size: clamp(0.72rem, 0.66rem + 0.22vw, 0.92rem);
-			--summary-number-size: clamp(0.82rem, 0.78rem + 0.18vw, 1rem);
+			--summary-label-size: clamp(0.78rem, 0.72rem + 0.18vw, 0.92rem);
+			--summary-number-size: clamp(0.82rem, 0.78rem + 0.16vw, 1rem);
 			--summary-total-size: clamp(2rem, 1.8rem + 0.8vw, 2.8rem);
 			--summary-gap: 0.55rem;
-			--summary-body-inline-space: 2.25rem;
-			--summary-body-padding-x: 1.5rem;
+			--summary-body-inline-space: clamp(1rem, 0.35rem + 1.05vw, 2.25rem);
+			--summary-body-padding-x: clamp(0.85rem, 0.45rem + 0.65vw, 1.5rem);
 			--summary-body-padding-y: 1.25rem;
 			--summary-item-min-height: 2.9rem;
 			--summary-row-gap: 1rem;
@@ -298,7 +298,7 @@
 			display: flex;
 		}
 
-		@media (min-width: 1400px) {
+		@media (min-width: 1700px) {
 			.damage-dashboard-stats>.dashboard-summary-col {
 				flex: 0 0 20%;
 				max-width: 20%;
@@ -378,8 +378,8 @@
 			min-height: 1.25em;
 			font-size: var(--summary-label-size) !important;
 			overflow: visible;
-			text-wrap: nowrap !important;
-			white-space: nowrap !important;
+			text-wrap: balance;
+			white-space: normal !important;
 			word-break: normal;
 			overflow-wrap: normal;
 		}
