@@ -2,9 +2,11 @@
 
 namespace App\Modules\DamageAssessment\Services\Audit;
 
+use App\Models\Building;
 use App\Models\HousingUnit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AuditTableService
@@ -156,6 +158,23 @@ class AuditTableService
         ];
     }
 
+    public function floorAreaMismatchRows(Request $request): Collection
+    {
+        $query = Building::query()
+            ->select('buildings.objectid')
+            ->selectRaw($this->floorAreaDifferenceSql('0', 'ground_floor_area__m2').' as ground_floor_difference')
+            ->selectRaw($this->floorAreaDifferenceSql('1', 'floor_area_m2').' as repeated_floor_difference');
+
+        $request->merge(['floor_area_mismatch' => '1']);
+
+        $this->applyFilters($query, $request);
+        $this->applyStatusDateFilters($query, $request);
+
+        return $query
+            ->orderBy('buildings.objectid')
+            ->get();
+    }
+
     /**
      * @return array<int, string>
      */
@@ -261,11 +280,19 @@ class AuditTableService
 
     private function floorAreaMismatchSql(string $floorNumber, string $buildingAreaField): string
     {
-        $floorValue = $this->sqlQuote($floorNumber);
-        $buildingAreaFieldValue = $this->sqlQuote($buildingAreaField);
+        return 'ABS('.$this->floorAreaDifferenceSql($floorNumber, $buildingAreaField).') > 0.01';
+    }
 
-        return "ABS(
-            COALESCE((
+    private function floorAreaDifferenceSql(string $floorNumber, string $buildingAreaField): string
+    {
+        return $this->floorAreaUnitsTotalSql($floorNumber).' - '.$this->buildingAreaSql($buildingAreaField);
+    }
+
+    private function floorAreaUnitsTotalSql(string $floorNumber): string
+    {
+        $floorValue = $this->sqlQuote($floorNumber);
+
+        return "COALESCE((
                 SELECT SUM(COALESCE((
                     SELECT area_edits.field_value
                     FROM edit_assessments AS area_edits
@@ -286,9 +313,14 @@ class AuditTableService
                         ORDER BY floor_edits.id DESC
                         LIMIT 1
                     ), floor_area_units.floor_number, ''))) = {$floorValue}
-            ), 0)
-            -
-            (COALESCE((
+            ), 0)";
+    }
+
+    private function buildingAreaSql(string $buildingAreaField): string
+    {
+        $buildingAreaFieldValue = $this->sqlQuote($buildingAreaField);
+
+        return "(COALESCE((
                 SELECT building_area_edits.field_value
                 FROM edit_assessments AS building_area_edits
                 WHERE building_area_edits.type = 'building_table'
@@ -296,8 +328,7 @@ class AuditTableService
                     AND building_area_edits.global_id = buildings.globalid
                 ORDER BY building_area_edits.id DESC
                 LIMIT 1
-            ), buildings.{$buildingAreaField}, 0) + 0)
-        ) > 0.01";
+            ), buildings.{$buildingAreaField}, 0) + 0)";
     }
 
     private function sqlQuote(string $value): string

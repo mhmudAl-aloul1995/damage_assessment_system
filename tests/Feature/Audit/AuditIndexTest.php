@@ -690,6 +690,7 @@ it('filters buildings with mismatched unit floor areas and excludes roof units',
         ->get(route('audit.index'))
         ->assertOk()
         ->assertSee('id="toggle_floor_area_mismatch"', false)
+        ->assertSee('id="export_floor_area_mismatch"', false)
         ->assertSee('مخالف لمساحات الطوابق');
 
     $this->actingAs($user)
@@ -712,6 +713,28 @@ it('filters buildings with mismatched unit floor areas and excludes roof units',
         ->assertJsonMissing([
             'globalid' => $partialMismatchedBuilding->globalid,
         ]);
+
+    $exportResponse = $this->actingAs($user)
+        ->get(route('audit.floor-area-mismatches.export'));
+
+    $exportResponse
+        ->assertOk()
+        ->assertHeader('content-disposition');
+
+    $filePath = $exportResponse->baseResponse->getFile()->getPathname();
+    $spreadsheet = IOFactory::load($filePath);
+    $sheet = $spreadsheet->getSheetByName('مخالفات المساحات');
+
+    expect($sheet)->not->toBeNull();
+    expect($sheet->rangeToArray('A1:C1'))->toBe([
+        ['ObjectID', 'فرق الطابق الأرضي 0', 'فرق الطابق المتكرر 1'],
+    ]);
+    expect((int) $sheet->getCell('A2')->getValue())->toBe(7451)
+        ->and((float) $sheet->getCell('B2')->getValue())->toBe(-10.0)
+        ->and((float) $sheet->getCell('C2')->getValue())->toBe(0.0)
+        ->and($sheet->getCell('A3')->getValue())->toBeNull();
+
+    $spreadsheet->disconnectWorksheets();
 
     config()->set('database.default', 'sqlite');
     DB::purge('mysql');

@@ -8,6 +8,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditDashboardController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditEngineerChangeLogController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditExportController;
+use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditFloorAreaMismatchExportController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditReviewerController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditStatusHistoryController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\LawyerAuditAssignmentController;
@@ -293,6 +294,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/audit', [auditController::class, 'index'])->name('audit.index');
     Route::get('/field-engineer-audit', [auditController::class, 'fieldEngineerAudit'])->name('audit.fieldEngineer');
     Route::get('/audit/export', AuditExportController::class)->name('audit.export');
+    Route::get('/audit/floor-area-mismatches/export', AuditFloorAreaMismatchExportController::class)
+        ->name('audit.floor-area-mismatches.export');
     Route::get('/audit/engineer-change-log', AuditEngineerChangeLogController::class)->name('audit.engineer-change-log');
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
     Route::get('/audit/lawyer-assignments', LawyerAuditAssignmentController::class)

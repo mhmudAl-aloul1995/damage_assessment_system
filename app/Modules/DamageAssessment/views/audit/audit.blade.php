@@ -430,6 +430,10 @@
 							مخالف لمساحات الطوابق
 							<i class="ki-duotone ki-chart-line-down"></i>
 						</button>
+						<button type="button" id="export_floor_area_mismatch" class="btn btn-light-success btn-sm">
+							تصدير مخالفات المساحات Excel
+							<i class="ki-duotone ki-file-down"></i>
+						</button>
 						<button type="button" id="btn_engineer_change_log" class="btn btn-light-info btn-sm">
 							تغييرات مهندسي التدقيق
 							<i class="ki-duotone ki-notepad-edit"></i>
@@ -2462,6 +2466,18 @@
 				floorAreaMismatch = !floorAreaMismatch;
 				renderFloorAreaMismatchButton();
 				table.ajax.reload(null, true);
+			});
+
+			$('#export_floor_area_mismatch').on('click', function () {
+				const params = new URLSearchParams();
+				const filters = auditFilterPayload();
+				filters.floor_area_mismatch = 1;
+
+				Object.keys(filters).forEach(function (key) {
+					appendAuditExportParams(params, key, filters[key]);
+				});
+
+				window.location.href = "{{ route('audit.floor-area-mismatches.export') }}?" + params.toString();
 			});
 			$('#toggle_select_column').on('click', function () {
 				const button = $(this);
