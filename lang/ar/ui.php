@@ -380,6 +380,8 @@ return [
         'cso_surveys' => 'منظمات المجتمع المدني',
         'total_cso_surveys' => 'إجمالي استبيانات المنظمات',
         'organizations' => 'المنظمات',
+        'without_units' => 'بدون وحدات',
+        'without_organization' => 'بدون منظمة',
         'items' => 'العناصر',
         'potholes' => 'الحفر',
         'obstacles' => 'العوائق',

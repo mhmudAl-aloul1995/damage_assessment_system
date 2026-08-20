@@ -49,9 +49,12 @@
 			],
 			'cso_surveys' => [
 				'index' => route('cso-surveys.index'),
+				'completed' => route('cso-surveys.index') . '?' . http_build_query(['field_status' => 'COMPLETED']),
 				'damaged' => route('cso-surveys.index') . '?' . http_build_query(['damaged_only' => 1]),
 				'organizations' => route('cso-surveys.index') . '?' . http_build_query(['with_organizations' => 1]),
 				'units' => route('cso-surveys.index') . '?' . http_build_query(['with_units' => 1]),
+				'without_units' => route('cso-surveys.index') . '?' . http_build_query(['without_units' => 1]),
+				'without_organization' => route('cso-surveys.index') . '?' . http_build_query(['without_organization' => 1]),
 			],
 		];
 		$housingUnitsTarget = 67500;
@@ -1755,6 +1758,21 @@
 						style="margin-top: -100px">
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check-circle"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['completed'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.completed') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['completed'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-cross"><span
 											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
 							</div>
@@ -2127,6 +2145,37 @@
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									{{ $csoSurveyStats['total_units'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-home-cross"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['without_units'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.without_units') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['without_units'] }}
+								</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-people"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span><span
+											class="path4"></span><span class="path5"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['cso_surveys']['without_organization'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.without_organization') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
+									{{ $csoSurveyStats['without_organization'] }}
 								</div>
 							</div>
 						</div>

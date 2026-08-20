@@ -107,7 +107,30 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'assignedto' => 'CSO Team 1',
         'creationdate' => Carbon::today()->toDateString(),
         'organization_name' => 'Civil Support Organization',
+        'field_status' => 'COMPLETED',
         'building_damage_status' => 'partial_damage',
+    ]);
+
+    $csoSurveyWithoutOrganization = CsoSurvey::query()->create([
+        'objectid' => 3002,
+        'globalid' => 'dashboard-cso-without-organization-global-id',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'CSO Team 2',
+        'creationdate' => Carbon::today()->toDateString(),
+        'organization_name' => 'Unlinked Organization Survey',
+    ]);
+
+    $csoSurveyWithoutUnits = CsoSurvey::query()->create([
+        'objectid' => 3003,
+        'globalid' => 'dashboard-cso-without-units-global-id',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'CSO Team 3',
+        'creationdate' => Carbon::today()->toDateString(),
+        'organization_name' => 'No Units Organization',
     ]);
 
     CsoSurveyOrganization::query()->create([
@@ -124,12 +147,29 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'unit_name' => 'Ground Floor Unit',
     ]);
 
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 3102,
+        'globalid' => 'dashboard-cso-without-units-organization-global-id',
+        'parentglobalid' => $csoSurveyWithoutUnits->globalid,
+        'organization_name_en' => 'No Units Organization',
+    ]);
+
+    CsoSurveyUnit::query()->create([
+        'objectid' => 3202,
+        'globalid' => 'dashboard-cso-without-organization-unit-global-id',
+        'parentglobalid' => $csoSurveyWithoutOrganization->globalid,
+        'unit_name' => 'Unlinked Organization Unit',
+    ]);
+
     $response = $this->actingAs($user)->get('/damage-assessment/damageAssessment');
 
     $response
         ->assertOk()
         ->assertSee('Civil Society Organizations')
+        ->assertSee('Completed')
         ->assertSee('Organizations')
+        ->assertSee('Without Units')
+        ->assertSee('Without Organization')
         ->assertSee('Neighborhoods')
         ->assertSee('Assigned Staff')
         ->assertSee('Occupied')
@@ -152,9 +192,12 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertViewHas('publicBuildingStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
         ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['total_surveys'] === 2)
         ->assertViewHas('roadFacilityStats', fn (array $stats): bool => $stats['undamaged_roads'] === 1)
-        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_surveys'] === 1)
-        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_organizations'] === 1)
-        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_units'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_surveys'] === 3)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['completed'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_organizations'] === 2)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['total_units'] === 2)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['without_units'] === 1)
+        ->assertViewHas('csoSurveyStats', fn (array $stats): bool => $stats['without_organization'] === 1)
         ->assertSee('data-period="day"', false)
         ->assertSee('data-period="all"', false)
         ->assertSee('Rimal');

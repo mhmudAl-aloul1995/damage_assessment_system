@@ -383,6 +383,8 @@ return [
         'cso_surveys' => 'Civil Society Organizations',
         'total_cso_surveys' => 'Total CSO Surveys',
         'organizations' => 'Organizations',
+        'without_units' => 'Without Units',
+        'without_organization' => 'Without Organization',
         'total_road_facilities' => 'Total Road Facilities',
         'items' => 'Items',
         'potholes' => 'Potholes',

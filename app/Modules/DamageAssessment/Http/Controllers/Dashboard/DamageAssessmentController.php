@@ -233,6 +233,10 @@ class DamageAssessmentController extends Controller
             'total_surveys' => $this->dashboardCsoSurveyQuery($request)
                 ->count(),
 
+            'completed' => $this->dashboardCsoSurveyQuery($request)
+                ->whereIn('field_status', ['COMPLETED', 'completed'])
+                ->count(),
+
             'damaged_buildings' => $this->dashboardCsoSurveyQuery($request)
                 ->whereNotNull('building_damage_status')
                 ->where('building_damage_status', '!=', '')
@@ -244,6 +248,14 @@ class DamageAssessmentController extends Controller
 
             'total_units' => (int) CsoSurveyUnit::query()
                 ->whereIn('parentglobalid', $this->dashboardCsoSurveyQuery($request)->select('globalid'))
+                ->count(),
+
+            'without_units' => $this->dashboardCsoSurveyQuery($request)
+                ->whereDoesntHave('units')
+                ->count(),
+
+            'without_organization' => $this->dashboardCsoSurveyQuery($request)
+                ->whereDoesntHave('organizations')
                 ->count(),
 
             'municipalities' => $this->dashboardCsoSurveyQuery($request)
