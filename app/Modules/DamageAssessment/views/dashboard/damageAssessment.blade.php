@@ -294,15 +294,15 @@
 			.damage-dashboard-stats {
 				--summary-header-height: 190px;
 				--summary-body-offset: 44px;
-				--summary-label-size: 0.72rem;
-				--summary-number-size: 0.76rem;
+				--summary-label-size: 0.8rem;
+				--summary-number-size: 0.82rem;
 				--summary-total-size: clamp(1.85rem, 1.25rem + 1.35vw, 2.45rem);
 				--summary-gap: 0.35rem;
 				--summary-body-inline-space: 0.65rem;
 				--summary-body-padding-x: 0.75rem;
 				--summary-body-padding-y: 0.75rem;
-				--summary-item-min-height: 2.2rem;
-				--summary-row-gap: 0.45rem;
+				--summary-item-min-height: 2.28rem;
+				--summary-row-gap: 0.5rem;
 				flex-wrap: nowrap;
 			}
 		}
@@ -407,7 +407,8 @@
 			padding-inline-end: 0.35rem !important;
 		}
 
-		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.mb-1.pe-3.flex-grow-1 a {
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.mb-1.pe-3.flex-grow-1 a,
+		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.mb-1.pe-3.flex-grow-1 span {
 			display: block;
 			line-height: 1.25;
 			min-height: 1.25em;
