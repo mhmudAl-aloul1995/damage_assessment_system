@@ -292,17 +292,17 @@
 
 		@media (min-width: 1200px) {
 			.damage-dashboard-stats {
-				--summary-header-height: 210px;
-				--summary-body-offset: 54px;
+				--summary-header-height: 190px;
+				--summary-body-offset: 44px;
 				--summary-label-size: 0.72rem;
 				--summary-number-size: 0.76rem;
 				--summary-total-size: clamp(1.85rem, 1.25rem + 1.35vw, 2.45rem);
 				--summary-gap: 0.35rem;
 				--summary-body-inline-space: 0.65rem;
 				--summary-body-padding-x: 0.75rem;
-				--summary-body-padding-y: 0.95rem;
-				--summary-item-min-height: 2.55rem;
-				--summary-row-gap: 0.72rem;
+				--summary-body-padding-y: 0.75rem;
+				--summary-item-min-height: 2.2rem;
+				--summary-row-gap: 0.45rem;
 				flex-wrap: nowrap;
 			}
 		}
@@ -355,6 +355,10 @@
 				line-height: 1.18;
 				max-width: calc(100% - 2.25rem);
 				white-space: normal;
+			}
+
+			.damage-dashboard-stats .dashboard-summary-header .d-flex.text-center.flex-column.text-white.pt-8 {
+				padding-top: 1.15rem !important;
 			}
 		}
 
@@ -430,6 +434,10 @@
 			.damage-dashboard-stats .symbol.symbol-25px.w-25px.me-5 {
 				margin-inline-end: 0.32rem !important;
 				width: 20px !important;
+			}
+
+			.damage-dashboard-stats .dashboard-summary-body .d-flex.align-items-center.mb-6 {
+				align-items: center !important;
 			}
 		}
 
