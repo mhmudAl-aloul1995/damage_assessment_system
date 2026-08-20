@@ -290,6 +290,23 @@
 			--summary-row-gap: 1rem;
 		}
 
+		@media (min-width: 1200px) {
+			.damage-dashboard-stats {
+				--summary-header-height: 210px;
+				--summary-body-offset: 54px;
+				--summary-label-size: 0.72rem;
+				--summary-number-size: 0.76rem;
+				--summary-total-size: clamp(1.85rem, 1.25rem + 1.35vw, 2.45rem);
+				--summary-gap: 0.35rem;
+				--summary-body-inline-space: 0.65rem;
+				--summary-body-padding-x: 0.75rem;
+				--summary-body-padding-y: 0.95rem;
+				--summary-item-min-height: 2.55rem;
+				--summary-row-gap: 0.72rem;
+				flex-wrap: nowrap;
+			}
+		}
+
 		.damage-dashboard-stats>[class*="col-"] {
 			display: flex;
 		}
@@ -298,7 +315,7 @@
 			display: flex;
 		}
 
-		@media (min-width: 1700px) {
+		@media (min-width: 1200px) {
 			.damage-dashboard-stats>.dashboard-summary-col {
 				flex: 0 0 20%;
 				max-width: 20%;
@@ -326,6 +343,19 @@
 			min-height: var(--summary-header-height) !important;
 			max-height: var(--summary-header-height);
 			flex: 0 0 auto;
+		}
+
+		@media (min-width: 1200px) {
+			.damage-dashboard-stats .dashboard-summary-header {
+				padding-inline: 1rem !important;
+			}
+
+			.damage-dashboard-stats .dashboard-summary-header h3 {
+				font-size: clamp(1rem, 0.62rem + 0.76vw, 1.45rem) !important;
+				line-height: 1.18;
+				max-width: calc(100% - 2.25rem);
+				white-space: normal;
+			}
 		}
 
 		.damage-dashboard-stats .dashboard-summary-body {
@@ -370,6 +400,7 @@
 			flex: 1 1 auto;
 			min-width: 0;
 			margin-bottom: 0 !important;
+			padding-inline-end: 0.35rem !important;
 		}
 
 		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.mb-1.pe-3.flex-grow-1 a {
@@ -380,8 +411,8 @@
 			overflow: visible;
 			text-wrap: balance;
 			white-space: normal !important;
-			word-break: normal;
-			overflow-wrap: normal;
+			word-break: keep-all;
+			overflow-wrap: anywhere;
 		}
 
 		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.fw-bold,
@@ -395,10 +426,24 @@
 			margin-inline-end: clamp(0.45rem, 0.35rem + 0.25vw, 0.75rem) !important;
 		}
 
+		@media (min-width: 1200px) {
+			.damage-dashboard-stats .symbol.symbol-25px.w-25px.me-5 {
+				margin-inline-end: 0.32rem !important;
+				width: 20px !important;
+			}
+		}
+
 		.damage-dashboard-stats .dashboard-summary-body .symbol-label {
 			background-color: var(--bs-gray-100) !important;
 			height: 25px;
 			width: 25px;
+		}
+
+		@media (min-width: 1200px) {
+			.damage-dashboard-stats .dashboard-summary-body .symbol-label {
+				height: 20px;
+				width: 20px;
+			}
 		}
 
 		.damage-dashboard-stats .dashboard-summary-body .symbol-label .ki-duotone {
