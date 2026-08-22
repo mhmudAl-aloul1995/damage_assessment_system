@@ -41,7 +41,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.damage_assessment.title',
         'icon' => 'ki-abstract-28',
-        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Legal Auditor', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
         'active_patterns' => [
             'damage-assessment/building*',
             'damage-assessment/housing*',
