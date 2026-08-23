@@ -40,6 +40,14 @@ return new class extends Migration
             $table->text('field_status')->nullable();
             $table->text('building_damage_status')->nullable();
             $table->text('unit_damage_status')->nullable();
+            $table->text('building_submit_date')->nullable();
+            $table->text('governorate')->nullable();
+            $table->text('neighborhood')->nullable();
+            $table->text('has_fire')->nullable();
+            $table->text('unit_stripping')->nullable();
+            $table->text('is_the_housing_unit_or_living_habitable')->nullable();
+            $table->text('security_situation_unit')->nullable();
+            $table->text('unit_support_needed')->nullable();
             $table->timestamp('editdate')->nullable();
             $table->timestamps();
         });

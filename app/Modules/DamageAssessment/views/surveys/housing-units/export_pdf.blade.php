@@ -41,7 +41,7 @@
                 <div class="eyebrow">Damage Assessment Project</div>
                 <h1>جدول الكميات BOQ</h1>
                 <div class="meta">
-                    مصدر البيانات: {{ $sourceTable ?? 'v_housing_units_audited' }}
+                    مصدر البيانات: {{ $sourceTable ?? 'audited_housing_units' }}
                     | تاريخ التوليد: {{ $generatedAt }}
                 </div>
             </div>

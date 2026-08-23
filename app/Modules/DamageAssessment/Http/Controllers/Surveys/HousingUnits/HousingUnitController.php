@@ -29,7 +29,7 @@ use ZipArchive;
 
 class HousingUnitController extends Controller
 {
-    private const HOUSING_EXPORT_SOURCE_TABLE = 'v_housing_units_audited';
+    private const HOUSING_EXPORT_SOURCE_TABLE = 'audited_housing_units';
 
     private const HOUSING_EXPORT_OBJECT_IDS_LIMIT = 200;
 

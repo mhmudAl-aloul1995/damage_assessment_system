@@ -509,6 +509,8 @@ it('filters dashboard housing totals by building submit date without hiding inco
         'building_field_status' => 'Not_Completed',
     ]);
 
+    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+
     $this->actingAs($user)
         ->get(route('damageAssessment.index', [
             'from_date' => '2026-06-01',
@@ -554,6 +556,8 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         'building_field_status' => 'COMPLETED',
     ]);
 
+    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
@@ -592,6 +596,8 @@ it('uses latest housing edit assessments in dashboard unit statistics', function
         'created_at' => now(),
         'updated_at' => now(),
     ]);
+
+    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))

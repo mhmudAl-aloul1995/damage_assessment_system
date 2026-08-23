@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\services;
 
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\VBuildingAudited;
-use App\Models\VHousingUnitAudited;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\PendingRequest;
@@ -104,7 +104,7 @@ class ArcgisAuditedRestoreService
     }
 
     /**
-     * @return iterable<VHousingUnitAudited>
+     * @return iterable<AuditedHousingUnit>
      */
     private function auditedUnitsFor(VBuildingAudited $building): iterable
     {
@@ -114,7 +114,7 @@ class ArcgisAuditedRestoreService
             return [];
         }
 
-        $query = VHousingUnitAudited::query()
+        $query = AuditedHousingUnit::query()
             ->where('parentglobalid', $buildingGlobalId)
             ->orderBy('objectid');
 
