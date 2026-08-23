@@ -28,7 +28,7 @@ class ArcgisAuditedUploadService
     private string $token = '';
 
     /**
-     * @var array<string, array{object_id_field: string|null, fields: array<string, string>}>
+     * @var array<string, array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}>
      */
     private array $targetLayerMetadata = [];
 
@@ -845,6 +845,75 @@ class ArcgisAuditedUploadService
         $this->uploadUnitAuditEdits($globalId, $fields, $summary, false, false, CarbonImmutable::now());
     }
 
+    /**
+     * @param  array<int, int|string>  $buildingObjectIds
+     * @param  array<int, int|string>  $unitObjectIds
+     * @return array<string, int>
+     */
+    public function uploadObjectIds(
+        array $buildingObjectIds = [],
+        array $unitObjectIds = [],
+        bool $withoutAttachments = false,
+        bool $dryRun = false,
+    ): array {
+        $summary = $this->emptySummary();
+        $summary['dry_run'] = $dryRun ? 1 : 0;
+
+        $buildingObjectIds = $this->normalizeObjectIdList($buildingObjectIds);
+        $unitObjectIds = $this->normalizeObjectIdList($unitObjectIds);
+
+        if ($dryRun) {
+            $summary['buildings_to_sync'] = count($buildingObjectIds);
+            $summary['units_to_sync'] = count($unitObjectIds);
+            $summary['buildings_available'] = (int) AuditedBuilding::query()
+                ->whereIn('objectid', $buildingObjectIds)
+                ->count();
+            $summary['units_available'] = (int) AuditedHousingUnit::query()
+                ->whereIn('objectid', $unitObjectIds)
+                ->count();
+
+            return $summary;
+        }
+
+        foreach (AuditedBuilding::query()->whereIn('objectid', $buildingObjectIds)->orderBy('objectid')->cursor() as $building) {
+            try {
+                echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
+
+                $this->uploadBuilding($building, $summary, ! $withoutAttachments, false, null);
+            } catch (Throwable $exception) {
+                $summary['errors']++;
+
+                echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
+                echo $exception->getMessage()."\n";
+
+                Log::error('Failed uploading reconciled audited building to ArcGIS.', [
+                    'objectid' => $building->getAttribute('objectid'),
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        foreach (AuditedHousingUnit::query()->whereIn('objectid', $unitObjectIds)->orderBy('objectid')->cursor() as $unit) {
+            try {
+                echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+
+                $this->uploadUnit($unit, $summary, ! $withoutAttachments, false, null);
+            } catch (Throwable $exception) {
+                $summary['errors']++;
+
+                echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+                echo $exception->getMessage()."\n";
+
+                Log::error('Failed uploading reconciled audited housing unit to ArcGIS.', [
+                    'objectid' => $unit->getAttribute('objectid'),
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return $summary;
+    }
+
     private function refreshToken(): string
     {
         $this->token = $this->generateToken();
@@ -1260,13 +1329,19 @@ class ArcgisAuditedUploadService
 
     private function targetFeatureForLayer(int|string $layerId, array $feature, string $token): array
     {
-        $fields = $this->targetLayerMetadata($layerId, $token)['fields'];
+        $metadata = $this->targetLayerMetadata($layerId, $token);
+        $fields = $metadata['fields'];
 
         if ($fields === []) {
             return $feature;
         }
 
-        $feature['attributes'] = collect($feature['attributes'] ?? [])
+        $attributes = $this->prepareTargetAttributes(
+            $feature['attributes'] ?? [],
+            $metadata['definitions']
+        );
+
+        $feature['attributes'] = collect($attributes)
             ->filter(fn (mixed $value, string $field): bool => array_key_exists(strtolower($field), $fields))
             ->mapWithKeys(fn (mixed $value, string $field): array => [$fields[strtolower($field)] => $value])
             ->toArray();
@@ -1322,7 +1397,7 @@ class ArcgisAuditedUploadService
     }
 
     /**
-     * @return array{object_id_field: string|null, fields: array<string, string>}
+     * @return array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
      */
     private function targetLayerMetadata(int|string $layerId, string $token): array
     {
@@ -1343,10 +1418,23 @@ class ArcgisAuditedUploadService
             throw new RuntimeException('ArcGIS target layer metadata failed: '.$response->body());
         }
 
-        $fields = collect($response->json('fields') ?? [])
+        $metadataFields = $response->json('fields') ?? [];
+
+        $fields = collect($metadataFields)
             ->pluck('name')
             ->filter(fn (mixed $field): bool => is_string($field) && $field !== '')
             ->mapWithKeys(fn (string $field): array => [strtolower($field) => $field])
+            ->toArray();
+
+        $definitions = collect($metadataFields)
+            ->filter(fn (mixed $field): bool => is_array($field) && is_string($field['name'] ?? null) && $field['name'] !== '')
+            ->mapWithKeys(fn (array $field): array => [
+                strtolower((string) $field['name']) => [
+                    'name' => (string) $field['name'],
+                    'type' => is_string($field['type'] ?? null) ? $field['type'] : null,
+                    'length' => is_numeric($field['length'] ?? null) ? (int) $field['length'] : null,
+                ],
+            ])
             ->toArray();
 
         $objectIdField = $response->json('objectIdField');
@@ -1354,7 +1442,180 @@ class ArcgisAuditedUploadService
         return $this->targetLayerMetadata[$cacheKey] = [
             'object_id_field' => is_string($objectIdField) && $objectIdField !== '' ? $objectIdField : null,
             'fields' => $fields,
+            'definitions' => $definitions,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, array{name: string, type: string|null, length: int|null}>  $definitions
+     * @return array<string, mixed>
+     */
+    private function prepareTargetAttributes(array $attributes, array $definitions): array
+    {
+        $attributes = $this->moveLongTextAttributes($attributes, $definitions);
+
+        foreach ($attributes as $field => $value) {
+            $definition = $definitions[strtolower((string) $field)] ?? null;
+
+            if ($definition === null) {
+                continue;
+            }
+
+            if ($this->isNumericArcgisField($definition['type'])) {
+                $attributes[$field] = $this->normalizeArcgisNumericValue($value);
+
+                continue;
+            }
+
+            if (
+                $definition['type'] === 'esriFieldTypeString'
+                && is_int($definition['length'])
+                && is_string($value)
+            ) {
+                $attributes[$field] = $this->limitArcgisString($value, $definition['length']);
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, array{name: string, type: string|null, length: int|null}>  $definitions
+     * @return array<string, mixed>
+     */
+    private function moveLongTextAttributes(array $attributes, array $definitions): array
+    {
+        foreach ($this->longTextTargetFields() as $sourceField => $targetField) {
+            $sourceKey = $this->attributeKey($attributes, $sourceField);
+            $targetDefinition = $definitions[strtolower($targetField)] ?? null;
+            $sourceDefinition = $definitions[strtolower($sourceField)] ?? null;
+
+            if (
+                $sourceKey === null
+                || ! is_string($attributes[$sourceKey])
+                || $targetDefinition === null
+            ) {
+                continue;
+            }
+
+            $value = $attributes[$sourceKey];
+
+            if (! is_int($sourceDefinition['length'] ?? null) || mb_strlen($value) <= $sourceDefinition['length']) {
+                continue;
+            }
+
+            $targetKey = ($definitions[strtolower($targetField)]['name'] ?? $targetField);
+            $targetLength = $targetDefinition['length'];
+            $attributes[$targetKey] = is_int($targetLength)
+                ? $this->limitArcgisString($value, $targetLength)
+                : $value;
+            $attributes[$sourceKey] = $this->limitArcgisString($value, (int) $sourceDefinition['length']);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function longTextTargetFields(): array
+    {
+        return [
+            'assessment_obstacle_info' => 'assessment_obstacle_info_v1',
+            'building_services_notes' => 'building_services_notes_v1',
+            'Comments_Recommendations' => 'Comments_Recommendations_v1',
+            'comments_recommendations' => 'comments_recommendations_v1',
+            'final_comments' => 'final_comments_v1',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function attributeKey(array $attributes, string $field): ?string
+    {
+        $lookup = strtolower($field);
+
+        foreach (array_keys($attributes) as $key) {
+            if (strtolower((string) $key) === $lookup) {
+                return (string) $key;
+            }
+        }
+
+        return null;
+    }
+
+    private function isNumericArcgisField(?string $type): bool
+    {
+        return in_array($type, [
+            'esriFieldTypeDouble',
+            'esriFieldTypeSingle',
+            'esriFieldTypeInteger',
+            'esriFieldTypeSmallInteger',
+        ], true);
+    }
+
+    private function normalizeArcgisNumericValue(mixed $value): int|float|null
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        if ($value === '' || $value === '-') {
+            return null;
+        }
+
+        $normalized = rtrim($value, '.');
+
+        if (is_numeric($normalized)) {
+            return str_contains($normalized, '.') ? (float) $normalized : (int) $normalized;
+        }
+
+        if (preg_match('/^-?\d+(?:\.\d+)?\s+[^\d]+$/u', $value) === 1) {
+            preg_match('/^-?\d+(?:\.\d+)?/u', $value, $matches);
+            $number = $matches[0] ?? null;
+
+            if (is_string($number) && is_numeric($number)) {
+                return str_contains($number, '.') ? (float) $number : (int) $number;
+            }
+        }
+
+        return null;
+    }
+
+    private function limitArcgisString(string $value, int $length): string
+    {
+        if ($length < 1 || mb_strlen($value) <= $length) {
+            return $value;
+        }
+
+        return mb_substr($value, 0, $length);
+    }
+
+    /**
+     * @param  array<int, int|string>  $objectIds
+     * @return array<int, int|string>
+     */
+    private function normalizeObjectIdList(array $objectIds): array
+    {
+        return collect($objectIds)
+            ->filter(fn (int|string $objectId): bool => $objectId !== '')
+            ->map(fn (int|string $objectId): int|string => is_numeric($objectId) ? (int) $objectId : $objectId)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function sourceGeometry(int|string $layerId, int|string $objectId, string $token): ?array
