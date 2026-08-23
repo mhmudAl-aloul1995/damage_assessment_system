@@ -2256,8 +2256,6 @@ class DamageAssessmentController extends Controller
     {
         [$startDate, $endDate] = $this->dashboardDateRange($request);
 
-        $query->where('building_field_status', 'COMPLETED');
-
         if ($startDate !== null) {
             $query->whereDate('building_submit_date', '>=', $startDate);
         }
