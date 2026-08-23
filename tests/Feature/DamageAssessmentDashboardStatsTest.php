@@ -566,6 +566,43 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         });
 });
 
+it('uses latest housing edit assessments in dashboard unit statistics', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    HousingUnit::query()->create([
+        'objectid' => 907,
+        'globalid' => 'edited-unit-dashboard-status',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_submit_date' => '2026-06-15 10:00:00',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        'global_id' => 'edited-unit-dashboard-status',
+        'type' => 'housing_table',
+        'field_name' => 'unit_damage_status',
+        'field_value' => 'partially_damaged2',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertViewHas('unitStats', function (array $unitStats): bool {
+            return (int) $unitStats['total_units'] === 1
+                && (int) $unitStats['fully_damaged'] === 0
+                && (int) $unitStats['partially_damaged'] === 1;
+        });
+});
+
 it('counts assessed buildings from damaged committee review and blocked assessment totals', function () {
     $user = User::factory()->create();
 

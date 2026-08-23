@@ -15,6 +15,7 @@ use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
+use App\Models\VHousingUnitAudited;
 use App\Modules\DamageAssessment\Http\Requests\HudBuildingUnitsRequest;
 use App\Services\ArcgisService;
 use Carbon\Carbon;
@@ -73,7 +74,7 @@ class DamageAssessmentController extends Controller
         $buildingQuery = Building::query();
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
 
-        $housingUnitQuery = HousingUnit::query();
+        $housingUnitQuery = VHousingUnitAudited::query();
         $this->applyDashboardHousingFilters($housingUnitQuery, $request);
 
         $data = [
@@ -1093,7 +1094,7 @@ class DamageAssessmentController extends Controller
         $buildingQuery = Building::query();
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
 
-        $housingUnitQuery = HousingUnit::query();
+        $housingUnitQuery = VHousingUnitAudited::query();
         $this->applyDashboardHousingFilters($housingUnitQuery, $request);
 
         $buildings = $buildingQuery
