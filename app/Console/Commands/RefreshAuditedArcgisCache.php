@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\ArcgisAuditedCacheService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class RefreshAuditedArcgisCache extends Command
 {
@@ -22,6 +23,8 @@ class RefreshAuditedArcgisCache extends Command
         $summary = $cacheService->refresh(
             is_numeric($buildingsLimit) ? (int) $buildingsLimit : null
         );
+
+        Cache::forever('damage_dashboard.stats_version', now()->timestamp);
 
         $this->table(['Metric', 'Value'], [
             ['buildings_cached', (string) $summary['buildings_cached']],

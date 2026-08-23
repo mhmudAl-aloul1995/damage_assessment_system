@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -71,66 +72,7 @@ class DamageAssessmentController extends Controller
             ? (string) $request->string('governorate')
             : '';
 
-        $buildingQuery = Building::query();
-        $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
-
-        $housingUnitQuery = AuditedHousingUnit::query();
-        $this->applyDashboardHousingFilters($housingUnitQuery, $request);
-
-        $data = [
-            'buildings' => $buildingQuery
-                ->selectRaw("COALESCE(SUM(field_status = 'Not_Completed'), 0) as not_completed,
-                COALESCE(SUM(field_status = 'COMPLETED'), 0) as completed,
-                COALESCE(SUM(field_status NOT IN ('COMPLETED', 'Not_Completed')), 0) as pending,
-                COALESCE(SUM(building_damage_status = 'fully_damaged'), 0) as fully_damaged,
-                COALESCE(SUM(building_damage_status = 'partially_damaged'), 0) as partially_damaged,
-                COALESCE(SUM(building_damage_status = 'committee_review'), 0) as committee_review,
-                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as assessment_obstacle,
-                COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
-                COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
-                COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
-                ->first(),
-            'units' => $housingUnitQuery
-                ->selectRaw("
-                COUNT(*) as total_units,
-                COALESCE(SUM(unit_damage_status = 'fully_damaged2'), 0) as fully_damaged,
-                COALESCE(SUM(unit_damage_status = 'partially_damaged2'), 0) as partially_damaged,
-                COALESCE(SUM(unit_damage_status = 'committee_review2'), 0) as committee_review,
-                COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,
-                COALESCE(SUM(unit_stripping = 'yes'), 0) as has_strip,
-                COALESCE(SUM(is_the_housing_unit_or_living_habitable = 'yes'), 0) as habitable,
-                COALESCE(SUM(security_situation_unit = 'Unsafe'), 0) as security_unsafe,
-                COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
-                COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed")
-                ->first(),
-        ];
-
-        $unitStats = [
-            'total_units' => $data['units']->total_units,
-            'fully_damaged' => $data['units']->fully_damaged,
-            'partially_damaged' => $data['units']->partially_damaged,
-            'damaged_total' => (int) $data['units']->fully_damaged + (int) $data['units']->partially_damaged,
-            'committee_review' => $data['units']->committee_review,
-            'has_fire' => $data['units']->has_fire,
-            'has_strip' => $data['units']->has_strip,
-            'habitable' => $data['units']->habitable,
-            'security_unsafe' => $data['units']->security_unsafe,
-            'unit_stripping' => $data['units']->unit_stripping,
-            'unit_support_needed' => $data['units']->unit_support_needed,
-        ];
-        $buildingStats = [
-            'not_completed' => $data['buildings']->not_completed,
-            'completed' => $data['buildings']->completed,
-            'pending' => $data['buildings']->pending,
-            'fully_damaged' => $data['buildings']->fully_damaged,
-            'partially_damaged' => $data['buildings']->partially_damaged,
-            'committee_review' => $data['buildings']->committee_review,
-            'assessment_obstacle' => $data['buildings']->assessment_obstacle,
-            'assessed_total' => (int) $data['buildings']->fully_damaged + (int) $data['buildings']->partially_damaged + (int) $data['buildings']->committee_review + (int) $data['buildings']->assessment_obstacle,
-            'uxo' => $data['buildings']->uxo,
-            'bodies' => $data['buildings']->bodies,
-            'debris' => $data['buildings']->debris,
-        ];
+        ['buildingStats' => $buildingStats, 'unitStats' => $unitStats] = $this->cachedDashboardCoreStats($request);
 
         $publicBuildingStats = [
             'total_surveys' => $this->dashboardPublicBuildingQuery($request)
@@ -1091,6 +1033,26 @@ class DamageAssessmentController extends Controller
 
     public function latestStats(Request $request): \Illuminate\Http\JsonResponse
     {
+        return response()->json($this->cachedDashboardCoreStats($request));
+    }
+
+    /**
+     * @return array{buildingStats: array<string, int>, unitStats: array<string, int>}
+     */
+    private function cachedDashboardCoreStats(Request $request): array
+    {
+        return Cache::remember(
+            $this->dashboardCoreStatsCacheKey($request),
+            now()->addMinutes(10),
+            fn (): array => $this->dashboardCoreStats($request)
+        );
+    }
+
+    /**
+     * @return array{buildingStats: array<string, int>, unitStats: array<string, int>}
+     */
+    private function dashboardCoreStats(Request $request): array
+    {
         $buildingQuery = Building::query();
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
 
@@ -1124,7 +1086,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed")
             ->first();
 
-        return response()->json([
+        return [
             'buildingStats' => [
                 'not_completed' => (int) $buildings->not_completed,
                 'completed' => (int) $buildings->completed,
@@ -1151,7 +1113,27 @@ class DamageAssessmentController extends Controller
                 'unit_stripping' => (int) $units->unit_stripping,
                 'unit_support_needed' => (int) $units->unit_support_needed,
             ],
+        ];
+    }
+
+    private function dashboardCoreStatsCacheKey(Request $request): string
+    {
+        $filters = $request->only([
+            'period',
+            'from_date',
+            'to_date',
+            'saved_from_date',
+            'saved_to_date',
+            'governorate',
+            'neighborhood',
         ]);
+
+        ksort($filters);
+
+        return 'damage_dashboard.core_stats.'
+            .Cache::get('damage_dashboard.stats_version', 1)
+            .'.'
+            .md5(json_encode($filters, JSON_THROW_ON_ERROR));
     }
 
     public function arcgisOptions(Request $request)
