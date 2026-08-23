@@ -141,6 +141,86 @@ it('uploads cached base table records with the latest audit edit values without 
     ])->assertSuccessful();
 });
 
+it('uploads only audited housing units when only units option is used', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::table('buildings')->insert([
+        'objectid' => 7300,
+        'globalid' => 'only-units-building-globalid',
+        'building_damage_status' => 'minor',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 7400,
+        'globalid' => 'only-units-unit-globalid',
+        'parentglobalid' => 'only-units-building-globalid',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'globalid'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'parentglobalid'],
+                ['name' => 'unit_damage_status'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['globalid' => 'target-only-units-building-globalid']],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/addFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toMatchArray([
+                'old_objectid_U' => 7400,
+                'old_global_id_U' => 'only-units-unit-globalid',
+                'parentglobalid' => 'target-only-units-building-globalid',
+                'unit_damage_status' => 'fully_damaged2',
+                'is_audited' => 1,
+            ]);
+
+            return Http::response([
+                'addResults' => [
+                    ['success' => true, 'objectId' => 9400],
+                ],
+            ]);
+        },
+    ]);
+
+    $this->artisan('arcgis:upload-audited', [
+        '--refresh-cache' => true,
+        '--without-attachments' => true,
+        '--only' => 'units',
+    ])->assertSuccessful();
+
+    Http::assertNotSent(fn ($request): bool => str_contains((string) $request->url(), '/FeatureServer/0/addFeatures'));
+});
+
 it('syncs the submitted audit field value directly to the audited arcgis layer', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

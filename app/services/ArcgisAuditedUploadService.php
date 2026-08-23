@@ -44,14 +44,20 @@ class ArcgisAuditedUploadService
         ?CarbonInterface $changedSince = null,
         bool $skipCounts = false,
         bool $onlyAuditEdits = false,
+        ?string $only = null,
     ): array {
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
         }
 
+        if (! in_array($only, [null, 'buildings', 'units'], true)) {
+            throw new RuntimeException('The only option must be buildings or units.');
+        }
+
         $summary = $this->emptySummary();
         $summary['without_attachments'] = $withoutAttachments ? 1 : 0;
         $summary['attachments_only'] = $attachmentsOnly ? 1 : 0;
+        $summary['only'] = $only ?? 'all';
 
         if ($changedSince !== null) {
             $summary['changed_since'] = $changedSince->format('Y-m-d H:i:s');
@@ -62,8 +68,6 @@ class ArcgisAuditedUploadService
         $this->refreshToken();
         echo "Token generated successfully.\n";
 
-        echo "Uploading buildings...\n";
-
         if ($changedSince !== null) {
             $this->uploadChangedSince(
                 $summary,
@@ -73,6 +77,7 @@ class ArcgisAuditedUploadService
                 $changedSince,
                 $skipCounts,
                 $onlyAuditEdits,
+                $only,
             );
 
             return $summary;
@@ -108,52 +113,58 @@ class ArcgisAuditedUploadService
         } else {
             echo "Counting sync candidates...\n";
 
-            $summary['buildings_to_sync'] = $this->candidateCount($buildingQuery);
-            $summary['units_to_sync'] = $this->candidateCount($unitQuery);
+            $summary['buildings_to_sync'] = $only === 'units' ? 0 : $this->candidateCount($buildingQuery);
+            $summary['units_to_sync'] = $only === 'buildings' ? 0 : $this->candidateCount($unitQuery);
 
             echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
         }
 
-        foreach ($buildingQuery->cursor() as $building) {
-            try {
-                echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
+        if ($only !== 'units') {
+            echo "Uploading buildings...\n";
 
-                $this->uploadBuilding($building, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
+            foreach ($buildingQuery->cursor() as $building) {
+                try {
+                    echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
-                echo "Building uploaded/copied successfully.\n";
-            } catch (Throwable $exception) {
-                $summary['errors']++;
+                    $this->uploadBuilding($building, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
 
-                echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
-                echo $exception->getMessage()."\n";
+                    echo "Building uploaded/copied successfully.\n";
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
 
-                Log::error('Failed uploading audited building to ArcGIS.', [
-                    'objectid' => $building->getAttribute('objectid'),
-                    'message' => $exception->getMessage(),
-                ]);
+                    echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
+                    echo $exception->getMessage()."\n";
+
+                    Log::error('Failed uploading audited building to ArcGIS.', [
+                        'objectid' => $building->getAttribute('objectid'),
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
         }
 
-        echo "Uploading housing units...\n";
+        if ($only !== 'buildings') {
+            echo "Uploading housing units...\n";
 
-        foreach ($unitQuery->cursor() as $unit) {
-            try {
-                echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+            foreach ($unitQuery->cursor() as $unit) {
+                try {
+                    echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
-                $this->uploadUnit($unit, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
+                    $this->uploadUnit($unit, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
 
-                echo "Unit uploaded/copied successfully.\n";
-            } catch (Throwable $exception) {
-                $summary['errors']++;
+                    echo "Unit uploaded/copied successfully.\n";
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
 
-                echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
-                echo $exception->getMessage()."\n";
+                    echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+                    echo $exception->getMessage()."\n";
 
-                Log::error('Failed uploading audited housing unit to ArcGIS.', [
-                    'objectid' => $unit->getAttribute('objectid'),
-                    'message' => $exception->getMessage(),
-                ]);
+                    Log::error('Failed uploading audited housing unit to ArcGIS.', [
+                        'objectid' => $unit->getAttribute('objectid'),
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
         }
 
@@ -168,31 +179,40 @@ class ArcgisAuditedUploadService
         CarbonInterface $changedSince,
         bool $skipCounts,
         bool $onlyAuditEdits,
+        ?string $only,
     ): void {
         if ($onlyAuditEdits) {
-            $this->uploadOnlyAuditEdits($summary, $buildingsLimit, $copyAttachments, $attachmentsOnly, $changedSince, $skipCounts);
+            $this->uploadOnlyAuditEdits($summary, $buildingsLimit, $copyAttachments, $attachmentsOnly, $changedSince, $skipCounts, $only);
 
             return;
         }
 
-        echo "Loading changed building ids...\n";
+        $buildingGlobalIds = [];
 
-        $buildingGlobalIds = $this->changedCandidateGlobalIds(
-            Building::query(),
-            'building_table',
-            $changedSince,
-            $onlyAuditEdits,
-            $buildingsLimit,
-        );
+        if ($only !== 'units') {
+            echo "Loading changed building ids...\n";
 
-        echo "Loading changed unit ids...\n";
+            $buildingGlobalIds = $this->changedCandidateGlobalIds(
+                Building::query(),
+                'building_table',
+                $changedSince,
+                $onlyAuditEdits,
+                $buildingsLimit,
+            );
+        }
 
-        $unitGlobalIds = $this->changedCandidateGlobalIds(
-            HousingUnit::query(),
-            'housing_table',
-            $changedSince,
-            $onlyAuditEdits,
-        );
+        $unitGlobalIds = [];
+
+        if ($only !== 'buildings') {
+            echo "Loading changed unit ids...\n";
+
+            $unitGlobalIds = $this->changedCandidateGlobalIds(
+                HousingUnit::query(),
+                'housing_table',
+                $changedSince,
+                $onlyAuditEdits,
+            );
+        }
 
         if ($skipCounts) {
             $summary['candidate_counts_skipped'] = 1;
@@ -206,57 +226,63 @@ class ArcgisAuditedUploadService
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
         }
 
-        foreach ($buildingGlobalIds as $buildingGlobalId) {
-            $building = $this->auditedBuildingByGlobalId($buildingGlobalId);
+        if ($only !== 'units') {
+            echo "Uploading buildings...\n";
 
-            if ($building === null) {
-                continue;
-            }
+            foreach ($buildingGlobalIds as $buildingGlobalId) {
+                $building = $this->auditedBuildingByGlobalId($buildingGlobalId);
 
-            try {
-                echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
+                if ($building === null) {
+                    continue;
+                }
 
-                $this->uploadBuilding($building, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                try {
+                    echo 'Building OBJECTID: '.$building->getAttribute('objectid')."\n";
 
-                echo "Building uploaded/copied successfully.\n";
-            } catch (Throwable $exception) {
-                $summary['errors']++;
+                    $this->uploadBuilding($building, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
 
-                echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
-                echo $exception->getMessage()."\n";
+                    echo "Building uploaded/copied successfully.\n";
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
 
-                Log::error('Failed uploading audited building to ArcGIS.', [
-                    'objectid' => $building->getAttribute('objectid'),
-                    'message' => $exception->getMessage(),
-                ]);
+                    echo 'Failed building OBJECTID: '.$building->getAttribute('objectid')."\n";
+                    echo $exception->getMessage()."\n";
+
+                    Log::error('Failed uploading audited building to ArcGIS.', [
+                        'objectid' => $building->getAttribute('objectid'),
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
         }
 
-        echo "Uploading housing units...\n";
+        if ($only !== 'buildings') {
+            echo "Uploading housing units...\n";
 
-        foreach ($unitGlobalIds as $unitGlobalId) {
-            $unit = $this->auditedUnitByGlobalId($unitGlobalId);
+            foreach ($unitGlobalIds as $unitGlobalId) {
+                $unit = $this->auditedUnitByGlobalId($unitGlobalId);
 
-            if ($unit === null) {
-                continue;
-            }
+                if ($unit === null) {
+                    continue;
+                }
 
-            try {
-                echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+                try {
+                    echo 'Unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
 
-                $this->uploadUnit($unit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                    $this->uploadUnit($unit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
 
-                echo "Unit uploaded/copied successfully.\n";
-            } catch (Throwable $exception) {
-                $summary['errors']++;
+                    echo "Unit uploaded/copied successfully.\n";
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
 
-                echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
-                echo $exception->getMessage()."\n";
+                    echo 'Failed unit OBJECTID: '.$unit->getAttribute('objectid')."\n";
+                    echo $exception->getMessage()."\n";
 
-                Log::error('Failed uploading audited housing unit to ArcGIS.', [
-                    'objectid' => $unit->getAttribute('objectid'),
-                    'message' => $exception->getMessage(),
-                ]);
+                    Log::error('Failed uploading audited housing unit to ArcGIS.', [
+                        'objectid' => $unit->getAttribute('objectid'),
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
         }
     }
@@ -301,14 +327,23 @@ class ArcgisAuditedUploadService
         bool $attachmentsOnly,
         CarbonInterface $changedSince,
         bool $skipCounts,
+        ?string $only,
     ): void {
-        echo "Loading building audit edits...\n";
+        $buildingEdits = [];
 
-        $buildingEdits = $this->auditEditsByGlobalId('building_table', $changedSince, $buildingsLimit);
+        if ($only !== 'units') {
+            echo "Loading building audit edits...\n";
 
-        echo "Loading unit audit edits...\n";
+            $buildingEdits = $this->auditEditsByGlobalId('building_table', $changedSince, $buildingsLimit);
+        }
 
-        $unitEdits = $this->auditEditsByGlobalId('housing_table', $changedSince);
+        $unitEdits = [];
+
+        if ($only !== 'buildings') {
+            echo "Loading unit audit edits...\n";
+
+            $unitEdits = $this->auditEditsByGlobalId('housing_table', $changedSince);
+        }
 
         if ($skipCounts) {
             $summary['candidate_counts_skipped'] = 1;
@@ -322,37 +357,43 @@ class ArcgisAuditedUploadService
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
         }
 
-        foreach ($buildingEdits as $globalId => $fields) {
-            try {
-                $this->uploadBuildingAuditEdits($globalId, $fields, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
-            } catch (Throwable $exception) {
-                $summary['errors']++;
+        if ($only !== 'units') {
+            echo "Uploading buildings...\n";
 
-                echo "Failed building globalid: {$globalId}\n";
-                echo $exception->getMessage()."\n";
+            foreach ($buildingEdits as $globalId => $fields) {
+                try {
+                    $this->uploadBuildingAuditEdits($globalId, $fields, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
 
-                Log::error('Failed uploading audited building edits to ArcGIS.', [
-                    'globalid' => $globalId,
-                    'message' => $exception->getMessage(),
-                ]);
+                    echo "Failed building globalid: {$globalId}\n";
+                    echo $exception->getMessage()."\n";
+
+                    Log::error('Failed uploading audited building edits to ArcGIS.', [
+                        'globalid' => $globalId,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
         }
 
-        echo "Uploading housing units...\n";
+        if ($only !== 'buildings') {
+            echo "Uploading housing units...\n";
 
-        foreach ($unitEdits as $globalId => $fields) {
-            try {
-                $this->uploadUnitAuditEdits($globalId, $fields, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
-            } catch (Throwable $exception) {
-                $summary['errors']++;
+            foreach ($unitEdits as $globalId => $fields) {
+                try {
+                    $this->uploadUnitAuditEdits($globalId, $fields, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
 
-                echo "Failed unit globalid: {$globalId}\n";
-                echo $exception->getMessage()."\n";
+                    echo "Failed unit globalid: {$globalId}\n";
+                    echo $exception->getMessage()."\n";
 
-                Log::error('Failed uploading audited housing unit edits to ArcGIS.', [
-                    'globalid' => $globalId,
-                    'message' => $exception->getMessage(),
-                ]);
+                    Log::error('Failed uploading audited housing unit edits to ArcGIS.', [
+                        'globalid' => $globalId,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
             }
         }
     }

@@ -12,6 +12,7 @@ class UploadAuditedToArcgis extends Command
 {
     protected $signature = 'arcgis:upload-audited
         {--buildings-limit= : Upload only the first N audited buildings and their housing units.}
+        {--only= : Upload only buildings or units.}
         {--changed-since= : Upload only buildings or housing units with editdate or audit edits on or after this date/time.}
         {--only-audit-edits : With --changed-since, ignore editdate and sync only records changed in edit_assessments.}
         {--skip-counts : Start syncing immediately without counting candidates first.}
@@ -41,6 +42,7 @@ class UploadAuditedToArcgis extends Command
         try {
             $this->info('Processing...');
             $buildingsLimit = $this->option('buildings-limit');
+            $only = $this->onlyOption();
 
             if ((bool) $this->option('refresh-cache')) {
                 $this->info('Refreshing audited cache...');
@@ -58,6 +60,7 @@ class UploadAuditedToArcgis extends Command
                 $changedSince,
                 (bool) $this->option('skip-counts'),
                 (bool) $this->option('only-audit-edits'),
+                $only,
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');
@@ -110,5 +113,22 @@ class UploadAuditedToArcgis extends Command
         }
 
         return CarbonImmutable::parse($changedSince)->startOfSecond();
+    }
+
+    private function onlyOption(): ?string
+    {
+        $only = $this->option('only');
+
+        if (! is_string($only) || trim($only) === '') {
+            return null;
+        }
+
+        $only = trim($only);
+
+        if (! in_array($only, ['buildings', 'units'], true)) {
+            throw new \InvalidArgumentException('The --only option must be buildings or units.');
+        }
+
+        return $only;
     }
 }
