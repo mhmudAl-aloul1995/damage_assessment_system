@@ -5,6 +5,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AssignedAssessmentUser;
+use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\CsoSurvey;
@@ -1053,10 +1054,10 @@ class DamageAssessmentController extends Controller
      */
     private function dashboardCoreStats(Request $request): array
     {
-        $buildingQuery = Building::query();
+        $buildingQuery = $this->dashboardTargetBackedQuery(AuditedBuilding::class, Building::class);
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
 
-        $housingUnitQuery = AuditedHousingUnit::query();
+        $housingUnitQuery = $this->dashboardTargetBackedQuery(AuditedHousingUnit::class, HousingUnit::class);
         $this->applyDashboardHousingFilters($housingUnitQuery, $request);
 
         $buildings = $buildingQuery
@@ -1114,6 +1115,17 @@ class DamageAssessmentController extends Controller
                 'unit_support_needed' => (int) $units->unit_support_needed,
             ],
         ];
+    }
+
+    /**
+     * @param  class-string<Model>  $targetModelClass
+     * @param  class-string<Model>  $fallbackModelClass
+     */
+    private function dashboardTargetBackedQuery(string $targetModelClass, string $fallbackModelClass): Builder
+    {
+        return $targetModelClass::query()->exists()
+            ? $targetModelClass::query()
+            : $fallbackModelClass::query();
     }
 
     private function dashboardCoreStatsCacheKey(Request $request): string

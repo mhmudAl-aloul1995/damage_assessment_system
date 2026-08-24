@@ -11,10 +11,12 @@ use App\Models\User;
 use App\Services\ArcgisService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
+    Cache::flush();
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
@@ -675,6 +677,46 @@ it('counts assessed buildings from damaged committee review and blocked assessme
                 && (int) $buildingStats['committee_review'] === 1
                 && (int) $buildingStats['assessment_obstacle'] === 1
                 && (int) $buildingStats['assessed_total'] === 4;
+        });
+});
+
+it('uses target cached building statistics after audit edits are refreshed', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    Building::query()->create([
+        'objectid' => 916,
+        'globalid' => 'target-cached-building-status',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        'global_id' => 'target-cached-building-status',
+        'type' => 'building_table',
+        'field_name' => 'building_damage_status',
+        'field_value' => 'partially_damaged',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertViewHas('buildingStats', function (array $buildingStats): bool {
+            return (int) $buildingStats['completed'] === 1
+                && (int) $buildingStats['fully_damaged'] === 0
+                && (int) $buildingStats['partially_damaged'] === 1
+                && (int) $buildingStats['assessed_total'] === 1;
         });
 });
 

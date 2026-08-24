@@ -40,9 +40,14 @@ return new class extends Migration
             $table->text('field_status')->nullable();
             $table->text('building_damage_status')->nullable();
             $table->text('unit_damage_status')->nullable();
+            $table->text('submission_date')->nullable();
             $table->text('building_submit_date')->nullable();
             $table->text('governorate')->nullable();
             $table->text('neighborhood')->nullable();
+            $table->text('assessment_obstacle')->nullable();
+            $table->text('uxo_present')->nullable();
+            $table->text('bodies_present')->nullable();
+            $table->text('building_debris_exist')->nullable();
             $table->text('has_fire')->nullable();
             $table->text('unit_stripping')->nullable();
             $table->text('is_the_housing_unit_or_living_habitable')->nullable();
