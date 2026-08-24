@@ -42,6 +42,7 @@ it('auto-detects a populated layer from the feature server root url and syncs ro
                             'objectid' => 9101,
                             'globalid' => '{ROAD-9101}',
                             'Field_status' => 'COMPLETED',
+                            'Lenght_Km_2' => 446.683,
                             'Str_Name' => 'Salah Al Din Road',
                             'road_damage_level' => 'moderate',
                             'road_type_note' => 'Choose damaged components',
@@ -78,6 +79,7 @@ it('auto-detects a populated layer from the feature server root url and syncs ro
     expect($survey)->not->toBeNull();
     expect($survey->globalid)->toBe('{ROAD-9101}');
     expect($survey->str_name)->toBe('Salah Al Din Road');
+    expect((float) $survey->Lenght_Km_2)->toBe(446.683);
     expect($survey->road_damage_level)->toBe('moderate');
     expect($survey->road_type_note)->toBe('Choose damaged components');
     expect($survey->asphalt)->toBe('yes');

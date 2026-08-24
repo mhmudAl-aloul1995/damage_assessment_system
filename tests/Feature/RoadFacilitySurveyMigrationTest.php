@@ -16,6 +16,7 @@ it('creates the road facility survey tables with the expected columns', function
         'field_status',
         'objectid',
         'str_name',
+        'Lenght_Km_2',
         'road_damage_level',
         'blockage_reason',
         'road_type',

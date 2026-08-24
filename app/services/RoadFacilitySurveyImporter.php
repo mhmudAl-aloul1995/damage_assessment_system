@@ -21,6 +21,7 @@ class RoadFacilitySurveyImporter
         'AssignedTo' => 'assignedto',
         'GroupNumber' => 'group_number',
         'Zone_Code' => 'zone_code',
+        'Lenght_Km_2' => 'Lenght_Km_2',
         'audit' => 'audit',
         'audit_low' => 'audit_low',
         'submissionDate' => 'submissiondate',
