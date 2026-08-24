@@ -290,41 +290,73 @@
 								</label>
 							</div>
 
-							<div id="auditNotesExportOptions" class="border rounded p-4 mb-6">
-								<h4 class="fw-bold mb-4">ملاحظات التدقيق</h4>
-								<div class="row">
-									<div class="col-lg-6 mb-4">
-										<label class="form-check form-check-custom form-check-solid mb-3">
-											<input type="hidden" name="include_legal_notes" value="0">
-											<input class="form-check-input" type="checkbox" id="exportIncludeLegalNotes"
-												name="include_legal_notes" value="1">
-											<span class="form-check-label ms-3">تضمين الملاحظات القانونية + اسم المدقق القانوني</span>
-										</label>
+							<div id="auditExportOptions" class="border rounded p-4 mb-6">
+								<div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+									<h4 class="fw-bold mb-0">خيارات التدقيق</h4>
 
-										<label class="form-label fw-bold" for="legalNotesFilter">فلتر الملاحظات القانونية</label>
-										<select id="legalNotesFilter" name="legal_notes_filter"
-											class="form-select form-select-solid audit-notes-select2">
-											<option value="">كل السجلات القانونية</option>
-											<option value="with_notes">يوجد ملاحظة قانونية</option>
-											<option value="without_notes">لا يوجد ملاحظة قانونية</option>
-										</select>
-									</div>
+									<label class="form-check form-switch form-check-custom form-check-solid">
+										<input type="hidden" name="include_audit_data" value="0">
+										<input class="form-check-input" type="checkbox" id="exportIncludeAuditData"
+											name="include_audit_data" value="1">
+										<span class="form-check-label fw-semibold ms-3">تضمين بيانات التدقيق</span>
+									</label>
+								</div>
 
-									<div class="col-lg-6 mb-4">
-										<label class="form-check form-check-custom form-check-solid mb-3">
-											<input type="hidden" name="include_engineering_notes" value="0">
-											<input class="form-check-input" type="checkbox" id="exportIncludeEngineeringNotes"
-												name="include_engineering_notes" value="1">
-											<span class="form-check-label ms-3">تضمين الملاحظات الهندسية + اسم المدقق الهندسي</span>
-										</label>
+								<div id="auditExportDetails" class="d-none mt-5">
+									<div class="row">
+										<div class="col-lg-4 mb-4">
+											<label class="form-check form-check-custom form-check-solid h-100 border rounded p-4">
+												<input class="form-check-input" type="checkbox" id="exportIncludeAllAuditNotes">
+												<span class="form-check-label ms-3">
+													<strong class="d-block">كل ملاحظات التدقيق</strong>
+													<small class="text-muted d-block mt-1">القانونية والهندسية مع أسماء المدققين</small>
+												</span>
+											</label>
+										</div>
 
-										<label class="form-label fw-bold" for="engineeringNotesFilter">فلتر الملاحظات الهندسية</label>
-										<select id="engineeringNotesFilter" name="engineering_notes_filter"
-											class="form-select form-select-solid audit-notes-select2">
-											<option value="">كل السجلات الهندسية</option>
-											<option value="with_notes">يوجد ملاحظة هندسية</option>
-											<option value="without_notes">لا يوجد ملاحظة هندسية</option>
-										</select>
+										<div class="col-lg-4 mb-4">
+											<label class="form-check form-check-custom form-check-solid h-100 border rounded p-4">
+												<input type="hidden" name="include_legal_notes" value="0">
+												<input class="form-check-input" type="checkbox" id="exportIncludeLegalNotes"
+													name="include_legal_notes" value="1">
+												<span class="form-check-label ms-3">
+													<strong class="d-block">التدقيق القانوني</strong>
+													<small class="text-muted d-block mt-1">الملاحظات واسم المدقق القانوني</small>
+												</span>
+											</label>
+										</div>
+
+										<div class="col-lg-4 mb-4">
+											<label class="form-check form-check-custom form-check-solid h-100 border rounded p-4">
+												<input type="hidden" name="include_engineering_notes" value="0">
+												<input class="form-check-input" type="checkbox" id="exportIncludeEngineeringNotes"
+													name="include_engineering_notes" value="1">
+												<span class="form-check-label ms-3">
+													<strong class="d-block">التدقيق الهندسي</strong>
+													<small class="text-muted d-block mt-1">الملاحظات واسم المدقق الهندسي</small>
+												</span>
+											</label>
+										</div>
+
+										<div class="col-lg-6 mb-4">
+											<label class="form-label fw-bold" for="legalNotesFilter">فلتر التدقيق القانوني</label>
+											<select id="legalNotesFilter" name="legal_notes_filter"
+												class="form-select form-select-solid audit-notes-select2">
+												<option value="">كل السجلات القانونية</option>
+												<option value="with_notes">يوجد ملاحظة قانونية</option>
+												<option value="without_notes">لا يوجد ملاحظة قانونية</option>
+											</select>
+										</div>
+
+										<div class="col-lg-6 mb-4">
+											<label class="form-label fw-bold" for="engineeringNotesFilter">فلتر التدقيق الهندسي</label>
+											<select id="engineeringNotesFilter" name="engineering_notes_filter"
+												class="form-select form-select-solid audit-notes-select2">
+												<option value="">كل السجلات الهندسية</option>
+												<option value="with_notes">يوجد ملاحظة هندسية</option>
+												<option value="without_notes">لا يوجد ملاحظة هندسية</option>
+											</select>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1042,6 +1074,34 @@
 			return selectedExportMode() !== 'attachments';
 		}
 
+		function resetAuditExportOptions() {
+			$('#exportIncludeAllAuditNotes').prop('checked', false);
+			$('#exportIncludeLegalNotes').prop('checked', false);
+			$('#exportIncludeEngineeringNotes').prop('checked', false);
+			$('#legalNotesFilter').val('').trigger('change.select2');
+			$('#engineeringNotesFilter').val('').trigger('change.select2');
+		}
+
+		function syncAuditExportOptions() {
+			const isEnabled = $('#exportIncludeAuditData').is(':checked');
+			$('#auditExportDetails').toggleClass('d-none', !isEnabled);
+
+			if (!isEnabled) {
+				resetAuditExportOptions();
+			}
+		}
+
+		function syncAllAuditNotesOption() {
+			const includeAll = $('#exportIncludeAllAuditNotes').is(':checked');
+			$('#exportIncludeLegalNotes').prop('checked', includeAll);
+			$('#exportIncludeEngineeringNotes').prop('checked', includeAll);
+		}
+
+		function enableAuditExportOptions() {
+			$('#exportIncludeAuditData').prop('checked', true);
+			syncAuditExportOptions();
+		}
+
 		function requiresAttachmentSourceForExport() {
 			return ['attachments', 'data_with_attachments'].includes(selectedExportMode());
 		}
@@ -1440,6 +1500,7 @@
 			filterColumns('housingSearch', 'housingColumnsList', 'housingCounter');
 			filterFilterCards();
 			syncObjectIdInputMethod();
+			syncAuditExportOptions();
 			syncAttachmentExportOptions();
 			updateSelectedColumnsStatus();
 
@@ -1454,7 +1515,7 @@
 				width: '100%',
 				dir: 'rtl',
 				closeOnSelect: false,
-				placeholder: 'كل المرفقات'
+				placeholder: 'اختر تصنيف المرفق'
 			});
 
 			$('.audit-notes-select2').select2({
@@ -1465,13 +1526,23 @@
 
 			$('#legalNotesFilter').on('change', function () {
 				if ($(this).val()) {
+					enableAuditExportOptions();
 					$('#exportIncludeLegalNotes').prop('checked', true);
 				}
 			});
 
 			$('#engineeringNotesFilter').on('change', function () {
 				if ($(this).val()) {
+					enableAuditExportOptions();
 					$('#exportIncludeEngineeringNotes').prop('checked', true);
+				}
+			});
+
+			$('#exportIncludeAuditData').on('change', syncAuditExportOptions);
+			$('#exportIncludeAllAuditNotes').on('change', syncAllAuditNotesOption);
+			$('#exportIncludeLegalNotes, #exportIncludeEngineeringNotes').on('change', function () {
+				if ($(this).is(':checked')) {
+					enableAuditExportOptions();
 				}
 			});
 

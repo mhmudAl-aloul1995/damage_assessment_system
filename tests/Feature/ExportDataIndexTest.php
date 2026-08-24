@@ -28,6 +28,11 @@ it('shows export page actions including objectid import', function () {
     $response->assertSee('name="include_engineering_notes"', false);
     $response->assertSee('name="legal_notes_filter"', false);
     $response->assertSee('name="engineering_notes_filter"', false);
+    $response->assertSee('name="include_audit_data"', false);
+    $response->assertSee('id="auditExportDetails" class="d-none mt-5"', false);
+    $response->assertSee('id="exportIncludeAllAuditNotes"', false);
+    $response->assertSee('خيارات التدقيق');
+    $response->assertDontSee('id="auditNotesExportOptions"', false);
     $response->assertSee('name="update_housing_names_from_civil_registry"', false);
     $response->assertSee('name="export_source"', false);
     $response->assertSee('value="base"', false);
