@@ -560,18 +560,37 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         'building_field_status' => 'COMPLETED',
     ]);
 
+    HousingUnit::query()->create([
+        'objectid' => 9061,
+        'globalid' => 'damaged-total-no-damage',
+        'unit_damage_status' => 'no_damaged',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9062,
+        'globalid' => 'damaged-total-unclassified',
+        'unit_damage_status' => null,
+        'building_field_status' => 'COMPLETED',
+    ]);
+
     app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
         ->assertViewHas('unitStats', function (array $unitStats): bool {
-            return (int) $unitStats['total_units'] === 3
+            return (int) $unitStats['total_units'] === 5
                 && (int) $unitStats['damaged_total'] === 2
                 && (int) $unitStats['fully_damaged'] === 1
                 && (int) $unitStats['partially_damaged'] === 1
-                && (int) $unitStats['committee_review'] === 1;
-        });
+                && (int) $unitStats['committee_review'] === 1
+                && (int) $unitStats['no_damage'] === 1
+                && (int) $unitStats['unclassified'] === 1;
+        })
+        ->assertSee(__('ui.damage_dashboard.no_damage'))
+        ->assertSee(__('ui.damage_dashboard.unclassified'))
+        ->assertSee('unit_damage_status=no_damaged', false);
 });
 
 it('counts dashboard housing assessment blocked from yes security situation values', function () {

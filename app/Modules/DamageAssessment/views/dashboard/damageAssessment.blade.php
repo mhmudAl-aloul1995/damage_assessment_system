@@ -20,6 +20,7 @@
 				'fully_damaged' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'fully_damaged2']),
 				'partially_damaged' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'partially_damaged2']),
 				'committee_review' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'committee_review2']),
+				'no_damage' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'no_damaged']),
 				'assessment_blocked' => url('damage-assessment/housing') . '?' . http_build_query(['security_situation_unit' => 'yes']),
 				'structural_support' => url('damage-assessment/housing') . '?' . http_build_query(['unit_support_needed' => 'yes']),
 				'at_risk_of_collapse' => url('damage-assessment/housing') . '?' . http_build_query(['unit_stripping' => 'yes']),
@@ -59,7 +60,7 @@
 			],
 		];
 		$housingUnitsTarget = 67500;
-		$housingUnitsTargetReached = (int) ($unitStats['damaged_total'] ?? 0) >= $housingUnitsTarget;
+		$housingUnitsTargetReached = (int) ($unitStats['total_units'] ?? 0) >= $housingUnitsTarget;
 	@endphp
 	<style>
 		#externalLegendDiv {
@@ -1361,7 +1362,7 @@
 						<!--begin::Balance-->
 						<div class="d-flex text-center flex-column text-white pt-8 target-total-wrap">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
-							<span class="fw-bold fs-1 fs-lg-2x pt-1 @if ($housingUnitsTargetReached) target-total-number @endif">{{ $unitStats['damaged_total'] }}</span>
+							<span class="fw-bold fs-1 fs-lg-2x pt-1 @if ($housingUnitsTargetReached) target-total-number @endif">{{ $unitStats['total_units'] }}</span>
 							@if ($housingUnitsTargetReached)
 								<span class="target-achieved-badge">تم تحقيق التارجت {{ number_format($housingUnitsTarget) }}+</span>
 							@endif
@@ -1480,6 +1481,31 @@
 							<!--end::Label-->
 						</div>
 						<!--end::Description-->
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check-circle"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['housing']['no_damage'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.no_damage') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $unitStats['no_damage'] }}</div>
+							</div>
+						</div>
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-question-2"><span
+											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<span class="fs-10 fs-lg-7 text-gray-800 fw-bold text-wrap">{{ __('ui.damage_dashboard.unclassified') }}</span>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $unitStats['unclassified'] }}</div>
+							</div>
+						</div>
 						<!-- Item 4 -->
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
@@ -1592,7 +1618,7 @@
 						<div class="d-flex text-center flex-column text-white pt-8">
 							<span class="fw-semibold fs-7">{{ __('ui.damage_dashboard.total_housing_units') }}</span>
 							<span
-								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['damaged_total'] }}</span>
+								class="fw-bold fs-1 fs-lg-2x pt-1">{{ $unitStats['total_units'] }}</span>
 						</div>
 						<!--end::Balance-->
 					</div>
