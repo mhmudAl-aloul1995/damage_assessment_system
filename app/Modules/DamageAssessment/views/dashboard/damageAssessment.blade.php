@@ -1061,7 +1061,7 @@
 									<a href="{{ $dashboardStatLinks['buildings']['no_damage'] }}"
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.no_damage') }}</a>
 								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['no_damage'] }}</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['no_damage'] ?? 0 }}</div>
 							</div>
 						</div>
 
@@ -2312,7 +2312,7 @@
 							</thead>
 							<tbody>
 								@php
-									$totalAssessed = $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'] + $buildingStats['no_damage'];
+									$totalAssessed = ($buildingStats['fully_damaged'] ?? 0) + ($buildingStats['partially_damaged'] ?? 0) + ($buildingStats['committee_review'] ?? 0) + ($buildingStats['no_damage'] ?? 0);
 
 									$getPercent = fn($val, $total) => $total > 0 ? round(($val / $total) * 100, 1) : 0;
 								@endphp
@@ -2375,14 +2375,14 @@
 									<td><span
 											class="text-dark fw-bold text-hover-primary fs-6">{{ __('ui.damage_dashboard.no_damage') }}</span>
 									</td>
-									<td class="text-end text-muted fw-bold">{{ $buildingStats['no_damage'] }}</td>
+									<td class="text-end text-muted fw-bold">{{ $buildingStats['no_damage'] ?? 0 }}</td>
 									<td class="text-end">
 										<div class="d-flex align-items-center justify-content-end">
 											<span
-												class="text-muted fw-bold me-2">{{ $getPercent($buildingStats['no_damage'], $totalAssessed) }}%</span>
+												class="text-muted fw-bold me-2">{{ $getPercent($buildingStats['no_damage'] ?? 0, $totalAssessed) }}%</span>
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-success" role="progressbar"
-													style="width: {{ $getPercent($buildingStats['no_damage'], $totalAssessed) }}%">
+													style="width: {{ $getPercent($buildingStats['no_damage'] ?? 0, $totalAssessed) }}%">
 												</div>
 											</div>
 										</div>
