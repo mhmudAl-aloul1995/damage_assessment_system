@@ -4,6 +4,7 @@ use App\Models\RoadFacilitySurvey;
 use App\services\RoadFacilitySurveyImporter;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 it('imports a road facility survey payload with repeated items', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -17,7 +18,7 @@ it('imports a road facility survey payload with repeated items', function () {
         'objectid' => 8101,
         'globalid' => 'road-facility-survey-8101',
         'Field_status' => 'COMPLETED',
-        'Lenght_Km_2' => 446.683,
+        'length_km_2' => 446.683,
         'Str_Name' => 'Al Rasheed Road',
         'road_damage_level' => 'severe',
         'road_access' => 'partial',
@@ -46,4 +47,28 @@ it('imports a road facility survey payload with repeated items', function () {
     expect($survey->items->first()->item_required)->toBe('Traffic light replacement');
     expect($survey->items->first()->unit)->toBe('item');
     expect($survey->items->first()->quantity)->toBe(2);
+});
+
+it('skips road facility payload fields when legacy tables do not have matching columns', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    Schema::connection('mysql')->table('road_facility_surveys', function ($table): void {
+        $table->dropColumn('location');
+    });
+
+    $survey = app(RoadFacilitySurveyImporter::class)->import([
+        'objectid' => 8102,
+        'globalid' => 'road-facility-survey-8102',
+        'Field_status' => 'COMPLETED',
+        'length_km_2' => 12.345,
+        'location' => '{"paths":[]}',
+        'Str_Name' => 'Legacy Road',
+    ]);
+
+    expect($survey)->toBeInstanceOf(RoadFacilitySurvey::class);
+    expect($survey->str_name)->toBe('Legacy Road');
+    expect((float) $survey->Lenght_Km_2)->toBe(12.345);
 });

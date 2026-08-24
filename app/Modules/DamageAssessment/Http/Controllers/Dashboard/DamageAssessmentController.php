@@ -2221,7 +2221,7 @@ class DamageAssessmentController extends Controller
 
     private function dashboardCompletedRoadLengthKilometers(Request $request): float
     {
-        $lengthColumn = collect(['Lenght_Km_2', 'lenght_km_2'])
+        $lengthColumn = collect(['Lenght_Km_2', 'lenght_km_2', 'length_km_2'])
             ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
 
         if ($lengthColumn === null) {

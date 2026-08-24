@@ -42,7 +42,7 @@ it('auto-detects a populated layer from the feature server root url and syncs ro
                             'objectid' => 9101,
                             'globalid' => '{ROAD-9101}',
                             'Field_status' => 'COMPLETED',
-                            'Lenght_Km_2' => 446.683,
+                            'length_km_2' => 446.683,
                             'Str_Name' => 'Salah Al Din Road',
                             'road_damage_level' => 'moderate',
                             'road_type_note' => 'Choose damaged components',

@@ -760,7 +760,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function roadLengthColumn(): ?string
     {
-        return collect(['Lenght_Km_2', 'lenght_km_2'])
+        return collect(['Lenght_Km_2', 'lenght_km_2', 'length_km_2'])
             ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 
@@ -949,7 +949,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function roadLength(RoadFacilitySurvey $survey): ?string
     {
-        foreach (['Lenght_Km_2', 'lenght_km_2'] as $column) {
+        foreach (['Lenght_Km_2', 'lenght_km_2', 'length_km_2'] as $column) {
 
             if (! Schema::hasColumn('road_facility_surveys', $column)) {
                 continue;

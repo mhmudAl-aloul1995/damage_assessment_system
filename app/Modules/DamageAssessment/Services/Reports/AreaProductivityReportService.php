@@ -475,7 +475,7 @@ class AreaProductivityReportService
 
     private function roadLengthColumn(): ?string
     {
-        return collect(['Lenght_Km_2', 'lenght_km_2'])
+        return collect(['Lenght_Km_2', 'lenght_km_2', 'length_km_2'])
             ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 

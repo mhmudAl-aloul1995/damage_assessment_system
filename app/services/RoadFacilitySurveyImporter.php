@@ -7,9 +7,22 @@ namespace App\services;
 use App\Models\RoadFacilitySurvey;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RoadFacilitySurveyImporter
 {
+    private const ROAD_LENGTH_SOURCE_KEYS = [
+        'Lenght_Km_2',
+        'lenght_km_2',
+        'length_km_2',
+    ];
+
+    private const ROAD_LENGTH_COLUMNS = [
+        'Lenght_Km_2',
+        'lenght_km_2',
+        'length_km_2',
+    ];
+
     private const MAIN_FIELD_MAP = [
         'location' => 'location',
         'globalid' => 'globalid',
@@ -21,7 +34,6 @@ class RoadFacilitySurveyImporter
         'AssignedTo' => 'assignedto',
         'GroupNumber' => 'group_number',
         'Zone_Code' => 'zone_code',
-        'Lenght_Km_2' => 'Lenght_Km_2',
         'audit' => 'audit',
         'audit_low' => 'audit_low',
         'submissionDate' => 'submissiondate',
@@ -152,12 +164,30 @@ class RoadFacilitySurveyImporter
         $mapped = [];
 
         foreach (self::MAIN_FIELD_MAP as $sourceKey => $targetKey) {
-            if (array_key_exists($sourceKey, $payload)) {
+            if (array_key_exists($sourceKey, $payload) && Schema::hasColumn('road_facility_surveys', $targetKey)) {
                 $mapped[$targetKey] = $payload[$sourceKey];
             }
         }
 
+        $lengthColumn = $this->roadLengthColumn();
+
+        if ($lengthColumn !== null) {
+            foreach (self::ROAD_LENGTH_SOURCE_KEYS as $sourceKey) {
+                if (array_key_exists($sourceKey, $payload)) {
+                    $mapped[$lengthColumn] = $payload[$sourceKey];
+
+                    break;
+                }
+            }
+        }
+
         return $mapped;
+    }
+
+    private function roadLengthColumn(): ?string
+    {
+        return collect(self::ROAD_LENGTH_COLUMNS)
+            ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 
     private function mapItemPayload(array $payload): array

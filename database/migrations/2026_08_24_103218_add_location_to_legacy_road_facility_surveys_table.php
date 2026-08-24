@@ -12,12 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('road_facility_surveys', function (Blueprint $table) {
-            if (! Schema::hasColumn('road_facility_surveys', 'Lenght_Km_2')) {
-                $column = $table->double('Lenght_Km_2')->nullable();
-
-                if (Schema::hasColumn('road_facility_surveys', 'shape__length')) {
-                    $column->after('shape__length');
-                }
+            if (! Schema::hasColumn('road_facility_surveys', 'location')) {
+                $table->longText('location')->nullable();
             }
         });
     }
@@ -28,9 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('road_facility_surveys', function (Blueprint $table) {
-            if (Schema::hasColumn('road_facility_surveys', 'Lenght_Km_2')) {
-                $table->dropColumn('Lenght_Km_2');
-            }
+            //
         });
     }
 };
