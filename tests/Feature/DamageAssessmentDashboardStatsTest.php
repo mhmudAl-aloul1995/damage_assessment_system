@@ -677,7 +677,7 @@ it('uses latest housing edit assessments in dashboard unit statistics', function
         });
 });
 
-it('counts assessed buildings from damage statuses no damage and blocked assessment totals', function () {
+it('counts assessed buildings from completed building surveys', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -742,6 +742,8 @@ it('counts assessed buildings from damage statuses no damage and blocked assessm
         'globalid' => 'assessed-building-blocked',
         'field_status' => 'Not_Completed',
         'assessment_obstacle' => 'yes',
+        'building_debris_exist' => 'yes',
+        'building_debris_blocking' => 'yes',
     ]);
 
     Building::query()->create([
@@ -750,6 +752,8 @@ it('counts assessed buildings from damage statuses no damage and blocked assessm
         'field_status' => 'Not_Completed',
         'assessment_obstacle' => 'no',
         'security_situation' => 'Unsafe',
+        'building_debris_exist' => 'yes',
+        'building_debris_blocking' => 'no',
     ]);
 
     $this->actingAs($user)
@@ -762,7 +766,8 @@ it('counts assessed buildings from damage statuses no damage and blocked assessm
                 && (int) $buildingStats['committee_review'] === 1
                 && (int) $buildingStats['no_damage'] === 2
                 && (int) $buildingStats['assessment_obstacle'] === 1
-                && (int) $buildingStats['assessed_total'] === 8;
+                && (int) $buildingStats['debris'] === 1
+                && (int) $buildingStats['assessed_total'] === 7;
         });
 });
 

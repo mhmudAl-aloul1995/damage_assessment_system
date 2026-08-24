@@ -1056,6 +1056,10 @@ class DamageAssessmentController extends Controller
     {
         $buildingQuery = $this->dashboardTargetBackedQuery(AuditedBuilding::class, Building::class);
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
+        $buildingTable = $buildingQuery->getModel()->getTable();
+        $buildingDebrisBlockingColumn = Schema::hasColumn($buildingTable, 'building_debris_blocking')
+            ? 'building_debris_blocking'
+            : 'building_debris_exist';
 
         $housingUnitQuery = $this->dashboardTargetBackedQuery(AuditedHousingUnit::class, HousingUnit::class);
         $this->applyDashboardHousingFilters($housingUnitQuery, $request);
@@ -1071,7 +1075,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as assessment_obstacle,
                 COALESCE(SUM(uxo_present = 'yes3'), 0) as uxo,
                 COALESCE(SUM(bodies_present = 'yes3'), 0) as bodies,
-                COALESCE(SUM(building_debris_exist = 'yes'), 0) as debris")
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE({$buildingDebrisBlockingColumn}, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as debris")
             ->first();
 
         $units = $housingUnitQuery
@@ -1100,7 +1104,7 @@ class DamageAssessmentController extends Controller
                 'committee_review' => (int) $buildings->committee_review,
                 'no_damage' => (int) $buildings->no_damage,
                 'assessment_obstacle' => (int) $buildings->assessment_obstacle,
-                'assessed_total' => (int) $buildings->fully_damaged + (int) $buildings->partially_damaged + (int) $buildings->committee_review + (int) $buildings->no_damage + (int) $buildings->assessment_obstacle,
+                'assessed_total' => (int) $buildings->completed,
                 'uxo' => (int) $buildings->uxo,
                 'bodies' => (int) $buildings->bodies,
                 'debris' => (int) $buildings->debris,

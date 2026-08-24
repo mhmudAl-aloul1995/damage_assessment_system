@@ -14,7 +14,7 @@
 				'assessment_blocked' => url('damage-assessment/building') . '?' . http_build_query(['assessment_obstacle' => 'yes']),
 				'bodies_present' => url('damage-assessment/building') . '?' . http_build_query(['bodies_present' => 'yes3']),
 				'uxo_present' => url('damage-assessment/building') . '?' . http_build_query(['uxo_present' => 'yes3']),
-				'debris_blocking' => url('damage-assessment/building') . '?' . http_build_query(['building_debris_exist' => 'yes']),
+				'debris_blocking' => url('damage-assessment/building') . '?' . http_build_query(['building_debris_blocking' => 'yes']),
 				'completed' => url('damage-assessment/building') . '?' . http_build_query(['field_status' => 'COMPLETED']),
 			],
 			'housing' => [

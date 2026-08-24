@@ -50,6 +50,7 @@ return new class extends Migration
             $table->text('uxo_present')->nullable();
             $table->text('bodies_present')->nullable();
             $table->text('building_debris_exist')->nullable();
+            $table->text('building_debris_blocking')->nullable();
             $table->text('has_fire')->nullable();
             $table->text('unit_stripping')->nullable();
             $table->text('is_the_housing_unit_or_living_habitable')->nullable();
