@@ -318,6 +318,12 @@ class HousingUnitController extends Controller
                 continue;
             }
 
+            if ($field === 'unit_damage_status') {
+                $this->applyUnitDamageStatusFilter($query, $value, $field);
+
+                continue;
+            }
+
             is_array($value)
                 ? $query->whereIn($field, $value)
                 : $query->where($field, $value);
@@ -382,6 +388,25 @@ class HousingUnitController extends Controller
                 $query->whereDate($submissionDateColumn, '<=', $to);
             }
         }
+    }
+
+    private function applyUnitDamageStatusFilter(Builder $query, array|string $value, string $field): void
+    {
+        $values = is_array($value) ? $value : [$value];
+        $includesBlank = in_array('__blank__', $values, true);
+        $explicitValues = array_values(array_filter($values, fn (mixed $item): bool => $item !== '__blank__'));
+
+        $query->where(function (Builder $query) use ($field, $includesBlank, $explicitValues): void {
+            if ($explicitValues !== []) {
+                $query->whereIn($field, $explicitValues);
+            }
+
+            if ($includesBlank) {
+                $explicitValues !== []
+                    ? $query->orWhereNull($field)->orWhere($field, '')
+                    : $query->whereNull($field)->orWhere($field, '');
+            }
+        });
     }
 
     private function housingSubmissionDateColumn(string $table = 'housing_units'): ?string

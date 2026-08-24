@@ -68,6 +68,7 @@
                             @foreach (($groupedFilters['unit_damage_status'] ?? collect()) as $option)
                                 <option value="{{ $option->name }}">{{ $option->label }}</option>
                             @endforeach
+                            <option value="__blank__">{{ __('ui.damage_dashboard.unclassified') }}</option>
                         </select>
                     </div>
                     <div class="col-md-3">

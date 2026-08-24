@@ -175,6 +175,47 @@ it('filters housing unit datatable records using grouped filters and ranges', fu
     $response->assertDontSee('Hani Nassar');
 });
 
+it('filters housing unit datatable records by unclassified damage status', function () {
+    $user = User::factory()->create();
+
+    HousingUnit::query()->create([
+        'objectid' => 3006,
+        'globalid' => 'housing-unit-unclassified-null',
+        'housing_unit_number' => '91',
+        'unit_damage_status' => null,
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3007,
+        'globalid' => 'housing-unit-unclassified-empty',
+        'housing_unit_number' => '92',
+        'unit_damage_status' => '',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 3008,
+        'globalid' => 'housing-unit-classified',
+        'housing_unit_number' => '93',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'unit_damage_status' => ['__blank__'],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 2);
+    expect(collect($response->json('data'))->pluck('housing_unit_number')->sort()->values()->all())
+        ->toBe(['91', '92']);
+});
+
 it('filters housing unit datatable records by housing unit objectid', function () {
     $user = User::factory()->create();
 

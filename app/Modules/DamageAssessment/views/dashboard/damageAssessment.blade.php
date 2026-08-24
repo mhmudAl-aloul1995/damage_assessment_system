@@ -21,6 +21,7 @@
 				'partially_damaged' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'partially_damaged2']),
 				'committee_review' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'committee_review2']),
 				'no_damage' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'no_damaged']),
+				'unclassified' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => '__blank__']),
 				'assessment_blocked' => url('damage-assessment/housing') . '?' . http_build_query(['security_situation_unit' => 'yes']),
 				'structural_support' => url('damage-assessment/housing') . '?' . http_build_query(['unit_support_needed' => 'yes']),
 				'at_risk_of_collapse' => url('damage-assessment/housing') . '?' . http_build_query(['unit_stripping' => 'yes']),
@@ -1501,7 +1502,8 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<span class="fs-10 fs-lg-7 text-gray-800 fw-bold text-wrap">{{ __('ui.damage_dashboard.unclassified') }}</span>
+									<a href="{{ $dashboardStatLinks['housing']['unclassified'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.unclassified') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $unitStats['unclassified'] }}</div>
 							</div>

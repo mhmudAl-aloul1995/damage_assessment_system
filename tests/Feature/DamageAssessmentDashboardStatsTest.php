@@ -590,7 +590,8 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         })
         ->assertSee(__('ui.damage_dashboard.no_damage'))
         ->assertSee(__('ui.damage_dashboard.unclassified'))
-        ->assertSee('unit_damage_status=no_damaged', false);
+        ->assertSee('unit_damage_status=no_damaged', false)
+        ->assertSee('unit_damage_status=__blank__', false);
 });
 
 it('counts dashboard housing assessment blocked from yes security situation values', function () {
