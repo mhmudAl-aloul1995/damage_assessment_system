@@ -42,7 +42,7 @@ class ArcgisAuditedCacheService
      */
     private function refreshBuildings(array &$summary, ?int $buildingsLimit): array
     {
-        $query = Building::query()->orderBy('objectid');
+        $query = Building::query()->orderBy('id');
 
         if ($buildingsLimit !== null) {
             $query->limit($buildingsLimit);
@@ -62,7 +62,7 @@ class ArcgisAuditedCacheService
                 ->all();
         }
 
-        $query->chunk(500, function (Collection $records) use (&$summary, &$buildingGlobalIds): void {
+        $query->chunkById(500, function (Collection $records) use (&$summary, &$buildingGlobalIds): void {
             $records = $this->applyLatestAuditEdits($records, 'building_table');
             $this->insertCacheRows('audited_buildings', $records);
             $summary['buildings_cached'] += $records->count();
@@ -90,9 +90,9 @@ class ArcgisAuditedCacheService
             ->when($buildingGlobalIds !== null, function ($query) use ($buildingGlobalIds): void {
                 $query->whereIn('parentglobalid', $buildingGlobalIds);
             })
-            ->orderBy('objectid');
+            ->orderBy('id');
 
-        $query->chunk(500, function (Collection $records) use (&$summary): void {
+        $query->chunkById(500, function (Collection $records) use (&$summary): void {
             $records = $this->applyLatestAuditEdits($records, 'housing_table');
             $this->insertCacheRows('audited_housing_units', $records);
             $summary['housing_units_cached'] += $records->count();
@@ -133,7 +133,15 @@ class ArcgisAuditedCacheService
             ->values()
             ->all();
 
+        $updateColumns = array_values(array_diff($cacheColumns, ['id']));
+
         foreach (array_chunk($rows, 10) as $chunk) {
+            if (in_array('id', $cacheColumns, true)) {
+                DB::table($tableName)->upsert($chunk, ['id'], $updateColumns);
+
+                continue;
+            }
+
             DB::table($tableName)->insert($chunk);
         }
     }
