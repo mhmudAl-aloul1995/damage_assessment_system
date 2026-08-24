@@ -10,6 +10,7 @@
 				'fully_damaged' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'fully_damaged']),
 				'partially_damaged' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'partially_damaged']),
 				'committee_review' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'committee_review']),
+				'no_damage' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'no_damage']),
 				'assessment_blocked' => url('damage-assessment/building') . '?' . http_build_query(['assessment_obstacle' => 'yes']),
 				'bodies_present' => url('damage-assessment/building') . '?' . http_build_query(['bodies_present' => 'yes3']),
 				'uxo_present' => url('damage-assessment/building') . '?' . http_build_query(['uxo_present' => 'yes3']),
@@ -1050,6 +1051,20 @@
 						</div>
 
 						<!-- Item 4 -->
+						<div class="d-flex align-items-center mb-6">
+							<div class="symbol symbol-25px w-25px me-5">
+								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-check-circle"><span
+											class="path1"></span><span class="path2"></span></i></span>
+							</div>
+							<div class="d-flex align-items-center flex-wrap w-100">
+								<div class="mb-1 pe-3 flex-grow-1">
+									<a href="{{ $dashboardStatLinks['buildings']['no_damage'] }}"
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.no_damage') }}</a>
+								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['no_damage'] }}</div>
+							</div>
+						</div>
+
 						<div class="d-flex align-items-center mb-6">
 							<div class="symbol symbol-25px w-25px me-5">
 								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search"><span
@@ -2297,7 +2312,7 @@
 							</thead>
 							<tbody>
 								@php
-									$totalAssessed = $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'];
+									$totalAssessed = $buildingStats['fully_damaged'] + $buildingStats['partially_damaged'] + $buildingStats['committee_review'] + $buildingStats['no_damage'];
 
 									$getPercent = fn($val, $total) => $total > 0 ? round(($val / $total) * 100, 1) : 0;
 								@endphp
@@ -2350,6 +2365,24 @@
 											<div class="progress h-6px w-100px">
 												<div class="progress-bar bg-primary" role="progressbar"
 													style="width: {{ $getPercent($buildingStats['committee_review'], $totalAssessed) }}%">
+												</div>
+											</div>
+										</div>
+									</td>
+								</tr>
+
+								<tr>
+									<td><span
+											class="text-dark fw-bold text-hover-primary fs-6">{{ __('ui.damage_dashboard.no_damage') }}</span>
+									</td>
+									<td class="text-end text-muted fw-bold">{{ $buildingStats['no_damage'] }}</td>
+									<td class="text-end">
+										<div class="d-flex align-items-center justify-content-end">
+											<span
+												class="text-muted fw-bold me-2">{{ $getPercent($buildingStats['no_damage'], $totalAssessed) }}%</span>
+											<div class="progress h-6px w-100px">
+												<div class="progress-bar bg-success" role="progressbar"
+													style="width: {{ $getPercent($buildingStats['no_damage'], $totalAssessed) }}%">
 												</div>
 											</div>
 										</div>
@@ -2765,6 +2798,7 @@
 									{{ $buildingStats['fully_damaged'] ?? 0 }},
 									{{ $buildingStats['partially_damaged'] ?? 0 }},
 									{{ $buildingStats['committee_review'] ?? 0 }},
+									{{ $buildingStats['no_damage'] ?? 0 }},
 				{{ $buildingStats['assessment_obstacle'] ?? 0 }}
 			],
 			chart: {
@@ -2775,9 +2809,10 @@
 				@json(__('ui.damage_dashboard.fully_damaged')),
 				@json(__('ui.damage_dashboard.partially_damaged')),
 				@json(__('ui.damage_dashboard.committee_review')),
+				@json(__('ui.damage_dashboard.no_damage')),
 				@json(__('ui.damage_dashboard.assessment_blocked'))
 			],
-			colors: ['#F1416C', '#FFAD0F', '#009EF7', '#7239EA'],
+			colors: ['#F1416C', '#FFAD0F', '#009EF7', '#50CD89', '#7239EA'],
 			legend: {
 				position: 'bottom'
 			},

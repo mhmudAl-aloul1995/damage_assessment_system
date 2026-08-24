@@ -11,6 +11,7 @@ use App\Models\HousingUnit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class AssessmentEditService
@@ -85,6 +86,8 @@ class AssessmentEditService
                 'user_agent' => $request->userAgent(),
             ]);
 
+            $this->syncAuditedCacheRow($type, $record, $fieldName, $newValue);
+
             return [
                 'changed' => true,
                 'edit' => $edit->load('user'),
@@ -108,6 +111,76 @@ class AssessmentEditService
         return array_key_exists($fieldName, $record->getAttributes())
             ? $record->getRawOriginal($fieldName)
             : null;
+    }
+
+    private function syncAuditedCacheRow(string $type, Model $record, string $fieldName, mixed $newValue): void
+    {
+        $table = $type === 'building_table'
+            ? 'audited_buildings'
+            : 'audited_housing_units';
+
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $fieldName)) {
+            return;
+        }
+
+        $cacheColumns = Schema::getColumnListing($table);
+        $row = [$fieldName => $newValue];
+
+        if (in_array('is_audited', $cacheColumns, true)) {
+            $row['is_audited'] = true;
+        }
+
+        if (in_array('last_audit_user_id', $cacheColumns, true)) {
+            $row['last_audit_user_id'] = auth()->id();
+        }
+
+        if (in_array('last_audit_at', $cacheColumns, true)) {
+            $row['last_audit_at'] = now();
+        }
+
+        if ($fieldName === 'field_status') {
+            if (in_array('last_status_user_id', $cacheColumns, true)) {
+                $row['last_status_user_id'] = auth()->id();
+            }
+
+            if (in_array('last_status_at', $cacheColumns, true)) {
+                $row['last_status_at'] = now();
+            }
+        }
+
+        if (in_array('updated_at', $cacheColumns, true)) {
+            $row['updated_at'] = now();
+        }
+
+        if (in_array('created_at', $cacheColumns, true)) {
+            $row['created_at'] = $row['created_at'] ?? now();
+        }
+
+        $key = $record->getAttribute('objectid') !== null
+            ? ['objectid' => $record->getAttribute('objectid')]
+            : ['globalid' => $record->getAttribute('globalid')];
+
+        $query = DB::table($table);
+
+        foreach ($key as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        if ($query->exists()) {
+            DB::table($table)->where($key)->update($row);
+
+            return;
+        }
+
+        $attributes = $record->getAttributes();
+
+        foreach ($cacheColumns as $column) {
+            if (! array_key_exists($column, $row) && array_key_exists($column, $attributes)) {
+                $row[$column] = $attributes[$column];
+            }
+        }
+
+        DB::table($table)->insert($row);
     }
 
     private function returnRequestId(string $type, Model $record): ?int

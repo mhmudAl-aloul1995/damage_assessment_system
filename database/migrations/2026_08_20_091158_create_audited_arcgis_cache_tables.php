@@ -37,6 +37,8 @@ return new class extends Migration
             $table->unsignedBigInteger('objectid')->nullable()->index();
             $table->text('globalid')->nullable();
             $table->text('parentglobalid')->nullable();
+            $table->text('building_name')->nullable();
+            $table->text('unit_owner')->nullable();
             $table->text('field_status')->nullable();
             $table->text('building_damage_status')->nullable();
             $table->text('unit_damage_status')->nullable();

@@ -677,7 +677,7 @@ it('uses latest housing edit assessments in dashboard unit statistics', function
         });
 });
 
-it('counts assessed buildings from damaged committee review and blocked assessment totals', function () {
+it('counts assessed buildings from damage statuses no damage and blocked assessment totals', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -717,6 +717,27 @@ it('counts assessed buildings from damaged committee review and blocked assessme
     ]);
 
     Building::query()->create([
+        'objectid' => 916,
+        'globalid' => 'assessed-building-fully-alias',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged2',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 917,
+        'globalid' => 'assessed-building-partially-alias',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partial_damage',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 918,
+        'globalid' => 'assessed-building-no-damage-alias',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'No_Damage',
+    ]);
+
+    Building::query()->create([
         'objectid' => 914,
         'globalid' => 'assessed-building-blocked',
         'field_status' => 'Not_Completed',
@@ -735,12 +756,13 @@ it('counts assessed buildings from damaged committee review and blocked assessme
         ->get(route('damageAssessment.index'))
         ->assertOk()
         ->assertViewHas('buildingStats', function (array $buildingStats): bool {
-            return (int) $buildingStats['completed'] === 4
-                && (int) $buildingStats['fully_damaged'] === 1
-                && (int) $buildingStats['partially_damaged'] === 1
+            return (int) $buildingStats['completed'] === 7
+                && (int) $buildingStats['fully_damaged'] === 2
+                && (int) $buildingStats['partially_damaged'] === 2
                 && (int) $buildingStats['committee_review'] === 1
+                && (int) $buildingStats['no_damage'] === 2
                 && (int) $buildingStats['assessment_obstacle'] === 1
-                && (int) $buildingStats['assessed_total'] === 4;
+                && (int) $buildingStats['assessed_total'] === 8;
         });
 });
 

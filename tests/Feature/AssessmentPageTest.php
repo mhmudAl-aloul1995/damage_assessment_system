@@ -15,6 +15,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Spatie\LaravelPdf\Facades\Pdf;
@@ -171,6 +172,13 @@ it('returns inline edit metadata and field history when saving an audit edit', f
         'user_id' => $user->id,
     ]);
 
+    DB::table('audited_buildings')->insert([
+        'objectid' => $building->objectid,
+        'globalid' => $building->globalid,
+        'building_name' => 'Previous Cached Building',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
     $this->actingAs($user)
         ->postJson(route('assessment.inline.update'), [
             'type' => 'building_table',
@@ -195,6 +203,15 @@ it('returns inline edit metadata and field history when saving an audit edit', f
         'old_value' => 'Previous Building',
         'new_value' => 'Updated Building',
         'edited_by' => $user->id,
+    ]);
+
+    $this->assertDatabaseHas('audited_buildings', [
+        'objectid' => $building->objectid,
+        'globalid' => $building->globalid,
+        'building_name' => 'Updated Building',
+        'building_damage_status' => 'fully_damaged',
+        'is_audited' => true,
+        'last_audit_user_id' => $user->id,
     ]);
 
     Queue::assertPushed(SyncAuditEditToArcgis::class, function (SyncAuditEditToArcgis $job) use ($building): bool {
@@ -358,6 +375,14 @@ it('keeps previous housing unit inline edits in edit assessments when saving a n
         ->where('field_name', 'unit_owner')
         ->latest('id')
         ->value('field_value'))->toBe('Second Edited Owner');
+
+    $this->assertDatabaseHas('audited_housing_units', [
+        'objectid' => $housingUnit->objectid,
+        'globalid' => $housingUnit->globalid,
+        'unit_owner' => 'Second Edited Owner',
+        'is_audited' => true,
+        'last_audit_user_id' => $user->id,
+    ]);
 });
 
 it('shows only total damage housing fields in the sidebar summary', function () {
