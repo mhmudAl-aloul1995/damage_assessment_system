@@ -136,6 +136,7 @@ class ExportDataController extends Controller
             'filters' => $filters,
             'importedObjectIds' => $importedObjectIds,
             'importedObjectIdTarget' => $importedObjectIdTarget,
+            'defaultExportSource' => ExportDataColumns::SOURCE_BASE,
         ]);
     }
 

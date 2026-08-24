@@ -239,6 +239,23 @@
 						</div>
 
 						<div class="card-body">
+							<div class="mb-6">
+								<label class="form-label fw-bold d-block mb-3">مصدر بيانات التصدير</label>
+								<div class="btn-group w-100" role="group" aria-label="مصدر بيانات التصدير">
+									<input type="radio" class="btn-check" name="export_source" id="exportSourceBase"
+										value="base" autocomplete="off" @checked(($defaultExportSource ?? 'base') === 'base')>
+									<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportSourceBase">
+										الاستبيان الأساسي
+									</label>
+
+									<input type="radio" class="btn-check" name="export_source" id="exportSourceAudited"
+										value="audited" autocomplete="off" @checked(($defaultExportSource ?? 'base') === 'audited')>
+									<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportSourceAudited">
+										الاستبيان المدقق
+									</label>
+								</div>
+							</div>
+
 							<div class="btn-group w-100 mb-6" role="group" aria-label="نوع التصدير">
 								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeData"
 									value="data" autocomplete="off" checked>

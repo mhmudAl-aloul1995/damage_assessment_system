@@ -29,6 +29,9 @@ it('shows export page actions including objectid import', function () {
     $response->assertSee('name="legal_notes_filter"', false);
     $response->assertSee('name="engineering_notes_filter"', false);
     $response->assertSee('name="update_housing_names_from_civil_registry"', false);
+    $response->assertSee('name="export_source"', false);
+    $response->assertSee('value="base"', false);
+    $response->assertSee('value="audited"', false);
     $response->assertSee('تحديث أسماء المالك/الزوجات من السجل المدني قبل التصدير');
 });
 

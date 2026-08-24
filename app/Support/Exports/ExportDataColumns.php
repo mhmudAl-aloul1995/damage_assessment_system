@@ -8,9 +8,17 @@ use Illuminate\Support\Facades\Schema;
 
 class ExportDataColumns
 {
+    public const SOURCE_BASE = 'base';
+
+    public const SOURCE_AUDITED = 'audited';
+
     public const BUILDINGS_TABLE = 'buildings';
 
     public const HOUSING_UNITS_TABLE = 'housing_units';
+
+    public const AUDITED_BUILDINGS_TABLE = 'audited_buildings';
+
+    public const AUDITED_HOUSING_UNITS_TABLE = 'audited_housing_units';
 
     public const BUILDING_UNITS_COUNT_COLUMN = 'housing_units_count';
 
@@ -28,6 +36,27 @@ class ExportDataColumns
         self::ENGINEERING_AUDITOR_COLUMN,
         self::ENGINEERING_NOTES_COLUMN,
     ];
+
+    public static function exportSource(mixed $source): string
+    {
+        return $source === self::SOURCE_AUDITED
+            ? self::SOURCE_AUDITED
+            : self::SOURCE_BASE;
+    }
+
+    public static function buildingTableForSource(mixed $source): string
+    {
+        return self::exportSource($source) === self::SOURCE_AUDITED
+            ? self::AUDITED_BUILDINGS_TABLE
+            : self::BUILDINGS_TABLE;
+    }
+
+    public static function housingTableForSource(mixed $source): string
+    {
+        return self::exportSource($source) === self::SOURCE_AUDITED
+            ? self::AUDITED_HOUSING_UNITS_TABLE
+            : self::HOUSING_UNITS_TABLE;
+    }
 
     private const HIDDEN_COLUMNS = [
         self::BUILDINGS_TABLE => [

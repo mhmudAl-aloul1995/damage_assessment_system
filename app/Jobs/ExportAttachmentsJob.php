@@ -235,8 +235,9 @@ class ExportAttachmentsJob implements ShouldQueue
      */
     private function attachmentRows(array $params, array $sources): \Illuminate\Support\Collection
     {
-        $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
-        $housingUnitsSource = ExportDataColumns::HOUSING_UNITS_TABLE;
+        $exportSource = ExportDataColumns::exportSource($params['export_source'] ?? null);
+        $buildingsSource = ExportDataColumns::buildingTableForSource($exportSource);
+        $housingUnitsSource = ExportDataColumns::housingTableForSource($exportSource);
         $filters = $params['filters'] ?? [];
         $needsHousingJoin = in_array(self::SOURCE_HOUSING_UNIT_ARCGIS, $sources, true)
             || (($params['imported_object_id_target'] ?? 'building') === 'housing_unit')
@@ -266,7 +267,7 @@ class ExportAttachmentsJob implements ShouldQueue
             $query->selectRaw('NULL as housing_objectid, NULL as housing_globalid, NULL as housing_unit_number');
         }
 
-        $this->applyFilters($query, $params, $needsHousingJoin || $anchorOnHousing);
+        $this->applyFilters($query, $params, $needsHousingJoin || $anchorOnHousing, $buildingsSource, $housingUnitsSource);
 
         return $query
             ->orderBy('b.objectid')
@@ -288,11 +289,17 @@ class ExportAttachmentsJob implements ShouldQueue
     /**
      * @param  array<string, mixed>  $params
      */
-    private function applyFilters($query, array $params, bool $includeHousing): void
-    {
+    private function applyFilters(
+        $query,
+        array $params,
+        bool $includeHousing,
+        ?string $buildingsSource = null,
+        ?string $housingUnitsSource = null,
+    ): void {
         $filters = $params['filters'] ?? [];
-        $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
-        $housingUnitsSource = ExportDataColumns::HOUSING_UNITS_TABLE;
+        $exportSource = ExportDataColumns::exportSource($params['export_source'] ?? null);
+        $buildingsSource ??= ExportDataColumns::buildingTableForSource($exportSource);
+        $housingUnitsSource ??= ExportDataColumns::housingTableForSource($exportSource);
 
         foreach ($filters as $field => $values) {
             $values = array_filter((array) $values, fn ($value): bool => $value !== null && $value !== '');
@@ -702,14 +709,18 @@ class ExportAttachmentsJob implements ShouldQueue
      */
     private function dataColumns(array $params): array
     {
+        $exportSource = ExportDataColumns::exportSource($params['export_source'] ?? null);
+        $buildingsSource = ExportDataColumns::buildingTableForSource($exportSource);
+        $housingUnitsSource = ExportDataColumns::housingTableForSource($exportSource);
+
         $buildingColumns = ExportDataColumns::sanitizeRequestedColumns(
-            ExportDataColumns::BUILDINGS_TABLE,
+            $buildingsSource,
             array_values($params['building_columns'] ?? []),
             [ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN],
         );
 
         $housingColumns = ExportDataColumns::sanitizeRequestedColumns(
-            ExportDataColumns::HOUSING_UNITS_TABLE,
+            $housingUnitsSource,
             array_values($params['housing_columns'] ?? []),
         );
         ExportDataColumns::appendRequestedAuditNoteColumns($buildingColumns, $housingColumns, $params);
@@ -966,8 +977,9 @@ class ExportAttachmentsJob implements ShouldQueue
      */
     private function dataRows(array $params, array $sources, array $columns): \Illuminate\Support\Collection
     {
-        $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
-        $housingUnitsSource = ExportDataColumns::HOUSING_UNITS_TABLE;
+        $exportSource = ExportDataColumns::exportSource($params['export_source'] ?? null);
+        $buildingsSource = ExportDataColumns::buildingTableForSource($exportSource);
+        $housingUnitsSource = ExportDataColumns::housingTableForSource($exportSource);
         $filters = $params['filters'] ?? [];
         $needsHousingJoin = in_array(self::SOURCE_HOUSING_UNIT_ARCGIS, $sources, true)
             || collect($columns)->contains(fn (array $column): bool => $column['table'] === 'housing')
@@ -980,9 +992,9 @@ class ExportAttachmentsJob implements ShouldQueue
             : DB::table("{$buildingsSource} as b");
 
         $selects = collect($columns)
-            ->map(function (array $column): string {
+            ->map(function (array $column) use ($housingUnitsSource): string {
                 if ($column['field'] === ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN) {
-                    return '(SELECT COUNT(*) FROM '.ExportDataColumns::HOUSING_UNITS_TABLE.' hu_count WHERE hu_count.parentglobalid = b.globalid) as `'.$column['alias'].'`';
+                    return "(SELECT COUNT(*) FROM {$housingUnitsSource} hu_count WHERE hu_count.parentglobalid = b.globalid) as `{$column['alias']}`";
                 }
 
                 $tableAlias = $column['table'] === 'housing' ? 'h' : 'b';
@@ -1012,9 +1024,9 @@ class ExportAttachmentsJob implements ShouldQueue
         }
 
         $query->selectRaw(implode(', ', $selects));
-        $this->applyFilters($query, $params, $needsHousingJoin);
+        $this->applyFilters($query, $params, $needsHousingJoin, $buildingsSource, $housingUnitsSource);
 
-        if ($needsHousingJoin && $this->truthy($params['update_housing_names_from_civil_registry'] ?? null)) {
+        if ($exportSource === ExportDataColumns::SOURCE_BASE && $needsHousingJoin && $this->truthy($params['update_housing_names_from_civil_registry'] ?? null)) {
             $housingColumns = collect($columns)
                 ->filter(fn (array $column): bool => $column['table'] === 'housing')
                 ->pluck('field')

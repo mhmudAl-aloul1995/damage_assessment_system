@@ -20,7 +20,7 @@
 				'fully_damaged' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'fully_damaged2']),
 				'partially_damaged' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'partially_damaged2']),
 				'committee_review' => url('damage-assessment/housing') . '?' . http_build_query(['unit_damage_status' => 'committee_review2']),
-				'assessment_blocked' => url('damage-assessment/housing') . '?' . http_build_query(['security_situation_unit' => 'Unsafe']),
+				'assessment_blocked' => url('damage-assessment/housing') . '?' . http_build_query(['security_situation_unit' => 'yes']),
 				'structural_support' => url('damage-assessment/housing') . '?' . http_build_query(['unit_support_needed' => 'yes']),
 				'at_risk_of_collapse' => url('damage-assessment/housing') . '?' . http_build_query(['unit_stripping' => 'yes']),
 				'habitable' => url('damage-assessment/housing') . '?' . http_build_query(['is_the_housing_unit_or_living_habitable' => 'yes']),

@@ -73,14 +73,17 @@ class ExportDataJob implements ShouldQueue
             Log::info('Export started', ['id' => $export->id]);
 
             $params = json_decode($export->filters, true) ?: [];
+            $exportSource = ExportDataColumns::exportSource($params['export_source'] ?? null);
+            $buildingsSource = ExportDataColumns::buildingTableForSource($exportSource);
+            $housingUnitsSource = ExportDataColumns::housingTableForSource($exportSource);
 
             $buildingColumns = ExportDataColumns::sanitizeRequestedColumns(
-                ExportDataColumns::BUILDINGS_TABLE,
+                $buildingsSource,
                 array_values($params['building_columns'] ?? []),
                 [ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN],
             );
             $housingColumns = ExportDataColumns::sanitizeRequestedColumns(
-                ExportDataColumns::HOUSING_UNITS_TABLE,
+                $housingUnitsSource,
                 array_values($params['housing_columns'] ?? []),
             );
             ExportDataColumns::appendRequestedAuditNoteColumns($buildingColumns, $housingColumns, $params);
@@ -105,8 +108,6 @@ class ExportDataJob implements ShouldQueue
             $needsHousingJoin = ! empty($housingColumns) || (! empty($importedObjectIds) && $importedObjectIdTarget === 'housing_unit');
             $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
             $paginateByHousing = $needsHousingJoin;
-            $buildingsSource = ExportDataColumns::BUILDINGS_TABLE;
-            $housingUnitsSource = ExportDataColumns::HOUSING_UNITS_TABLE;
 
             $assessmentLabels = DB::table('assessments')
                 ->whereNotNull('name')
@@ -121,7 +122,7 @@ class ExportDataJob implements ShouldQueue
                 ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
                 : DB::table("{$buildingsSource} as b");
 
-            $buildingEndExpression = $this->editedColumnExpression('building_table', 'b', 'globalid', 'end');
+            $buildingEndExpression = $this->sourceColumnExpression('b', 'end');
 
             if ($buildingEndFrom !== null && $buildingEndFrom !== '') {
                 $query->whereDate(DB::raw($buildingEndExpression), '>=', $buildingEndFrom);
@@ -169,7 +170,7 @@ class ExportDataJob implements ShouldQueue
                 if (ExportDataColumns::isAuditNoteColumn($column)) {
                     $selects[] = $this->auditNoteColumnExpression('building_statuses', 'building_id', 'b.objectid', $column)." as `building_{$column}`";
                 } elseif (ExportDataColumns::hasColumn($buildingsSource, $column)) {
-                    $selects[] = $this->editedColumnExpression('building_table', 'b', 'globalid', $column)." as `building_{$column}`";
+                    $selects[] = $this->sourceColumnExpression('b', $column)." as `building_{$column}`";
                 }
             }
 
@@ -177,7 +178,7 @@ class ExportDataJob implements ShouldQueue
                 if (ExportDataColumns::isAuditNoteColumn($column)) {
                     $selects[] = $this->auditNoteColumnExpression('housing_statuses', 'housing_id', 'h.objectid', $column)." as `housing_{$column}`";
                 } elseif (ExportDataColumns::hasColumn($housingUnitsSource, $column)) {
-                    $selects[] = $this->editedColumnExpression('housing_table', 'h', 'globalid', $column)." as `housing_{$column}`";
+                    $selects[] = $this->sourceColumnExpression('h', $column)." as `housing_{$column}`";
                 }
             }
 
@@ -206,9 +207,9 @@ class ExportDataJob implements ShouldQueue
                 }
 
                 if (ExportDataColumns::hasColumn($buildingsSource, $field)) {
-                    $query->whereIn(DB::raw($this->editedColumnExpression('building_table', 'b', 'globalid', $field)), $values);
+                    $query->whereIn(DB::raw($this->sourceColumnExpression('b', $field)), $values);
                 } elseif (ExportDataColumns::hasColumn($housingUnitsSource, $field)) {
-                    $query->whereIn(DB::raw($this->editedColumnExpression('housing_table', 'h', 'globalid', $field)), $values);
+                    $query->whereIn(DB::raw($this->sourceColumnExpression('h', $field)), $values);
                 }
             }
 
@@ -232,7 +233,7 @@ class ExportDataJob implements ShouldQueue
                 );
             }
 
-            if ($needsHousingJoin && $this->truthy($params['update_housing_names_from_civil_registry'] ?? null)) {
+            if ($exportSource === ExportDataColumns::SOURCE_BASE && $needsHousingJoin && $this->truthy($params['update_housing_names_from_civil_registry'] ?? null)) {
                 $backfillCounts = app(HousingUnitCivilRegistryNameBackfillService::class)
                     ->updateFilteredQuery(clone $query, $housingColumns);
 
@@ -249,7 +250,7 @@ class ExportDataJob implements ShouldQueue
                 'building_columns' => count($buildingColumns),
                 'housing_columns' => count($housingColumns),
                 'imported_object_id_target' => $importedObjectIdTarget,
-                'source' => 'base_tables',
+                'source' => $exportSource,
             ]);
 
             $totalRows = $this->countExportRows($query, $paginateByHousing);
@@ -486,19 +487,9 @@ class ExportDataJob implements ShouldQueue
         );
     }
 
-    private function editedColumnExpression(string $type, string $tableAlias, string $globalIdColumn, string $field): string
+    private function sourceColumnExpression(string $tableAlias, string $field): string
     {
-        return 'COALESCE('.
-            $this->latestEditValueExpression($type, $tableAlias, $globalIdColumn, $field).
-            ", {$tableAlias}.`{$field}`)";
-    }
-
-    private function latestEditValueExpression(string $type, string $tableAlias, string $globalIdColumn, string $field): string
-    {
-        $escapedType = str_replace("'", "''", $type);
-        $escapedField = str_replace("'", "''", $field);
-
-        return "(SELECT ea.field_value FROM edit_assessments ea WHERE ea.type = '{$escapedType}' AND ea.global_id = {$tableAlias}.`{$globalIdColumn}` AND ea.field_name = '{$escapedField}' ORDER BY ea.id DESC LIMIT 1)";
+        return "{$tableAlias}.`{$field}`";
     }
 
     private function familyMembersSelectExpression(): string
@@ -513,7 +504,7 @@ class ExportDataJob implements ShouldQueue
         ];
 
         $membersExpression = collect($fields)
-            ->map(fn (string $field): string => 'COALESCE(CAST(NULLIF('.$this->editedColumnExpression('housing_table', 'hf', 'globalid', $field).", '') AS UNSIGNED), 0)")
+            ->map(fn (string $field): string => 'COALESCE(CAST(NULLIF('.$this->sourceColumnExpression('hf', $field).", '') AS UNSIGNED), 0)")
             ->implode(' + ');
 
         return "

@@ -146,21 +146,82 @@ test('it updates processed rows while streaming the export file', function () {
     }
 });
 
-test('it filters building exports by audited building end date range', function () {
+test('it exports base survey values without audit edits', function () {
     $user = User::factory()->create();
 
     Building::query()->create([
         'objectid' => 2001,
-        'globalid' => 'building-audited-into-range',
+        'globalid' => 'building-base-source',
         'end' => '2026-04-30 10:00:00',
     ]);
 
     EditAssessment::query()->create([
-        'global_id' => 'building-audited-into-range',
+        'global_id' => 'building-base-source',
         'type' => 'building_table',
         'field_name' => 'end',
         'field_value' => '2026-05-10 10:00:00',
         'user_id' => $user->id,
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'export_source' => 'base',
+            'building_columns' => ['objectid', 'end'],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->not->toBeNull();
+
+        $reader = new Reader;
+        $reader->open(storage_path('app/public/'.$export->file_name));
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        expect($rows[1])->toBe([2001, '2026-04-30 10:00:00']);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it filters audited survey exports from audited cache tables', function () {
+    $user = User::factory()->create();
+
+    if (! Schema::hasColumn('audited_buildings', 'end')) {
+        Schema::table('audited_buildings', function (Blueprint $table): void {
+            $table->string('end')->nullable();
+        });
+    }
+
+    DB::table('audited_buildings')->insert([
+        'objectid' => 2001,
+        'globalid' => 'building-audited-into-range',
+        'end' => '2026-05-10 10:00:00',
     ]);
 
     Building::query()->create([
@@ -178,6 +239,7 @@ test('it filters building exports by audited building end date range', function 
     $export = Export::query()->create([
         'status' => 'pending',
         'filters' => json_encode([
+            'export_source' => 'audited',
             'building_columns' => ['objectid', 'end'],
             'building_end_from' => '2026-05-01',
             'building_end_to' => '2026-05-31',

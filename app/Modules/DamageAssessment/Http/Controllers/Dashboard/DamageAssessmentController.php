@@ -1082,7 +1082,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,
                 COALESCE(SUM(unit_stripping = 'yes'), 0) as has_strip,
                 COALESCE(SUM(is_the_housing_unit_or_living_habitable = 'yes'), 0) as habitable,
-                COALESCE(SUM(security_situation_unit = 'Unsafe'), 0) as security_unsafe,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(security_situation_unit, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as security_unsafe,
                 COALESCE(SUM(unit_stripping = 'yes'), 0) as unit_stripping,
                 COALESCE(SUM(unit_support_needed = 'yes'), 0) as unit_support_needed")
             ->first();
