@@ -574,6 +574,50 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         });
 });
 
+it('counts dashboard housing assessment blocked from yes security situation values', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    HousingUnit::query()->create([
+        'objectid' => 9071,
+        'globalid' => 'assessment-blocked-lowercase-yes',
+        'security_situation_unit' => 'yes',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9072,
+        'globalid' => 'assessment-blocked-titlecase-yes',
+        'security_situation_unit' => ' Yes ',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9073,
+        'globalid' => 'assessment-blocked-unsafe',
+        'security_situation_unit' => 'Unsafe',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertViewHas('unitStats', function (array $unitStats): bool {
+            return (int) $unitStats['total_units'] === 3
+                && (int) $unitStats['security_unsafe'] === 2;
+        })
+        ->assertSee('security_situation_unit=yes', false);
+});
+
 it('uses latest housing edit assessments in dashboard unit statistics', function () {
     $user = User::factory()->create();
 
