@@ -158,6 +158,7 @@ it('shows attachment export controls on the export page', function () {
     $response->assertOk();
     $response->assertSee('value="attachments"', false);
     $response->assertSee('value="data_with_attachments"', false);
+    $response->assertSee('id="attachmentExportOptions" class="border rounded p-4 d-none"', false);
     $response->assertSee('name="attachment_sources[]"', false);
     $response->assertSee('name="attachment_type_filters[]"', false);
     $response->assertSee('name="include_attachment_excel_columns"', false);
@@ -168,6 +169,12 @@ it('shows attachment export controls on the export page', function () {
     $response->assertSee('value="housing_unit_arcgis"', false);
     $response->assertSee('value="damage_photos"', false);
     $response->assertSee('data-type="zip"', false);
+    $response->assertDontSee('value="building_arcgis" checked', false);
+    $response->assertDontSee('value="housing_unit_arcgis" checked', false);
+    $response->assertDontSee('value="all" selected', false);
+    $response->assertDontSee('name="include_attachment_index" value="1" checked', false);
+    $response->assertSee("$('#attachmentExportOptions').toggleClass('d-none', !shouldShow);", false);
+    $response->assertSee('function hasSelectedAttachmentSource(formData)', false);
 });
 
 it('rejects data exports when no data columns are selected', function () {

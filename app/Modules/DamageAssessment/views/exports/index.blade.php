@@ -336,13 +336,13 @@
 										<div class="d-flex flex-column gap-3">
 											<label class="form-check form-check-custom form-check-solid">
 												<input class="form-check-input" type="checkbox" name="attachment_sources[]"
-													value="building_arcgis" checked>
+													value="building_arcgis">
 												<span class="form-check-label ms-3">مرفقات المباني</span>
 											</label>
 
 											<label class="form-check form-check-custom form-check-solid">
 												<input class="form-check-input" type="checkbox" name="attachment_sources[]"
-													value="housing_unit_arcgis" checked>
+													value="housing_unit_arcgis">
 												<span class="form-check-label ms-3">مرفقات الوحد السكنية</span>
 											</label>
 										</div>
@@ -352,8 +352,8 @@
 										<label class="form-label fw-bold" for="attachmentTypeFilters">تصنيف المرفق</label>
 										<select id="attachmentTypeFilters" name="attachment_type_filters[]"
 											class="form-select form-select-solid attachment-type-select2" multiple
-											data-placeholder="كل المرفقات">
-											<option value="all" selected>كل المرفقات</option>
+											data-placeholder="اختر تصنيف المرفق">
+											<option value="all">كل المرفقات</option>
 											<option value="images">صور فقط</option>
 											<option value="pdf">PDF فقط</option>
 											<option value="damage_photos">صور الضرر</option>
@@ -368,6 +368,7 @@
 										<label class="form-label fw-bold" for="attachmentGrouping">طريقة التجميع</label>
 										<select id="attachmentGrouping" name="attachment_grouping"
 											class="form-select form-select-solid">
+											<option value="" selected>اختر طريقة التجميع</option>
 											<option value="by_building">مجلد لكل مبنى</option>
 											<option value="by_housing_unit">مجلد لكل وحدة سكنية</option>
 											<option value="flat">كل الملفات في مجلد واحد</option>
@@ -378,6 +379,7 @@
 										<label class="form-label fw-bold" for="attachmentFilenameStrategy">تسمية الملفات</label>
 										<select id="attachmentFilenameStrategy" name="attachment_filename_strategy"
 											class="form-select form-select-solid">
+											<option value="" selected>اختر طريقة التسمية</option>
 											<option value="objectid_type">ObjectID + نوع المرفق</option>
 											<option value="globalid">GlobalID</option>
 											<option value="owner_name">اسم المالك</option>
@@ -397,6 +399,7 @@
 										<label class="form-label fw-bold" for="attachmentExcelDisplay">عرض المرفق داخل Excel</label>
 										<select id="attachmentExcelDisplay" name="attachment_excel_display"
 											class="form-select form-select-solid">
+											<option value="" selected>اختر طريقة العرض</option>
 											<option value="links">روابط</option>
 											<option value="images">صور داخل Excel</option>
 										</select>
@@ -405,7 +408,7 @@
 
 								<label class="form-check form-check-custom form-check-solid">
 									<input type="hidden" name="include_attachment_index" value="0">
-									<input class="form-check-input" type="checkbox" name="include_attachment_index" value="1" checked>
+									<input class="form-check-input" type="checkbox" name="include_attachment_index" value="1">
 									<span class="form-check-label ms-3">تضمين ملف فهرس للمرفقات داخل ZIP</span>
 								</label>
 							</div>
@@ -1039,6 +1042,16 @@
 			return selectedExportMode() !== 'attachments';
 		}
 
+		function requiresAttachmentSourceForExport() {
+			return ['attachments', 'data_with_attachments'].includes(selectedExportMode());
+		}
+
+		function hasSelectedAttachmentSource(formData) {
+			return formData.some(function (field) {
+				return field.name === 'attachment_sources[]' && field.value;
+			});
+		}
+
 		function syncAttachmentExcelDisplay() {
 			if ($('#attachmentExcelDisplay').val() === 'images') {
 				$('input[name="include_attachment_excel_columns"][value="1"]').prop('checked', true);
@@ -1046,7 +1059,13 @@
 		}
 
 		function syncAttachmentExportOptions() {
-			$('#attachmentExportOptions').removeClass('d-none');
+			const shouldShow = selectedExportMode() !== 'data';
+			$('#attachmentExportOptions').toggleClass('d-none', !shouldShow);
+
+			if (!shouldShow) {
+				return;
+			}
+
 			syncAttachmentExcelDisplay();
 		}
 
@@ -1602,6 +1621,11 @@
 
 				if (requiresDataColumnsForExport() && !hasSelectedDataColumns(formData)) {
 					toastr.error('يرجى اختيار عمود واحد على الأقل من أعمدة البيانات قبل التصدير.');
+					return;
+				}
+
+				if (requiresAttachmentSourceForExport() && !hasSelectedAttachmentSource(formData)) {
+					toastr.error('يرجى اختيار نوع المرفق قبل التصدير.');
 					return;
 				}
 
