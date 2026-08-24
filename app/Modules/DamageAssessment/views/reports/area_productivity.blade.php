@@ -629,7 +629,7 @@
                                     <tr>
                                         <td class="fw-bold">{{ $row->total_count }}</td>
                                         @if ($showRoadDamageColumns)
-                                            <td>{{ number_format((float) ($row->total_road_length_km ?? 0), 2) }}</td>
+                                            <td>{{ number_format((float) ($row->total_road_length_km ?? 0), 3) }}</td>
                                         @endif
                                         @if ($showHousingUnitsCount)
                                             <td>{{ $row->housing_units_count ?? 0 }}</td>
@@ -663,7 +663,7 @@
                                 <tr class="fw-bold bg-light">
                                     <td class="text-success fs-5">{{ $summary['total_records'] }}</td>
                                     @if ($showRoadDamageColumns)
-                                        <td class="text-success">{{ number_format((float) ($summary['total_road_length_km'] ?? 0), 2) }}</td>
+                                        <td class="text-success">{{ number_format((float) ($summary['total_road_length_km'] ?? 0), 3) }}</td>
                                     @endif
                                     @if ($showHousingUnitsCount)
                                         <td>{{ $summary['housing_units_count'] }}</td>

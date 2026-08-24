@@ -108,7 +108,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         ];
 
         if ($this->isRoadFacilitiesReport()) {
-            $mapped[] = round((float) ($row->total_road_length_km ?? 0), 2);
+            $mapped[] = round((float) ($row->total_road_length_km ?? 0), 3);
         }
 
         if ($this->includeHousingUnitsCount) {

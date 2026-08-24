@@ -115,15 +115,15 @@ class RoadFacilityController extends Controller
             ->selectRaw('COUNT(*) as completed_roads_count')
             ->when(
                 $lengthColumn !== null,
-                fn (Builder $query): Builder => $query->selectRaw("COALESCE(SUM(COALESCE({$lengthColumn}, 0)), 0) as shape_length_total"),
-                fn (Builder $query): Builder => $query->selectRaw('0 as shape_length_total'),
+                fn (Builder $query): Builder => $query->selectRaw("COALESCE(SUM(COALESCE({$lengthColumn}, 0)), 0) as road_length_kilometers_total"),
+                fn (Builder $query): Builder => $query->selectRaw('0 as road_length_kilometers_total'),
             )
             ->groupBy('municipalitie', 'neighborhood')
             ->orderBy('municipalitie')
             ->orderBy('neighborhood')
             ->get()
             ->map(function (RoadFacilitySurvey $row): array {
-                $streetLengthKilometers = round((float) $row->shape_length_total * 111, 2);
+                $streetLengthKilometers = round((float) $row->road_length_kilometers_total, 3);
 
                 return [
                     $row->municipalitie ?: '-',
@@ -136,7 +136,7 @@ class RoadFacilityController extends Controller
         $rows->push([
             __('multilingual.road_facilities_page.total'),
             '',
-            round((float) $rows->sum(fn (array $row): float => (float) $row[2]), 2),
+            round((float) $rows->sum(fn (array $row): float => (float) $row[2]), 3),
             (int) $rows->sum(fn (array $row): int => (int) $row[3]),
         ]);
 
@@ -417,7 +417,7 @@ class RoadFacilityController extends Controller
 
     private function roadLengthColumn(): ?string
     {
-        return collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+        return collect(['Lenght_Km_2', 'lenght_km_2'])
             ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 

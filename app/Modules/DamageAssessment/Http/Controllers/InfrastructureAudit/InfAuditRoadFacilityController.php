@@ -63,11 +63,11 @@ class InfAuditRoadFacilityController extends Controller
         $query = $this->filteredAuditQuery($request);
 
         return DataTables::eloquent($query)
-            ->addColumn('selection', fn(RoadFacilitySurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="' . e((string) $survey->id) . '">')
-            ->addColumn('audit_status', fn(RoadFacilitySurvey $survey): string => $this->statusBadge($survey->infAuditStatus?->status))
-            ->addColumn('field_engineer', fn(RoadFacilitySurvey $survey): string => e($this->fieldEngineerName($survey)))
-            ->addColumn('auditor', fn(RoadFacilitySurvey $survey): string => e($survey->infAuditAssignment?->user?->name ?? $survey->infAuditStatus?->assignee?->name ?? '-'))
-            ->addColumn('actions', fn(RoadFacilitySurvey $survey): string => '<a class="btn btn-sm btn-light-primary" href="' . route('inf-audit.roads.show', $survey) . '">فتح التدقيق</a>')
+            ->addColumn('selection', fn (RoadFacilitySurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="'.e((string) $survey->id).'">')
+            ->addColumn('audit_status', fn (RoadFacilitySurvey $survey): string => $this->statusBadge($survey->infAuditStatus?->status))
+            ->addColumn('field_engineer', fn (RoadFacilitySurvey $survey): string => e($this->fieldEngineerName($survey)))
+            ->addColumn('auditor', fn (RoadFacilitySurvey $survey): string => e($survey->infAuditAssignment?->user?->name ?? $survey->infAuditStatus?->assignee?->name ?? '-'))
+            ->addColumn('actions', fn (RoadFacilitySurvey $survey): string => '<a class="btn btn-sm btn-light-primary" href="'.route('inf-audit.roads.show', $survey).'">فتح التدقيق</a>')
             ->filterColumn('field_engineer', function (Builder $query, string $keyword): void {
                 $query->where(function (Builder $builder) use ($keyword): void {
                     $builder->where('road_facility_surveys.assignedto', 'like', "%{$keyword}%");
@@ -98,7 +98,7 @@ class InfAuditRoadFacilityController extends Controller
             ]);
 
         return DataTables::eloquent($query)
-            ->editColumn('road_damage_level', fn(RoadFacilitySurvey $survey): string => $this->damageLevelBadge($survey->road_damage_level))
+            ->editColumn('road_damage_level', fn (RoadFacilitySurvey $survey): string => $this->damageLevelBadge($survey->road_damage_level))
             ->rawColumns(['road_damage_level'])
             ->toJson();
     }
@@ -108,8 +108,8 @@ class InfAuditRoadFacilityController extends Controller
         $objectIds = $this->filteredAuditQuery($request, false, false)
             ->whereNotNull('objectid')
             ->pluck('objectid')
-            ->map(fn(mixed $objectId): int => (int) $objectId)
-            ->filter(fn(int $objectId): bool => $objectId > 0)
+            ->map(fn (mixed $objectId): int => (int) $objectId)
+            ->filter(fn (int $objectId): bool => $objectId > 0)
             ->values();
 
         return response()->json([
@@ -125,7 +125,7 @@ class InfAuditRoadFacilityController extends Controller
         abort_unless(in_array($format, ['xlsx', 'pdf'], true), 404);
 
         $rows = $this->reportRows($request);
-        $fileBaseName = 'inf_audit_roads_report_' . now()->format('Ymd_His');
+        $fileBaseName = 'inf_audit_roads_report_'.now()->format('Ymd_His');
 
         if ($format === 'pdf') {
             return $this->downloadPdfReport($rows, $this->activeFilterLabels($request), $fileBaseName);
@@ -133,7 +133,7 @@ class InfAuditRoadFacilityController extends Controller
 
         return Excel::download(
             new InfAuditRoadsSummaryExport($rows),
-            $fileBaseName . '.xlsx',
+            $fileBaseName.'.xlsx',
             ExcelFormat::XLSX,
         );
     }
@@ -202,7 +202,7 @@ class InfAuditRoadFacilityController extends Controller
     public function show(RoadFacilitySurvey $road): View
     {
         $road->load([
-            'items' => fn($query) => $query->orderBy('objectid'),
+            'items' => fn ($query) => $query->orderBy('objectid'),
             'infAuditAssignment.manager',
             'infAuditAssignment.user',
             'infAuditStatus.status',
@@ -249,7 +249,7 @@ class InfAuditRoadFacilityController extends Controller
 
             $assignedTo = array_key_exists('assigned_to', $data) ? $data['assigned_to'] : $current?->assigned_to;
 
-            if ($status->name === 'assigned' && !$assignedTo) {
+            if ($status->name === 'assigned' && ! $assignedTo) {
                 return response()->json(['message' => 'يرجى اختيار المدقق.'], 422);
             }
 
@@ -395,7 +395,7 @@ class InfAuditRoadFacilityController extends Controller
             return $normalized;
         }
 
-        return $normalized . '/0';
+        return $normalized.'/0';
     }
 
     private function assignment(string $globalid): ?InfAuditAssignment
@@ -426,8 +426,8 @@ class InfAuditRoadFacilityController extends Controller
     private function surveySections(RoadFacilitySurvey $survey): array
     {
         return collect(RoadFacilitySurveyLayout::sections())
-            ->reject(fn(array $section): bool => ($section['type'] ?? 'group') === 'repeat')
-            ->map(fn(array $section): array => [
+            ->reject(fn (array $section): bool => ($section['type'] ?? 'group') === 'repeat')
+            ->map(fn (array $section): array => [
                 'title' => $section['label'] ?: $section['name'],
                 'rows' => $this->rows($survey, $section['fields'] ?? [], self::TABLE_TYPE),
             ])
@@ -439,9 +439,9 @@ class InfAuditRoadFacilityController extends Controller
     {
         $itemSections = RoadFacilitySurveyLayout::repeatSections('R2');
 
-        return $survey->items->map(fn(RoadFacilitySurveyItem $item, int $index): array => [
-            'title' => 'Road Item ' . ($index + 1) . ' - ' . ($item->item_required ?: $item->objectid),
-            'sections' => collect($itemSections)->map(fn(array $section): array => [
+        return $survey->items->map(fn (RoadFacilitySurveyItem $item, int $index): array => [
+            'title' => 'Road Item '.($index + 1).' - '.($item->item_required ?: $item->objectid),
+            'sections' => collect($itemSections)->map(fn (array $section): array => [
                 'title' => $section['label'] ?: $section['name'],
                 'rows' => $this->rows($item, $section['fields'] ?? [], self::ITEM_TABLE_TYPE),
             ])->values()->all(),
@@ -451,7 +451,7 @@ class InfAuditRoadFacilityController extends Controller
     private function rows(object $record, array $fields, string $tableType): array
     {
         return collect($fields)
-            ->reject(fn(array $field): bool => ($field['type'] ?? null) === 'calculate')
+            ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
             ->map(function (array $field) use ($record, $tableType): array {
                 $rawValue = $this->rawValue($record, $field['name'], $tableType);
                 $history = $this->fieldHistory($record, $field['name'], $tableType);
@@ -468,7 +468,7 @@ class InfAuditRoadFacilityController extends Controller
                     'has_answer' => filled($rawValue),
                     'is_edited' => $history !== [],
                     'options' => $this->fieldOptions($field['list_name'] ?? null),
-                    'history_id' => 'inf_history_' . md5($tableType . '|' . $record->id . '|' . $field['name']),
+                    'history_id' => 'inf_history_'.md5($tableType.'|'.$record->id.'|'.$field['name']),
                     'history' => $history,
                 ];
             })
@@ -509,7 +509,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function fieldOptions(?string $listName): array
     {
-        if (!$listName) {
+        if (! $listName) {
             return [];
         }
 
@@ -518,7 +518,7 @@ class InfAuditRoadFacilityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get(['name', 'label'])
-            ->map(fn(RoadFacilityFilter $filter): array => [
+            ->map(fn (RoadFacilityFilter $filter): array => [
                 'value' => $filter->name,
                 'label' => $filter->label ?: $filter->name,
             ])
@@ -527,7 +527,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function filterLabel(?string $listName, string $value): string
     {
-        if (!$listName || $value === '') {
+        if (! $listName || $value === '') {
             return $value;
         }
 
@@ -588,14 +588,14 @@ class InfAuditRoadFacilityController extends Controller
 
     private function formatValue(mixed $value, array $field): string
     {
-        if (!filled($value)) {
+        if (! filled($value)) {
             return 'لا يوجد جواب';
         }
 
         if (is_array($value)) {
             return collect($value)
                 ->flatten()
-                ->map(fn(mixed $item): string => $this->filterLabel($field['list_name'] ?? null, (string) $item))
+                ->map(fn (mixed $item): string => $this->filterLabel($field['list_name'] ?? null, (string) $item))
                 ->implode(', ');
         }
 
@@ -604,7 +604,7 @@ class InfAuditRoadFacilityController extends Controller
         if (($field['type'] ?? null) === 'select_multiple') {
             return collect(preg_split('/[, ]+/', $stringValue) ?: [])
                 ->filter()
-                ->map(fn(string $item): string => $this->filterLabel($field['list_name'] ?? null, $item))
+                ->map(fn (string $item): string => $this->filterLabel($field['list_name'] ?? null, $item))
                 ->implode(', ');
         }
 
@@ -618,7 +618,7 @@ class InfAuditRoadFacilityController extends Controller
     private function historyPayload(array $history): array
     {
         return collect($history)
-            ->map(fn(InfEditAssessment $item): array => [
+            ->map(fn (InfEditAssessment $item): array => [
                 'field_value' => $item->display_field_value ?? $item->field_value ?? '-',
                 'old_value' => $item->display_old_value ?? $item->old_value ?? '-',
                 'user_name' => $item->user?->name ?? '-',
@@ -646,14 +646,14 @@ class InfAuditRoadFacilityController extends Controller
 
     private function applyFilters(Builder $query, Request $request): void
     {
-        $query->when($request->filled('objectid'), fn(Builder $q) => $q->where('objectid', '=', trim((string) $request->input('objectid'))));
+        $query->when($request->filled('objectid'), fn (Builder $q) => $q->where('objectid', '=', trim((string) $request->input('objectid'))));
 
         foreach (['municipalitie', 'neighborhood'] as $field) {
-            $query->when($request->filled($field), fn(Builder $q) => $q->where($field, $request->string($field)));
+            $query->when($request->filled($field), fn (Builder $q) => $q->where($field, $request->string($field)));
         }
 
-        $query->when($request->filled('auditor'), fn(Builder $q) => $q->whereHas('infAuditAssignment', fn(Builder $s) => $s->where('user_id', $request->integer('auditor'))));
-        $query->when($request->filled('field_engineer'), fn(Builder $q) => $q->where('road_facility_surveys.assignedto', $request->string('field_engineer')));
+        $query->when($request->filled('auditor'), fn (Builder $q) => $q->whereHas('infAuditAssignment', fn (Builder $s) => $s->where('user_id', $request->integer('auditor'))));
+        $query->when($request->filled('field_engineer'), fn (Builder $q) => $q->where('road_facility_surveys.assignedto', $request->string('field_engineer')));
         $query->when($request->filled('status'), function (Builder $q) use ($request): void {
 
             $status = (string) $request->string('status');
@@ -675,8 +675,8 @@ class InfAuditRoadFacilityController extends Controller
 
             $this->whereLatestStatus($q, $status);
         });
-        $query->when($request->filled('from_date'), fn(Builder $q) => $q->whereDate($this->dateColumn(), '>=', $request->date('from_date')?->toDateString()));
-        $query->when($request->filled('to_date'), fn(Builder $q) => $q->whereDate($this->dateColumn(), '<=', $request->date('to_date')?->toDateString()));
+        $query->when($request->filled('from_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '>=', $request->date('from_date')?->toDateString()));
+        $query->when($request->filled('to_date'), fn (Builder $q) => $q->whereDate($this->dateColumn(), '<=', $request->date('to_date')?->toDateString()));
     }
 
     private function filteredAuditQuery(Request $request, bool $includeDisplayColumns = true, bool $applyVisibilityScope = true): Builder
@@ -703,7 +703,7 @@ class InfAuditRoadFacilityController extends Controller
     private function reportRows(Request $request): array
     {
         $lengthExpression = $this->roadLengthColumn()
-            ? 'COALESCE(SUM(COALESCE(road_facility_surveys.' . $this->roadLengthColumn() . ', 0)), 0) * 111000'
+            ? 'COALESCE(SUM(COALESCE(road_facility_surveys.'.$this->roadLengthColumn().', 0)), 0) * 1000'
             : '0';
         $governorateExpression = Schema::hasColumn('road_facility_surveys', 'governorate')
             ? "COALESCE(NULLIF(road_facility_surveys.governorate, ''), NULLIF(road_facility_surveys.municipalitie, ''), '-')"
@@ -713,15 +713,15 @@ class InfAuditRoadFacilityController extends Controller
         $damageLevelExpression = "COALESCE(NULLIF(road_facility_surveys.road_damage_level, ''), '-')";
 
         return $this->filteredAuditQuery($request, false)
-            ->selectRaw($governorateExpression . ' as governorate')
-            ->selectRaw($municipalityExpression . ' as municipality')
-            ->selectRaw($neighborhoodExpression . ' as neighborhood')
-            ->selectRaw($damageLevelExpression . ' as road_damage_level')
+            ->selectRaw($governorateExpression.' as governorate')
+            ->selectRaw($municipalityExpression.' as municipality')
+            ->selectRaw($neighborhoodExpression.' as neighborhood')
+            ->selectRaw($damageLevelExpression.' as road_damage_level')
             ->selectRaw('COUNT(*) as surveyed_count')
             ->selectRaw(
                 "SUM(CASE WHEN latest_statuses.status_name IS NOT NULL AND latest_statuses.status_name <> 'assigned' THEN 1 ELSE 0 END) as audited_count"
             )
-            ->selectRaw($lengthExpression . ' as road_length_meters')
+            ->selectRaw($lengthExpression.' as road_length_meters')
             ->leftJoinSub($this->latestStatusSubquery(), 'latest_statuses', function ($join): void {
                 $join->on('latest_statuses.globalid', '=', 'road_facility_surveys.globalid');
             })
@@ -734,7 +734,7 @@ class InfAuditRoadFacilityController extends Controller
             ->orderByRaw($neighborhoodExpression)
             ->orderByRaw($damageLevelExpression)
             ->get()
-            ->map(fn(RoadFacilitySurvey $row): array => [
+            ->map(fn (RoadFacilitySurvey $row): array => [
                 'governorate' => $row->governorate ?: '-',
                 'municipality' => $row->municipality ?: '-',
                 'neighborhood' => $row->neighborhood ?: '-',
@@ -760,8 +760,8 @@ class InfAuditRoadFacilityController extends Controller
 
     private function roadLengthColumn(): ?string
     {
-        return collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
-            ->first(fn(string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
+        return collect(['Lenght_Km_2', 'lenght_km_2'])
+            ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 
     private function applyExportSearch(Builder $query, Request $request): void
@@ -809,13 +809,13 @@ class InfAuditRoadFacilityController extends Controller
         $temporaryDirectory = storage_path('app/mpdf');
 
         foreach ([$directory, $temporaryDirectory] as $path) {
-            if (!File::exists($path)) {
+            if (! File::exists($path)) {
                 File::makeDirectory($path, 0755, true);
             }
         }
 
-        $fileName = $fileBaseName . '.pdf';
-        $filePath = $directory . DIRECTORY_SEPARATOR . $fileName;
+        $fileName = $fileBaseName.'.pdf';
+        $filePath = $directory.DIRECTORY_SEPARATOR.$fileName;
         $defaultConfig = (new ConfigVariables)->getDefaults();
         $defaultFontConfig = (new FontVariables)->getDefaults();
         $html = view('damage-assessment::infrastructure-audit.roads.export_pdf', [
@@ -854,7 +854,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function joinFieldEngineer(Builder $query): void
     {
-        if (!Schema::hasColumn('road_facility_surveys', 'assignedto') || !Schema::hasColumn('users', 'username_arcgis')) {
+        if (! Schema::hasColumn('road_facility_surveys', 'assignedto') || ! Schema::hasColumn('users', 'username_arcgis')) {
             return;
         }
 
@@ -867,7 +867,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function fieldEngineerName(RoadFacilitySurvey $survey): string
     {
-        if (!filled($survey->assignedto)) {
+        if (! filled($survey->assignedto)) {
             return '-';
         }
 
@@ -876,7 +876,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function fieldEngineerOptions(): array
     {
-        if (!Schema::hasColumn('road_facility_surveys', 'assignedto')) {
+        if (! Schema::hasColumn('road_facility_surveys', 'assignedto')) {
             return [];
         }
 
@@ -892,7 +892,7 @@ class InfAuditRoadFacilityController extends Controller
             : collect();
 
         return $assignedValues
-            ->map(fn(string $assignedTo): array => [
+            ->map(fn (string $assignedTo): array => [
                 'value' => $assignedTo,
                 'label' => $users->get($assignedTo)?->name ?: $users->get($assignedTo)?->name_en ?: $assignedTo,
             ])
@@ -923,7 +923,7 @@ class InfAuditRoadFacilityController extends Controller
 
     private function arcgisAttachments(RoadFacilitySurvey $survey): array
     {
-        if (!filled($survey->objectid)) {
+        if (! filled($survey->objectid)) {
             return [];
         }
 
@@ -933,13 +933,13 @@ class InfAuditRoadFacilityController extends Controller
             $layerUrl = (string) config('services.arcgis.road_facility_survey_layer_url');
 
             return collect($arcgis->getAttachmentsFromLayerUrl($layerUrl, $survey->objectid, $token))
-                ->map(fn(array $attachment): array => [
+                ->map(fn (array $attachment): array => [
                     'id' => $attachment['id'] ?? null,
                     'name' => $attachment['name'] ?? 'Attachment',
                     'content_type' => $attachment['contentType'] ?? '',
                     'url' => filled($attachment['id'] ?? null) ? $arcgis->buildUrlFromLayerUrl($layerUrl, $survey->objectid, $attachment['id'], $token) : null,
                 ])
-                ->filter(fn(array $attachment): bool => filled($attachment['url']))
+                ->filter(fn (array $attachment): bool => filled($attachment['url']))
                 ->values()
                 ->all();
         } catch (\Throwable) {
@@ -949,9 +949,9 @@ class InfAuditRoadFacilityController extends Controller
 
     private function roadLength(RoadFacilitySurvey $survey): ?string
     {
-        foreach (['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'] as $column) {
+        foreach (['Lenght_Km_2', 'lenght_km_2'] as $column) {
 
-            if (!Schema::hasColumn('road_facility_surveys', $column)) {
+            if (! Schema::hasColumn('road_facility_surveys', $column)) {
                 continue;
             }
 
@@ -959,9 +959,9 @@ class InfAuditRoadFacilityController extends Controller
 
             if ($value > 0) {
 
-                $meters = $value * 111000;
+                $meters = $value * 1000;
 
-                return number_format($meters, 2) . ' متر';
+                return number_format($meters, 2).' متر';
             }
         }
 
@@ -970,14 +970,14 @@ class InfAuditRoadFacilityController extends Controller
 
     private function scopeVisibleToUser(Builder $query): void
     {
-        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && !Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF'])) {
-            $query->whereHas('infAuditAssignment', fn(Builder $statusQuery) => $statusQuery->where('user_id', Auth::id()));
+        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && ! Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF'])) {
+            $query->whereHas('infAuditAssignment', fn (Builder $statusQuery) => $statusQuery->where('user_id', Auth::id()));
         }
     }
 
     private function authorizeRecord(RoadFacilitySurvey $survey): void
     {
-        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && !Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF'])) {
+        if (Auth::user()?->hasRole('Inf - QC/QA Engineer') && ! Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF'])) {
             abort_unless((int) ($survey->infAuditAssignment?->user_id ?? $survey->infAuditStatus?->assigned_to ?? 0) === Auth::id(), 403);
         }
     }
@@ -1001,18 +1001,18 @@ class InfAuditRoadFacilityController extends Controller
     private function statusBadge(?InfAuditStatus $status): string
     {
         return $status
-            ? '<span class="' . e($status->badge_class) . '">' . e($status->label) . '</span>'
+            ? '<span class="'.e($status->badge_class).'">'.e($status->label).'</span>'
             : '<span class="badge badge-light">-</span>';
     }
 
     private function damageLevelBadge(?string $damageLevel): string
     {
         return match ($damageLevel) {
-            'destroyed' => '<span class="badge badge-light-danger fw-bold">' . e(__('multilingual.damage_dashboard.destroyed')) . '</span>',
-            'severe' => '<span class="badge badge-light-danger fw-bold">' . e(__('multilingual.damage_dashboard.severe')) . '</span>',
-            'moderate' => '<span class="badge badge-light-warning fw-bold">' . e(__('multilingual.damage_dashboard.moderate')) . '</span>',
-            'minor' => '<span class="badge badge-light-success fw-bold">' . e(__('multilingual.damage_dashboard.minor')) . '</span>',
-            'No_Damage' => '<span class="badge badge-light-success fw-bold">' . e(__('multilingual.damage_dashboard.no_damage')) . '</span>',
+            'destroyed' => '<span class="badge badge-light-danger fw-bold">'.e(__('multilingual.damage_dashboard.destroyed')).'</span>',
+            'severe' => '<span class="badge badge-light-danger fw-bold">'.e(__('multilingual.damage_dashboard.severe')).'</span>',
+            'moderate' => '<span class="badge badge-light-warning fw-bold">'.e(__('multilingual.damage_dashboard.moderate')).'</span>',
+            'minor' => '<span class="badge badge-light-success fw-bold">'.e(__('multilingual.damage_dashboard.minor')).'</span>',
+            'No_Damage' => '<span class="badge badge-light-success fw-bold">'.e(__('multilingual.damage_dashboard.no_damage')).'</span>',
             default => '<span class="badge badge-light">-</span>',
         };
     }

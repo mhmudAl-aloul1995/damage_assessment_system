@@ -1962,7 +1962,7 @@
 									<span class="fs-10 fs-lg-7 text-gray-800 fw-bold">{{ __('ui.damage_dashboard.street_length') }}</span>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ number_format($roadFacilityStats['completed_road_length_km'], 2) }} كم
+									{{ number_format($roadFacilityStats['completed_road_length_km'], 3) }} كم
 								</div>
 							</div>
 						</div>

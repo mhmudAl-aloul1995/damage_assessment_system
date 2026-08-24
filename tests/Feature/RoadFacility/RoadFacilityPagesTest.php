@@ -32,6 +32,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'assignedto' => 'Engineer Roads',
         'field_status' => 'COMPLETED',
         'shape__length' => 0.1,
+        'Lenght_Km_2' => 4.683,
         'road_damage_level' => 'severe',
         'road_access' => 'partial',
         'lane_count' => 'two',
@@ -69,6 +70,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'assignedto' => 'Engineer Other',
         'field_status' => 'Not_Completed',
         'shape__length' => 0.2,
+        'Lenght_Km_2' => 99.999,
         'road_damage_level' => 'minor',
         'road_access' => 'open',
         'lane_count' => 'one',
@@ -173,8 +175,8 @@ it('shows the road facility survey page with all dynamic road filters and export
             $rows = $export->collection();
 
             return $rows->count() === 2
-                && $rows->get(0) === ['Gaza', 'Rimal', 11.1, 1]
-                && $rows->get(1) === ['Total', '', 11.1, 1];
+                && $rows->get(0) === ['Gaza', 'Rimal', 4.683, 1]
+                && $rows->get(1) === ['Total', '', 4.683, 1];
         }
     );
 

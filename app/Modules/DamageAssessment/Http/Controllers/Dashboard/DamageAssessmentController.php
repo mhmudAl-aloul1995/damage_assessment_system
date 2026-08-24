@@ -2221,18 +2221,16 @@ class DamageAssessmentController extends Controller
 
     private function dashboardCompletedRoadLengthKilometers(Request $request): float
     {
-        $lengthColumn = collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+        $lengthColumn = collect(['Lenght_Km_2', 'lenght_km_2'])
             ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
 
         if ($lengthColumn === null) {
             return 0.0;
         }
 
-        $shapeLength = (float) $this->dashboardRoadFacilityQuery($request)
+        return (float) $this->dashboardRoadFacilityQuery($request)
             ->where('field_status', 'COMPLETED')
             ->sum($lengthColumn);
-
-        return $shapeLength * 111;
     }
 
     private function applyDashboardHousingFilters(Builder $query, Request $request): void

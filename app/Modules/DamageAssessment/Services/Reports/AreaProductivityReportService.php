@@ -82,7 +82,7 @@ class AreaProductivityReportService
                 'minor' => (int) $rows->sum('minor_count'),
                 'no_damage' => (int) $rows->sum('no_damage_count'),
                 'total_records' => (int) $rows->sum('total_count'),
-                'total_road_length_km' => round((float) $rows->sum('total_road_length_km'), 2),
+                'total_road_length_km' => round((float) $rows->sum('total_road_length_km'), 3),
                 'housing_units_count' => (int) $rows->sum('housing_units_count'),
             ],
         ];
@@ -259,7 +259,7 @@ class AreaProductivityReportService
                     WHEN road_facility_surveys.field_status = 'COMPLETED'
                     THEN COALESCE(road_facility_surveys.{$lengthColumn}, 0)
                     ELSE 0
-                END) * 111, 2)"
+                END), 3)"
             : '0';
 
         $query = RoadFacilitySurvey::query()
@@ -475,7 +475,7 @@ class AreaProductivityReportService
 
     private function roadLengthColumn(): ?string
     {
-        return collect(['shape__length', 'shape_length', 'Shape__Length', 'shape_leng'])
+        return collect(['Lenght_Km_2', 'lenght_km_2'])
             ->first(fn (string $column): bool => Schema::hasColumn('road_facility_surveys', $column));
     }
 

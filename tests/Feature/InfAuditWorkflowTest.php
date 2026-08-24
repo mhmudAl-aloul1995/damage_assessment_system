@@ -683,6 +683,7 @@ test('database officer can export filtered road audit summary', function (): voi
         'str_name' => 'Assigned Road',
         'assignedto' => 'road.field.one',
         'shape__length' => 0.001,
+        'Lenght_Km_2' => 1.1,
     ]);
 
     $acceptedRoad = RoadFacilitySurvey::query()->create([
@@ -695,6 +696,7 @@ test('database officer can export filtered road audit summary', function (): voi
         'str_name' => 'Accepted Road',
         'assignedto' => 'road.field.two',
         'shape__length' => 0.002,
+        'Lenght_Km_2' => 2.2,
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -707,6 +709,7 @@ test('database officer can export filtered road audit summary', function (): voi
         'str_name' => 'Outside Filter Road',
         'assignedto' => 'road.field.three',
         'shape__length' => 0.004,
+        'Lenght_Km_2' => 99.999,
     ]);
 
     RoadFacilityAuditStatus::query()->create([
@@ -757,7 +760,7 @@ test('database officer can export filtered road audit summary', function (): voi
                 'High',
                 2,
                 1,
-                333.0,
+                3300.0,
             ],
         ]);
 

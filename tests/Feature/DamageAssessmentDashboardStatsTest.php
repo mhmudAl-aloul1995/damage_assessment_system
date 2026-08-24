@@ -69,6 +69,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'creationdate' => Carbon::today()->toDateString(),
         'field_status' => 'COMPLETED',
         'shape__length' => 0.1,
+        'Lenght_Km_2' => 4.683,
         'road_damage_level' => 'severe',
         'potholes_exist' => 'yes',
         'obstacle_exist' => 'yes',
@@ -95,6 +96,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'creationdate' => Carbon::today()->toDateString(),
         'field_status' => 'Not_Completed',
         'shape__length' => 0.2,
+        'Lenght_Km_2' => 99.999,
         'road_damage_level' => 'moderate',
     ]);
 
@@ -178,7 +180,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Occupied')
         ->assertSee('Street Length')
         ->assertSee('Undamaged')
-        ->assertSee('11.10 كم')
+        ->assertSee('4.683 كم')
         ->assertSee('Bodies')
         ->assertSee('UXO')
         ->assertSee('Potholes')
