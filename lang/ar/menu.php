@@ -58,6 +58,7 @@ return [
         'public_buildings' => 'تقرير المباني العامة',
         'road_facilities' => 'تقرير الطرق',
         'export_data' => 'تصدير البيانات',
+        'public_buildings_export_data' => 'تصدير المباني العامة',
     ],
     'inf_audit' => [
         'title' => 'تدقيق البنية التحتية',

@@ -88,6 +88,13 @@ it('groups report links into sidebar categories', function () {
     expect($auditingGroup['children'])
         ->pluck('url')
         ->toContain('damage-assessment/reports/engineer-audit');
+
+    $exportsGroup = $reportsSection['items']->firstWhere('title', 'menu.reports.groups.exports');
+
+    expect($exportsGroup['children'])
+        ->pluck('url')
+        ->toContain('damage-assessment/export-data')
+        ->toContain('damage-assessment/public-buildings/export-data');
 });
 
 it('shows missing citizen identities sidebar link to auditing supervisor and project officer', function (string $roleName) {

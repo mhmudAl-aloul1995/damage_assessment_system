@@ -58,6 +58,7 @@ return [
         'public_buildings' => 'Public Buildings Report',
         'road_facilities' => 'Road Facilities Report',
         'export_data' => 'Export Data',
+        'public_buildings_export_data' => 'Export Public Buildings',
     ],
     'inf_audit' => [
         'title' => 'Inf Audit',
