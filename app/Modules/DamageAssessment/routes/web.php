@@ -150,6 +150,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/public-buildings', [PublicBuildingController::class, 'index'])->name('public-buildings.index');
     Route::get('/public-buildings/data', [PublicBuildingController::class, 'data'])->name('public-buildings.data');
+    Route::get('/public-buildings/export-data', [PublicBuildingController::class, 'exportData'])->name('public-buildings.export-data');
     Route::get('/public-buildings/export/{format}', [PublicBuildingController::class, 'export'])->name('public-buildings.export');
     Route::get('/public-buildings/{publicBuilding:globalid}', [PublicBuildingController::class, 'show'])->name('public-buildings.show');
     Route::get('/road-facilities', [RoadFacilityController::class, 'index'])->name('road-facilities.index');

@@ -214,3 +214,50 @@ it('shows the public building survey pages and datatable data with dynamic filte
 
     Carbon::setTestNow();
 });
+
+it('shows the dedicated public building export data page', function () {
+    app(PublicBuildingFilterSeeder::class)->run();
+
+    $user = User::factory()->create();
+
+    PublicBuildingSurvey::query()->create([
+        'objectid' => 901,
+        'globalid' => 'public-building-export-901',
+        'building_name' => 'Export Public Building',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'Export Engineer',
+        'building_damage_status' => 'partially_damaged',
+        'date_of_damage' => '2026-03-02',
+    ]);
+
+    $indexResponse = $this
+        ->actingAs($user)
+        ->get(route('public-buildings.index'));
+
+    $indexResponse
+        ->assertOk()
+        ->assertSee(route('public-buildings.export-data'), false)
+        ->assertSee('صفحة التصدير');
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('public-buildings.export-data'));
+
+    $response
+        ->assertOk()
+        ->assertSee('تصدير بيانات المباني العامة')
+        ->assertSee('id="publicBuildingExportForm"', false)
+        ->assertSee('name="municipalitie[]"', false)
+        ->assertSee('name="neighborhood[]"', false)
+        ->assertSee('name="assignedto[]"', false)
+        ->assertSee('name="from_date"', false)
+        ->assertSee('name="to_date"', false)
+        ->assertSee('name="filters[security][]"', false)
+        ->assertSee('data-format="xlsx"', false)
+        ->assertSee('data-format="csv"', false)
+        ->assertSee('data-format="pdf"', false)
+        ->assertSee('__FORMAT__', false)
+        ->assertSee('Sheet المباني')
+        ->assertSee('Sheet الوحدات');
+});

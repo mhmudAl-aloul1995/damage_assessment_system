@@ -29,6 +29,23 @@ class PublicBuildingController extends Controller
 
     public function index(): View
     {
+        return view('damage-assessment::surveys.public-buildings.index', $this->indexData());
+    }
+
+    public function exportData(): View
+    {
+        return view('damage-assessment::surveys.public-buildings.export-data', $this->indexData());
+    }
+
+    /**
+     * @return array{
+     *     summary: array{total_surveys: int, total_units: int, damaged_buildings: int},
+     *     filterOptions: array{municipalities: Collection, neighborhoods: Collection, researchers: Collection, min_damage_date: ?string, max_damage_date: ?string},
+     *     filterGroups: Collection
+     * }
+     */
+    private function indexData(): array
+    {
         $summary = [
             'total_surveys' => PublicBuildingSurvey::query()->count(),
             'total_units' => PublicBuildingSurvey::query()->withCount('units')->get()->sum('units_count'),
@@ -70,7 +87,7 @@ class PublicBuildingController extends Controller
             )?->format('Y-m-d'),
         ];
 
-        return view('damage-assessment::surveys.public-buildings.index', compact('summary', 'filterOptions', 'filterGroups'));
+        return compact('summary', 'filterOptions', 'filterGroups');
     }
 
     // ================= DATATABLE =================

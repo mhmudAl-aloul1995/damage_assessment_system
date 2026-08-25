@@ -95,6 +95,7 @@
                 <h3 class="fw-bold m-0">{{ __('multilingual.public_buildings_page.surveys_title') }}</h3>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="{{ route('public-buildings.export-data') }}" class="btn btn-primary">صفحة التصدير</a>
                 <button type="button" class="btn btn-light-primary public-buildings-export" data-format="xlsx">{{ __('multilingual.public_buildings_page.export_excel') }}</button>
                 <button type="button" class="btn btn-light-success public-buildings-export" data-format="csv">{{ __('multilingual.public_buildings_page.export_csv') }}</button>
                 <button type="button" class="btn btn-light-danger public-buildings-export" data-format="pdf">{{ __('multilingual.public_buildings_page.export_pdf') }}</button>
