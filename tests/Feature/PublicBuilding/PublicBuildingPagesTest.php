@@ -254,10 +254,73 @@ it('shows the dedicated public building export data page', function () {
         ->assertSee('name="from_date"', false)
         ->assertSee('name="to_date"', false)
         ->assertSee('name="filters[security][]"', false)
+        ->assertSee('name="public_building_columns[]"', false)
+        ->assertSee('name="public_building_unit_columns[]"', false)
+        ->assertSee('value="building_name"', false)
+        ->assertSee('value="unit_name"', false)
         ->assertSee('data-format="xlsx"', false)
         ->assertSee('data-format="csv"', false)
         ->assertSee('data-format="pdf"', false)
         ->assertSee('__FORMAT__', false)
         ->assertSee('Sheet المباني')
         ->assertSee('Sheet الوحدات');
+});
+
+it('exports only selected public building and unit columns', function () {
+    Carbon::setTestNow('2026-04-14 10:30:00');
+
+    $user = User::factory()->create();
+
+    $survey = PublicBuildingSurvey::query()->create([
+        'objectid' => 951,
+        'globalid' => 'public-building-selected-columns-951',
+        'building_name' => 'Selected Columns Building',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'Column Engineer',
+        'building_damage_status' => 'partially_damaged',
+        'date_of_damage' => '2026-03-02',
+    ]);
+
+    PublicBuildingSurveyUnit::query()->create([
+        'parentglobalid' => $survey->globalid,
+        'objectid' => 1951,
+        'globalid' => 'public-building-unit-selected-columns-1951',
+        'unit_name' => 'Selected Unit',
+        'damaged_area_m2' => 42.5,
+        'occupied' => 'yes',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('public-buildings.export', [
+            'format' => 'xlsx',
+            'public_building_columns' => ['objectid', 'building_name'],
+            'public_building_unit_columns' => ['building_objectid', 'unit_name', 'damaged_area_m2'],
+        ]));
+
+    $response->assertOk();
+    $response->assertHeader('content-disposition', 'attachment; filename=public_buildings_20260414_103000.xlsx');
+
+    $reader = new Reader;
+    $reader->open($response->baseResponse->getFile()->getPathname());
+
+    $xlsxRows = [];
+
+    foreach ($reader->getSheetIterator() as $sheet) {
+        $xlsxRows[$sheet->getName()] = [];
+
+        foreach ($sheet->getRowIterator() as $row) {
+            $xlsxRows[$sheet->getName()][] = $row->toArray();
+        }
+    }
+
+    $reader->close();
+
+    expect($xlsxRows['Buildings'][0])->toBe(['Object ID', 'Building Name']);
+    expect($xlsxRows['Buildings'][1])->toBe([951, 'Selected Columns Building']);
+    expect($xlsxRows['Units'][0])->toBe(['Building Object ID', 'Unit Name', 'Damaged Area M2']);
+    expect($xlsxRows['Units'][1])->toBe([951, 'Selected Unit', 42.5]);
+
+    Carbon::setTestNow();
 });

@@ -81,31 +81,30 @@
     <table>
         <thead>
             <tr>
-                <th>{{ __('multilingual.public_buildings_page.object_id') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.building_name') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.municipality') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.neighborhood') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.damage_status') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.date_of_damage') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.linked_units') }}</th>
-                <th>{{ __('multilingual.public_buildings_page.researcher') }}</th>
+                @foreach ($columns as $label)
+                    <th>{{ $label }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse ($surveys as $survey)
                 <tr>
-                    <td>{{ $survey->objectid }}</td>
-                    <td>{{ $survey->building_name }}</td>
-                    <td>{{ $survey->municipalitie }}</td>
-                    <td>{{ $survey->neighborhood }}</td>
-                    <td>{{ $survey->building_damage_status }}</td>
-                    <td>{{ $survey->date_of_damage?->format('Y-m-d') }}</td>
-                    <td>{{ $survey->units_count }}</td>
-                    <td>{{ $survey->assignedto }}</td>
+                    @foreach (array_keys($columns) as $column)
+                        <td>
+                            @switch($column)
+                                @case('date_of_damage')
+                                    {{ $survey->date_of_damage?->format('Y-m-d') }}
+                                    @break
+
+                                @default
+                                    {{ $survey->{$column} }}
+                            @endswitch
+                        </td>
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8">{{ __('multilingual.public_buildings_page.no_surveys') }}</td>
+                    <td colspan="{{ count($columns) }}">{{ __('multilingual.public_buildings_page.no_surveys') }}</td>
                 </tr>
             @endforelse
         </tbody>

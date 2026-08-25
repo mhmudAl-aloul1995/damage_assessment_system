@@ -6,6 +6,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\PublicBuildings;
 
 use App\Exports\PublicBuildingSurveysExport;
 use App\Exports\PublicBuildingSurveysWorkbookExport;
+use App\Exports\PublicBuildingSurveyUnitsExport;
 use App\Http\Controllers\Controller;
 use App\Models\PublicBuildingFilter;
 use App\Models\PublicBuildingSurvey;
@@ -41,7 +42,8 @@ class PublicBuildingController extends Controller
      * @return array{
      *     summary: array{total_surveys: int, total_units: int, damaged_buildings: int},
      *     filterOptions: array{municipalities: Collection, neighborhoods: Collection, researchers: Collection, min_damage_date: ?string, max_damage_date: ?string},
-     *     filterGroups: Collection
+     *     filterGroups: Collection,
+     *     exportColumns: array{buildings: array<string, string>, units: array<string, string>}
      * }
      */
     private function indexData(): array
@@ -87,7 +89,12 @@ class PublicBuildingController extends Controller
             )?->format('Y-m-d'),
         ];
 
-        return compact('summary', 'filterOptions', 'filterGroups');
+        $exportColumns = [
+            'buildings' => PublicBuildingSurveysExport::availableColumns(),
+            'units' => PublicBuildingSurveyUnitsExport::availableColumns(),
+        ];
+
+        return compact('summary', 'filterOptions', 'filterGroups', 'exportColumns');
     }
 
     // ================= DATATABLE =================
@@ -119,11 +126,14 @@ class PublicBuildingController extends Controller
 
         $surveys = $this->filteredQuery($request)->get();
         $fileBaseName = 'public_buildings_'.now()->format('Ymd_His');
+        $buildingColumns = $this->selectedExportColumns($request, 'public_building_columns', PublicBuildingSurveysExport::availableColumns());
+        $unitColumns = $this->selectedExportColumns($request, 'public_building_unit_columns', PublicBuildingSurveyUnitsExport::availableColumns());
 
         if ($format === 'pdf') {
             return Pdf::loadView('damage-assessment::surveys.public-buildings.export_pdf', [
                 'surveys' => $surveys,
                 'filters' => $request->all(),
+                'columns' => array_intersect_key(PublicBuildingSurveysExport::availableColumns(), array_flip($buildingColumns)),
             ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
         }
 
@@ -133,8 +143,8 @@ class PublicBuildingController extends Controller
 
         return Excel::download(
             $format === 'xlsx'
-                ? new PublicBuildingSurveysWorkbookExport($surveys)
-                : new PublicBuildingSurveysExport($surveys),
+                ? new PublicBuildingSurveysWorkbookExport($surveys, $buildingColumns, $unitColumns)
+                : new PublicBuildingSurveysExport($surveys, $buildingColumns),
             $fileBaseName.'.'.$format,
             $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,
         );
@@ -343,6 +353,20 @@ class PublicBuildingController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $availableColumns
+     * @return array<int, string>
+     */
+    private function selectedExportColumns(Request $request, string $key, array $availableColumns): array
+    {
+        $selectedColumns = array_values(array_intersect(
+            $this->normalizeValues($request->input($key)),
+            array_keys($availableColumns),
+        ));
+
+        return $selectedColumns !== [] ? $selectedColumns : array_keys($availableColumns);
     }
 
     /**

@@ -86,6 +86,20 @@
             background: #fff;
         }
 
+        .public-building-export-column-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .75rem;
+        }
+
+        .public-building-export-column-grid .form-check {
+            min-height: 56px;
+            margin: 0;
+            border: 1px solid var(--bs-gray-200);
+            border-radius: .55rem;
+            background: var(--bs-gray-100);
+        }
+
         @media (max-width: 991.98px) {
             .public-building-export-hero,
             .public-building-export-bar,
@@ -99,6 +113,10 @@
             }
 
             .public-building-export-format {
+                grid-template-columns: 1fr;
+            }
+
+            .public-building-export-column-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -248,18 +266,30 @@
             <div class="public-building-export-section">
                 <div class="public-building-export-section-header">
                     <div>
-                        <h3 class="fw-bold mb-1">محتوى الملف</h3>
-                        <div class="text-muted fs-7">الأعمدة الحالية للتصدير العام للمباني العامة.</div>
+                        <h3 class="fw-bold mb-1">اختيار الحقول</h3>
+                        <div class="text-muted fs-7">حدد الأعمدة التي تريد ظهورها في ملف التصدير.</div>
                     </div>
                 </div>
                 <div class="public-building-export-section-body">
                     <div class="row g-5">
                         <div class="col-lg-6">
                             <div class="public-building-export-field-card">
-                                <h4 class="fw-bold mb-4">Sheet المباني</h4>
-                                <div class="d-flex flex-wrap gap-2">
-                                    @foreach (['Object ID', 'Building Name', 'Municipality', 'Neighborhood', 'Damage Status', 'Date Of Damage', 'Linked Units', 'Researcher'] as $column)
-                                        <span class="badge badge-light-primary">{{ $column }}</span>
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                                    <h4 class="fw-bold mb-0">Sheet المباني</h4>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-light-primary" data-toggle-public-building-columns="public_building_columns[]" data-checked="1">تحديد الكل</button>
+                                        <button type="button" class="btn btn-sm btn-light" data-toggle-public-building-columns="public_building_columns[]" data-checked="0">إلغاء الكل</button>
+                                    </div>
+                                </div>
+                                <div class="public-building-export-column-grid">
+                                    @foreach ($exportColumns['buildings'] as $column => $label)
+                                        <label class="form-check form-check-custom form-check-solid p-3">
+                                            <input class="form-check-input" type="checkbox" name="public_building_columns[]" value="{{ $column }}" checked>
+                                            <span class="form-check-label ms-3">
+                                                <strong class="d-block">{{ $label }}</strong>
+                                                <small class="text-muted">{{ $column }}</small>
+                                            </span>
+                                        </label>
                                     @endforeach
                                 </div>
                             </div>
@@ -267,10 +297,22 @@
 
                         <div class="col-lg-6">
                             <div class="public-building-export-field-card">
-                                <h4 class="fw-bold mb-4">Sheet الوحدات</h4>
-                                <div class="d-flex flex-wrap gap-2">
-                                    @foreach (['Building Object ID', 'Building Global ID', 'Building Name', 'Unit Object ID', 'Unit Global ID', 'Parent Global ID', 'Repeat Index', 'Unit Name', 'Floor Number', 'Damaged Area M2', 'Occupied', 'Final Comments'] as $column)
-                                        <span class="badge badge-light-success">{{ $column }}</span>
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                                    <h4 class="fw-bold mb-0">Sheet الوحدات</h4>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-light-success" data-toggle-public-building-columns="public_building_unit_columns[]" data-checked="1">تحديد الكل</button>
+                                        <button type="button" class="btn btn-sm btn-light" data-toggle-public-building-columns="public_building_unit_columns[]" data-checked="0">إلغاء الكل</button>
+                                    </div>
+                                </div>
+                                <div class="public-building-export-column-grid">
+                                    @foreach ($exportColumns['units'] as $column => $label)
+                                        <label class="form-check form-check-custom form-check-solid p-3">
+                                            <input class="form-check-input" type="checkbox" name="public_building_unit_columns[]" value="{{ $column }}" checked>
+                                            <span class="form-check-label ms-3">
+                                                <strong class="d-block">{{ $label }}</strong>
+                                                <small class="text-muted">{{ $column }}</small>
+                                            </span>
+                                        </label>
                                     @endforeach
                                 </div>
                             </div>
@@ -338,6 +380,14 @@
                     appendField(query, name, values);
                 });
 
+                $('input[name="public_building_columns[]"]:checked').each(function () {
+                    query.append('public_building_columns[]', this.value);
+                });
+
+                $('input[name="public_building_unit_columns[]"]:checked').each(function () {
+                    query.append('public_building_unit_columns[]', this.value);
+                });
+
                 return query;
             };
 
@@ -352,6 +402,14 @@
             $('#resetPublicBuildingExportFilters').on('click', function () {
                 $('#publicBuildingExportForm').find('input[type="text"], input[type="date"]').val('');
                 $('.public-building-export-select2').val(null).trigger('change');
+                $('input[name="public_building_columns[]"], input[name="public_building_unit_columns[]"]').prop('checked', true);
+            });
+
+            $('[data-toggle-public-building-columns]').on('click', function () {
+                const inputName = $(this).data('toggle-public-building-columns');
+                const checked = String($(this).data('checked')) === '1';
+
+                $('input[name="' + inputName + '"]').prop('checked', checked);
             });
         });
     </script>
