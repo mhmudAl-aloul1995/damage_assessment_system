@@ -122,3 +122,78 @@ it('reports source target differences without applying changes by default', func
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'addFeatures')
         || str_contains($request->url(), 'deleteFeatures'));
 });
+
+it('syncs existing target objectid values from old object ids when requested', function (): void {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'OBJECTID',
+            'fields' => [
+                ['name' => 'OBJECTID'],
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => function ($request) {
+            if ((int) ($request['resultOffset'] ?? 0) > 0) {
+                return Http::response(['features' => []]);
+            }
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => ['objectid' => 123]],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if ((int) ($request['resultOffset'] ?? 0) > 0) {
+                return Http::response(['features' => []]);
+            }
+
+            if ($request['outFields'] === 'OBJECTID,objectid,old_objectid_B') {
+                return Http::response([
+                    'features' => [
+                        ['attributes' => ['OBJECTID' => 9001, 'objectid' => 9001, 'old_objectid_B' => 123]],
+                    ],
+                ]);
+            }
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => ['objectid' => 9001, 'old_objectid_B' => 123]],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features)->toBe([
+                [
+                    'attributes' => [
+                        'OBJECTID' => 9001,
+                        'objectid' => 123,
+                    ],
+                ],
+            ]);
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9001],
+                ],
+            ]);
+        },
+    ]);
+
+    $exitCode = Artisan::call('arcgis:reconcile-target', [
+        '--only' => 'buildings',
+        '--sync-objectids' => true,
+        '--run' => true,
+        '--skip-cache-refresh' => true,
+        '--without-attachments' => true,
+    ]);
+
+    expect($exitCode)->toBe(0)
+        ->and(Artisan::output())->toContain('Updated buildings objectid values: 1');
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures');
+});

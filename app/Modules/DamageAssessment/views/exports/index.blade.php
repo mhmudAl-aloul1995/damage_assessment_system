@@ -2,6 +2,123 @@
 
 @section('content')
 	<style>
+		.export-data-page {
+			max-width: 1680px;
+			margin-inline: auto;
+		}
+
+		.export-page-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			margin-bottom: 1.5rem;
+			padding: 1.5rem;
+			border: 1px solid var(--bs-gray-200);
+			border-radius: .75rem;
+			background: #fff;
+			box-shadow: 0 8px 22px rgba(15, 23, 42, .05);
+		}
+
+		.export-page-kicker {
+			display: inline-flex;
+			align-items: center;
+			gap: .45rem;
+			margin-bottom: .45rem;
+			color: var(--bs-primary);
+			font-size: .78rem;
+			font-weight: 700;
+		}
+
+		.export-action-bar {
+			position: sticky;
+			top: 78px;
+			z-index: 7;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			margin-bottom: 1.25rem;
+			padding: 1rem;
+			border: 1px solid var(--bs-gray-200);
+			border-radius: .75rem;
+			background: rgba(255, 255, 255, .96);
+			box-shadow: 0 10px 25px rgba(15, 23, 42, .06);
+			backdrop-filter: blur(8px);
+		}
+
+		.export-section {
+			margin-bottom: 1.25rem;
+			border: 1px solid var(--bs-gray-200);
+			border-radius: .75rem;
+			background: #fff;
+			box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+		}
+
+		.export-section-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+			padding: 1rem 1.25rem;
+			border-bottom: 1px solid var(--bs-gray-200);
+		}
+
+		.export-section-body {
+			padding: 1.25rem;
+		}
+
+		.export-option-panel {
+			height: 100%;
+			padding: 1rem;
+			border: 1px solid var(--bs-gray-200);
+			border-radius: .65rem;
+			background: var(--bs-gray-100);
+		}
+
+		.export-radio-group {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: .75rem;
+		}
+
+		.export-radio-group.export-radio-group-two {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.export-radio-group .btn {
+			min-height: 46px;
+			white-space: normal;
+		}
+
+		.export-column-card {
+			border: 1px solid var(--bs-gray-200);
+			border-radius: .75rem;
+			background: #fff;
+			box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
+		}
+
+		.export-column-card .column-list-scroll {
+			max-height: 680px;
+			overflow: auto;
+			padding-inline-end: .25rem;
+		}
+
+		.export-column-card .form-check {
+			min-height: 74px;
+			transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+		}
+
+		.export-column-card .form-check:hover {
+			border-color: var(--bs-primary);
+			background: var(--bs-primary-light);
+			box-shadow: 0 6px 14px rgba(62, 151, 255, .08);
+		}
+
+		.export-column-card .form-check-label strong {
+			line-height: 1.45;
+		}
+
 		.card-toolbar .dropdown-menu .dropdown-item {
 			font-size: 13px;
 			padding: 0.65rem 1rem;
@@ -15,14 +132,91 @@
 		.container-loader {
 			display: none !important
 		}
+
+		@media (max-width: 991.98px) {
+			.export-page-header,
+			.export-action-bar,
+			.export-section-header {
+				align-items: stretch;
+				flex-direction: column;
+			}
+
+			.export-action-bar {
+				position: static;
+			}
+
+			.export-radio-group,
+			.export-radio-group.export-radio-group-two {
+				grid-template-columns: 1fr;
+			}
+		}
 	</style>
 
 
-	<div class="container py-4">
-		<div id="exportResult" class="mt-4"></div>
-		<div class="card shadow-sm">
-			<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-				<h3 class="mb-0">{{ __('ui.exports.title') }}</h3>
+	<div class="export-data-page py-4">
+		<div class="export-page-header">
+			<div>
+				<div class="export-page-kicker">
+					<i class="ki-duotone ki-file-down fs-4">
+						<span class="path1"></span>
+						<span class="path2"></span>
+					</i>
+					{{ __('ui.exports.export') }}
+				</div>
+				<h2 class="fw-bold text-gray-900 mb-1">{{ __('ui.exports.title') }}</h2>
+				<div class="text-muted fw-semibold">اختر مصدر البيانات، اضبط الفلاتر، ثم حدد الأعمدة المطلوبة للتصدير.</div>
+			</div>
+
+			<div class="d-flex align-items-center flex-wrap gap-2">
+				<span class="badge badge-light-primary">
+					{{ __('ui.exports.building_table_fields') }}: {{ count($buildingColumns) }}
+				</span>
+				<span class="badge badge-light-success">
+					{{ __('ui.exports.housing_table_fields') }}: {{ count($housingColumns) }}
+				</span>
+				<span class="badge badge-light-info">
+					{{ __('ui.exports.filters') }}: {{ count($filters) }}
+				</span>
+			</div>
+		</div>
+
+		<div id="exportResult" class="mb-4"></div>
+
+		@if(session('error'))
+			<div class="alert alert-danger">
+				{{ session('error') }}
+			</div>
+		@endif
+
+		<div id="objectIdsFilterSummary"
+			class="alert alert-info flex-column flex-md-row align-items-md-center justify-content-between gap-3 {{ empty($importedObjectIds) ? 'd-none' : 'd-flex' }}">
+			<div>
+				<strong>{{ __('ui.exports.objectid_import_active') }}</strong>
+				<div class="text-muted fs-7 mt-1" id="objectIdsFilterSummaryText">
+					{{ __('ui.exports.objectid_import_active_count', ['count' => count($importedObjectIds)]) }}
+					{{ __('ui.exports.objectid_import_active_target', ['target' => __('ui.exports.objectid_target_' . $importedObjectIdTarget)]) }}
+				</div>
+			</div>
+			<div class="d-flex flex-wrap gap-2" id="objectIdsFilterBadges">
+				@foreach(array_slice($importedObjectIds, 0, 8) as $objectId)
+					<span class="badge badge-light-primary">{{ $objectId }}</span>
+				@endforeach
+				@if(count($importedObjectIds) > 8)
+					<span class="badge badge-light">+{{ count($importedObjectIds) - 8 }}</span>
+				@endif
+			</div>
+		</div>
+
+		<form id="exportForm" method="POST">
+			@csrf
+			<div id="importedObjectIdsInputs">
+				<input type="hidden" name="imported_object_ids_json" value='@json($importedObjectIds)'>
+				@if(!empty($importedObjectIds))
+					<input type="hidden" name="imported_object_id_target" value="{{ $importedObjectIdTarget }}">
+				@endif
+			</div>
+
+			<div class="export-action-bar">
 				<div class="d-flex align-items-center flex-wrap gap-2">
 					<button type="button" class="btn btn-sm btn-light-primary" data-bs-toggle="modal"
 						data-bs-target="#importObjectIdsModal">
@@ -43,47 +237,68 @@
 					</button>
 				</div>
 
+				<div class="d-flex align-items-center justify-content-end flex-wrap gap-2">
+					<button type="button" class="btn btn-sm btn-light-info d-flex align-items-center gap-2"
+						id="selectedColumnsStatusBtn">
+						<i class="ki-duotone ki-check-square fs-5">
+							<span class="path1"></span>
+							<span class="path2"></span>
+						</i>
+						<span>الأعمدة المختارة</span>
+						<span class="badge badge-primary" id="selectedColumnsCount">0</span>
+					</button>
+
+					<div class="dropdown">
+						<button type="button"
+							class="btn btn-primary btn-sm dropdown-toggle d-flex align-items-center gap-1"
+							data-bs-toggle="dropdown" aria-expanded="false">
+
+							<i class="ki-duotone ki-exit-down fs-5">
+								<span class="path1"></span>
+								<span class="path2"></span>
+							</i>
+							{{ __('ui.exports.export') }}
+						</button>
+
+						<div class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+							<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
+								data-type="excel">
+								<i class="ki-duotone ki-file-down fs-4 text-success">
+									<span class="path1"></span>
+									<span class="path2"></span>
+								</i>
+								<span>Excel (.xlsx)</span>
+							</button>
+
+							<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
+								data-type="pdf">
+								<i class="ki-duotone ki-file-down fs-4 text-danger">
+									<span class="path1"></span>
+									<span class="path2"></span>
+								</i>
+								<span>PDF (.pdf)</span>
+							</button>
+
+							<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
+								data-type="zip">
+								<i class="ki-duotone ki-folder-down fs-4 text-warning">
+									<span class="path1"></span>
+									<span class="path2"></span>
+								</i>
+								<span>ZIP مرفقات</span>
+							</button>
+						</div>
+					</div>
+				</div>
 			</div>
 
-			<div class="card-body">
-				@if(session('error'))
-					<div class="alert alert-danger">
-						{{ session('error') }}
-					</div>
-				@endif
-
-					<div id="objectIdsFilterSummary"
-						class="alert alert-info flex-column flex-md-row align-items-md-center justify-content-between gap-3 {{ empty($importedObjectIds) ? 'd-none' : 'd-flex' }}">
-						<div>
-							<strong>{{ __('ui.exports.objectid_import_active') }}</strong>
-							<div class="text-muted fs-7 mt-1" id="objectIdsFilterSummaryText">
-								{{ __('ui.exports.objectid_import_active_count', ['count' => count($importedObjectIds)]) }}
-								{{ __('ui.exports.objectid_import_active_target', ['target' => __('ui.exports.objectid_target_' . $importedObjectIdTarget)]) }}
-							</div>
-						</div>
-						<div class="d-flex flex-wrap gap-2" id="objectIdsFilterBadges">
-							@foreach(array_slice($importedObjectIds, 0, 8) as $objectId)
-								<span class="badge badge-light-primary">{{ $objectId }}</span>
-							@endforeach
-							@if(count($importedObjectIds) > 8)
-								<span class="badge badge-light">+{{ count($importedObjectIds) - 8 }}</span>
-							@endif
-						</div>
-					</div>
-
-				<form id="exportForm" method="POST">
-					@csrf
-					<div id="importedObjectIdsInputs">
-						<input type="hidden" name="imported_object_ids_json" value='@json($importedObjectIds)'>
-						@if(!empty($importedObjectIds))
-							<input type="hidden" name="imported_object_id_target" value="{{ $importedObjectIdTarget }}">
-						@endif
-					</div>
-
 					{{-- FILTERS --}}
-					<div class="card card-bordered mb-5">
-						<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-							<h3 class="card-title mb-0">{{ __('ui.exports.filters') }}</h3>
+					<div class="export-section">
+						<div class="export-section-header">
+							<div>
+								<h3 class="fw-bold mb-1">{{ __('ui.exports.filters') }}</h3>
+								<div class="text-muted fs-7">استخدم البحث لتقليل القائمة، ثم اختر القيم المطلوبة فقط.</div>
+							</div>
 
 							<div class="d-flex gap-2">
 								<button class="btn btn-sm btn-light-primary" type="button" data-bs-toggle="collapse"
@@ -97,62 +312,12 @@
 									<i class="fas fa-times me-1"></i>
 									{{ __('ui.exports.clear_filters') }}
 								</button>
-
-								<button type="button" class="btn btn-sm btn-light-info d-flex align-items-center gap-2"
-									id="selectedColumnsStatusBtn">
-									<i class="ki-duotone ki-check-square fs-5">
-										<span class="path1"></span>
-										<span class="path2"></span>
-									</i>
-									<span>الأعمدة المختارة</span>
-									<span class="badge badge-primary" id="selectedColumnsCount">0</span>
-								</button>
-
-								<button type="button"
-									class="btn btn-light-primary btn-sm dropdown-toggle d-flex align-items-center gap-1"
-									data-bs-toggle="dropdown" aria-expanded="false">
-
-									<i class="ki-duotone ki-exit-down fs-5">
-										<span class="path1"></span>
-										<span class="path2"></span>
-									</i>
-									{{ __('ui.exports.export') }}
-								</button>
-
-								<div class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
-										data-type="excel">
-										<i class="ki-duotone ki-file-down fs-4 text-success">
-											<span class="path1"></span>
-											<span class="path2"></span>
-										</i>
-										<span>Excel (.xlsx)</span>
-									</button>
-
-									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
-										data-type="pdf">
-										<i class="ki-duotone ki-file-down fs-4 text-danger">
-											<span class="path1"></span>
-											<span class="path2"></span>
-										</i>
-										<span>PDF (.pdf)</span>
-									</button>
-
-									<button class="dropdown-item d-flex align-items-center gap-2 export-btn" type="button"
-										data-type="zip">
-										<i class="ki-duotone ki-folder-down fs-4 text-warning">
-											<span class="path1"></span>
-											<span class="path2"></span>
-										</i>
-										<span>ZIP مرفقات</span>
-									</button>
-								</div>
 							</div>
 
 						</div>
 
 						<div class="collapse" id="filtersCollapse">
-							<div class="card-body">
+							<div class="export-section-body">
 
 								<div class="mb-5">
 									<div class="input-group">
@@ -233,47 +398,59 @@
 						</div>
 					</div>
 
-					<div class="card card-bordered mb-5">
-						<div class="card-header">
-							<h3 class="card-title mb-0">نوع التصدير</h3>
+					<div class="export-section">
+						<div class="export-section-header">
+							<div>
+								<h3 class="fw-bold mb-1">إعدادات التصدير</h3>
+								<div class="text-muted fs-7">حدد نوع الملف ومصدر البيانات وخيارات التدقيق أو المرفقات.</div>
+							</div>
 						</div>
 
-						<div class="card-body">
-							<div class="mb-6">
-								<label class="form-label fw-bold d-block mb-3">مصدر بيانات التصدير</label>
-								<div class="btn-group w-100" role="group" aria-label="مصدر بيانات التصدير">
-									<input type="radio" class="btn-check" name="export_source" id="exportSourceBase"
-										value="base" autocomplete="off" @checked(($defaultExportSource ?? 'base') === 'base')>
-									<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportSourceBase">
-										الاستبيان الأساسي
-									</label>
+						<div class="export-section-body">
+							<div class="row g-5 mb-6">
+								<div class="col-xl-6">
+									<div class="export-option-panel">
+										<label class="form-label fw-bold d-block mb-3">مصدر بيانات التصدير</label>
+										<div class="export-radio-group export-radio-group-two" role="group" aria-label="مصدر بيانات التصدير">
+											<input type="radio" class="btn-check" name="export_source" id="exportSourceBase"
+												value="base" autocomplete="off" @checked(($defaultExportSource ?? 'base') === 'base')>
+											<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportSourceBase">
+												الاستبيان الأساسي
+											</label>
 
-									<input type="radio" class="btn-check" name="export_source" id="exportSourceAudited"
-										value="audited" autocomplete="off" @checked(($defaultExportSource ?? 'base') === 'audited')>
-									<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportSourceAudited">
-										الاستبيان المدقق
-									</label>
+											<input type="radio" class="btn-check" name="export_source" id="exportSourceAudited"
+												value="audited" autocomplete="off" @checked(($defaultExportSource ?? 'base') === 'audited')>
+											<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportSourceAudited">
+												الاستبيان المدقق
+											</label>
+										</div>
+									</div>
 								</div>
-							</div>
 
-							<div class="btn-group w-100 mb-6" role="group" aria-label="نوع التصدير">
-								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeData"
-									value="data" autocomplete="off" checked>
-								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeData">
-									بيانات فقط
-								</label>
+								<div class="col-xl-6">
+									<div class="export-option-panel">
+										<label class="form-label fw-bold d-block mb-3">نوع التصدير</label>
+										<div class="export-radio-group" role="group" aria-label="نوع التصدير">
+											<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeData"
+												value="data" autocomplete="off" checked>
+											<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeData">
+												بيانات فقط
+											</label>
 
-								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeAttachments"
-									value="attachments" autocomplete="off">
-								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeAttachments">
-									مرفقات فقط
-								</label>
+											<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeAttachments"
+												value="attachments" autocomplete="off">
+											<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeAttachments">
+												مرفقات فقط
+											</label>
 
-								<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeDataAttachments"
-									value="data_with_attachments" autocomplete="off">
-								<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeDataAttachments">
-									بيانات + مرفقات
-								</label>
+											<input type="radio" class="btn-check export-mode-option" name="export_mode" id="exportModeDataAttachments"
+												value="data_with_attachments" autocomplete="off">
+											<label class="btn btn-outline btn-outline-dashed btn-active-light-primary" for="exportModeDataAttachments">
+												بيانات + مرفقات
+											</label>
+										</div>
+									</div>
+								</div>
 							</div>
 
 							<div class="border rounded p-4 mb-6 bg-light-primary">
@@ -666,12 +843,19 @@
 
 						{{-- BUILDING --}}
 						<div class="col-lg-6 mb-4">
-							<div class="card card-bordered h-100">
-								<div class="card-header">
-									<h4>{{ __('ui.exports.building_table_fields') }}</h4>
+							<div class="export-column-card h-100">
+								<div class="export-section-header">
+									<div>
+										<h4 class="fw-bold mb-1">{{ __('ui.exports.building_table_fields') }}</h4>
+										<div class="text-muted fs-7">
+											{{ __('ui.exports.total_results') }}
+											<span id="buildingCounter">{{ count($buildingColumns) }}</span>
+											/ {{ count($buildingColumns) }}
+										</div>
+									</div>
 								</div>
 
-								<div class="card-body">
+								<div class="export-section-body">
 									<div class="mb-4">
 										<div class="d-flex gap-2 flex-wrap mb-3">
 
@@ -700,15 +884,9 @@
 												{{ __('ui.exports.clear') }}
 											</button>
 										</div>
-
-										<div class="text-muted fs-7 mt-2">
-											{{ __('ui.exports.total_results') }}
-											<span id="buildingCounter">{{ count($buildingColumns) }}</span>
-											/ {{ count($buildingColumns) }}
-										</div>
 									</div>
 
-									<div id="buildingColumnsList">
+									<div id="buildingColumnsList" class="column-list-scroll">
 										@foreach($groupedBuilding as $group => $columns)
 											<div class="mb-5 column-group">
 												<div
@@ -756,12 +934,19 @@
 
 						{{-- HOUSING --}}
 						<div class="col-lg-6 mb-4">
-							<div class="card card-bordered h-100">
-								<div class="card-header">
-									<h4>{{ __('ui.exports.housing_table_fields') }}</h4>
+							<div class="export-column-card h-100">
+								<div class="export-section-header">
+									<div>
+										<h4 class="fw-bold mb-1">{{ __('ui.exports.housing_table_fields') }}</h4>
+										<div class="text-muted fs-7">
+											{{ __('ui.exports.total_results') }}
+											<span id="housingCounter">{{ count($housingColumns) }}</span>
+											/ {{ count($housingColumns) }}
+										</div>
+									</div>
 								</div>
 
-								<div class="card-body">
+								<div class="export-section-body">
 
 
 									<div class="mb-4">
@@ -792,15 +977,9 @@
 												{{ __('ui.exports.clear') }}
 											</button>
 										</div>
-
-										<div class="text-muted fs-7 mt-2">
-											{{ __('ui.exports.total_results') }}
-											<span id="housingCounter">{{ count($housingColumns) }}</span>
-											/ {{ count($housingColumns) }}
-										</div>
 									</div>
 
-									<div id="housingColumnsList">
+									<div id="housingColumnsList" class="column-list-scroll">
 										@foreach($groupedHousing as $group => $columns)
 											<div class="mb-5 column-group">
 												<div
@@ -847,10 +1026,7 @@
 						</div>
 					</div>
 
-			</div>
-			</form>
-		</div>
-	</div>
+		</form>
 	</div>
 
 	<div class="modal fade" id="importObjectIdsModal" tabindex="-1" aria-hidden="true">

@@ -1496,6 +1496,64 @@ it('moves comments recommendations into the v1 field before uploading', function
     $this->artisan('arcgis:upload-audited')->assertSuccessful();
 });
 
+it('keeps target object id while replacing target objectid attribute with the old source objectid', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+    config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+    config()->set('services.arcgis.source_buildings_layer', 10);
+    config()->set('services.arcgis.source_units_layer', 11);
+
+    DB::table('audited_buildings')->insert([
+        'objectid' => 1234,
+        'globalid' => 'building-with-target-objectid-field',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'OBJECTID',
+            'fields' => [
+                ['name' => 'OBJECTID'],
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'is_audited'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['OBJECTID' => 9100]],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features[0]['attributes'])->toMatchArray([
+                'OBJECTID' => 9100,
+                'objectid' => 1234,
+                'old_objectid_B' => 1234,
+                'old_global_id_B' => 'building-with-target-objectid-field',
+                'is_audited' => 1,
+            ]);
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9100],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/9100/attachments*' => Http::response(['attachmentInfos' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/1234/attachments?*' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+});
+
 it('can upload features without copying attachments', function () {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

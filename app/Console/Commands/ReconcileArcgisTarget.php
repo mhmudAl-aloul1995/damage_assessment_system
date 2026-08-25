@@ -15,6 +15,7 @@ class ReconcileArcgisTarget extends Command
     protected $signature = 'arcgis:reconcile-target
         {--run : Apply changes. Without this option the command only reports what would happen.}
         {--delete-extra : With --run, delete target rows whose old object id no longer exists in source.}
+        {--sync-objectids : Copy old object id values into the target objectid attribute for existing target rows.}
         {--only= : Reconcile only buildings or units.}
         {--skip-cache-refresh : Do not rebuild audited cache tables before uploading missing rows.}
         {--without-attachments : Upload missing features without copying attachments.}
@@ -28,6 +29,7 @@ class ReconcileArcgisTarget extends Command
     ): int {
         $applyChanges = (bool) $this->option('run');
         $deleteExtra = (bool) $this->option('delete-extra');
+        $syncObjectIds = (bool) $this->option('sync-objectids');
         $only = $this->option('only');
 
         if (! in_array($only, [null, '', 'buildings', 'units'], true)) {
@@ -38,6 +40,7 @@ class ReconcileArcgisTarget extends Command
 
         $this->line('Mode: '.($applyChanges ? 'RUN' : 'DRY-RUN'));
         $this->line('Delete extra target rows: '.($applyChanges && $deleteExtra ? 'yes' : 'no'));
+        $this->line('Sync target objectid values: '.($syncObjectIds ? 'yes' : 'no'));
 
         $token = $this->generateToken();
         $jobs = $this->jobs($only);
@@ -64,6 +67,7 @@ class ReconcileArcgisTarget extends Command
                 'target' => count($targetRows),
                 'missing' => count($missing),
                 'extra' => count($extraRows),
+                'objectids_to_sync' => $syncObjectIds ? $this->targetObjectIdBackfillCount($job, $token) : 0,
                 'available_for_upload' => $available,
             ];
 
@@ -85,10 +89,20 @@ class ReconcileArcgisTarget extends Command
         }
 
         if (! $applyChanges) {
-            $this->warn('Dry-run only. Re-run with --run to upload missing records.');
+            $this->warn('Dry-run only. Re-run with --run to apply the reported changes.');
             $this->warn('Add --delete-extra with --run only when you also want to remove target extras.');
 
             return self::SUCCESS;
+        }
+
+        if ($syncObjectIds) {
+            foreach ($jobs as $job) {
+                $this->newLine();
+                $this->info('Syncing target objectid values for '.$job['name'].'...');
+                $synced = $this->syncTargetObjectIds($job, $token);
+                $this->line('Updated '.$job['name'].' objectid values: '.$synced);
+                $summary[$job['name']]['objectids_synced'] = $synced;
+            }
         }
 
         if (! (bool) $this->option('skip-cache-refresh')) {
@@ -200,6 +214,148 @@ class ReconcileArcgisTarget extends Command
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
+     */
+    private function targetObjectIdBackfillCount(array $job, string $token): int
+    {
+        $targetFields = $this->targetObjectIdFields($job, $token);
+
+        if ($targetFields === null) {
+            return 0;
+        }
+
+        $count = 0;
+
+        foreach ($this->targetObjectIdBackfillRows($job, $token, $targetFields) as $row) {
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
+     */
+    private function syncTargetObjectIds(array $job, string $token): int
+    {
+        $targetFields = $this->targetObjectIdFields($job, $token);
+
+        if ($targetFields === null) {
+            $this->warn('Skipping '.$job['name'].': target layer does not have a writable objectid field separate from the ArcGIS ObjectID field.');
+
+            return 0;
+        }
+
+        $updated = 0;
+
+        foreach (array_chunk(iterator_to_array($this->targetObjectIdBackfillRows($job, $token, $targetFields)), 200) as $chunk) {
+            $features = array_map(fn (array $row): array => [
+                'attributes' => [
+                    $targetFields['object_id_field'] => $row['target_object_id'],
+                    $targetFields['data_objectid_field'] => $row['old_object_id'],
+                ],
+            ], $chunk);
+
+            $response = $this->http()
+                ->asForm()
+                ->post($this->targetLayerUrl($job['target_layer']).'/updateFeatures', [
+                    'f' => 'json',
+                    'token' => $token,
+                    'features' => json_encode($features, JSON_THROW_ON_ERROR),
+                ]);
+
+            $data = $response->json();
+            $this->throwIfArcgisError($data, 'ArcGIS objectid sync failed for '.$job['name']);
+
+            if (! $response->successful()) {
+                throw new RuntimeException('ArcGIS objectid sync failed: '.$response->body());
+            }
+
+            foreach (($data['updateResults'] ?? []) as $result) {
+                if (($result['success'] ?? false) === true) {
+                    $updated++;
+                }
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
+     * @param  array{object_id_field: string, data_objectid_field: string}  $targetFields
+     * @return iterable<int, array{target_object_id: int, old_object_id: int|string}>
+     */
+    private function targetObjectIdBackfillRows(array $job, string $token, array $targetFields): iterable
+    {
+        $outFields = implode(',', [
+            $targetFields['object_id_field'],
+            $targetFields['data_objectid_field'],
+            $job['old_field'],
+        ]);
+
+        foreach ($this->queryLayerRows($this->targetLayerUrl($job['target_layer']), $outFields, $token, $targetFields['object_id_field'].' ASC') as $attributes) {
+            $targetObjectId = $attributes[$targetFields['object_id_field']] ?? null;
+            $currentObjectId = $attributes[$targetFields['data_objectid_field']] ?? null;
+            $oldObjectId = $attributes[$job['old_field']] ?? null;
+
+            if (! is_numeric($targetObjectId) || $oldObjectId === null || $oldObjectId === '') {
+                continue;
+            }
+
+            if ((string) $currentObjectId === (string) $oldObjectId) {
+                continue;
+            }
+
+            yield [
+                'target_object_id' => (int) $targetObjectId,
+                'old_object_id' => is_numeric($oldObjectId) ? (int) $oldObjectId : $oldObjectId,
+            ];
+        }
+    }
+
+    /**
+     * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
+     * @return array{object_id_field: string, data_objectid_field: string}|null
+     */
+    private function targetObjectIdFields(array $job, string $token): ?array
+    {
+        $response = $this->http()->get($this->targetLayerUrl($job['target_layer']), [
+            'f' => 'json',
+            'token' => $token,
+        ]);
+
+        $data = $response->json();
+        $this->throwIfArcgisError($data, 'ArcGIS target layer metadata failed for '.$job['name']);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('ArcGIS target layer metadata failed: '.$response->body());
+        }
+
+        $objectIdField = $data['objectIdField'] ?? null;
+        $fields = $data['fields'] ?? [];
+
+        if (! is_string($objectIdField) || $objectIdField === '' || ! is_array($fields)) {
+            return null;
+        }
+
+        $dataObjectIdField = collect($fields)
+            ->pluck('name')
+            ->first(fn (mixed $field): bool => is_string($field)
+                && $field === 'objectid'
+                && $field !== $objectIdField);
+
+        if (! is_string($dataObjectIdField)) {
+            return null;
+        }
+
+        return [
+            'object_id_field' => $objectIdField,
+            'data_objectid_field' => $dataObjectIdField,
+        ];
     }
 
     /**

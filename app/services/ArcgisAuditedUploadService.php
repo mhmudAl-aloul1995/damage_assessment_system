@@ -966,6 +966,7 @@ class ArcgisAuditedUploadService
     {
         $attributes = $this->auditedAttributes($building->getAttributes());
 
+        $attributes['objectid'] = $building->objectid;
         $attributes['old_objectid_B'] = $building->objectid;
         $attributes['old_global_id_B'] = $building->getAttribute('globalid');
         $attributes['is_audited'] = 1;
@@ -990,6 +991,7 @@ class ArcgisAuditedUploadService
     {
         $attributes = $this->auditedAttributes($unit->getAttributes());
 
+        $attributes['objectid'] = $unit->objectid;
         $attributes['old_objectid_U'] = $unit->objectid;
         $attributes['old_global_id_U'] = $unit->getAttribute('globalid');
         $attributes['is_audited'] = 1;
@@ -1293,8 +1295,8 @@ class ArcgisAuditedUploadService
     ): void {
         $this->withTokenRetry(function (string $token) use ($layerId, $targetObjectId, $objectIdField, $featureFactory): void {
             $feature = $featureFactory($token);
-            $feature['attributes'][$objectIdField] = $targetObjectId;
             $feature = $this->targetFeatureForLayer($layerId, $feature, $token);
+            $feature['attributes'][$objectIdField] = $targetObjectId;
 
             $response = $this->http()->post($this->targetLayerUrl($layerId).'/updateFeatures', [
                 'f' => 'json',
@@ -1372,6 +1374,7 @@ class ArcgisAuditedUploadService
     {
         $metadata = $this->targetLayerMetadata($layerId, $token);
         $fields = $metadata['fields'];
+        $objectIdField = $metadata['object_id_field'];
 
         if ($fields === []) {
             return $feature;
@@ -1383,7 +1386,12 @@ class ArcgisAuditedUploadService
         );
 
         $feature['attributes'] = collect($attributes)
-            ->filter(fn (mixed $value, string $field): bool => array_key_exists(strtolower($field), $fields))
+            ->filter(fn (mixed $value, string $field): bool => array_key_exists(strtolower($field), $fields)
+                && (
+                    $objectIdField === null
+                    || $fields[strtolower($field)] !== $objectIdField
+                    || (string) $field !== $objectIdField
+                ))
             ->mapWithKeys(fn (mixed $value, string $field): array => [$fields[strtolower($field)] => $value])
             ->toArray();
 
@@ -1460,12 +1468,39 @@ class ArcgisAuditedUploadService
         }
 
         $metadataFields = $response->json('fields') ?? [];
+        $objectIdField = $response->json('objectIdField');
 
         $fields = collect($metadataFields)
             ->pluck('name')
             ->filter(fn (mixed $field): bool => is_string($field) && $field !== '')
-            ->mapWithKeys(fn (string $field): array => [strtolower($field) => $field])
-            ->toArray();
+            ->reduce(function (array $fields, string $field) use ($objectIdField): array {
+                $key = strtolower($field);
+                $existingField = $fields[$key] ?? null;
+
+                if (
+                    is_string($existingField)
+                    && is_string($objectIdField)
+                    && strcasecmp($existingField, $objectIdField) === 0
+                    && strcasecmp($field, $objectIdField) !== 0
+                ) {
+                    $fields[$key] = $field;
+
+                    return $fields;
+                }
+
+                if (
+                    is_string($existingField)
+                    && is_string($objectIdField)
+                    && strcasecmp($field, $objectIdField) === 0
+                    && strcasecmp($existingField, $objectIdField) !== 0
+                ) {
+                    return $fields;
+                }
+
+                $fields[$key] = $field;
+
+                return $fields;
+            }, []);
 
         $definitions = collect($metadataFields)
             ->filter(fn (mixed $field): bool => is_array($field) && is_string($field['name'] ?? null) && $field['name'] !== '')
@@ -1477,8 +1512,6 @@ class ArcgisAuditedUploadService
                 ],
             ])
             ->toArray();
-
-        $objectIdField = $response->json('objectIdField');
 
         return $this->targetLayerMetadata[$cacheKey] = [
             'object_id_field' => is_string($objectIdField) && $objectIdField !== '' ? $objectIdField : null,
