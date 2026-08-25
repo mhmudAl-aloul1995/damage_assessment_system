@@ -55,6 +55,30 @@
     </style>
 </head>
 <body>
+    @php
+        $repeatSectionNames = \App\Support\Forms\PublicBuildingSurveyLayout::repeatSectionNames('Unit_Information');
+        $fieldDefinitions = collect(\App\Support\Forms\PublicBuildingSurveyLayout::sections())
+            ->reject(fn (array $section, string $sectionName): bool => ($section['type'] ?? 'group') === 'repeat' || in_array($sectionName, $repeatSectionNames, true))
+            ->flatMap(fn (array $section): array => $section['fields'] ?? [])
+            ->keyBy('name');
+        $baseColumnValues = function ($survey, string $column): mixed {
+            return match ($column) {
+                'date_of_damage' => $survey->date_of_damage?->format('Y-m-d'),
+                default => $survey->{$column},
+            };
+        };
+        $layoutColumnValue = function ($survey, string $column) use ($fieldDefinitions): ?string {
+            $field = $fieldDefinitions->get($column);
+            $value = \App\Support\Forms\PublicBuildingSurveyLayout::value($survey, $column);
+
+            if (! $field) {
+                return is_scalar($value) ? trim((string) $value) : null;
+            }
+
+            return \App\Support\Forms\PublicBuildingSurveyLayout::displayValue($value, $field);
+        };
+    @endphp
+
     <div class="heading">
         <h1>{{ __('multilingual.public_buildings_page.surveys_title') }}</h1>
         <div class="meta">{{ __('multilingual.public_buildings_page.generated_at') }} {{ now()->format('Y-m-d H:i') }}</div>
@@ -91,14 +115,11 @@
                 <tr>
                     @foreach (array_keys($columns) as $column)
                         <td>
-                            @switch($column)
-                                @case('date_of_damage')
-                                    {{ $survey->date_of_damage?->format('Y-m-d') }}
-                                    @break
-
-                                @default
-                                    {{ $survey->{$column} }}
-                            @endswitch
+                            @if (in_array($column, ['objectid', 'building_name', 'municipalitie', 'neighborhood', 'building_damage_status', 'date_of_damage', 'units_count', 'assignedto'], true))
+                                {{ $baseColumnValues($survey, $column) }}
+                            @else
+                                {{ $layoutColumnValue($survey, $column) }}
+                            @endif
                         </td>
                     @endforeach
                 </tr>

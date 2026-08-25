@@ -92,6 +92,12 @@
             gap: .75rem;
         }
 
+        .public-building-export-column-list {
+            max-height: 620px;
+            overflow: auto;
+            padding-inline-end: .35rem;
+        }
+
         .public-building-export-column-grid .form-check {
             min-height: 56px;
             margin: 0;
@@ -281,15 +287,22 @@
                                         <button type="button" class="btn btn-sm btn-light" data-toggle-public-building-columns="public_building_columns[]" data-checked="0">إلغاء الكل</button>
                                     </div>
                                 </div>
-                                <div class="public-building-export-column-grid">
-                                    @foreach ($exportColumns['buildings'] as $column => $label)
-                                        <label class="form-check form-check-custom form-check-solid p-3">
-                                            <input class="form-check-input" type="checkbox" name="public_building_columns[]" value="{{ $column }}" checked>
-                                            <span class="form-check-label ms-3">
-                                                <strong class="d-block">{{ $label }}</strong>
-                                                <small class="text-muted">{{ $column }}</small>
-                                            </span>
-                                        </label>
+                                <div class="public-building-export-column-list">
+                                    @foreach ($exportColumnGroups['buildings'] as $group => $columns)
+                                        <div class="mb-5">
+                                            <div class="fw-bold text-primary border-bottom pb-2 mb-3">{{ $group }}</div>
+                                            <div class="public-building-export-column-grid">
+                                                @foreach ($columns as $column => $label)
+                                                    <label class="form-check form-check-custom form-check-solid p-3">
+                                                        <input class="form-check-input" type="checkbox" name="public_building_columns[]" value="{{ $column }}" checked>
+                                                        <span class="form-check-label ms-3">
+                                                            <strong class="d-block">{{ $label }}</strong>
+                                                            <small class="text-muted">{{ $column }}</small>
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                     @endforeach
                                 </div>
                             </div>
@@ -304,15 +317,22 @@
                                         <button type="button" class="btn btn-sm btn-light" data-toggle-public-building-columns="public_building_unit_columns[]" data-checked="0">إلغاء الكل</button>
                                     </div>
                                 </div>
-                                <div class="public-building-export-column-grid">
-                                    @foreach ($exportColumns['units'] as $column => $label)
-                                        <label class="form-check form-check-custom form-check-solid p-3">
-                                            <input class="form-check-input" type="checkbox" name="public_building_unit_columns[]" value="{{ $column }}" checked>
-                                            <span class="form-check-label ms-3">
-                                                <strong class="d-block">{{ $label }}</strong>
-                                                <small class="text-muted">{{ $column }}</small>
-                                            </span>
-                                        </label>
+                                <div class="public-building-export-column-list">
+                                    @foreach ($exportColumnGroups['units'] as $group => $columns)
+                                        <div class="mb-5">
+                                            <div class="fw-bold text-success border-bottom pb-2 mb-3">{{ $group }}</div>
+                                            <div class="public-building-export-column-grid">
+                                                @foreach ($columns as $column => $label)
+                                                    <label class="form-check form-check-custom form-check-solid p-3">
+                                                        <input class="form-check-input" type="checkbox" name="public_building_unit_columns[]" value="{{ $column }}" checked>
+                                                        <span class="form-check-label ms-3">
+                                                            <strong class="d-block">{{ $label }}</strong>
+                                                            <small class="text-muted">{{ $column }}</small>
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                     @endforeach
                                 </div>
                             </div>
@@ -380,15 +400,33 @@
                     appendField(query, name, values);
                 });
 
-                $('input[name="public_building_columns[]"]:checked').each(function () {
-                    query.append('public_building_columns[]', this.value);
-                });
-
-                $('input[name="public_building_unit_columns[]"]:checked').each(function () {
-                    query.append('public_building_unit_columns[]', this.value);
-                });
+                appendColumnSelection(query, 'public_building_columns[]', 'public_building_columns');
+                appendColumnSelection(query, 'public_building_unit_columns[]', 'public_building_unit_columns');
 
                 return query;
+            };
+
+            const appendColumnSelection = function (query, inputName, queryName) {
+                const inputs = $('input[name="' + inputName + '"]');
+                const checkedInputs = inputs.filter(':checked');
+
+                if (checkedInputs.length === inputs.length) {
+                    return;
+                }
+
+                if (checkedInputs.length > inputs.length / 2) {
+                    query.set(queryName + '_mode', 'except');
+
+                    inputs.not(':checked').each(function () {
+                        query.append(queryName + '_excluded[]', this.value);
+                    });
+
+                    return;
+                }
+
+                checkedInputs.each(function () {
+                    query.append(queryName + '[]', this.value);
+                });
             };
 
             $('.public-building-export-submit').on('click', function () {

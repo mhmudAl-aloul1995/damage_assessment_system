@@ -152,7 +152,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
     $reader->close();
 
     expect(array_keys($xlsxRows))->toBe(['Buildings', 'Units']);
-    expect($xlsxRows['Buildings'][1])->toBe([
+    expect(array_slice($xlsxRows['Buildings'][1], 0, 8))->toBe([
         801,
         'Public School',
         'Gaza',
@@ -162,7 +162,7 @@ it('shows the public building survey pages and datatable data with dynamic filte
         1,
         'Engineer Public',
     ]);
-    expect($xlsxRows['Units'][1])->toBe([
+    expect(array_slice($xlsxRows['Units'][1], 0, 12))->toBe([
         801,
         'public-building-survey-801',
         'Public School',
@@ -258,6 +258,9 @@ it('shows the dedicated public building export data page', function () {
         ->assertSee('name="public_building_unit_columns[]"', false)
         ->assertSee('value="building_name"', false)
         ->assertSee('value="unit_name"', false)
+        ->assertSee('value="Date_of_damage"', false)
+        ->assertSee('value="PM1"', false)
+        ->assertSee('PM1-Complete solar heating system')
         ->assertSee('data-format="xlsx"', false)
         ->assertSee('data-format="csv"', false)
         ->assertSee('data-format="pdf"', false)
@@ -289,14 +292,17 @@ it('exports only selected public building and unit columns', function () {
         'unit_name' => 'Selected Unit',
         'damaged_area_m2' => 42.5,
         'occupied' => 'yes',
+        'raw_payload' => [
+            'PM1' => 2,
+        ],
     ]);
 
     $response = $this
         ->actingAs($user)
         ->get(route('public-buildings.export', [
             'format' => 'xlsx',
-            'public_building_columns' => ['objectid', 'building_name'],
-            'public_building_unit_columns' => ['building_objectid', 'unit_name', 'damaged_area_m2'],
+            'public_building_columns' => ['objectid', 'building_name', 'Date_of_damage'],
+            'public_building_unit_columns' => ['building_objectid', 'unit_name', 'damaged_area_m2', 'PM1'],
         ]));
 
     $response->assertOk();
@@ -317,10 +323,10 @@ it('exports only selected public building and unit columns', function () {
 
     $reader->close();
 
-    expect($xlsxRows['Buildings'][0])->toBe(['Object ID', 'Building Name']);
-    expect($xlsxRows['Buildings'][1])->toBe([951, 'Selected Columns Building']);
-    expect($xlsxRows['Units'][0])->toBe(['Building Object ID', 'Unit Name', 'Damaged Area M2']);
-    expect($xlsxRows['Units'][1])->toBe([951, 'Selected Unit', 42.5]);
+    expect($xlsxRows['Buildings'][0])->toBe(['Object ID', 'Building Name', '2.1 Date of damage']);
+    expect($xlsxRows['Buildings'][1])->toBe([951, 'Selected Columns Building', '2026-03-02 00:00']);
+    expect($xlsxRows['Units'][0])->toBe(['Building Object ID', 'Unit Name', 'Damaged Area M2', 'PM1-Complete solar heating system']);
+    expect($xlsxRows['Units'][1])->toBe([951, 'Selected Unit', 42.5, 2]);
 
     Carbon::setTestNow();
 });

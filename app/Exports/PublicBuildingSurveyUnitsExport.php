@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Exports;
 
 use App\Models\PublicBuildingSurvey;
+use App\Support\Forms\PublicBuildingSurveyLayout;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -17,7 +18,7 @@ class PublicBuildingSurveyUnitsExport implements FromCollection, ShouldAutoSize,
     /**
      * @var array<string, string>
      */
-    private const COLUMNS = [
+    private const BASE_COLUMNS = [
         'building_objectid' => 'Building Object ID',
         'building_globalid' => 'Building Global ID',
         'building_name' => 'Building Name',
@@ -47,7 +48,34 @@ class PublicBuildingSurveyUnitsExport implements FromCollection, ShouldAutoSize,
      */
     public static function availableColumns(): array
     {
-        return self::COLUMNS;
+        return self::BASE_COLUMNS + self::layoutColumns();
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    public static function availableColumnGroups(): array
+    {
+        $groups = [
+            'Summary' => self::BASE_COLUMNS,
+        ];
+
+        foreach (PublicBuildingSurveyLayout::repeatSections('Unit_Information') as $sectionName => $section) {
+            $columns = collect($section['fields'] ?? [])
+                ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
+                ->mapWithKeys(fn (array $field): array => [
+                    $field['name'] => self::fieldLabel($field),
+                ])
+                ->all();
+
+            $columns = array_diff_key($columns, self::BASE_COLUMNS);
+
+            if ($columns !== []) {
+                $groups[(string) ($section['label'] ?? $sectionName)] = $columns;
+            }
+        }
+
+        return $groups;
     }
 
     public function collection(): Collection
@@ -58,7 +86,7 @@ class PublicBuildingSurveyUnitsExport implements FromCollection, ShouldAutoSize,
 
     public function headings(): array
     {
-        return array_values(array_intersect_key(self::COLUMNS, array_flip($this->columns)));
+        return array_values(array_intersect_key(self::availableColumns(), array_flip($this->columns)));
     }
 
     public function title(): string
@@ -70,7 +98,7 @@ class PublicBuildingSurveyUnitsExport implements FromCollection, ShouldAutoSize,
     {
         $survey = $this->surveys->firstWhere('globalid', $row->parentglobalid);
 
-        $values = [
+        $baseValues = [
             'building_objectid' => $survey?->objectid,
             'building_globalid' => $survey?->globalid,
             'building_name' => $survey?->building_name,
@@ -86,7 +114,7 @@ class PublicBuildingSurveyUnitsExport implements FromCollection, ShouldAutoSize,
         ];
 
         return collect($this->columns)
-            ->map(fn (string $column): mixed => $values[$column] ?? null)
+            ->map(fn (string $column): mixed => $baseValues[$column] ?? $this->layoutValue($row, $column))
             ->all();
     }
 
@@ -96,8 +124,51 @@ class PublicBuildingSurveyUnitsExport implements FromCollection, ShouldAutoSize,
      */
     private function resolveColumns(array $columns): array
     {
-        $selectedColumns = array_values(array_intersect($columns, array_keys(self::COLUMNS)));
+        $selectedColumns = array_values(array_intersect($columns, array_keys(self::availableColumns())));
 
-        return $selectedColumns !== [] ? $selectedColumns : array_keys(self::COLUMNS);
+        return $selectedColumns !== [] ? $selectedColumns : array_keys(self::availableColumns());
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function layoutColumns(): array
+    {
+        return collect(self::availableColumnGroups())
+            ->except('Summary')
+            ->flatMap(fn (array $columns): array => $columns)
+            ->all();
+    }
+
+    private static function fieldLabel(array $field): string
+    {
+        return trim((string) ($field['label'] ?? '')) !== ''
+            ? (string) $field['label']
+            : (string) $field['name'];
+    }
+
+    private function layoutValue(object $unit, string $column): ?string
+    {
+        $field = $this->fieldDefinition($column);
+        $value = PublicBuildingSurveyLayout::value($unit, $column);
+
+        if ($field === null) {
+            return is_scalar($value) ? trim((string) $value) : null;
+        }
+
+        return PublicBuildingSurveyLayout::displayValue($value, $field);
+    }
+
+    private function fieldDefinition(string $column): ?array
+    {
+        foreach (PublicBuildingSurveyLayout::repeatSections('Unit_Information') as $section) {
+            foreach ($section['fields'] ?? [] as $field) {
+                if (($field['name'] ?? null) === $column) {
+                    return $field;
+                }
+            }
+        }
+
+        return null;
     }
 }

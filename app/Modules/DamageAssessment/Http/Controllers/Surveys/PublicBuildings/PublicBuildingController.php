@@ -43,7 +43,8 @@ class PublicBuildingController extends Controller
      *     summary: array{total_surveys: int, total_units: int, damaged_buildings: int},
      *     filterOptions: array{municipalities: Collection, neighborhoods: Collection, researchers: Collection, min_damage_date: ?string, max_damage_date: ?string},
      *     filterGroups: Collection,
-     *     exportColumns: array{buildings: array<string, string>, units: array<string, string>}
+     *     exportColumns: array{buildings: array<string, string>, units: array<string, string>},
+     *     exportColumnGroups: array{buildings: array<string, array<string, string>>, units: array<string, array<string, string>>}
      * }
      */
     private function indexData(): array
@@ -94,7 +95,12 @@ class PublicBuildingController extends Controller
             'units' => PublicBuildingSurveyUnitsExport::availableColumns(),
         ];
 
-        return compact('summary', 'filterOptions', 'filterGroups', 'exportColumns');
+        $exportColumnGroups = [
+            'buildings' => PublicBuildingSurveysExport::availableColumnGroups(),
+            'units' => PublicBuildingSurveyUnitsExport::availableColumnGroups(),
+        ];
+
+        return compact('summary', 'filterOptions', 'filterGroups', 'exportColumns', 'exportColumnGroups');
     }
 
     // ================= DATATABLE =================
@@ -361,12 +367,23 @@ class PublicBuildingController extends Controller
      */
     private function selectedExportColumns(Request $request, string $key, array $availableColumns): array
     {
+        $availableColumnKeys = array_keys($availableColumns);
+
+        if ($request->input($key.'_mode') === 'except') {
+            $excludedColumns = array_values(array_intersect(
+                $this->normalizeValues($request->input($key.'_excluded')),
+                $availableColumnKeys,
+            ));
+
+            return array_values(array_diff($availableColumnKeys, $excludedColumns));
+        }
+
         $selectedColumns = array_values(array_intersect(
             $this->normalizeValues($request->input($key)),
-            array_keys($availableColumns),
+            $availableColumnKeys,
         ));
 
-        return $selectedColumns !== [] ? $selectedColumns : array_keys($availableColumns);
+        return $selectedColumns !== [] ? $selectedColumns : $availableColumnKeys;
     }
 
     /**
