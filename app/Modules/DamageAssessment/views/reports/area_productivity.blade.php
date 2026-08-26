@@ -9,10 +9,13 @@
         $showAuditedBuildingColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;
         $showAuditedHousingUnitColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS;
         $showRoadDamageColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES;
-        $useAjaxFilters = $showAuditedBuildingColumns || $showAuditedHousingUnitColumns;
-        $ajaxRouteName = $showAuditedBuildingColumns
-            ? 'reports.area-productivity.buildings.data'
-            : ($showAuditedHousingUnitColumns ? 'reports.area-productivity.housing-units.data' : null);
+        $useAjaxFilters = true;
+        $ajaxRouteName = match ($type) {
+            \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS => 'reports.area-productivity.buildings.data',
+            \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS => 'reports.area-productivity.public-buildings.data',
+            \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES => 'reports.area-productivity.road-facilities.data',
+            default => 'reports.area-productivity.housing-units.data',
+        };
         $showLocationPies = in_array($type, [
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS,
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS,
@@ -82,20 +85,72 @@
         }
 
         .area-productivity-toolbar-main {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: minmax(240px, 320px) repeat(3, auto);
             align-items: center;
             justify-content: flex-end;
             gap: .75rem;
         }
 
-        .area-productivity-toolbar-main .btn {
+        .area-productivity-toolbar-main .btn,
+        .area-productivity-date-control {
             min-height: 45px;
+        }
+
+        .area-productivity-date-control {
+            position: relative;
+        }
+
+        .area-productivity-date-control .form-control {
+            height: 45px;
+            padding-inline-start: 3rem;
+            border: 1px solid #eef0f4;
+            border-radius: .65rem;
+            background-color: #f9fafb;
+            color: #3f4254;
+            font-weight: 700;
+            box-shadow: none;
+        }
+
+        .area-productivity-date-control .form-control:focus {
+            border-color: #99c2ff;
+            background-color: #fff;
+            box-shadow: 0 0 0 .2rem rgba(54, 153, 255, .1);
+        }
+
+        .area-productivity-date-icon {
+            position: absolute;
+            inset-inline-start: 1rem;
+            top: 50%;
+            z-index: 2;
+            display: inline-flex;
+            color: #7e8299;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .area-productivity-auto-status {
+            min-height: 45px;
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: 0 .9rem;
+            border: 1px solid #e8edf5;
+            border-radius: .65rem;
+            background: #f8fbff;
+            color: #7e8299;
+            font-size: .82rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .area-productivity-auto-status.is-loading {
+            color: #1b84ff;
         }
 
         @media (max-width: 767px) {
             .area-productivity-toolbar-main {
-                justify-content: stretch;
+                grid-template-columns: 1fr;
             }
 
             .area-productivity-toolbar-main > * {
@@ -398,34 +453,37 @@
                             <input type="hidden" name="end_date" id="end_date" value="{{ $end_date }}">
 
                             <div class="area-productivity-toolbar-main">
+                                <div class="area-productivity-date-control">
+                                    <span class="area-productivity-date-icon">
+                                        <i class="ki-duotone ki-calendar fs-2"></i>
+                                    </span>
+                                    <input class="form-control form-control-solid" value="{{ $start_date && $end_date ? $date_range_label : '' }}"
+                                        placeholder="{{ __('multilingual.area_productivity_reports.filters.date_range') }}"
+                                        id="kt_daterangepicker" autocomplete="off" />
+                                </div>
+
+                                <button class="btn btn-light" type="button" id="area_productivity_clear_date" title="{{ __('multilingual.area_productivity_reports.actions.clear_date') }}">
+                                    <i class="ki-duotone ki-cross-circle fs-2"></i>
+                                    {{ __('multilingual.area_productivity_reports.actions.clear_date') }}
+                                </button>
+
+                                <button class="btn btn-light" type="button" data-bs-toggle="collapse"
+                                    title="{{ __('multilingual.area_productivity_reports.actions.advanced_filters') }}"
+                                    data-bs-target="#area-productivity-advanced-filters" aria-expanded="{{ $hasAdvancedFilters ? 'true' : 'false' }}">
+                                    <i class="ki-duotone ki-setting-4 fs-2"></i>
+                                    {{ __('multilingual.area_productivity_reports.actions.advanced_filters') }}
+                                </button>
+
                                 <a href="{{ route($export_route_name, array_merge(request()->query(), ['start_date' => $start_date, 'end_date' => $end_date])) }}"
                                     class="btn btn-light-success" id="area_productivity_export_link">
                                     <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
                                     {{ __('multilingual.area_productivity_reports.actions.export_excel') }}
                                 </a>
 
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="ki-duotone ki-filter fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                    {{ __('multilingual.area_productivity_reports.actions.filter') }}
-                                </button>
-
-                                <div class="input-group w-md-300px">
-                                    <input class="form-control form-control-solid" value="{{ $start_date && $end_date ? $date_range_label : '' }}"
-                                        placeholder="{{ __('multilingual.area_productivity_reports.filters.date_range') }}"
-                                        id="kt_daterangepicker" autocomplete="off" @if (! $useAjaxFilters) readonly @endif />
-                                    <span class="input-group-text"><i class="ki-duotone ki-calendar fs-2"></i></span>
-                                </div>
-
-                                <button class="btn btn-light" type="button" id="area_productivity_clear_date">
-                                    <i class="ki-duotone ki-cross-circle fs-2"></i>
-                                    {{ __('multilingual.area_productivity_reports.actions.clear_date') }}
-                                </button>
-
-                                <button class="btn btn-light" type="button" data-bs-toggle="collapse"
-                                    data-bs-target="#area-productivity-advanced-filters" aria-expanded="{{ $hasAdvancedFilters ? 'true' : 'false' }}">
-                                    <i class="ki-duotone ki-setting-4 fs-2"></i>
-                                    {{ __('multilingual.area_productivity_reports.actions.advanced_filters') }}
-                                </button>
+                                <span class="area-productivity-auto-status" id="area_productivity_auto_status">
+                                    <i class="ki-duotone ki-arrows-circle fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                    {{ __('multilingual.area_productivity_reports.actions.auto_filter') }}
+                                </span>
                             </div>
 
                             <div class="collapse mt-5 {{ $hasAdvancedFilters ? 'show' : '' }}" id="area-productivity-advanced-filters">
@@ -482,10 +540,6 @@
                                             </select>
                                         </div>
                                         <div class="col-md-4 col-xl-3 d-flex gap-3">
-                                            <button type="submit" class="btn btn-primary flex-fill">
-                                                <i class="ki-duotone ki-check fs-2"></i>
-                                                {{ __('multilingual.area_productivity_reports.actions.apply_filters') }}
-                                            </button>
                                             <a href="{{ route($route_name) }}" class="btn btn-light flex-fill">
                                                 <i class="ki-duotone ki-arrows-circle fs-2"><span class="path1"></span><span class="path2"></span></i>
                                                 {{ __('multilingual.area_productivity_reports.actions.reset') }}
@@ -771,10 +825,14 @@
             const allLabel = 'All';
             const isBuildingsReport = @json($showAuditedBuildingColumns);
             const isHousingUnitsReport = @json($showAuditedHousingUnitColumns);
+            const isRoadReport = @json($showRoadDamageColumns);
+            const isPublicBuildingsReport = @json(! $showRoadDamageColumns && ! $showAuditedBuildingColumns && ! $showAuditedHousingUnitColumns);
             const dateRangeInput = document.getElementById('kt_daterangepicker');
             const startDateInput = document.getElementById('start_date');
             const endDateInput = document.getElementById('end_date');
-            let flatDateRangePicker = null;
+            const autoStatus = $('#area_productivity_auto_status');
+            let autoFilterTimer = null;
+            let activeFilterRequest = null;
 
             function syncFlatDateRange(selectedDates, instance) {
                 if (selectedDates.length >= 2) {
@@ -801,53 +859,42 @@
                 endDateInput.value = '';
             }
 
-            if (useAjaxFilters) {
-                flatDateRangePicker = flatpickr(dateRangeInput, {
-                    mode: 'range',
-                    dateFormat: 'Y-m-d',
-                    allowInput: true,
-                    locale: Object.assign({}, @json(app()->getLocale() === 'ar') && flatpickr.l10ns.ar ? flatpickr.l10ns.ar : {}, {
-                        rangeSeparator: ' - '
-                    }),
-                    defaultDate: [startDateInput.value, endDateInput.value].filter(Boolean),
-                    onChange: function (selectedDates, dateStr, instance) {
-                        syncFlatDateRange(selectedDates, instance);
-                    },
-                    onClose: function (selectedDates, dateStr, instance) {
-                        syncFlatDateRange(selectedDates, instance);
-                    },
-                    onReady: function (selectedDates, dateStr, instance) {
-                        if (! startDateInput.value && ! endDateInput.value) {
-                            instance.clear();
-                            dateRangeInput.value = '';
-                        }
+            const flatDateRangePicker = flatpickr(dateRangeInput, {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+                locale: Object.assign({}, @json(app()->getLocale() === 'ar') && flatpickr.l10ns.ar ? flatpickr.l10ns.ar : {}, {
+                    rangeSeparator: ' - '
+                }),
+                defaultDate: [startDateInput.value, endDateInput.value].filter(Boolean),
+                onChange: function (selectedDates, dateStr, instance) {
+                    syncFlatDateRange(selectedDates, instance);
+
+                    if (selectedDates.length !== 1) {
+                        queueAutoFilter();
                     }
-                });
-            } else {
-                $('#kt_daterangepicker').daterangepicker({
-                    startDate: @json($start_date) ? moment(@json($start_date)) : moment().subtract(29, 'days'),
-                    endDate: @json($end_date) ? moment(@json($end_date)) : moment(),
-                    locale: {
-                        format: 'MM/DD/YYYY'
-                    },
-                    ranges: {
-                        @if (app()->getLocale() === 'ar')
-                            'آخر 30 يوم': [moment().subtract(29, 'days'), moment()],
-                            'هذا الشهر': [moment().startOf('month'), moment().endOf('month')]
-                        @else
-                            'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                            'This Month': [moment().startOf('month'), moment().endOf('month')]
-                        @endif
+                },
+                onClose: function (selectedDates, dateStr, instance) {
+                    syncFlatDateRange(selectedDates, instance);
+                    queueAutoFilter(0);
+                },
+                onReady: function (selectedDates, dateStr, instance) {
+                    if (! startDateInput.value && ! endDateInput.value) {
+                        instance.clear();
+                        dateRangeInput.value = '';
                     }
-                }, function (start, end) {
-                    $('#kt_daterangepicker').val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
-                    $('#start_date').val(start.format('YYYY-MM-DD'));
-                    $('#end_date').val(end.format('YYYY-MM-DD'));
-                });
-            }
+                }
+            });
 
             function numberFormat(value) {
                 return Number(value || 0).toLocaleString();
+            }
+
+            function decimalFormat(value) {
+                return Number(value || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 3,
+                    maximumFractionDigits: 3
+                });
             }
 
             function tableRow(row) {
@@ -855,7 +902,14 @@
                     `<span class="fw-bold">${numberFormat(row.total_count)}</span>`,
                 ];
 
-                if (isBuildingsReport) {
+                if (isRoadReport) {
+                    cells.push(decimalFormat(row.total_road_length_km));
+                    cells.push(numberFormat(row.destroyed_count));
+                    cells.push(numberFormat(row.severe_count));
+                    cells.push(numberFormat(row.moderate_count));
+                    cells.push(numberFormat(row.minor_count));
+                    cells.push(numberFormat(row.no_damage_count));
+                } else if (isBuildingsReport) {
                     cells.push(numberFormat(row.housing_units_count));
                     cells.push(numberFormat(row.tda_range));
                     cells.push(numberFormat(row.pda_range));
@@ -867,6 +921,10 @@
                     cells.push(numberFormat(row.no_damage_count));
                     cells.push(numberFormat(row.cra_range));
                     cells.push(numberFormat(row.unclassified_count));
+                } else if (isPublicBuildingsReport) {
+                    cells.push(numberFormat(row.cra_range));
+                    cells.push(numberFormat(row.pda_range));
+                    cells.push(numberFormat(row.tda_range));
                 }
 
                 cells.push(numberFormat(row.no_eng));
@@ -884,7 +942,14 @@
 
                 footerCells.eq(index++).text(numberFormat(summary.total_records));
 
-                if (isBuildingsReport) {
+                if (isRoadReport) {
+                    footerCells.eq(index++).text(decimalFormat(summary.total_road_length_km));
+                    footerCells.eq(index++).text(numberFormat(summary.destroyed));
+                    footerCells.eq(index++).text(numberFormat(summary.severe));
+                    footerCells.eq(index++).text(numberFormat(summary.moderate));
+                    footerCells.eq(index++).text(numberFormat(summary.minor));
+                    footerCells.eq(index++).text(numberFormat(summary.no_damage));
+                } else if (isBuildingsReport) {
                     footerCells.eq(index++).text(numberFormat(summary.housing_units_count));
                     footerCells.eq(index++).text(numberFormat(summary.tda));
                     footerCells.eq(index++).text(numberFormat(summary.pda));
@@ -896,6 +961,10 @@
                     footerCells.eq(index++).text(numberFormat(summary.no_damage));
                     footerCells.eq(index++).text(numberFormat(summary.cra));
                     footerCells.eq(index++).text(numberFormat(summary.unclassified));
+                } else if (isPublicBuildingsReport) {
+                    footerCells.eq(index++).text(numberFormat(summary.cra));
+                    footerCells.eq(index++).text(numberFormat(summary.pda));
+                    footerCells.eq(index++).text(numberFormat(summary.tda));
                 }
 
                 footerCells.eq(index).text(numberFormat(summary.engineers));
@@ -925,45 +994,66 @@
                 $('#area_productivity_export_link').attr('href', queryString ? `${exportBaseUrl}?${queryString}` : exportBaseUrl);
             }
 
-            if (useAjaxFilters) {
-                $('#filter_form').on('submit', function (event) {
-                    event.preventDefault();
-                    syncFlatDateRange(flatDateRangePicker.selectedDates, flatDateRangePicker);
-
-                    const queryString = formQueryString();
-                    const requestUrl = queryString ? `${ajaxUrl}?${queryString}` : ajaxUrl;
-                    const filterButton = $(this).find('button[type="submit"]').first();
-
-                    filterButton.prop('disabled', true);
-
-                    $.get(requestUrl)
-                        .done(function (payload) {
-                            areaProductivityTable.clear();
-
-                            payload.rows.forEach(function (row) {
-                                areaProductivityTable.row.add(tableRow(row));
-                            });
-
-                            areaProductivityTable.draw();
-                            updateFooter(payload.summary);
-                            updateReportTitle(payload);
-                            updateExportLink(queryString);
-                        })
-                        .always(function () {
-                            filterButton.prop('disabled', false);
-                        });
-                });
+            function setAutoStatus(isLoading) {
+                autoStatus.toggleClass('is-loading', isLoading);
             }
 
-            $('#area_productivity_clear_date').on('click', function () {
-                if (flatDateRangePicker) {
-                    flatDateRangePicker.clear();
-                } else {
-                    $('#kt_daterangepicker').val('');
+            function applyAutoFilter() {
+                syncFlatDateRange(flatDateRangePicker.selectedDates, flatDateRangePicker);
+
+                const queryString = formQueryString();
+                const requestUrl = queryString ? `${ajaxUrl}?${queryString}` : ajaxUrl;
+
+                if (activeFilterRequest) {
+                    activeFilterRequest.abort();
                 }
 
+                setAutoStatus(true);
+                const currentRequest = $.get(requestUrl);
+                activeFilterRequest = currentRequest;
+
+                currentRequest
+                    .done(function (payload) {
+                        areaProductivityTable.clear();
+
+                        payload.rows.forEach(function (row) {
+                            areaProductivityTable.row.add(tableRow(row));
+                        });
+
+                        areaProductivityTable.draw();
+                        updateFooter(payload.summary);
+                        updateReportTitle(payload);
+                        updateExportLink(queryString);
+                        window.history.replaceState({}, '', queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname);
+                    })
+                    .always(function () {
+                        if (activeFilterRequest === currentRequest) {
+                            activeFilterRequest = null;
+                            setAutoStatus(false);
+                        }
+                    });
+            }
+
+            function queueAutoFilter(delay = 300) {
+                clearTimeout(autoFilterTimer);
+                autoFilterTimer = setTimeout(applyAutoFilter, delay);
+            }
+
+            $('#filter_form').on('submit', function (event) {
+                event.preventDefault();
+                queueAutoFilter(0);
+            });
+
+            $('.area-report-select').on('change', function () {
+                queueAutoFilter();
+            });
+
+            $('#area_productivity_clear_date').on('click', function () {
+                flatDateRangePicker.clear();
+                dateRangeInput.value = '';
                 startDateInput.value = '';
                 endDateInput.value = '';
+                queueAutoFilter(0);
             });
 
                 @if ($showLocationPies)

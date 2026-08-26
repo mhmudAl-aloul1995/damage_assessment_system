@@ -426,6 +426,8 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee("mode: 'range'", false)
         ->assertSee('onReady: function (selectedDates, dateStr, instance)', false)
         ->assertSee('defaultDate: [startDateInput.value, endDateInput.value].filter(Boolean)', false)
+        ->assertSee(__('multilingual.area_productivity_reports.actions.auto_filter'), false)
+        ->assertDontSee('type="submit" class="btn btn-primary"', false)
         ->assertViewHas('start_date', '')
         ->assertViewHas('end_date', '');
 
@@ -438,6 +440,8 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('const useAjaxFilters = true;', false)
         ->assertSee("mode: 'range'", false)
         ->assertSee('onReady: function (selectedDates, dateStr, instance)', false)
+        ->assertSee(__('multilingual.area_productivity_reports.actions.auto_filter'), false)
+        ->assertDontSee('type="submit" class="btn btn-primary"', false)
         ->assertViewHas('start_date', '')
         ->assertViewHas('end_date', '');
 
@@ -463,6 +467,27 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertJsonPath('summary.total_records', 7)
         ->assertJsonPath('summary.no_damage', 1)
         ->assertJsonPath('summary.unclassified', 1)
+        ->assertJsonPath('start_date', '')
+        ->assertJsonPath('end_date', '');
+
+    $this->actingAs($user)
+        ->getJson(route('reports.area-productivity.public-buildings.data', [
+            'start_date' => '',
+            'end_date' => '',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summary.total_records', 2)
+        ->assertJsonPath('start_date', '')
+        ->assertJsonPath('end_date', '');
+
+    $this->actingAs($user)
+        ->getJson(route('reports.area-productivity.road-facilities.data', [
+            'start_date' => '',
+            'end_date' => '',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summary.total_records', 5)
+        ->assertJsonPath('summary.total_road_length_km', 446.683)
         ->assertJsonPath('start_date', '')
         ->assertJsonPath('end_date', '');
 

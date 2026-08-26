@@ -40,6 +40,16 @@ class AreaProductivityReportController extends Controller
         return $this->reportData(AreaProductivityReportService::TYPE_BUILDINGS, $request->validated());
     }
 
+    public function publicBuildingsData(AreaProductivityReportFilterRequest $request): JsonResponse
+    {
+        return $this->reportData(AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS, $request->validated());
+    }
+
+    public function roadFacilitiesData(AreaProductivityReportFilterRequest $request): JsonResponse
+    {
+        return $this->reportData(AreaProductivityReportService::TYPE_ROAD_FACILITIES, $request->validated());
+    }
+
     public function publicBuildings(AreaProductivityReportFilterRequest $request): View
     {
         return $this->renderReport(AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS, $request->validated());
@@ -82,10 +92,15 @@ class AreaProductivityReportController extends Controller
         return response()->json([
             'rows' => $report['rows']->map(fn (object $row): array => [
                 'total_count' => (int) ($row->total_count ?? 0),
+                'total_road_length_km' => round((float) ($row->total_road_length_km ?? 0), 3),
                 'housing_units_count' => (int) ($row->housing_units_count ?? 0),
                 'tda_range' => (int) ($row->tda_range ?? 0),
                 'pda_range' => (int) ($row->pda_range ?? 0),
                 'cra_range' => (int) ($row->cra_range ?? 0),
+                'destroyed_count' => (int) ($row->destroyed_count ?? 0),
+                'severe_count' => (int) ($row->severe_count ?? 0),
+                'moderate_count' => (int) ($row->moderate_count ?? 0),
+                'minor_count' => (int) ($row->minor_count ?? 0),
                 'no_damage_count' => (int) ($row->no_damage_count ?? 0),
                 'unclassified_count' => (int) ($row->unclassified_count ?? 0),
                 'no_eng' => (int) ($row->no_eng ?? 0),

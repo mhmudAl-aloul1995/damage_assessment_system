@@ -270,6 +270,8 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/commulative', action: [ReportController::class, 'commulative'])->name('reports.commulative');
     Route::get('reports/area-productivity/housing-units/data', [AreaProductivityReportController::class, 'housingUnitsData'])->name('reports.area-productivity.housing-units.data');
     Route::get('reports/area-productivity/buildings/data', [AreaProductivityReportController::class, 'buildingsData'])->name('reports.area-productivity.buildings.data');
+    Route::get('reports/area-productivity/public-buildings/data', [AreaProductivityReportController::class, 'publicBuildingsData'])->name('reports.area-productivity.public-buildings.data');
+    Route::get('reports/area-productivity/road-facilities/data', [AreaProductivityReportController::class, 'roadFacilitiesData'])->name('reports.area-productivity.road-facilities.data');
     Route::get('reports/area-productivity/housing-units', [AreaProductivityReportController::class, 'housingUnits'])->name('reports.area-productivity.housing-units');
     Route::get('reports/area-productivity/buildings', [AreaProductivityReportController::class, 'buildings'])->name('reports.area-productivity.buildings');
     Route::get('reports/area-productivity/public-buildings', [AreaProductivityReportController::class, 'publicBuildings'])->name('reports.area-productivity.public-buildings');

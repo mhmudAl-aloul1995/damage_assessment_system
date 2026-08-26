@@ -137,6 +137,7 @@ return [
             'apply_filters' => 'Apply Filters',
             'reset' => 'Reset',
             'clear_date' => 'Clear Date',
+            'auto_filter' => 'Auto filter',
         ],
         'columns' => [
             'sector' => 'Sector',

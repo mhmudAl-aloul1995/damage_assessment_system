@@ -137,6 +137,7 @@ return [
             'apply_filters' => 'تطبيق الفلاتر',
             'reset' => 'إعادة تعيين',
             'clear_date' => 'تفريغ التاريخ',
+            'auto_filter' => 'تحديث تلقائي',
         ],
         'columns' => [
             'sector' => 'القطاع',
