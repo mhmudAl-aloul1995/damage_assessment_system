@@ -175,8 +175,8 @@
 
         #area_productivity_table thead th {
             position: sticky;
-            top: 0;
-            z-index: 5;
+            top: calc(var(--bs-app-header-height, 74px) + .5rem);
+            z-index: 30;
             background: #fff;
             box-shadow: inset 0 -1px 0 #e4e6ef, 0 .35rem .8rem rgba(15, 23, 42, .04);
         }
