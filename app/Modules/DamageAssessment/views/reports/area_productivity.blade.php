@@ -412,7 +412,7 @@
                                 <div class="input-group w-md-300px">
                                     <input class="form-control form-control-solid" value="{{ $start_date && $end_date ? $date_range_label : '' }}"
                                         placeholder="{{ __('multilingual.area_productivity_reports.filters.date_range') }}"
-                                        id="kt_daterangepicker" readonly />
+                                        id="kt_daterangepicker" @if (! $useAjaxFilters) readonly @endif />
                                     <span class="input-group-text"><i class="ki-duotone ki-calendar fs-2"></i></span>
                                 </div>
 
@@ -749,27 +749,6 @@
                 width: '100%'
             });
 
-            $('#kt_daterangepicker').daterangepicker({
-                startDate: @json($start_date) ? moment(@json($start_date)) : moment().subtract(29, 'days'),
-                endDate: @json($end_date) ? moment(@json($end_date)) : moment(),
-                locale: {
-                    format: 'MM/DD/YYYY'
-                },
-                ranges: {
-                    @if (app()->getLocale() === 'ar')
-                        'آخر 30 يوم': [moment().subtract(29, 'days'), moment()],
-                        'هذا الشهر': [moment().startOf('month'), moment().endOf('month')]
-                    @else
-                        'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                        'This Month': [moment().startOf('month'), moment().endOf('month')]
-                    @endif
-                }
-            }, function (start, end) {
-                $('#kt_daterangepicker').val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
-                $('#start_date').val(start.format('YYYY-MM-DD'));
-                $('#end_date').val(end.format('YYYY-MM-DD'));
-            });
-
             const areaProductivityTable = $('#area_productivity_table').DataTable({
                 pageLength: 25,
                 order: [[0, 'desc']],
@@ -792,6 +771,70 @@
             const allLabel = 'All';
             const isBuildingsReport = @json($showAuditedBuildingColumns);
             const isHousingUnitsReport = @json($showAuditedHousingUnitColumns);
+            const dateRangeInput = document.getElementById('kt_daterangepicker');
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+            let flatDateRangePicker = null;
+
+            function syncFlatDateRange(selectedDates, instance) {
+                if (selectedDates.length >= 2) {
+                    startDateInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    endDateInput.value = instance.formatDate(selectedDates[1], 'Y-m-d');
+
+                    return;
+                }
+
+                if (selectedDates.length === 1) {
+                    const selectedDate = instance.formatDate(selectedDates[0], 'Y-m-d');
+
+                    startDateInput.value = selectedDate;
+                    endDateInput.value = selectedDate;
+
+                    return;
+                }
+
+                startDateInput.value = '';
+                endDateInput.value = '';
+            }
+
+            if (useAjaxFilters) {
+                flatDateRangePicker = flatpickr(dateRangeInput, {
+                    mode: 'range',
+                    dateFormat: 'Y-m-d',
+                    allowInput: true,
+                    locale: Object.assign({}, @json(app()->getLocale() === 'ar') && flatpickr.l10ns.ar ? flatpickr.l10ns.ar : {}, {
+                        rangeSeparator: ' - '
+                    }),
+                    defaultDate: [startDateInput.value, endDateInput.value].filter(Boolean),
+                    onChange: function (selectedDates, dateStr, instance) {
+                        syncFlatDateRange(selectedDates, instance);
+                    },
+                    onClose: function (selectedDates, dateStr, instance) {
+                        syncFlatDateRange(selectedDates, instance);
+                    }
+                });
+            } else {
+                $('#kt_daterangepicker').daterangepicker({
+                    startDate: @json($start_date) ? moment(@json($start_date)) : moment().subtract(29, 'days'),
+                    endDate: @json($end_date) ? moment(@json($end_date)) : moment(),
+                    locale: {
+                        format: 'MM/DD/YYYY'
+                    },
+                    ranges: {
+                        @if (app()->getLocale() === 'ar')
+                            'آخر 30 يوم': [moment().subtract(29, 'days'), moment()],
+                            'هذا الشهر': [moment().startOf('month'), moment().endOf('month')]
+                        @else
+                            'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                            'This Month': [moment().startOf('month'), moment().endOf('month')]
+                        @endif
+                    }
+                }, function (start, end) {
+                    $('#kt_daterangepicker').val(start.format('MM/DD/YYYY') + ' - ' + end.format('MM/DD/YYYY'));
+                    $('#start_date').val(start.format('YYYY-MM-DD'));
+                    $('#end_date').val(end.format('YYYY-MM-DD'));
+                });
+            }
 
             function numberFormat(value) {
                 return Number(value || 0).toLocaleString();
@@ -875,6 +918,7 @@
             if (useAjaxFilters) {
                 $('#filter_form').on('submit', function (event) {
                     event.preventDefault();
+                    syncFlatDateRange(flatDateRangePicker.selectedDates, flatDateRangePicker);
 
                     const queryString = formQueryString();
                     const requestUrl = queryString ? `${ajaxUrl}?${queryString}` : ajaxUrl;
@@ -902,9 +946,14 @@
             }
 
             $('#area_productivity_clear_date').on('click', function () {
-                $('#kt_daterangepicker').val('');
-                $('#start_date').val('');
-                $('#end_date').val('');
+                if (flatDateRangePicker) {
+                    flatDateRangePicker.clear();
+                } else {
+                    $('#kt_daterangepicker').val('');
+                }
+
+                startDateInput.value = '';
+                endDateInput.value = '';
             });
 
                 @if ($showLocationPies)

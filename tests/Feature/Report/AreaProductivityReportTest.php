@@ -417,6 +417,27 @@ it('renders separated area productivity reports for all supported datasets with 
     });
 
     $this->actingAs($user)
+        ->get(route('reports.area-productivity.housing-units'))
+        ->assertOk()
+        ->assertSee('name="start_date" id="start_date" value=""', false)
+        ->assertSee('name="end_date" id="end_date" value=""', false)
+        ->assertSee('const useAjaxFilters = true;', false)
+        ->assertSee("mode: 'range'", false)
+        ->assertSee('defaultDate: [startDateInput.value, endDateInput.value].filter(Boolean)', false)
+        ->assertViewHas('start_date', '')
+        ->assertViewHas('end_date', '');
+
+    $this->actingAs($user)
+        ->get(route('reports.area-productivity.buildings'))
+        ->assertOk()
+        ->assertSee('name="start_date" id="start_date" value=""', false)
+        ->assertSee('name="end_date" id="end_date" value=""', false)
+        ->assertSee('const useAjaxFilters = true;', false)
+        ->assertSee("mode: 'range'", false)
+        ->assertViewHas('start_date', '')
+        ->assertViewHas('end_date', '');
+
+    $this->actingAs($user)
         ->get(route('reports.area-productivity.buildings', [
             'start_date' => '2026-04-01',
             'end_date' => '2026-04-30',
