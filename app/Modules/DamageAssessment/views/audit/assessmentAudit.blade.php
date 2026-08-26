@@ -2494,6 +2494,16 @@
             return message;
         }
 
+        function reloadInlineAssessmentViews(type) {
+            if (type === 'building_table') {
+                reloadBuildingAssessmentTable();
+            } else if (type === 'housing_table') {
+                reloadHousingAssessmentTable();
+            }
+
+            reloadBuildingUnitsTable();
+        }
+
         function syncHousingRowAfterNumberUpdate(globalid) {
             if (!globalid) return;
 
@@ -2514,7 +2524,7 @@
         }
 
 
-        function saveInlineValue(field, globalid, type, value, callback = null) {
+        function saveInlineValue(field, globalid, type, value, callback = null, options = {}) {
             globalid = resolveInlineGlobalId(globalid, type);
 
             if (!globalid) {
@@ -2526,7 +2536,7 @@
             let lockKey = [type, globalid, field].join('|');
 
             if (inlineSaveLocks.has(lockKey)) {
-                pendingInlineSaves.set(lockKey, { field, globalid, type, value });
+                pendingInlineSaves.set(lockKey, { field, globalid, type, value, options });
                 if (callback) callback(false);
                 return;
             }
@@ -2545,7 +2555,11 @@
                 },
                 success: function (response) {
                     if (response?.status === false || response?.success === false) {
-                        toastr.warning(auditResponseMessage(response, 'لا يوجد تغيير في القيمة'));
+                        if (options.showNoChange) {
+                            toastr.info(auditResponseMessage(response, 'القيمة محفوظة مسبقاً'));
+                        }
+
+                        reloadInlineAssessmentViews(type);
                         if (callback) callback(false);
                         return;
                     }
@@ -2573,8 +2587,7 @@
                         loadHousingSidebarSummary();
                     }
 
-                    reloadHousingAssessmentTable();
-                    reloadBuildingUnitsTable();
+                    reloadInlineAssessmentViews(type);
                     if (callback) callback(true);
                 },
                 error: function (xhr) {
@@ -2593,7 +2606,9 @@
                                 pendingSave.field,
                                 pendingSave.globalid,
                                 pendingSave.type,
-                                pendingSave.value
+                                pendingSave.value,
+                                null,
+                                pendingSave.options || {}
                             );
                         }
                     }
@@ -2818,7 +2833,7 @@
 
             saveInlineValue(field, globalid, type, value, function () {
                 btn.prop('disabled', false).html('حفظ');
-            });
+            }, { showNoChange: true });
         });
 
         $(document).on('change', '.inline-edit-select', function () {

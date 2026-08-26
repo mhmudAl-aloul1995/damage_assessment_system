@@ -1710,9 +1710,14 @@ it('queues the latest inline audit value while a save is in progress', function 
 
     expect($view)
         ->toContain('let pendingInlineSaves = new Map()')
-        ->toContain('pendingInlineSaves.set(lockKey, { field, globalid, type, value })')
+        ->toContain('pendingInlineSaves.set(lockKey, { field, globalid, type, value, options })')
         ->toContain('response?.status === false || response?.success === false')
-        ->toContain("toastr.warning(auditResponseMessage(response, 'لا يوجد تغيير في القيمة'))")
+        ->toContain('if (options.showNoChange)')
+        ->toContain("toastr.info(auditResponseMessage(response, 'القيمة محفوظة مسبقاً'))")
+        ->toContain('function reloadInlineAssessmentViews(type)')
+        ->toContain("if (type === 'building_table')")
+        ->toContain('reloadBuildingAssessmentTable()')
+        ->toContain('{ showNoChange: true }')
         ->toContain('let pendingSave = pendingInlineSaves.get(lockKey)')
         ->toContain('saveInlineValue(')
         ->toContain('pendingSave.value');
