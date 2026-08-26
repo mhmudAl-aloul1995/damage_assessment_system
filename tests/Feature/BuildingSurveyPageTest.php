@@ -115,6 +115,53 @@ it('filters building datatable records with grouped filters and ranges', functio
     $response->assertDontSee('Al Noor House');
 });
 
+it('filters building datatable records by unclassified damage status', function () {
+    $user = User::factory()->create();
+
+    seedBuildingFilterOptions();
+
+    Building::query()->create([
+        'assignedto' => 'Engineer One',
+        'globalid' => 'building-unclassified-null',
+        'objectid' => 1101,
+        'building_name' => 'Unclassified Null Building',
+        'building_damage_status' => null,
+    ]);
+
+    Building::query()->create([
+        'assignedto' => 'Engineer Two',
+        'globalid' => 'building-unclassified-empty',
+        'objectid' => 1102,
+        'building_name' => 'Unclassified Empty Building',
+        'building_damage_status' => '',
+    ]);
+
+    Building::query()->create([
+        'assignedto' => 'Engineer Three',
+        'globalid' => 'building-classified',
+        'objectid' => 1103,
+        'building_name' => 'Classified Building',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'building_damage_status' => ['__blank__'],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/building/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 2);
+    $response->assertSee('Unclassified Null Building');
+    $response->assertSee('Unclassified Empty Building');
+    $response->assertDontSee('Classified Building');
+});
+
 function seedBuildingFilterOptions(): void
 {
     collect([

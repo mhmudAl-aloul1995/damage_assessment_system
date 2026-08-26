@@ -738,6 +738,13 @@ it('counts assessed buildings from completed building surveys', function () {
     ]);
 
     Building::query()->create([
+        'objectid' => 919,
+        'globalid' => 'assessed-building-unclassified',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => null,
+    ]);
+
+    Building::query()->create([
         'objectid' => 914,
         'globalid' => 'assessed-building-blocked',
         'field_status' => 'Not_Completed',
@@ -760,15 +767,18 @@ it('counts assessed buildings from completed building surveys', function () {
         ->get(route('damageAssessment.index'))
         ->assertOk()
         ->assertViewHas('buildingStats', function (array $buildingStats): bool {
-            return (int) $buildingStats['completed'] === 7
+            return (int) $buildingStats['completed'] === 8
                 && (int) $buildingStats['fully_damaged'] === 2
                 && (int) $buildingStats['partially_damaged'] === 2
                 && (int) $buildingStats['committee_review'] === 1
-                && (int) $buildingStats['no_damage'] === 2
+                && (int) $buildingStats['unclassified'] === 1
                 && (int) $buildingStats['assessment_obstacle'] === 1
                 && (int) $buildingStats['debris'] === 1
-                && (int) $buildingStats['assessed_total'] === 7;
-        });
+                && (int) $buildingStats['assessed_total'] === 8;
+        })
+        ->assertSee(__('ui.damage_dashboard.unclassified'), false)
+        ->assertSee('building_damage_status=__blank__', false)
+        ->assertDontSee('building_damage_status=no_damage', false);
 });
 
 it('uses target cached building statistics after audit edits are refreshed', function () {

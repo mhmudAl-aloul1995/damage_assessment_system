@@ -90,6 +90,7 @@
                     <div class="col-md-3">
                         <label class="form-label">{{ __('ui.buildings_page.damage_status') }}</label>
                         <select name="filters[building_damage_status][]" class="form-select form-select-solid building-filter-control" data-control="select2" data-placeholder="{{ __('ui.buildings_page.select_damage_status') }}" data-allow-clear="true" data-close-on-select="false" multiple>
+                            <option value="__blank__">{{ __('ui.damage_dashboard.unclassified') }}</option>
                             @foreach (($groupedFilters['building_damage_status'] ?? collect()) as $option)
                                 <option value="{{ $option->name }}">{{ $option->label }}</option>
                             @endforeach

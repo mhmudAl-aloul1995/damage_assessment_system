@@ -255,6 +255,12 @@ class BuildingController extends Controller
                 continue;
             }
 
+            if ($field === 'building_damage_status') {
+                $this->applyNullableStatusFilter($query, $field, $value);
+
+                continue;
+            }
+
             is_array($value)
                 ? $query->whereIn($field, $value)
                 : $query->where($field, $value);
@@ -288,6 +294,28 @@ class BuildingController extends Controller
                 $query->where($field, '<=', $to);
             }
         }
+    }
+
+    private function applyNullableStatusFilter(Builder $query, string $field, array|string $value): void
+    {
+        $values = collect(is_array($value) ? $value : [$value])
+            ->filter(fn ($item): bool => $item !== null && $item !== '')
+            ->values();
+
+        $includesBlank = $values->contains('__blank__');
+        $statusValues = $values->reject(fn ($item): bool => $item === '__blank__')->values()->all();
+
+        $query->where(function (Builder $query) use ($field, $includesBlank, $statusValues): void {
+            if ($statusValues !== []) {
+                $query->whereIn($field, $statusValues);
+            }
+
+            if ($includesBlank) {
+                $statusValues !== []
+                    ? $query->orWhereNull($field)->orWhereRaw("TRIM({$field}) = ''")
+                    : $query->whereNull($field)->orWhereRaw("TRIM({$field}) = ''");
+            }
+        });
     }
 
     /**
