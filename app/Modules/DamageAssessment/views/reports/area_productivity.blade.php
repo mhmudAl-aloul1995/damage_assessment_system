@@ -6,7 +6,13 @@
 @section('content')
     @php
         $showHousingUnitsCount = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;
+        $showAuditedBuildingColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;
+        $showAuditedHousingUnitColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS;
         $showRoadDamageColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES;
+        $useAjaxFilters = $showAuditedBuildingColumns || $showAuditedHousingUnitColumns;
+        $ajaxRouteName = $showAuditedBuildingColumns
+            ? 'reports.area-productivity.buildings.data'
+            : ($showAuditedHousingUnitColumns ? 'reports.area-productivity.housing-units.data' : null);
         $showLocationPies = in_array($type, [
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS,
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS,
@@ -18,7 +24,7 @@
             default => 'housing units',
         };
         $locationPieDescription = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS
-            ? 'Municipality and neighborhood charts for totally damaged, partially damaged, and committee review housing units.'
+            ? 'Municipality and neighborhood charts for housing unit damage classifications.'
             : 'Municipality and neighborhood charts for totally and partially damaged '.$locationPieCountLabel.'.';
         $locationPieCharts = [];
 
@@ -33,6 +39,7 @@
         }
 
         $hasAdvancedFilters = collect($filters)->flatten()->filter()->isNotEmpty();
+        $emptyTableColspan = $showRoadDamageColumns ? 12 : (($showAuditedBuildingColumns || $showAuditedHousingUnitColumns) ? 11 : 9);
     @endphp
 
     <style>
@@ -373,7 +380,7 @@
             <div class="card">
                 <div class="card-header border-0 pt-6" style="direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};">
                     <div class="card-title">
-                        <h2 style="color: green;">
+                        <h2 style="color: green;" id="area_productivity_title">
                             {{ __($title_key) }}:
                             @if ($start_date && $end_date)
                                 {{ $start_date }}
@@ -392,7 +399,7 @@
 
                             <div class="area-productivity-toolbar-main">
                                 <a href="{{ route($export_route_name, array_merge(request()->query(), ['start_date' => $start_date, 'end_date' => $end_date])) }}"
-                                    class="btn btn-light-success">
+                                    class="btn btn-light-success" id="area_productivity_export_link">
                                     <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
                                     {{ __('multilingual.area_productivity_reports.actions.export_excel') }}
                                 </a>
@@ -403,11 +410,16 @@
                                 </button>
 
                                 <div class="input-group w-md-300px">
-                                    <input class="form-control form-control-solid" value="{{ $date_range_label }}"
+                                    <input class="form-control form-control-solid" value="{{ $start_date && $end_date ? $date_range_label : '' }}"
                                         placeholder="{{ __('multilingual.area_productivity_reports.filters.date_range') }}"
                                         id="kt_daterangepicker" readonly />
                                     <span class="input-group-text"><i class="ki-duotone ki-calendar fs-2"></i></span>
                                 </div>
+
+                                <button class="btn btn-light" type="button" id="area_productivity_clear_date">
+                                    <i class="ki-duotone ki-cross-circle fs-2"></i>
+                                    {{ __('multilingual.area_productivity_reports.actions.clear_date') }}
+                                </button>
 
                                 <button class="btn btn-light" type="button" data-bs-toggle="collapse"
                                     data-bs-target="#area-productivity-advanced-filters" aria-expanded="{{ $hasAdvancedFilters ? 'true' : 'false' }}">
@@ -554,8 +566,8 @@
                                                         'variant' => 'primary',
                                                         'neighborhoodsCount' => $showNeighborhoodPies ? count($municipalityNode['neighborhoods']) : null,
                                                         'countLabel' => $locationPieCountLabel,
-                                                        'firstMetricLabel' => 'Totally Damaged',
-                                                        'secondMetricLabel' => 'Partially Damaged',
+                                                        'firstMetricLabel' => __('multilingual.area_productivity_reports.metrics.totally_damaged'),
+                                                        'secondMetricLabel' => __('multilingual.area_productivity_reports.metrics.partially_damaged'),
                                                         'firstMetricClass' => 'totally-damaged',
                                                         'secondMetricClass' => 'partially-damaged',
                                                     ])
@@ -571,8 +583,8 @@
                                                                 @include('damage-assessment::reports.partials.location_productivity_neighborhood', [
                                                                     'pie' => $neighborhoodPie,
                                                                     'countLabel' => $locationPieCountLabel,
-                                                                    'firstMetricLabel' => 'Totally Damaged',
-                                                                    'secondMetricLabel' => 'Partially Damaged',
+                                                                    'firstMetricLabel' => __('multilingual.area_productivity_reports.metrics.totally_damaged'),
+                                                                    'secondMetricLabel' => __('multilingual.area_productivity_reports.metrics.partially_damaged'),
                                                                     'firstMetricClass' => 'totally-damaged',
                                                                     'secondMetricClass' => 'partially-damaged',
                                                                 ])
@@ -612,6 +624,17 @@
                                         <th>{{ __('multilingual.area_productivity_reports.columns.moderate') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.minor') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
+                                    @elseif ($showAuditedHousingUnitColumns)
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
+                                    @elseif ($showAuditedBuildingColumns)
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
                                     @else
                                         <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
@@ -640,6 +663,17 @@
                                             <td>{{ $row->moderate_count }}</td>
                                             <td>{{ $row->minor_count }}</td>
                                             <td>{{ $row->no_damage_count }}</td>
+                                        @elseif ($showAuditedHousingUnitColumns)
+                                            <td>{{ $row->tda_range }}</td>
+                                            <td>{{ $row->pda_range }}</td>
+                                            <td>{{ $row->no_damage_count ?? 0 }}</td>
+                                            <td>{{ $row->cra_range }}</td>
+                                            <td>{{ $row->unclassified_count ?? 0 }}</td>
+                                        @elseif ($showAuditedBuildingColumns)
+                                            <td>{{ $row->tda_range }}</td>
+                                            <td>{{ $row->pda_range }}</td>
+                                            <td>{{ $row->cra_range }}</td>
+                                            <td>{{ $row->unclassified_count ?? 0 }}</td>
                                         @else
                                             <td>{{ $row->cra_range }}</td>
                                             <td>{{ $row->pda_range }}</td>
@@ -653,7 +687,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ $showRoadDamageColumns ? 12 : ($showHousingUnitsCount ? 10 : 9) }}" class="text-center text-muted">
+                                        <td colspan="{{ $emptyTableColspan }}" class="text-center text-muted">
                                             {{ __('multilingual.area_productivity_reports.labels.empty') }}
                                         </td>
                                     </tr>
@@ -674,6 +708,17 @@
                                         <td class="text-warning">{{ $summary['moderate'] }}</td>
                                         <td class="text-primary">{{ $summary['minor'] }}</td>
                                         <td class="text-success">{{ $summary['no_damage'] }}</td>
+                                    @elseif ($showAuditedHousingUnitColumns)
+                                        <td class="text-danger">{{ $summary['tda'] }}</td>
+                                        <td class="text-warning">{{ $summary['pda'] }}</td>
+                                        <td class="text-success">{{ $summary['no_damage'] }}</td>
+                                        <td class="text-primary">{{ $summary['cra'] }}</td>
+                                        <td>{{ $summary['unclassified'] }}</td>
+                                    @elseif ($showAuditedBuildingColumns)
+                                        <td class="text-danger">{{ $summary['tda'] }}</td>
+                                        <td class="text-warning">{{ $summary['pda'] }}</td>
+                                        <td class="text-primary">{{ $summary['cra'] }}</td>
+                                        <td>{{ $summary['unclassified'] }}</td>
                                     @else
                                         <td class="text-primary">{{ $summary['cra'] }}</td>
                                         <td class="text-warning">{{ $summary['pda'] }}</td>
@@ -725,7 +770,7 @@
                 $('#end_date').val(end.format('YYYY-MM-DD'));
             });
 
-            $('#area_productivity_table').DataTable({
+            const areaProductivityTable = $('#area_productivity_table').DataTable({
                 pageLength: 25,
                 order: [[0, 'desc']],
                 columnDefs: [
@@ -737,6 +782,129 @@
                 language: {
                     url: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json')
                 }
+            });
+
+            const useAjaxFilters = @json($useAjaxFilters);
+            const ajaxUrl = @json($ajaxRouteName ? route($ajaxRouteName) : null);
+            const exportBaseUrl = @json(route($export_route_name));
+            const reportTitle = @json(__($title_key));
+            const toLabel = @json(__('multilingual.area_productivity_reports.labels.to'));
+            const allLabel = 'All';
+            const isBuildingsReport = @json($showAuditedBuildingColumns);
+            const isHousingUnitsReport = @json($showAuditedHousingUnitColumns);
+
+            function numberFormat(value) {
+                return Number(value || 0).toLocaleString();
+            }
+
+            function tableRow(row) {
+                const cells = [
+                    `<span class="fw-bold">${numberFormat(row.total_count)}</span>`,
+                ];
+
+                if (isBuildingsReport) {
+                    cells.push(numberFormat(row.housing_units_count));
+                    cells.push(numberFormat(row.tda_range));
+                    cells.push(numberFormat(row.pda_range));
+                    cells.push(numberFormat(row.cra_range));
+                    cells.push(numberFormat(row.unclassified_count));
+                } else if (isHousingUnitsReport) {
+                    cells.push(numberFormat(row.tda_range));
+                    cells.push(numberFormat(row.pda_range));
+                    cells.push(numberFormat(row.no_damage_count));
+                    cells.push(numberFormat(row.cra_range));
+                    cells.push(numberFormat(row.unclassified_count));
+                }
+
+                cells.push(numberFormat(row.no_eng));
+                cells.push(row.neighborhood);
+                cells.push(row.municipalitie);
+                cells.push(row.governorate);
+                cells.push(row.sector);
+
+                return cells;
+            }
+
+            function updateFooter(summary) {
+                const footerCells = $('#area_productivity_table tfoot td');
+                let index = 0;
+
+                footerCells.eq(index++).text(numberFormat(summary.total_records));
+
+                if (isBuildingsReport) {
+                    footerCells.eq(index++).text(numberFormat(summary.housing_units_count));
+                    footerCells.eq(index++).text(numberFormat(summary.tda));
+                    footerCells.eq(index++).text(numberFormat(summary.pda));
+                    footerCells.eq(index++).text(numberFormat(summary.cra));
+                    footerCells.eq(index++).text(numberFormat(summary.unclassified));
+                } else if (isHousingUnitsReport) {
+                    footerCells.eq(index++).text(numberFormat(summary.tda));
+                    footerCells.eq(index++).text(numberFormat(summary.pda));
+                    footerCells.eq(index++).text(numberFormat(summary.no_damage));
+                    footerCells.eq(index++).text(numberFormat(summary.cra));
+                    footerCells.eq(index++).text(numberFormat(summary.unclassified));
+                }
+
+                footerCells.eq(index).text(numberFormat(summary.engineers));
+            }
+
+            function formQueryString() {
+                const params = new URLSearchParams();
+
+                $('#filter_form').serializeArray().forEach(function (field) {
+                    if (field.value !== '') {
+                        params.append(field.name, field.value);
+                    }
+                });
+
+                return params.toString();
+            }
+
+            function updateReportTitle(payload) {
+                const dateLabel = payload.start_date && payload.end_date
+                    ? `${payload.start_date} <span class="text-gray-400">${toLabel}</span> ${payload.end_date}`
+                    : allLabel;
+
+                $('#area_productivity_title').html(`${reportTitle}: ${dateLabel}`);
+            }
+
+            function updateExportLink(queryString) {
+                $('#area_productivity_export_link').attr('href', queryString ? `${exportBaseUrl}?${queryString}` : exportBaseUrl);
+            }
+
+            if (useAjaxFilters) {
+                $('#filter_form').on('submit', function (event) {
+                    event.preventDefault();
+
+                    const queryString = formQueryString();
+                    const requestUrl = queryString ? `${ajaxUrl}?${queryString}` : ajaxUrl;
+                    const filterButton = $(this).find('button[type="submit"]').first();
+
+                    filterButton.prop('disabled', true);
+
+                    $.get(requestUrl)
+                        .done(function (payload) {
+                            areaProductivityTable.clear();
+
+                            payload.rows.forEach(function (row) {
+                                areaProductivityTable.row.add(tableRow(row));
+                            });
+
+                            areaProductivityTable.draw();
+                            updateFooter(payload.summary);
+                            updateReportTitle(payload);
+                            updateExportLink(queryString);
+                        })
+                        .always(function () {
+                            filterButton.prop('disabled', false);
+                        });
+                });
+            }
+
+            $('#area_productivity_clear_date').on('click', function () {
+                $('#kt_daterangepicker').val('');
+                $('#start_date').val('');
+                $('#end_date').val('');
             });
 
                 @if ($showLocationPies)

@@ -47,6 +47,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             'tda_range' => $this->data->sum('tda_range'),
             'pda_range' => $this->data->sum('pda_range'),
             'cra_range' => $this->data->sum('cra_range'),
+            'unclassified_count' => $this->data->sum('unclassified_count'),
             'destroyed_count' => $this->data->sum('destroyed_count'),
             'severe_count' => $this->data->sum('severe_count'),
             'moderate_count' => $this->data->sum('moderate_count'),
@@ -82,11 +83,26 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                 __('multilingual.area_productivity_reports.columns.minor'),
                 __('multilingual.area_productivity_reports.columns.no_damage'),
             ]
-            : [
-                __('multilingual.area_productivity_reports.columns.cra'),
-                __('multilingual.area_productivity_reports.columns.pda'),
-                __('multilingual.area_productivity_reports.columns.tda'),
-            ];
+            : ($this->isHousingUnitsReport()
+                ? [
+                    __('multilingual.area_productivity_reports.columns.tda'),
+                    __('multilingual.area_productivity_reports.columns.pda'),
+                    __('multilingual.area_productivity_reports.columns.no_damage'),
+                    __('multilingual.area_productivity_reports.columns.cra'),
+                    __('multilingual.area_productivity_reports.columns.unclassified'),
+                ]
+                : ($this->isBuildingsReport()
+                    ? [
+                        __('multilingual.area_productivity_reports.columns.tda'),
+                        __('multilingual.area_productivity_reports.columns.pda'),
+                        __('multilingual.area_productivity_reports.columns.cra'),
+                        __('multilingual.area_productivity_reports.columns.unclassified'),
+                    ]
+                    : [
+                        __('multilingual.area_productivity_reports.columns.cra'),
+                        __('multilingual.area_productivity_reports.columns.pda'),
+                        __('multilingual.area_productivity_reports.columns.tda'),
+                    ]));
 
         return [
             ...$headings,
@@ -123,11 +139,26 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                 $row->minor_count ?? 0,
                 $row->no_damage_count ?? 0,
             ]
-            : [
-                $row->cra_range ?? 0,
-                $row->pda_range ?? 0,
-                $row->tda_range ?? 0,
-            ];
+            : ($this->isHousingUnitsReport()
+                ? [
+                    $row->tda_range ?? 0,
+                    $row->pda_range ?? 0,
+                    $row->no_damage_count ?? 0,
+                    $row->cra_range ?? 0,
+                    $row->unclassified_count ?? 0,
+                ]
+                : ($this->isBuildingsReport()
+                    ? [
+                        $row->tda_range ?? 0,
+                        $row->pda_range ?? 0,
+                        $row->cra_range ?? 0,
+                        $row->unclassified_count ?? 0,
+                    ]
+                    : [
+                        $row->cra_range ?? 0,
+                        $row->pda_range ?? 0,
+                        $row->tda_range ?? 0,
+                    ]));
 
         return [
             ...$mapped,
@@ -222,12 +253,30 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         return $this->type === 'road_facilities';
     }
 
+    private function isHousingUnitsReport(): bool
+    {
+        return $this->type === 'housing_units';
+    }
+
+    private function isBuildingsReport(): bool
+    {
+        return $this->type === 'buildings';
+    }
+
     private function lastColumn(): string
     {
         if ($this->isRoadFacilitiesReport()) {
             return 'L';
         }
 
-        return $this->includeHousingUnitsCount ? 'J' : 'I';
+        if ($this->isHousingUnitsReport()) {
+            return 'K';
+        }
+
+        if ($this->isBuildingsReport()) {
+            return 'K';
+        }
+
+        return 'I';
     }
 }

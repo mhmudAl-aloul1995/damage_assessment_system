@@ -129,7 +129,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'globalid' => 'building-unclassified',
         'building_name' => 'Building Unclassified',
         'assignedto' => 'eng-4',
-        'building_damage_status' => 'no_damage',
+        'building_damage_status' => null,
         'governorate' => 'Gaza',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Rimal',
@@ -168,11 +168,20 @@ it('renders separated area productivity reports for all supported datasets with 
 
     AuditedHousingUnit::query()->create([
         'objectid' => 2004,
-        'globalid' => 'housing-unclassified',
+        'globalid' => 'housing-no-damage',
         'parentglobalid' => 'building-2',
-        'unit_damage_status' => 'no_damage2',
+        'unit_damage_status' => 'no_damaged',
         'building_submit_date' => '2026-04-11 14:00:00',
         'creationdate' => '2026-04-11 14:00:00',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 2007,
+        'globalid' => 'housing-unclassified',
+        'parentglobalid' => 'building-2',
+        'unit_damage_status' => null,
+        'building_submit_date' => '2026-04-11 15:00:00',
+        'creationdate' => '2026-04-11 15:00:00',
     ]);
 
     AuditedHousingUnit::query()->create([
@@ -333,11 +342,12 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('area-productivity-table-tab', false)
         ->assertSee('area-productivity-location-charts-tab', false)
         ->assertSee('area-productivity-location-charts-pane', false)
-        ->assertSee('Municipality | 3 housing units')
+        ->assertSee('Municipality | 5 housing units')
         ->assertSee('Neighborhoods under Gaza')
         ->assertSee('Totally Damaged')
         ->assertSee('Partially Damaged')
-        ->assertSee('Committee Review')
+        ->assertSee('Technical Committee')
+        ->assertSee('Unclassified')
         ->assertSee('location-pie-section-toggle', false)
         ->assertSee('location-pie-card', false)
         ->assertSee('housing_units_municipality', false)
@@ -346,21 +356,23 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSee('3', false)
         ->assertSee('1', false)
         ->assertViewHas('summary', function (array $summary): bool {
-            return $summary['total_records'] === 3
+            return $summary['total_records'] === 5
                 && $summary['tda'] === 1
                 && $summary['pda'] === 1
-                && $summary['cra'] === 1;
+                && $summary['cra'] === 1
+                && $summary['no_damage'] === 1
+                && $summary['unclassified'] === 1;
         })
         ->assertViewHas('charts', function (array $charts): bool {
             $municipalityNode = $charts['location_pies'][0] ?? null;
 
             return $municipalityNode !== null
                 && $municipalityNode['pie']['title'] === 'Gaza'
-                && $municipalityNode['pie']['series'] === [1, 1, 1]
-                && $municipalityNode['pie']['labels'] === ['Totally Damaged', 'Partially Damaged', 'Committee Review']
-                && $municipalityNode['pie']['colors'] === ['#F1416C', '#FFC700', '#E879F9']
-                && array_column($municipalityNode['pie']['summary_items'], 'color') === ['#F1416C', '#FFC700', '#E879F9']
-                && $municipalityNode['pie']['units_count'] === 3
+                && $municipalityNode['pie']['series'] === [1, 1, 1, 1, 1]
+                && $municipalityNode['pie']['labels'] === ['Totally Damaged', 'Partially Damaged', 'Technical Committee', 'No Damage', 'Unclassified']
+                && $municipalityNode['pie']['colors'] === ['#F1416C', '#FFC700', '#E879F9', '#50CD89', '#7E8299']
+                && array_column($municipalityNode['pie']['summary_items'], 'color') === ['#F1416C', '#FFC700', '#E879F9', '#50CD89', '#7E8299']
+                && $municipalityNode['pie']['units_count'] === 5
                 && count($municipalityNode['neighborhoods']) === 1
                 && $municipalityNode['neighborhoods'][0]['title'] === 'Rimal';
         });
@@ -384,22 +396,24 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertSeeInOrder(['<td>Gaza</td>', '<td>Buildings</td>'], false);
 
     $buildingResponse->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 3
+        return $summary['total_records'] === 4
             && $summary['tda'] === 1
             && $summary['pda'] === 2
             && $summary['cra'] === 0
-            && $summary['housing_units_count'] === 5;
+            && $summary['unclassified'] === 1
+            && $summary['housing_units_count'] === 6;
     });
 
     $buildingResponse->assertViewHas('rows', function ($rows): bool {
         $rimal = $rows->firstWhere('neighborhood', 'Rimal');
 
         return $rimal !== null
-            && (int) $rimal->total_count === 3
+            && (int) $rimal->total_count === 4
             && (int) $rimal->tda_range === 1
             && (int) $rimal->pda_range === 2
             && (int) $rimal->cra_range === 0
-            && (int) $rimal->housing_units_count === 5;
+            && (int) $rimal->unclassified_count === 1
+            && (int) $rimal->housing_units_count === 6;
     });
 
     $this->actingAs($user)
@@ -414,6 +428,29 @@ it('renders separated area productivity reports for all supported datasets with 
             return $rows->pluck('neighborhood')->sort()->values()->all() === ['Camp', 'Rimal']
                 && (int) $rows->sum('total_count') === 3;
         });
+
+    $this->actingAs($user)
+        ->getJson(route('reports.area-productivity.housing-units.data', [
+            'start_date' => '',
+            'end_date' => '',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summary.total_records', 7)
+        ->assertJsonPath('summary.no_damage', 1)
+        ->assertJsonPath('summary.unclassified', 1)
+        ->assertJsonPath('start_date', '')
+        ->assertJsonPath('end_date', '');
+
+    $this->actingAs($user)
+        ->getJson(route('reports.area-productivity.buildings.data', [
+            'start_date' => '',
+            'end_date' => '',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summary.total_records', 5)
+        ->assertJsonPath('summary.unclassified', 1)
+        ->assertJsonPath('start_date', '')
+        ->assertJsonPath('end_date', '');
 
     $publicBuildingsResponse = $this->actingAs($user)
         ->get(route('reports.area-productivity.public-buildings', [

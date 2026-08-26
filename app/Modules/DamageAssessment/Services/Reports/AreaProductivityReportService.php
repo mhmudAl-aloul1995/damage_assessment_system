@@ -31,6 +31,7 @@ class AreaProductivityReportService
     private const HOUSING_UNIT_PRODUCTIVITY_STATUSES = [
         'fully_damaged2',
         'partially_damaged2',
+        'no_damaged',
         'committee_review2',
         'committee_review',
         'commite_review',
@@ -76,6 +77,7 @@ class AreaProductivityReportService
                 'tda' => (int) $rows->sum('tda_range'),
                 'pda' => (int) $rows->sum('pda_range'),
                 'cra' => (int) $rows->sum('cra_range'),
+                'unclassified' => (int) $rows->sum('unclassified_count'),
                 'destroyed' => (int) $rows->sum('destroyed_count'),
                 'severe' => (int) $rows->sum('severe_count'),
                 'moderate' => (int) $rows->sum('moderate_count'),
@@ -140,9 +142,14 @@ class AreaProductivityReportService
                 COUNT(DISTINCT buildings.assignedto) as no_eng,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END) as pda_range,
+                SUM(CASE WHEN housing_units.unit_damage_status = 'no_damaged' THEN 1 ELSE 0 END) as no_damage_count,
                 SUM(CASE WHEN housing_units.unit_damage_status IN ('committee_review2', 'committee_review', 'commite_review', 'commitee_review2', 'commitee_review') THEN 1 ELSE 0 END) as cra_range,
+                SUM(CASE WHEN housing_units.unit_damage_status IS NULL OR TRIM(housing_units.unit_damage_status) = '' THEN 1 ELSE 0 END) as unclassified_count,
                 SUM(CASE
-                    WHEN housing_units.unit_damage_status IN ('".implode("', '", self::HOUSING_UNIT_PRODUCTIVITY_STATUSES)."') THEN 1
+                    WHEN housing_units.unit_damage_status IN ('".implode("', '", self::HOUSING_UNIT_PRODUCTIVITY_STATUSES)."')
+                        OR housing_units.unit_damage_status IS NULL
+                        OR TRIM(housing_units.unit_damage_status) = ''
+                    THEN 1
                     ELSE 0
                 END) as total_count
             ")
@@ -179,8 +186,12 @@ class AreaProductivityReportService
                 SUM(CASE WHEN buildings.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN buildings.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
+                SUM(CASE WHEN buildings.building_damage_status IS NULL OR TRIM(buildings.building_damage_status) = '' THEN 1 ELSE 0 END) as unclassified_count,
                 SUM(CASE
-                    WHEN buildings.building_damage_status IN ('fully_damaged', 'partially_damaged', 'committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1
+                    WHEN buildings.building_damage_status IN ('fully_damaged', 'partially_damaged', 'committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2')
+                        OR buildings.building_damage_status IS NULL
+                        OR TRIM(buildings.building_damage_status) = ''
+                    THEN 1
                     ELSE 0
                 END) as total_count,
                 COALESCE(MAX(filtered_housing_units.housing_units_count), 0) as housing_units_count
@@ -584,6 +595,8 @@ class AreaProductivityReportService
                 ['key' => 'tda_range', 'label' => __('multilingual.area_productivity_reports.metrics.totally_damaged'), 'color' => '#F1416C'],
                 ['key' => 'pda_range', 'label' => __('multilingual.area_productivity_reports.metrics.partially_damaged'), 'color' => '#FFC700'],
                 ['key' => 'cra_range', 'label' => __('multilingual.area_productivity_reports.metrics.committee_review'), 'color' => '#E879F9'],
+                ['key' => 'no_damage_count', 'label' => __('multilingual.area_productivity_reports.metrics.no_damage'), 'color' => '#50CD89'],
+                ['key' => 'unclassified_count', 'label' => __('multilingual.area_productivity_reports.metrics.unclassified'), 'color' => '#7E8299'],
             ];
         }
 
