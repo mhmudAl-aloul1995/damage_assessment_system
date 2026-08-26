@@ -85,8 +85,8 @@
         }
 
         .area-productivity-toolbar-main {
-            display: grid;
-            grid-template-columns: minmax(240px, 320px) repeat(3, auto);
+            display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: flex-end;
             gap: .75rem;
@@ -99,6 +99,9 @@
 
         .area-productivity-date-control {
             position: relative;
+            flex: 1 1 330px;
+            max-width: 420px;
+            min-width: 260px;
         }
 
         .area-productivity-date-control .form-control {
@@ -130,16 +133,17 @@
         }
 
         .area-productivity-auto-status {
-            min-height: 45px;
+            min-height: 36px;
             display: inline-flex;
             align-items: center;
+            align-self: center;
             gap: .45rem;
-            padding: 0 .9rem;
+            padding: 0 .75rem;
             border: 1px solid #e8edf5;
-            border-radius: .65rem;
+            border-radius: 999px;
             background: #f8fbff;
             color: #7e8299;
-            font-size: .82rem;
+            font-size: .78rem;
             font-weight: 800;
             white-space: nowrap;
         }
@@ -150,11 +154,12 @@
 
         @media (max-width: 767px) {
             .area-productivity-toolbar-main {
-                grid-template-columns: 1fr;
+                justify-content: stretch;
             }
 
             .area-productivity-toolbar-main > * {
                 width: 100%;
+                max-width: none;
             }
         }
 
@@ -474,6 +479,11 @@
                                     {{ __('multilingual.area_productivity_reports.actions.advanced_filters') }}
                                 </button>
 
+                                <a href="{{ route($route_name) }}" class="btn btn-light" title="{{ __('multilingual.area_productivity_reports.actions.reset') }}">
+                                    <i class="ki-duotone ki-arrows-circle fs-2"><span class="path1"></span><span class="path2"></span></i>
+                                    {{ __('multilingual.area_productivity_reports.actions.reset') }}
+                                </a>
+
                                 <a href="{{ route($export_route_name, array_merge(request()->query(), ['start_date' => $start_date, 'end_date' => $end_date])) }}"
                                     class="btn btn-light-success" id="area_productivity_export_link">
                                     <i class="ki-duotone ki-file-down fs-2"><span class="path1"></span><span class="path2"></span></i>
@@ -538,12 +548,6 @@
                                                     <option value="{{ $assignedto }}" @selected(in_array($assignedto, $filters['assignedto'], true))>{{ $assignedto }}</option>
                                                 @endforeach
                                             </select>
-                                        </div>
-                                        <div class="col-md-4 col-xl-3 d-flex gap-3">
-                                            <a href="{{ route($route_name) }}" class="btn btn-light flex-fill">
-                                                <i class="ki-duotone ki-arrows-circle fs-2"><span class="path1"></span><span class="path2"></span></i>
-                                                {{ __('multilingual.area_productivity_reports.actions.reset') }}
-                                            </a>
                                         </div>
                                     </div>
                                 </div>
