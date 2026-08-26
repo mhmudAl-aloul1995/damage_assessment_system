@@ -82,7 +82,7 @@ class AssessmentInlineEditController extends Controller
             return response()->json([
                 'status' => false,
                 'success' => false,
-                'message' => 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØªØºÙŠÙŠØ± ÙÙŠ Ø§Ù„Ù‚ÙŠÙ…Ø©.',
+                'message' => 'لا يوجد تغيير في القيمة.',
                 'history' => $this->historyRows($request->type, $request->globalid, $request->field),
             ]);
         }
@@ -92,7 +92,7 @@ class AssessmentInlineEditController extends Controller
         return response()->json([
             'status' => true,
             'success' => true,
-            'message' => 'ØªÙ… Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ Ø¨Ù†Ø¬Ø§Ø­',
+            'message' => 'تم حفظ التعديل بنجاح',
             'edit_id' => $edit->id,
             'field_value' => $edit->field_value,
             'user_name' => $edit->user?->name ?? '-',

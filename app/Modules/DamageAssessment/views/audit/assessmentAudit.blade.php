@@ -1367,6 +1367,8 @@
         function initInlineEditors() {
             $('.inline-edit-select').each(function () {
                 let el = $(this);
+                el.data('suppress-inline-save', true);
+
                 if (el.hasClass('select2-hidden-accessible')) {
                     el.select2('destroy');
                 }
@@ -1381,6 +1383,10 @@
                     minimumResultsForSearch: 0,
                     dropdownAutoWidth: true
                 });
+
+                setTimeout(function () {
+                    el.data('suppress-inline-save', false);
+                }, 0);
             });
         }
 
@@ -2838,6 +2844,11 @@
 
         $(document).on('change', '.inline-edit-select', function () {
             let select = $(this);
+
+            if (select.data('suppress-inline-save')) {
+                return;
+            }
+
             let type = select.data('type');
             saveInlineValue(select.data('field'), resolveInlineGlobalId(select.data('globalid'), type), type, select.val());
         });

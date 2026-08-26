@@ -222,6 +222,29 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     });
 });
 
+it('returns a readable Arabic message when an inline audit edit has no value change', function () {
+    $user = User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 502,
+        'globalid' => 'building-inline-no-change',
+        'building_name' => 'Same Building',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'building_table',
+            'globalid' => $building->globalid,
+            'field' => 'building_name',
+            'value' => 'Same Building',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', false)
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('message', 'لا يوجد تغيير في القيمة.')
+        ->assertJsonPath('history', []);
+});
+
 it('shows inline edit history cards to area managers without edit controls', function () {
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
@@ -1717,6 +1740,8 @@ it('queues the latest inline audit value while a save is in progress', function 
         ->toContain('function reloadInlineAssessmentViews(type)')
         ->toContain("if (type === 'building_table')")
         ->toContain('reloadBuildingAssessmentTable()')
+        ->toContain("el.data('suppress-inline-save', true)")
+        ->toContain("if (select.data('suppress-inline-save'))")
         ->toContain('{ showNoChange: true }')
         ->toContain('let pendingSave = pendingInlineSaves.get(lockKey)')
         ->toContain('saveInlineValue(')
