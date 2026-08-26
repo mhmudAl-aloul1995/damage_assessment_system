@@ -763,6 +763,20 @@ it('counts assessed buildings from completed building surveys', function () {
         'building_debris_blocking' => 'no',
     ]);
 
+    Building::query()->create([
+        'objectid' => 920,
+        'globalid' => 'not-completed-building-with-damage-status',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 921,
+        'globalid' => 'pending-building-with-damage-status',
+        'field_status' => 'Pending',
+        'building_damage_status' => 'partially_damaged',
+    ]);
+
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
