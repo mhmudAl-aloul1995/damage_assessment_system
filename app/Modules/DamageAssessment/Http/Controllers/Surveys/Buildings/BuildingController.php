@@ -5,6 +5,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\Buildings;
 use App\Exports\TableExport;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
+use App\Models\AuditedBuilding;
 use App\Models\Building;
 use App\Models\Filter;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -20,6 +21,17 @@ use Yajra\Datatables\Datatables;
 
 class BuildingController extends Controller
 {
+    /**
+     * @var list<string>
+     */
+    private const COMMITTEE_REVIEW_STATUSES = [
+        'committee_review',
+        'committee_review2',
+        'commite_review',
+        'commitee_review',
+        'commitee_review2',
+    ];
+
     public function index(): ViewContract
     {
         $filterColumns = ['id', 'list_name', 'name', 'label'];
@@ -41,10 +53,10 @@ class BuildingController extends Controller
             'buildingFilterSections' => $this->buildingFilterSections($filters->groupBy('list_name')),
             'buildingSummary' => $this->buildingSummary(),
             'buildingFieldStatuses' => $this->buildingFieldStatuses($filters->where('list_name', 'field_status')),
-            'engineers' => Building::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
-            'owners' => Building::query()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
-            'municip' => Building::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
-            'neighborhoods' => Building::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
+            'engineers' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
+            'owners' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
+            'municip' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
+            'neighborhoods' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
             'assessments' => Assessment::query()->get(),
             'filterName' => $filterName,
             'filters' => $filters,
@@ -59,7 +71,7 @@ class BuildingController extends Controller
             ? ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'neighborhood']
             : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'owner_id', 'zone_code', 'units_count', 'editdate', 'field_status', 'building_damage_status', 'units_nos', 'damaged_units_nos', 'floor_nos', 'building_debris_exist', 'uxo_present', 'bodies_present', 'neighborhood', 'municipalitie'];
 
-        $query = Building::query()->select($select)->where('assignedto', '!=', '');
+        $query = $this->auditedCompletedBuildingQuery()->select($select);
 
         $filters = $request->input('filters', []);
 
@@ -72,7 +84,7 @@ class BuildingController extends Controller
         return Datatables::of($query)
             ->editColumn('id', function ($ctr) {
                 return '<div class="form-check form-check-sm form-check-custom form-check-solid">
-                        <input class="form-check-input" type="checkbox" value="'.$ctr->id.'" />
+                        <input class="form-check-input" type="checkbox" value="'.$ctr->objectid.'" />
                     </div>';
             })
             ->editColumn('field_status', function ($ctr) {
@@ -87,10 +99,18 @@ class BuildingController extends Controller
                     'fully_damaged' => 'danger',
                     'partially_damaged' => 'warning',
                     'committee_review' => 'primary',
+                    'committee_review2' => 'primary',
+                    'commite_review' => 'primary',
+                    'commitee_review' => 'primary',
+                    'commitee_review2' => 'primary',
                 ], [
                     'fully_damaged' => 'Totally Damaged',
                     'partially_damaged' => 'Partially Damaged',
                     'committee_review' => 'Committee Review',
+                    'committee_review2' => 'Committee Review',
+                    'commite_review' => 'Committee Review',
+                    'commitee_review' => 'Committee Review',
+                    'commitee_review2' => 'Committee Review',
                 ]);
             })
             ->addColumn('risk_summary', function ($ctr) {
@@ -187,7 +207,7 @@ class BuildingController extends Controller
         return collect($sections)
             ->map(function (array $section) use ($groupedFilters): array {
                 $section['filters'] = collect($section['filters'])
-                    ->filter(fn (array $filter): bool => Schema::hasColumn('buildings', $filter['field']))
+                    ->filter(fn (array $filter): bool => Schema::hasColumn('audited_buildings', $filter['field']))
                     ->map(function (array $filter) use ($groupedFilters): array {
                         $filter['options'] = $groupedFilters[$filter['field']] ?? collect();
 
@@ -241,7 +261,7 @@ class BuildingController extends Controller
         ];
 
         foreach ($selectFilters as $field) {
-            if (! Schema::hasColumn('buildings', $field)) {
+            if (! Schema::hasColumn('audited_buildings', $field)) {
                 continue;
             }
 
@@ -256,7 +276,7 @@ class BuildingController extends Controller
             }
 
             if ($field === 'building_damage_status') {
-                $this->applyNullableStatusFilter($query, $field, $value);
+                $this->applyBuildingDamageStatusFilter($query, $value);
 
                 continue;
             }
@@ -267,7 +287,7 @@ class BuildingController extends Controller
         }
 
         foreach (['building_name', 'owner_name', 'owner_id', 'objectid'] as $field) {
-            if (! Schema::hasColumn('buildings', $field)) {
+            if (! Schema::hasColumn('audited_buildings', $field)) {
                 continue;
             }
 
@@ -279,7 +299,7 @@ class BuildingController extends Controller
         }
 
         foreach (['floor_nos', 'units_nos', 'damaged_units_nos'] as $field) {
-            if (! Schema::hasColumn('buildings', $field)) {
+            if (! Schema::hasColumn('audited_buildings', $field)) {
                 continue;
             }
 
@@ -294,6 +314,17 @@ class BuildingController extends Controller
                 $query->where($field, '<=', $to);
             }
         }
+    }
+
+    private function applyBuildingDamageStatusFilter(Builder $query, array|string $value): void
+    {
+        $values = collect(is_array($value) ? $value : [$value])
+            ->filter(fn ($item): bool => $item !== null && $item !== '')
+            ->flatMap(fn ($item): array => $item === 'committee_review' ? self::COMMITTEE_REVIEW_STATUSES : [$item])
+            ->unique()
+            ->values();
+
+        $this->applyNullableStatusFilter($query, 'building_damage_status', $values->all());
     }
 
     private function applyNullableStatusFilter(Builder $query, string $field, array|string $value): void
@@ -340,13 +371,13 @@ class BuildingController extends Controller
      */
     private function buildingSummary(): array
     {
-        $baseQuery = Building::query()->where('assignedto', '!=', '');
+        $baseQuery = $this->auditedCompletedBuildingQuery();
 
         return [
             'total' => (clone $baseQuery)->count(),
             'fully_damaged' => (clone $baseQuery)->where('building_damage_status', 'fully_damaged')->count(),
             'partially_damaged' => (clone $baseQuery)->where('building_damage_status', 'partially_damaged')->count(),
-            'committee_review' => (clone $baseQuery)->where('building_damage_status', 'committee_review')->count(),
+            'committee_review' => (clone $baseQuery)->whereIn('building_damage_status', self::COMMITTEE_REVIEW_STATUSES)->count(),
         ];
     }
 
@@ -359,7 +390,7 @@ class BuildingController extends Controller
             ->pluck('label', 'name')
             ->filter(fn ($label, $name): bool => filled($name) && filled($label));
 
-        return Building::query()
+        return $this->auditedCompletedBuildingQuery()
             ->whereNotNull('field_status')
             ->where('field_status', '!=', '')
             ->distinct()
@@ -402,7 +433,7 @@ class BuildingController extends Controller
             $buildingColumns = ['objectid', 'building_name', 'owner_name', 'building_damage_status', 'municipalitie', 'neighborhood', 'units_nos', 'damaged_units_nos'];
         }
 
-        $buildingQuery = Building::query()->select($buildingColumns);
+        $buildingQuery = $this->auditedCompletedBuildingQuery()->select($buildingColumns);
         $this->applyBuildingFilters($buildingQuery, $filters);
         $building = $buildingQuery->get();
 
@@ -417,6 +448,13 @@ class BuildingController extends Controller
         }
 
         return Excel::download(new TableExport($building, $buildingColumns, $assessmentHints), time().'building.'.$format);
+    }
+
+    private function auditedCompletedBuildingQuery(): Builder
+    {
+        return AuditedBuilding::query()
+            ->where('assignedto', '!=', '')
+            ->where('field_status', 'COMPLETED');
     }
 
     public function update(Request $request)
