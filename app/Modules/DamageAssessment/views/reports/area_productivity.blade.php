@@ -412,7 +412,7 @@
                                 <div class="input-group w-md-300px">
                                     <input class="form-control form-control-solid" value="{{ $start_date && $end_date ? $date_range_label : '' }}"
                                         placeholder="{{ __('multilingual.area_productivity_reports.filters.date_range') }}"
-                                        id="kt_daterangepicker" @if (! $useAjaxFilters) readonly @endif />
+                                        id="kt_daterangepicker" autocomplete="off" @if (! $useAjaxFilters) readonly @endif />
                                     <span class="input-group-text"><i class="ki-duotone ki-calendar fs-2"></i></span>
                                 </div>
 
@@ -778,8 +778,12 @@
 
             function syncFlatDateRange(selectedDates, instance) {
                 if (selectedDates.length >= 2) {
-                    startDateInput.value = instance.formatDate(selectedDates[0], 'Y-m-d');
-                    endDateInput.value = instance.formatDate(selectedDates[1], 'Y-m-d');
+                    const sortedDates = selectedDates.slice().sort(function (firstDate, secondDate) {
+                        return firstDate.getTime() - secondDate.getTime();
+                    });
+
+                    startDateInput.value = instance.formatDate(sortedDates[0], 'Y-m-d');
+                    endDateInput.value = instance.formatDate(sortedDates[1], 'Y-m-d');
 
                     return;
                 }
@@ -811,6 +815,12 @@
                     },
                     onClose: function (selectedDates, dateStr, instance) {
                         syncFlatDateRange(selectedDates, instance);
+                    },
+                    onReady: function (selectedDates, dateStr, instance) {
+                        if (! startDateInput.value && ! endDateInput.value) {
+                            instance.clear();
+                            dateRangeInput.value = '';
+                        }
                     }
                 });
             } else {

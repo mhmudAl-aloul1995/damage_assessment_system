@@ -421,8 +421,10 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertOk()
         ->assertSee('name="start_date" id="start_date" value=""', false)
         ->assertSee('name="end_date" id="end_date" value=""', false)
+        ->assertSee('id="kt_daterangepicker" autocomplete="off"', false)
         ->assertSee('const useAjaxFilters = true;', false)
         ->assertSee("mode: 'range'", false)
+        ->assertSee('onReady: function (selectedDates, dateStr, instance)', false)
         ->assertSee('defaultDate: [startDateInput.value, endDateInput.value].filter(Boolean)', false)
         ->assertViewHas('start_date', '')
         ->assertViewHas('end_date', '');
@@ -432,8 +434,10 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertOk()
         ->assertSee('name="start_date" id="start_date" value=""', false)
         ->assertSee('name="end_date" id="end_date" value=""', false)
+        ->assertSee('id="kt_daterangepicker" autocomplete="off"', false)
         ->assertSee('const useAjaxFilters = true;', false)
         ->assertSee("mode: 'range'", false)
+        ->assertSee('onReady: function (selectedDates, dateStr, instance)', false)
         ->assertViewHas('start_date', '')
         ->assertViewHas('end_date', '');
 
