@@ -169,6 +169,18 @@
             vertical-align: middle !important;
         }
 
+        .area-productivity-table-wrap {
+            overflow: visible;
+        }
+
+        #area_productivity_table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: #fff;
+            box-shadow: inset 0 -1px 0 #e4e6ef, 0 .35rem .8rem rgba(15, 23, 42, .04);
+        }
+
         #area_productivity_table tfoot td {
             text-align: center !important;
         }
@@ -665,7 +677,7 @@
                     <div class="tab-pane fade show active" id="area-productivity-table-pane" role="tabpanel"
                         aria-labelledby="area-productivity-table-tab">
                 @endif
-                    <div class="card-body py-4">
+                    <div class="card-body py-4 area-productivity-table-wrap">
                         <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle" id="area_productivity_table">
                             <thead>
                                 <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
