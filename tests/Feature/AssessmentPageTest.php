@@ -1705,6 +1705,19 @@ it('keeps audit attachment rows visible when regular filters are applied', funct
         ->toContain('return rows.filter(row => isAuditAttachmentRow(row));');
 });
 
+it('queues the latest inline audit value while a save is in progress', function () {
+    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
+
+    expect($view)
+        ->toContain('let pendingInlineSaves = new Map()')
+        ->toContain('pendingInlineSaves.set(lockKey, { field, globalid, type, value })')
+        ->toContain('response?.status === false || response?.success === false')
+        ->toContain("toastr.warning(auditResponseMessage(response, 'لا يوجد تغيير في القيمة'))")
+        ->toContain('let pendingSave = pendingInlineSaves.get(lockKey)')
+        ->toContain('saveInlineValue(')
+        ->toContain('pendingSave.value');
+});
+
 it('allows auditors to edit only their own matching note type', function () {
     $legalRole = Role::query()->create([
         'name' => 'Legal Auditor',

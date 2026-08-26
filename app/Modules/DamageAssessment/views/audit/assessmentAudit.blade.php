@@ -1235,6 +1235,7 @@
         let pendingHousingGlobalId = null;
         let selectedHousingGlobalIds = new Set();
         let inlineSaveLocks = new Set();
+        let pendingInlineSaves = new Map();
 
         let currentHousingFilter = 'answered';
         let currentBuildingFilter = 'answered';
@@ -2482,6 +2483,17 @@
                     .ajax.reload(null, false);
             }
         }
+
+        function auditResponseMessage(response, fallback) {
+            let message = response?.message;
+
+            if (!message || String(message).includes('Ù')) {
+                return fallback;
+            }
+
+            return message;
+        }
+
         function syncHousingRowAfterNumberUpdate(globalid) {
             if (!globalid) return;
 
@@ -2514,6 +2526,7 @@
             let lockKey = [type, globalid, field].join('|');
 
             if (inlineSaveLocks.has(lockKey)) {
+                pendingInlineSaves.set(lockKey, { field, globalid, type, value });
                 if (callback) callback(false);
                 return;
             }
@@ -2531,7 +2544,13 @@
                     value: value
                 },
                 success: function (response) {
-                    toastr.success(response.message || 'تم الحفظ بنجاح');
+                    if (response?.status === false || response?.success === false) {
+                        toastr.warning(auditResponseMessage(response, 'لا يوجد تغيير في القيمة'));
+                        if (callback) callback(false);
+                        return;
+                    }
+
+                    toastr.success(auditResponseMessage(response, 'تم الحفظ بنجاح'));
                     showAuditSaveIndicator();
 
                     updateAnswerCardAfterSave(field, globalid, type, value, response);
@@ -2564,6 +2583,20 @@
                 },
                 complete: function () {
                     inlineSaveLocks.delete(lockKey);
+
+                    let pendingSave = pendingInlineSaves.get(lockKey);
+                    if (pendingSave) {
+                        pendingInlineSaves.delete(lockKey);
+
+                        if (String(pendingSave.value ?? '') !== String(value ?? '')) {
+                            saveInlineValue(
+                                pendingSave.field,
+                                pendingSave.globalid,
+                                pendingSave.type,
+                                pendingSave.value
+                            );
+                        }
+                    }
                 }
             });
         }
