@@ -53,10 +53,10 @@ class BuildingController extends Controller
             'buildingFilterSections' => $this->buildingFilterSections($filters->groupBy('list_name')),
             'buildingSummary' => $this->buildingSummary(),
             'buildingFieldStatuses' => $this->buildingFieldStatuses($filters->where('list_name', 'field_status')),
-            'engineers' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
-            'owners' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
-            'municip' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
-            'neighborhoods' => $this->auditedCompletedBuildingQuery()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
+            'engineers' => $this->auditedBuildingQuery()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
+            'owners' => $this->auditedBuildingQuery()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
+            'municip' => $this->auditedBuildingQuery()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
+            'neighborhoods' => $this->auditedBuildingQuery()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
             'assessments' => Assessment::query()->get(),
             'filterName' => $filterName,
             'filters' => $filters,
@@ -71,7 +71,7 @@ class BuildingController extends Controller
             ? ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'neighborhood']
             : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'owner_id', 'zone_code', 'units_count', 'editdate', 'field_status', 'building_damage_status', 'units_nos', 'damaged_units_nos', 'floor_nos', 'building_debris_exist', 'uxo_present', 'bodies_present', 'neighborhood', 'municipalitie'];
 
-        $query = $this->auditedCompletedBuildingQuery()->select($select);
+        $query = $this->auditedBuildingQuery()->select($select);
 
         $filters = $request->input('filters', []);
 
@@ -371,7 +371,7 @@ class BuildingController extends Controller
      */
     private function buildingSummary(): array
     {
-        $baseQuery = $this->auditedCompletedBuildingQuery();
+        $baseQuery = $this->auditedBuildingQuery();
 
         return [
             'total' => (clone $baseQuery)->count(),
@@ -390,7 +390,7 @@ class BuildingController extends Controller
             ->pluck('label', 'name')
             ->filter(fn ($label, $name): bool => filled($name) && filled($label));
 
-        return $this->auditedCompletedBuildingQuery()
+        return $this->auditedBuildingQuery()
             ->whereNotNull('field_status')
             ->where('field_status', '!=', '')
             ->distinct()
@@ -433,7 +433,7 @@ class BuildingController extends Controller
             $buildingColumns = ['objectid', 'building_name', 'owner_name', 'building_damage_status', 'municipalitie', 'neighborhood', 'units_nos', 'damaged_units_nos'];
         }
 
-        $buildingQuery = $this->auditedCompletedBuildingQuery()->select($buildingColumns);
+        $buildingQuery = $this->auditedBuildingQuery()->select($buildingColumns);
         $this->applyBuildingFilters($buildingQuery, $filters);
         $building = $buildingQuery->get();
 
@@ -450,11 +450,10 @@ class BuildingController extends Controller
         return Excel::download(new TableExport($building, $buildingColumns, $assessmentHints), time().'building.'.$format);
     }
 
-    private function auditedCompletedBuildingQuery(): Builder
+    private function auditedBuildingQuery(): Builder
     {
         return AuditedBuilding::query()
-            ->where('assignedto', '!=', '')
-            ->where('field_status', 'COMPLETED');
+            ->where('assignedto', '!=', '');
     }
 
     public function update(Request $request)

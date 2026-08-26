@@ -171,7 +171,7 @@ it('filters building datatable records by unclassified damage status', function 
     $response->assertDontSee('Classified Building');
 });
 
-it('uses audited completed buildings for summary and datatable records', function () {
+it('uses audited buildings for summary and datatable records', function () {
     $user = User::factory()->create();
 
     seedBuildingFilterOptions();
@@ -215,7 +215,7 @@ it('uses audited completed buildings for summary and datatable records', functio
     $page = $this->actingAs($user)->get('/damage-assessment/building');
 
     $page->assertOk();
-    $page->assertSee('2');
+    $page->assertSee('Not Completed');
     $page->assertSee('1');
 
     $query = http_build_query([
@@ -233,7 +233,23 @@ it('uses audited completed buildings for summary and datatable records', functio
     $response->assertJsonPath('recordsFiltered', 1);
     $response->assertSee('Audited Committee Alias');
     $response->assertDontSee('Source Building Ignored');
-    $response->assertDontSee('Audited Not Completed Ignored');
+    $response->assertDontSee('Audited Not Completed');
+
+    $fieldStatusQuery = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'field_status' => ['Not_Completed'],
+        ],
+    ]);
+
+    $fieldStatusResponse = $this->actingAs($user)->get('/damage-assessment/building/show?'.$fieldStatusQuery);
+
+    $fieldStatusResponse->assertOk();
+    $fieldStatusResponse->assertJsonPath('recordsFiltered', 1);
+    $fieldStatusResponse->assertSee('Audited Not Completed');
+    $fieldStatusResponse->assertDontSee('Audited Fully');
 });
 
 function ensureAuditedBuildingSurveyColumns(): void
