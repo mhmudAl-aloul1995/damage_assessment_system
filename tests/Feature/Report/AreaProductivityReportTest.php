@@ -1,6 +1,8 @@
 <?php
 
 use App\Exports\AreaProductivityExport;
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
@@ -8,21 +10,61 @@ use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    ensureAuditedAreaProductivityColumns();
     app(RolesAndPermissionsSeeder::class)->run();
 });
+
+function ensureAuditedAreaProductivityColumns(): void
+{
+    foreach (['audited_buildings', 'audited_housing_units'] as $tableName) {
+        Schema::table($tableName, function (Blueprint $table) use ($tableName): void {
+            foreach (['assignedto', 'municipalitie', 'zone_code', 'creationdate', 'end'] as $columnName) {
+                if (! Schema::hasColumn($tableName, $columnName)) {
+                    $table->text($columnName)->nullable();
+                }
+            }
+        });
+    }
+}
 
 it('renders separated area productivity reports for all supported datasets with filtering', function () {
     $user = User::factory()->create();
     $user->assignRole('Database Officer');
 
     Building::query()->create([
+        'objectid' => 9001,
+        'globalid' => 'source-building-ignored',
+        'building_name' => 'Source Building Ignored',
+        'assignedto' => 'eng-1',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'zone_code' => 'Z-1',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-04-10 10:00:00',
+        'end' => '2026-04-10 10:00:00',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9002,
+        'globalid' => 'source-housing-ignored',
+        'parentglobalid' => 'source-building-ignored',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_submit_date' => '2026-04-10 12:00:00',
+        'creationdate' => '2026-04-10 12:00:00',
+    ]);
+
+    AuditedBuilding::query()->create([
         'objectid' => 1001,
         'globalid' => 'building-1',
         'building_name' => 'Building 1',
@@ -37,7 +79,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'end' => '2026-04-10 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 1002,
         'globalid' => 'building-2',
         'building_name' => 'Building 2',
@@ -52,7 +94,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'end' => '2026-04-11 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 1003,
         'globalid' => 'building-3',
         'building_name' => 'Building 3',
@@ -67,7 +109,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'end' => '2026-04-11 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 1004,
         'globalid' => 'building-4',
         'building_name' => 'Building 4',
@@ -82,7 +124,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'end' => '2026-04-12 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 1005,
         'globalid' => 'building-unclassified',
         'building_name' => 'Building Unclassified',
@@ -97,7 +139,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'end' => '2026-04-13 10:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 2001,
         'globalid' => 'housing-1',
         'parentglobalid' => 'building-1',
@@ -106,7 +148,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-05-10 12:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 2002,
         'globalid' => 'housing-2',
         'parentglobalid' => 'building-1',
@@ -115,7 +157,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-10 13:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 2003,
         'globalid' => 'housing-3',
         'parentglobalid' => 'building-2',
@@ -124,7 +166,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-11 13:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 2004,
         'globalid' => 'housing-unclassified',
         'parentglobalid' => 'building-2',
@@ -133,7 +175,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-11 14:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 2005,
         'globalid' => 'housing-for-unclassified-building',
         'parentglobalid' => 'building-unclassified',
@@ -142,7 +184,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'creationdate' => '2026-04-13 14:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 2006,
         'globalid' => 'housing-outside-report-range',
         'parentglobalid' => 'building-1',

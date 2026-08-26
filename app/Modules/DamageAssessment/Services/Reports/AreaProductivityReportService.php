@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\DamageAssessment\Services\Reports;
 
-use App\Models\Building;
-use App\Models\HousingUnit;
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use Carbon\Carbon;
@@ -130,8 +130,9 @@ class AreaProductivityReportService
     {
         $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
 
-        $query = HousingUnit::query()
-            ->join('buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
+        $query = AuditedHousingUnit::query()
+            ->from('audited_housing_units as housing_units')
+            ->join('audited_buildings as buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->selectRaw("
                 {$this->preferredValueExpression('buildings.governorate')} as governorate,
                 {$this->preferredValueExpression('buildings.municipalitie')} as municipalitie,
@@ -164,7 +165,8 @@ class AreaProductivityReportService
         $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
         $housingUnitsCountSubquery = $this->housingUnitsCountSubquery($filters, $fromDate, $toDate);
 
-        $query = Building::query()
+        $query = AuditedBuilding::query()
+            ->from('audited_buildings as buildings')
             ->leftJoinSub($housingUnitsCountSubquery, 'filtered_housing_units', function ($join) use ($groupKey): void {
                 $join->on('filtered_housing_units.neighborhood_group', '=', DB::raw($groupKey));
             })
@@ -201,8 +203,9 @@ class AreaProductivityReportService
     {
         $groupKey = $this->normalizedGroupExpression('unit_buildings.neighborhood');
 
-        $query = HousingUnit::query()
-            ->join('buildings as unit_buildings', 'housing_units.parentglobalid', '=', 'unit_buildings.globalid')
+        $query = AuditedHousingUnit::query()
+            ->from('audited_housing_units as housing_units')
+            ->join('audited_buildings as unit_buildings', 'housing_units.parentglobalid', '=', 'unit_buildings.globalid')
             ->selectRaw("
                 {$groupKey} as neighborhood_group,
                 COUNT(*) as housing_units_count
@@ -364,11 +367,11 @@ class AreaProductivityReportService
     private function buildingBackedFilterOptions(): array
     {
         return [
-            'governorates' => Building::query()->orderBy('governorate')->pluck('governorate')->filter()->unique()->values(),
-            'municipalities' => Building::query()->orderBy('municipalitie')->pluck('municipalitie')->filter()->unique()->values(),
-            'neighborhoods' => Building::query()->orderBy('neighborhood')->pluck('neighborhood')->filter()->unique()->values(),
-            'zone_codes' => Building::query()->orderBy('zone_code')->pluck('zone_code')->filter()->unique()->values(),
-            'assignedto' => Building::query()->orderBy('assignedto')->pluck('assignedto')->filter()->unique()->values(),
+            'governorates' => AuditedBuilding::query()->orderBy('governorate')->pluck('governorate')->filter()->unique()->values(),
+            'municipalities' => AuditedBuilding::query()->orderBy('municipalitie')->pluck('municipalitie')->filter()->unique()->values(),
+            'neighborhoods' => AuditedBuilding::query()->orderBy('neighborhood')->pluck('neighborhood')->filter()->unique()->values(),
+            'zone_codes' => AuditedBuilding::query()->orderBy('zone_code')->pluck('zone_code')->filter()->unique()->values(),
+            'assignedto' => AuditedBuilding::query()->orderBy('assignedto')->pluck('assignedto')->filter()->unique()->values(),
         ];
     }
 
