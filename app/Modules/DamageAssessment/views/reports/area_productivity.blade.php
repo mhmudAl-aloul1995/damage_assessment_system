@@ -173,12 +173,14 @@
             overflow: visible;
         }
 
-        #area_productivity_table thead th {
-            position: sticky;
-            top: calc(var(--bs-app-header-height, 74px) + .5rem);
-            z-index: 30;
+        #area_productivity_table thead th,
+        table.fixedHeader-floating thead th {
             background: #fff;
             box-shadow: inset 0 -1px 0 #e4e6ef, 0 .35rem .8rem rgba(15, 23, 42, .04);
+        }
+
+        table.fixedHeader-floating {
+            z-index: 104;
         }
 
         #area_productivity_table tfoot td {
@@ -819,9 +821,19 @@
                 width: '100%'
             });
 
+            function appHeaderOffset() {
+                const appHeader = document.getElementById('kt_app_header');
+
+                return appHeader ? appHeader.offsetHeight : 74;
+            }
+
             const areaProductivityTable = $('#area_productivity_table').DataTable({
                 pageLength: 25,
                 order: [[0, 'desc']],
+                fixedHeader: {
+                    header: true,
+                    headerOffset: appHeaderOffset()
+                },
                 columnDefs: [
                     {
                         targets: '_all',
@@ -831,6 +843,11 @@
                 language: {
                     url: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json')
                 }
+            });
+
+            $(window).on('resize', function () {
+                areaProductivityTable.fixedHeader.headerOffset(appHeaderOffset());
+                areaProductivityTable.fixedHeader.adjust();
             });
 
             const useAjaxFilters = @json($useAjaxFilters);
@@ -1037,6 +1054,7 @@
                         });
 
                         areaProductivityTable.draw();
+                        areaProductivityTable.fixedHeader.adjust();
                         updateFooter(payload.summary);
                         updateReportTitle(payload);
                         updateExportLink(queryString);
