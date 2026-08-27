@@ -112,6 +112,57 @@
 <script>
 $(document).ready(function () {
     const commandsByName = @json($commandsByName);
+    const commandOptionGuides = {
+        'arcgis:upload-audited': {
+            'buildings-limit': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.help')),
+                placeholder: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.placeholder')),
+                type: 'number',
+            },
+            'only': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.help')),
+                type: 'select',
+                choices: [
+                    {
+                        value: 'buildings',
+                        label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.buildings')),
+                    },
+                    {
+                        value: 'units',
+                        label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.units')),
+                    },
+                ],
+            },
+            'changed-since': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.help')),
+                placeholder: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.placeholder')),
+                type: 'datetime-local',
+            },
+            'only-audit-edits': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only_audit_edits.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only_audit_edits.help')),
+            },
+            'skip-counts': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.skip_counts.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.skip_counts.help')),
+            },
+            'without-attachments': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.without_attachments.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.without_attachments.help')),
+            },
+            'attachments-only': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.attachments_only.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.attachments_only.help')),
+            },
+            'refresh-cache': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.refresh_cache.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.refresh_cache.help')),
+            },
+        },
+    };
 
     $('#artisan_commands_table').DataTable({
         responsive: true,
@@ -129,7 +180,7 @@ $(document).ready(function () {
         },
     });
 
-    $('[data-copy-command]').on('click', function () {
+    $(document).on('click', '[data-copy-command]', function () {
         const command = $(this).data('copy-command');
 
         navigator.clipboard.writeText(command).then(function () {
@@ -139,7 +190,7 @@ $(document).ready(function () {
         });
     });
 
-    $('[data-run-command]').on('click', function () {
+    $(document).on('click', '[data-run-command]', function () {
         const button = $(this);
         const command = button.data('run-command');
         const commandDefinition = commandsByName[command];
@@ -148,7 +199,16 @@ $(document).ready(function () {
             return;
         }
 
-        const formHtml = buildCommandForm(commandDefinition);
+        let formHtml = '';
+
+        try {
+            formHtml = buildCommandForm(commandDefinition);
+        } catch (error) {
+            console.error(error);
+            toastr.error(@json(__('ui.artisan_commands.modal_failed')));
+
+            return;
+        }
 
         Swal.fire({
             title: @json(__('ui.artisan_commands.confirm_title')),
@@ -394,7 +454,8 @@ $(document).ready(function () {
     }
 
     function commandOptionUi(commandName, option) {
-        const guide = commandOptionGuides[commandName]?.[option.name] || {};
+        const commandGuides = commandOptionGuides[commandName] || {};
+        const guide = commandGuides[option.name] || {};
 
         return {
             label: guide.label || option.name,
@@ -404,58 +465,6 @@ $(document).ready(function () {
             choices: guide.choices || [],
         };
     }
-
-    const commandOptionGuides = {
-        'arcgis:upload-audited': {
-            'buildings-limit': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.help')),
-                placeholder: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.placeholder')),
-                type: 'number',
-            },
-            'only': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.help')),
-                type: 'select',
-                choices: [
-                    {
-                        value: 'buildings',
-                        label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.buildings')),
-                    },
-                    {
-                        value: 'units',
-                        label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.units')),
-                    },
-                ],
-            },
-            'changed-since': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.help')),
-                placeholder: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.placeholder')),
-                type: 'datetime-local',
-            },
-            'only-audit-edits': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only_audit_edits.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only_audit_edits.help')),
-            },
-            'skip-counts': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.skip_counts.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.skip_counts.help')),
-            },
-            'without-attachments': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.without_attachments.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.without_attachments.help')),
-            },
-            'attachments-only': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.attachments_only.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.attachments_only.help')),
-            },
-            'refresh-cache': {
-                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.refresh_cache.label')),
-                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.refresh_cache.help')),
-            },
-        },
-    };
 
     function shellPreviewValue(value) {
         if (/^[A-Za-z0-9_./:@=-]+$/.test(value)) {

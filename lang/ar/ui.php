@@ -125,6 +125,7 @@ return [
         'run_started' => 'بدأ تنفيذ الأمر ":command" في الخلفية.',
         'run_started_generic' => 'بدأ تنفيذ الأمر في الخلفية.',
         'run_failed' => 'تعذر بدء تنفيذ هذا الأمر.',
+        'modal_failed' => 'تعذر فتح نافذة إعداد الأمر.',
         'arguments_title' => 'المدخلات',
         'options_title' => 'الخيارات',
         'optional_value' => 'قيمة اختيارية',

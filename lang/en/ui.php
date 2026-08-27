@@ -125,6 +125,7 @@ return [
         'run_started' => 'Command ":command" has started in the background.',
         'run_started_generic' => 'Command started in the background.',
         'run_failed' => 'Unable to start this command.',
+        'modal_failed' => 'Unable to open the command setup window.',
         'arguments_title' => 'Arguments',
         'options_title' => 'Options',
         'optional_value' => 'Optional value',
