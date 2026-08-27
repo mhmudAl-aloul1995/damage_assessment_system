@@ -23,7 +23,7 @@ class DeleteNullPendingAuditEdits extends Command
     protected $signature = 'audit-edits:delete-null-pending
         {target=all : all, building, or housing}
         {--dry-run : Report matching rows without deleting}
-        {--export= : Export matching rows to an XLSX file. Leave empty to use the default storage path}
+        {--export= : Export matching rows to an XLSX file. Leave empty to use the default storage pathh}
         {--chunk=500 : Number of rows to process per chunk}';
 
     /**
