@@ -202,13 +202,15 @@ it('exports a dry run spreadsheet with previous and next edit values', function 
     $rows = Excel::toArray(null, Storage::disk('local')->path($path))[0];
 
     expect($rows[0])->toContain('Previous Value');
+    expect($rows[0])->toContain('Has Later Edit For Same Field');
     expect($rows[0])->toContain('Next Value');
 
     $buildingRow = collect($rows)->first(fn (array $row): bool => $row[1] === 101);
 
     expect($buildingRow[3])->toBe('building-pending');
     expect($buildingRow[11])->toBe('previous_building_edit');
-    expect($buildingRow[14])->toBe('later_building_edit');
+    expect($buildingRow[13])->toBe('Yes');
+    expect($buildingRow[15])->toBe('later_building_edit');
     expect(DB::table('edit_assessments')->where('id', 101)->exists())->toBeTrue();
     expect(DB::table('audit_edit_deletion_batches')->count())->toBe(0);
 });

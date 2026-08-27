@@ -330,6 +330,7 @@ class DeleteNullPendingAuditEdits extends Command
             'previous_edit_id' => $row->previous_edit_id,
             'previous_value' => $row->previous_field_value,
             'previous_edit_created_at' => $row->previous_created_at,
+            'has_later_edit_for_same_field' => $row->next_edit_id === null ? 'No' : 'Yes',
             'next_edit_id' => $row->next_edit_id,
             'next_value' => $row->next_field_value,
             'next_edit_created_at' => $row->next_created_at,
