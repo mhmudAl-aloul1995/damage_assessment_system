@@ -127,6 +127,7 @@ return [
         'run_failed' => 'Unable to start this command.',
         'modal_failed' => 'Unable to open the command setup window.',
         'monitor_title' => 'Execution Monitor',
+        'monitor_verbose_hint' => 'The command runs with full -vvv verbosity, and every line printed by the command appears here during execution.',
         'status_running' => 'Running',
         'status_success' => 'Completed',
         'status_failed' => 'Failed',

@@ -96,7 +96,8 @@ it('starts eligible commands with selected arguments and options', function (): 
         ->toContain('sync:arcgis-layers')
         ->toContain('housing_units')
         ->toContain('--chunk=250')
-        ->toContain('--force');
+        ->toContain('--force')
+        ->toContain('-vvv');
 
     Process::assertRan(function ($process): bool {
         $command = is_array($process->command)
@@ -134,7 +135,7 @@ it('shows live output status for a started command run', function (): void {
             'run_id' => $response->json('run_id'),
             'status' => 'running',
             'exit_code' => null,
-            'preview' => 'php artisan sync:arcgis-layers --force',
+            'preview' => 'php artisan sync:arcgis-layers --force -vvv',
         ])
         ->assertJsonStructure([
             'output',

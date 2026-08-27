@@ -323,6 +323,9 @@ $(document).ready(function () {
                     <div class="alert alert-light-primary py-3 px-4 mb-4">
                         <code dir="ltr">${escapeHtml(previewCommand)}</code>
                     </div>
+                    <div class="alert alert-light-info py-3 px-4 mb-4">
+                        ${escapeHtml(@json(__('ui.artisan_commands.monitor_verbose_hint')))}
+                    </div>
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <span class="spinner-border spinner-border-sm text-primary" id="artisan-run-spinner"></span>
                         <span class="badge badge-light-primary" id="artisan-run-status">${escapeHtml(@json(__('ui.artisan_commands.status_running')))}</span>

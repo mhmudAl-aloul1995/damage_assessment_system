@@ -236,6 +236,7 @@ class ArtisanCommandCatalog
             }
         }
 
+        $segments[] = '-vvv';
         $segments[] = '--no-interaction';
 
         return $segments;
