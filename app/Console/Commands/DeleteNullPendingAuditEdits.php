@@ -351,10 +351,10 @@ class DeleteNullPendingAuditEdits extends Command
         $baseUrl = $this->baseUrl();
 
         if ($row->type === 'housing_table' && filled($row->parentglobalid)) {
-            return $baseUrl.'/showAssessmentAudit/'.rawurlencode((string) $row->parentglobalid).'/'.rawurlencode((string) $row->global_id);
+            return $baseUrl.'/damage-assessment/showAssessmentAudit/'.rawurlencode((string) $row->parentglobalid).'/'.rawurlencode((string) $row->global_id);
         }
 
-        return $baseUrl.'/showAssessmentAudit/'.rawurlencode((string) $row->global_id);
+        return $baseUrl.'/damage-assessment/showAssessmentAudit/'.rawurlencode((string) $row->global_id);
     }
 
     private function baseUrl(): string
