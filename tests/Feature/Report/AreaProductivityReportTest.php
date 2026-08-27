@@ -330,6 +330,23 @@ it('renders separated area productivity reports for all supported datasets with 
         'updated_at' => '2026-04-15 09:00:00',
     ]);
 
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 4007,
+        'str_name' => 'Street G Not Completed',
+        'assignedto' => 'eng-1',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'road_damage_level' => 'destroyed',
+        'field_status' => 'Not_Completed',
+        'shape__length' => 0.77,
+        'Lenght_Km_2' => 770,
+        'zone_code' => 'RZ-7',
+        'creationdate' => '2026-04-16 09:00:00',
+        'created_at' => '2026-04-16 09:00:00',
+        'updated_at' => '2026-04-16 09:00:00',
+    ]);
+
     $this->actingAs($user)
         ->get(route('reports.area-productivity.housing-units', [
             'start_date' => '2026-04-01',
@@ -488,7 +505,8 @@ it('renders separated area productivity reports for all supported datasets with 
             'end_date' => '',
         ]))
         ->assertOk()
-        ->assertJsonPath('summary.total_records', 5)
+        ->assertJsonPath('summary.total_records', 6)
+        ->assertJsonPath('summary.unclassified', 1)
         ->assertJsonPath('summary.total_road_length_km', 446.683)
         ->assertJsonPath('start_date', '')
         ->assertJsonPath('end_date', '');
@@ -545,23 +563,25 @@ it('renders separated area productivity reports for all supported datasets with 
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.road_facilities'), false)
         ->assertSee('Location Pie Charts')
-        ->assertSee('Municipality | 5 road facilities')
+        ->assertSee('Municipality | 6 road facilities')
         ->assertSee('road_facilities_municipality', false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.destroyed'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.severe'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.moderate'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.minor'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.no_damage'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.unclassified'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.total_road_length'), false)
         ->assertDontSee(__('multilingual.area_productivity_reports.columns.cra'), false)
         ->assertSee('<td>Rimal</td>', false)
         ->assertSee('446.683', false)
-        ->assertSee('5', false)
+        ->assertSee('6', false)
         ->assertSee('Grand Totals', false)
         ->assertSee(__('multilingual.area_productivity_reports.sectors.road_facilities'), false);
 
     $roadFacilitiesResponse->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 5
+        return $summary['total_records'] === 6
+            && $summary['unclassified'] === 1
             && (float) $summary['total_road_length_km'] === 446.683;
     });
 
@@ -569,12 +589,13 @@ it('renders separated area productivity reports for all supported datasets with 
         $rimal = $rows->firstWhere('neighborhood', 'Rimal');
 
         return $rimal !== null
-            && (int) $rimal->total_count === 5
+            && (int) $rimal->total_count === 6
             && (int) $rimal->destroyed_count === 1
             && (int) $rimal->severe_count === 1
             && (int) $rimal->moderate_count === 1
             && (int) $rimal->minor_count === 1
             && (int) $rimal->no_damage_count === 1
+            && (int) $rimal->unclassified_count === 1
             && (float) $rimal->total_road_length_km === 446.683;
     });
 
@@ -583,11 +604,11 @@ it('renders separated area productivity reports for all supported datasets with 
 
         return $municipalityNode !== null
             && $municipalityNode['pie']['title'] === 'Gaza'
-            && $municipalityNode['pie']['series'] === [1, 1, 1, 1, 1]
-            && $municipalityNode['pie']['labels'] === ['Destroyed', 'Severe', 'Moderate', 'Minor', 'No Damage']
-            && $municipalityNode['pie']['colors'] === ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89']
-            && array_column($municipalityNode['pie']['summary_items'], 'color') === ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89']
-            && $municipalityNode['pie']['items_count'] === 5
+            && $municipalityNode['pie']['series'] === [1, 1, 1, 1, 1, 1]
+            && $municipalityNode['pie']['labels'] === ['Destroyed', 'Severe', 'Moderate', 'Minor', 'No Damage', 'Unclassified']
+            && $municipalityNode['pie']['colors'] === ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89', '#7E8299']
+            && array_column($municipalityNode['pie']['summary_items'], 'color') === ['#F1416C', '#E879F9', '#FFC700', '#009EF7', '#50CD89', '#7E8299']
+            && $municipalityNode['pie']['items_count'] === 6
             && count($municipalityNode['neighborhoods']) === 1;
     });
 
@@ -630,8 +651,9 @@ it('renders separated area productivity reports for all supported datasets with 
     $exportCollection = $export->collection();
 
     expect($export->map($exportCollection->firstWhere('neighborhood', 'Rimal')))->toBe([
-        5,
+        6,
         446.683,
+        1,
         1,
         1,
         1,
@@ -644,8 +666,9 @@ it('renders separated area productivity reports for all supported datasets with 
         __('multilingual.area_productivity_reports.sectors.road_facilities'),
     ]);
     expect($export->map($exportCollection->last()))->toBe([
-        5,
+        6,
         446.683,
+        1,
         1,
         1,
         1,

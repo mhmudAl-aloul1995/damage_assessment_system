@@ -82,6 +82,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                 __('multilingual.area_productivity_reports.columns.moderate'),
                 __('multilingual.area_productivity_reports.columns.minor'),
                 __('multilingual.area_productivity_reports.columns.no_damage'),
+                __('multilingual.area_productivity_reports.columns.unclassified'),
             ]
             : ($this->isHousingUnitsReport()
                 ? [
@@ -138,6 +139,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                 $row->moderate_count ?? 0,
                 $row->minor_count ?? 0,
                 $row->no_damage_count ?? 0,
+                $row->unclassified_count ?? 0,
             ]
             : ($this->isHousingUnitsReport()
                 ? [
@@ -266,7 +268,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
     private function lastColumn(): string
     {
         if ($this->isRoadFacilitiesReport()) {
-            return 'L';
+            return 'M';
         }
 
         if ($this->isHousingUnitsReport()) {

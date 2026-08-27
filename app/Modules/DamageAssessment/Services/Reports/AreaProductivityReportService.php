@@ -269,14 +269,11 @@ class AreaProductivityReportService
         $assignedExpression = $this->assignedValueExpression('road_facility_surveys');
         $lengthColumn = $this->roadLengthColumn();
         $lengthExpression = $lengthColumn !== null
-            ? "ROUND(SUM(CASE
-                    WHEN road_facility_surveys.field_status = 'COMPLETED'
-                    THEN COALESCE(road_facility_surveys.{$lengthColumn}, 0)
-                    ELSE 0
-                END), 3)"
+            ? "ROUND(SUM(COALESCE(road_facility_surveys.{$lengthColumn}, 0)), 3)"
             : '0';
 
         $query = RoadFacilitySurvey::query()
+            ->where('road_facility_surveys.field_status', 'COMPLETED')
             ->selectRaw("
                 {$this->preferredValueExpression('road_facility_surveys.governorate')} as governorate,
                 {$this->preferredValueExpression('road_facility_surveys.municipalitie')} as municipalitie,
@@ -288,9 +285,12 @@ class AreaProductivityReportService
                 SUM(CASE WHEN road_facility_surveys.road_damage_level = 'minor' THEN 1 ELSE 0 END) as minor_count,
                 SUM(CASE WHEN road_facility_surveys.road_damage_level IN ('No_Damage', 'no_damage') THEN 1 ELSE 0 END) as no_damage_count,
                 SUM(CASE
-                    WHEN road_facility_surveys.road_damage_level IN ('destroyed', 'severe', 'moderate', 'minor', 'No_Damage', 'no_damage')
+                    WHEN road_facility_surveys.road_damage_level IS NULL
+                        OR TRIM(road_facility_surveys.road_damage_level) = ''
+                        OR road_facility_surveys.road_damage_level NOT IN ('destroyed', 'severe', 'moderate', 'minor', 'No_Damage', 'no_damage')
                     THEN 1 ELSE 0
-                END) as total_count,
+                END) as unclassified_count,
+                COUNT(road_facility_surveys.id) as total_count,
                 {$lengthExpression} as total_road_length_km
             ")
             ->groupByRaw($groupKey)
@@ -607,6 +607,7 @@ class AreaProductivityReportService
                 ['key' => 'moderate_count', 'label' => __('multilingual.area_productivity_reports.metrics.moderate'), 'color' => '#FFC700'],
                 ['key' => 'minor_count', 'label' => __('multilingual.area_productivity_reports.metrics.minor'), 'color' => '#009EF7'],
                 ['key' => 'no_damage_count', 'label' => __('multilingual.area_productivity_reports.metrics.no_damage'), 'color' => '#50CD89'],
+                ['key' => 'unclassified_count', 'label' => __('multilingual.area_productivity_reports.metrics.unclassified'), 'color' => '#7E8299'],
             ];
         }
 
