@@ -3984,7 +3984,7 @@
 				.catch(error => {
 					console.error('Failed to update charts:', error);
 				});
-		}, 300000);
+		}, 30000);
 	</script>
 
 	<script>

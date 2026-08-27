@@ -10,6 +10,7 @@ use App\Models\EditAssessment;
 use App\Models\HousingUnit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -101,6 +102,10 @@ class AssessmentEditService
             SyncAuditEditToArcgis::dispatch($type, $globalId, $fieldName, $newValue)
                 ->afterCommit()
                 ->onQueue('arcgis');
+        }
+
+        if ($result['changed']) {
+            $this->bustDashboardStatsCache();
         }
 
         return $result;
@@ -229,5 +234,11 @@ class AssessmentEditService
         }
 
         return true;
+    }
+
+    private function bustDashboardStatsCache(): void
+    {
+        Cache::add('damage_dashboard.stats_version', 1);
+        Cache::increment('damage_dashboard.stats_version');
     }
 }

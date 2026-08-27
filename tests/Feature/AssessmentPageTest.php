@@ -15,6 +15,7 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -147,6 +148,7 @@ it('exports the assessment page as a pdf with attachments', function () {
 
 it('returns inline edit metadata and field history when saving an audit edit', function () {
     Queue::fake();
+    Cache::put('damage_dashboard.stats_version', 7);
 
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
@@ -220,6 +222,8 @@ it('returns inline edit metadata and field history when saving an audit edit', f
             && $job->fieldName === 'building_name'
             && $job->fieldValue === 'Updated Building';
     });
+
+    expect(Cache::get('damage_dashboard.stats_version'))->toBe(8);
 });
 
 it('returns a readable Arabic message when an inline audit edit has no value change', function () {
