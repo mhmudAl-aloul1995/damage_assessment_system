@@ -228,6 +228,7 @@ class HousingUnitController extends Controller
                     ['field' => 'activation_of_uxo_ha_d_material_clearance', 'label' => __('ui.housing_page.uxo_clearance_needed')],
                     ['field' => 'unit_support_needed', 'label' => __('ui.housing_page.support_needed')],
                     ['field' => 'is_the_housing_unit_or_living_habitable', 'label' => __('ui.housing_page.habitable')],
+                    ['field' => 'security_situation_unit', 'label' => __('ui.housing_page.security_situation')],
                 ],
             ],
         ];
@@ -237,7 +238,7 @@ class HousingUnitController extends Controller
                 $section['filters'] = collect($section['filters'])
                     ->filter(fn (array $filter): bool => Schema::hasColumn('audited_housing_units', $filter['field']))
                     ->map(function (array $filter) use ($groupedFilters): array {
-                        $filter['options'] = $groupedFilters[$filter['field']] ?? collect();
+                        $filter['options'] = $this->housingFilterOptions($filter['field'], $groupedFilters);
 
                         return $filter;
                     })
@@ -250,6 +251,20 @@ class HousingUnitController extends Controller
             ->filter(fn (array $section): bool => ! empty($section['filters']))
             ->values()
             ->all();
+    }
+
+    private function housingFilterOptions(string $field, Collection $groupedFilters): Collection
+    {
+        $options = $groupedFilters[$field] ?? collect();
+
+        if ($options->isNotEmpty() || $field !== 'security_situation_unit') {
+            return $options;
+        }
+
+        return collect([
+            (object) ['name' => 'yes', 'label' => __('ui.housing_page.yes')],
+            (object) ['name' => 'no', 'label' => __('ui.housing_page.no')],
+        ]);
     }
 
     private function applyHousingFilters(Builder $query, array $filters, string $table = 'housing_units'): void

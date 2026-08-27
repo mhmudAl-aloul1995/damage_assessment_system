@@ -53,6 +53,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Housing Unit Filters');
     $response->assertSee('Unit information and damage');
     $response->assertSee('Resident and household');
+    $response->assertSee('Unit security situation');
+    $response->assertSee('name="filters[security_situation_unit][]"', false);
     $response->assertSee('Housing Unit Object IDs');
     $response->assertSee('Paste up to 200 Object IDs from Excel');
     $response->assertSee('var url_phc', false);
@@ -829,6 +831,8 @@ function seedHousingFilterOptions(): void
         ['activation_of_uxo_ha_d_material_clearance', 'no', 'No'],
         ['is_the_housing_unit_or_living_habitable', 'yes', 'Yes'],
         ['is_the_housing_unit_or_living_habitable', 'no', 'No'],
+        ['security_situation_unit', 'yes', 'Yes'],
+        ['security_situation_unit', 'no', 'No'],
     ])->each(function (array $option): void {
         Filter::query()->create([
             'list_name' => $option[0],
