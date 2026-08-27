@@ -96,5 +96,6 @@ return [
         'roles' => 'Roles',
         'permissions' => 'Permissions',
         'team_leader_field_engineers' => 'Team Leader Field Engineers',
+        'artisan_commands' => 'Artisan Commands',
     ],
 ];

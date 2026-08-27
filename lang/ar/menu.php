@@ -96,5 +96,6 @@ return [
         'roles' => 'الأدوار',
         'permissions' => 'الصلاحيات',
         'team_leader_field_engineers' => 'ربط قادة الفرق بالمهندسين',
+        'artisan_commands' => 'أوامر Artisan',
     ],
 ];

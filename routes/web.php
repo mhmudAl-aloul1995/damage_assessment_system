@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ArcgisLayerSyncController;
+use App\Http\Controllers\Admin\ArtisanCommandController;
 use App\Http\Controllers\Admin\LocalDatabaseImportController;
 use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
 use App\Http\Controllers\LocaleController;
@@ -389,6 +390,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/local-database-import', [LocalDatabaseImportController::class, 'store'])
             ->middleware('role_or_permission:Database Officer|system.maintenance')
             ->name('local-database-import.store');
+
+        Route::get('/artisan-commands', [ArtisanCommandController::class, 'index'])
+            ->middleware('role_or_permission:Database Officer|system.maintenance')
+            ->name('artisan-commands.index');
+
+        Route::post('/artisan-commands/run', [ArtisanCommandController::class, 'store'])
+            ->middleware('role:Database Officer')
+            ->name('artisan-commands.run');
 
         Route::get('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'index'])
             ->name('team-leader-field-engineers.index');
