@@ -418,6 +418,35 @@
                 return currentIdentitySubject === 'spouse' ? 11 : 9;
             };
 
+            var jsonRequestHeaders = function (headers) {
+                return Object.assign({
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }, headers || {});
+            };
+
+            var parseJsonResponse = function (response) {
+                var contentType = response.headers.get('content-type') || '';
+
+                if (contentType.indexOf('application/json') === -1) {
+                    return response.text().then(function () {
+                        throw {
+                            message: (response.redirected || response.status === 401 || response.status === 419)
+                                ? @json(__('ui.messages.session_expired'))
+                                : @json(__('ui.messages.unexpected_error'))
+                        };
+                    });
+                }
+
+                return response.json().then(function (payload) {
+                    if (!response.ok) {
+                        throw payload;
+                    }
+
+                    return payload;
+                });
+            };
+
             var updateOwnerContextVisibility = function () {
                 Array.prototype.slice.call(document.querySelectorAll('[data-kt-missing-citizens-owner-context]')).forEach(function (element) {
                     element.classList.toggle('d-none', currentIdentitySubject !== 'spouse');
@@ -479,19 +508,9 @@
                 documentsBody.innerHTML = '<div class="text-muted text-center py-5">{{ __('ui.missing_citizen_identities.loading_documents') }}</div>';
 
                 fetch(documentsUrlTemplate.replace('__REPORT__', reportId), {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
+                    headers: jsonRequestHeaders()
                 })
-                    .then(function (response) {
-                        return response.json().then(function (payload) {
-                            if (!response.ok) {
-                                throw payload;
-                            }
-
-                            return payload;
-                        });
-                    })
+                    .then(parseJsonResponse)
                     .then(function (payload) {
                         var documents = payload.data || [];
 
@@ -708,22 +727,13 @@
 
                 fetch("{{ route('reports.missing-citizen-identities.data') }}", {
                     method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
+                    headers: jsonRequestHeaders({
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken
-                    },
+                    }),
                     body: JSON.stringify(params)
                 })
-                    .then(function (response) {
-                        return response.json().then(function (payload) {
-                            if (!response.ok) {
-                                throw payload;
-                            }
-
-                            return payload;
-                        });
-                    })
+                    .then(parseJsonResponse)
                     .then(function (payload) {
                         hasMore = Boolean(payload.has_more);
                         nextCursor = payload.next_cursor;
@@ -774,19 +784,9 @@
                 }
 
                 fetch(candidatesUrlTemplate.replace('__REPORT__', reportId), {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
+                    headers: jsonRequestHeaders()
                 })
-                    .then(function (response) {
-                        return response.json().then(function (payload) {
-                            if (!response.ok) {
-                                throw payload;
-                            }
-
-                            return payload;
-                        });
-                    })
+                    .then(parseJsonResponse)
                     .then(function (payload) {
                         var candidates = payload.data || [];
 
@@ -1006,19 +1006,9 @@
                 candidatesBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-8">{{ __('ui.missing_citizen_identities.loading') }}</td></tr>';
 
                 fetch(citizenSearchUrlTemplate.replace('__REPORT__', reportId) + '?' + citizenSearchParams().toString(), {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
+                    headers: jsonRequestHeaders()
                 })
-                    .then(function (response) {
-                        return response.json().then(function (payload) {
-                            if (!response.ok) {
-                                throw payload;
-                            }
-
-                            return payload;
-                        });
-                    })
+                    .then(parseJsonResponse)
                     .then(function (payload) {
                         renderCandidateRows(payload.data || []);
                     })
@@ -1038,25 +1028,16 @@
 
                     fetch(approveUrlTemplate.replace('__REPORT__', reportId), {
                         method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
+                        headers: jsonRequestHeaders({
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': csrfToken
-                        },
+                        }),
                         body: JSON.stringify({
                             confirm: true,
                             citizen_id: citizenId || null
                         })
                     })
-                        .then(function (response) {
-                            return response.json().then(function (payload) {
-                                if (!response.ok) {
-                                    throw payload;
-                                }
-
-                                return payload;
-                            });
-                        })
+                        .then(parseJsonResponse)
                         .then(function (payload) {
                             if (candidatesModalElement && window.bootstrap) {
                                 bootstrap.Modal.getOrCreateInstance(candidatesModalElement).hide();
@@ -1091,24 +1072,15 @@
 
                     fetch(bulkApproveUrl, {
                         method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
+                        headers: jsonRequestHeaders({
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': csrfToken
-                        },
+                        }),
                         body: JSON.stringify({
                             report_ids: reportIds
                         })
                     })
-                        .then(function (response) {
-                            return response.json().then(function (payload) {
-                                if (!response.ok) {
-                                    throw payload;
-                                }
-
-                                return payload;
-                            });
-                        })
+                        .then(parseJsonResponse)
                         .then(function (payload) {
                             showToast(payload.message || '{{ __('ui.missing_citizen_identities.bulk_approved_done') }}', 'success');
                             removeApprovedRows(reportIds);
