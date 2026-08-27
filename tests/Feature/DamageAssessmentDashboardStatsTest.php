@@ -87,6 +87,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         'neighborhood' => 'Rimal',
         'creationdate' => Carbon::today()->toDateString(),
         'field_status' => 'COMPLETED',
+        'security_situation' => 'Unsafe',
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -181,7 +182,8 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Assigned Staff')
         ->assertSee('Occupied')
         ->assertSee('Street Length')
-        ->assertSee('Undamaged')
+        ->assertSee('Assessment blocked')
+        ->assertSee('security_situation=Unsafe', false)
         ->assertSee('4.683 كم')
         ->assertSee('Bodies')
         ->assertSee('UXO')

@@ -93,6 +93,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'assignedto' => 'Engineer Roads',
         'field_status' => 'COMPLETED',
         'road_damage_level' => '',
+        'security_situation' => 'Unsafe',
         'submissiondate' => '2026-03-06 10:00:00',
     ]);
 
@@ -139,7 +140,7 @@ it('shows the road facility survey page with all dynamic road filters and export
         'draw' => 1,
         'start' => 0,
         'length' => 10,
-        'undamaged_only' => 1,
+        'security_situation' => 'Unsafe',
     ]));
     $undamagedResponse->assertOk();
     $undamagedResponse->assertSee('Clear Street');

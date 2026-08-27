@@ -255,10 +255,13 @@ class RoadFacilityController extends Controller
         }
 
         if ($request->boolean('undamaged_only')) {
-            $query->where(function (Builder $nested): void {
-                $nested->whereNull('road_damage_level')
-                    ->orWhere('road_damage_level', '');
-            });
+            $query->whereRaw("LOWER(TRIM(COALESCE(security_situation, ''))) = ?", ['unsafe']);
+        }
+
+        if ($request->filled('security_situation')) {
+            $query->whereRaw("LOWER(TRIM(COALESCE(security_situation, ''))) = ?", [
+                strtolower(trim((string) $request->input('security_situation'))),
+            ]);
         }
 
         if ($request->boolean('with_items')) {

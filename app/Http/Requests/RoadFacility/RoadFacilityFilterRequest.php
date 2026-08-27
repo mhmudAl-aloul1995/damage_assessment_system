@@ -31,6 +31,7 @@ class RoadFacilityFilterRequest extends FormRequest
             'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
             'damaged_only' => ['nullable', 'boolean'],
             'undamaged_only' => ['nullable', 'boolean'],
+            'security_situation' => ['nullable', 'string', 'max:255'],
             'with_items' => ['nullable', 'boolean'],
             'has_municipality' => ['nullable', 'boolean'],
             'has_neighborhood' => ['nullable', 'boolean'],

@@ -463,7 +463,7 @@ return [
         'neighborhood' => 'Neighborhood',
         'assigned_staff' => 'Assigned Staff',
         'occupied' => 'Occupied',
-        'undamaged' => 'Undamaged',
+        'undamaged' => 'Assessment blocked',
         'street_length' => 'Street Length',
         'bodies' => 'Bodies',
         'uxo' => 'UXO',

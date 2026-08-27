@@ -177,6 +177,7 @@
                     search: $('#filter_search').val() || queryParams.get('search'),
                     damaged_only: queryParams.get('damaged_only'),
                     undamaged_only: queryParams.get('undamaged_only'),
+                    security_situation: queryParams.get('security_situation'),
                     with_items: queryParams.get('with_items'),
                     has_municipality: queryParams.get('has_municipality'),
                     has_neighborhood: queryParams.get('has_neighborhood'),
@@ -219,6 +220,7 @@
                         d.search = filters.search;
                         d.damaged_only = filters.damaged_only;
                         d.undamaged_only = filters.undamaged_only;
+                        d.security_situation = filters.security_situation;
                         d.with_items = filters.with_items;
                         d.has_municipality = filters.has_municipality;
                         d.has_neighborhood = filters.has_neighborhood;

@@ -132,10 +132,7 @@ class DamageAssessmentController extends Controller
                 ->count(),
 
             'undamaged_roads' => $this->dashboardRoadFacilityQuery($request)
-                ->where(function (Builder $query): void {
-                    $query->whereNull('road_damage_level')
-                        ->orWhere('road_damage_level', '');
-                })
+                ->whereRaw("LOWER(TRIM(COALESCE(security_situation, ''))) = ?", ['unsafe'])
                 ->count(),
 
             'completed_road_length_km' => $this->dashboardCompletedRoadLengthKilometers($request),

@@ -41,7 +41,7 @@
 			],
 			'road_facilities' => [
 				'damaged' => route('road-facilities.index') . '?' . http_build_query(['damaged_only' => 1]),
-				'undamaged' => route('road-facilities.index') . '?' . http_build_query(['undamaged_only' => 1]),
+				'undamaged' => route('road-facilities.index') . '?' . http_build_query(['security_situation' => 'Unsafe']),
 				'items' => route('road-facilities.index') . '?' . http_build_query(['with_items' => 1]),
 				'municipalities' => route('road-facilities.index') . '?' . http_build_query(['has_municipality' => 1]),
 				'neighborhoods' => route('road-facilities.index') . '?' . http_build_query(['has_neighborhood' => 1]),

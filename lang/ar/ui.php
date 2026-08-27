@@ -455,7 +455,7 @@ return [
         'public_buildings' => 'المباني العامة',
         'total_surveys' => 'إجمالي الاستبيانات',
         'damaged' => 'متضررة',
-        'undamaged' => 'غير متضررة',
+        'undamaged' => 'تعيق التقييم',
         'units' => 'الوحدات',
         'municipalities' => 'البلديات',
         'neighborhoods' => 'الأحياء',
