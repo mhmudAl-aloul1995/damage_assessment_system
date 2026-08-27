@@ -181,6 +181,7 @@ it('shows summary statistics for public buildings and road facilities on the mai
         ->assertSee('Neighborhoods')
         ->assertSee('Assigned Staff')
         ->assertSee('Occupied')
+        ->assertSee('Assessed')
         ->assertSee('BOQ Table')
         ->assertSee('Street Length')
         ->assertSee('Assessment blocked')

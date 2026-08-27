@@ -1971,7 +1971,7 @@
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="{{ $dashboardStatLinks['road_facilities']['damaged'] }}"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.damaged') }}</a>
+										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.assessed') }}</a>
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									{{ $roadFacilityStats['damaged_roads'] }}

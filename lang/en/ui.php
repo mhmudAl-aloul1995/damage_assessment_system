@@ -456,6 +456,7 @@ return [
         'total_public_buildings' => 'Total Public Buildings',
         'total_surveys' => 'Total Surveys',
         'damaged' => 'Damaged',
+        'assessed' => 'Assessed',
         'units' => 'Units',
         'municipalities' => 'Municipalities',
         'municipality' => 'Municipality',
