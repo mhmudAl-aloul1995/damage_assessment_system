@@ -221,6 +221,7 @@
             const filterForm = document.querySelector('[data-kt-Housing-table-filter="form"]');
             const initialQueryParams = new URLSearchParams(window.location.search);
             const parentGlobalId = @json($globalid);
+            const initialDirectFilters = {};
 
             const setFilterValue = function (field, value) {
                 if (!filterForm || !value) return;
@@ -233,7 +234,10 @@
                 initialQueryParams.forEach((value, key) => {
                     if (key === 'search') return;
                     const match = key.match(/^filters\[(.+?)](?:\[])?$/);
-                    setFilterValue(match ? match[1] : key, value);
+                    const field = match ? match[1] : key;
+                    setFilterValue(field, value);
+                    initialDirectFilters[field] = initialDirectFilters[field] || [];
+                    initialDirectFilters[field].push(value);
                 });
             };
             const filterPayload = function () {
@@ -243,6 +247,11 @@
                     const multi = key.match(/^filters\[(.+)]\[]$/); const scalar = key.match(/^filters\[(.+)]$/);
                     if (multi && value !== '') { payload[multi[1]] = payload[multi[1]] || []; payload[multi[1]].push(value); }
                     if (scalar && value !== '') payload[scalar[1]] = value;
+                });
+                Object.keys(initialDirectFilters).forEach(function (field) {
+                    if (payload[field] === undefined) {
+                        payload[field] = initialDirectFilters[field].length === 1 ? initialDirectFilters[field][0] : initialDirectFilters[field];
+                    }
                 });
                 return payload;
             };
@@ -265,7 +274,7 @@
                 if (typeof flatpickr !== 'undefined') { flatpickr('.housing-date-filter', { dateFormat: 'Y-m-d', allowInput: true }); }
                 const search = document.querySelector('[data-kt-Housing-table-filter="search"]'); if (search) search.addEventListener('keyup', function (event) { datatable.search(event.target.value).draw(); });
                 if (filterForm) { filterForm.addEventListener('submit', function (event) { event.preventDefault(); const button = filterForm.querySelector('[data-kt-Housing-table-filter="filter"]'); button.setAttribute('data-kt-indicator', 'on'); button.disabled = true; datatable.ajax.reload(function () { button.removeAttribute('data-kt-indicator'); button.disabled = false; activeFilterChips(); }, true); }); $(filterForm).find('select').on('change', activeFilterChips); }
-                const reset = document.querySelector('[data-kt-housing-filter-action="reset"]'); if (reset) reset.addEventListener('click', function () { $(filterForm).find('select').val('').trigger('change'); $(filterForm).find('input').val(''); datatable.search('').ajax.reload(); activeFilterChips(); });
+                const reset = document.querySelector('[data-kt-housing-filter-action="reset"]'); if (reset) reset.addEventListener('click', function () { Object.keys(initialDirectFilters).forEach(function (field) { delete initialDirectFilters[field]; }); $(filterForm).find('select').val('').trigger('change'); $(filterForm).find('input').val(''); datatable.search('').ajax.reload(); activeFilterChips(); });
                 const refresh = document.querySelector('[data-kt-Housing-table-action="refresh"]'); if (refresh) refresh.addEventListener('click', function () { datatable.ajax.reload(null, false); });
             };
             return { init: function () { applyInitialFilters(); initHousingTable(); bindEvents(); activeFilterChips(); } };

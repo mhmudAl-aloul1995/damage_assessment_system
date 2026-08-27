@@ -354,6 +354,44 @@ it('filters housing unit datatable records by the assigned building researcher',
     $response->assertDontSee('Engineer Two');
 });
 
+it('filters housing unit datatable records by security situation from dashboard links', function () {
+    $user = User::factory()->create();
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 3251,
+        'globalid' => 'housing-unit-security-unsafe',
+        'housing_unit_number' => '36',
+        'q_9_3_1_first_name' => 'Unsafe',
+        'q_9_3_4_last_name' => 'Unit',
+        'security_situation_unit' => 'yes',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 3252,
+        'globalid' => 'housing-unit-security-safe',
+        'housing_unit_number' => '37',
+        'q_9_3_1_first_name' => 'Safe',
+        'q_9_3_4_last_name' => 'Unit',
+        'security_situation_unit' => 'no',
+    ]);
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'security_situation_unit' => 'yes',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 1);
+    $response->assertSee('Unsafe Unit');
+    $response->assertDontSee('Safe Unit');
+});
+
 it('filters housing unit datatable records by the building save date', function () {
     $user = User::factory()->create();
 
@@ -760,6 +798,7 @@ function ensureAuditedHousingSurveyColumns(): void
             'municipalitie',
             'rubble_removal_is_needed',
             'activation_of_uxo_ha_d_material_clearance',
+            'security_situation_unit',
             'editdate',
         ] as $columnName) {
             if (! Schema::hasColumn('audited_housing_units', $columnName)) {

@@ -301,6 +301,7 @@ class HousingUnitController extends Controller
             'activation_of_uxo_ha_d_material_clearance',
             'unit_support_needed',
             'is_the_housing_unit_or_living_habitable',
+            'security_situation_unit',
             'municipalitie',
             'neighborhood',
         ];
