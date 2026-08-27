@@ -8,6 +8,7 @@ use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
 use App\Models\EditAssessment;
+use App\Models\Filter;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -1175,6 +1176,94 @@ it('keeps previous building notes visible in the notes history response', functi
         ->assertJsonFragment([
             'notes' => 'Lawyer note also stays visible',
         ]);
+});
+
+it('shows and applies advanced building filters on the audit index', function () {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    config()->set('database.default', 'mysql');
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    Http::fake([
+        '*' => Http::response(['token' => 'fake-token']),
+    ]);
+
+    $role = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'QC/QA Engineer',
+        'guard_name' => 'web',
+    ]);
+    Role::query()->create([
+        'name' => 'Legal Auditor',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    Filter::query()->create([
+        'list_name' => 'building_material',
+        'name' => 'concrete',
+        'label' => 'Concrete',
+    ]);
+
+    Filter::query()->create([
+        'list_name' => 'building_material',
+        'name' => 'wood',
+        'label' => 'Wood',
+    ]);
+
+    $matchingBuilding = Building::query()->create([
+        'objectid' => 9101,
+        'globalid' => 'audit-advanced-filter-matching',
+        'building_name' => 'Audit Advanced Matching Building',
+        'assignedto' => 'Engineer A',
+        'field_status' => 'COMPLETED',
+        'building_material' => 'concrete',
+        'units_nos' => 8,
+    ]);
+
+    $excludedBuilding = Building::query()->create([
+        'objectid' => 9102,
+        'globalid' => 'audit-advanced-filter-excluded',
+        'building_name' => 'Audit Advanced Excluded Building',
+        'assignedto' => 'Engineer B',
+        'field_status' => 'COMPLETED',
+        'building_material' => 'wood',
+        'units_nos' => 2,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('advanced_audit_building_filters', false)
+        ->assertSee('Concrete');
+
+    $this->actingAs($user)
+        ->getJson(route('audit.index', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'advanced_filters' => [
+                'building_material' => ['concrete'],
+                'units_nos_from' => 5,
+            ],
+        ]), [
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
+        ->assertOk()
+        ->assertJsonMissingPath('error')
+        ->assertJsonFragment([
+            'globalid' => $matchingBuilding->globalid,
+        ])
+        ->assertJsonMissing([
+            'globalid' => $excludedBuilding->globalid,
+        ]);
+
+    config()->set('database.default', 'sqlite');
+    DB::purge('mysql');
 });
 
 it('filters audit buildings by field status and completes field status on arcgis', function () {

@@ -23,6 +23,38 @@ class AuditTableService
         'need_review',
     ];
 
+    /**
+     * @var list<string>
+     */
+    private const ADVANCED_BUILDING_FILTERS = [
+        'building_status_visit',
+        'building_debris_exist',
+        'building_debris_qty',
+        'building_debris_blocking',
+        'assessment_obstacle',
+        'uxo_present',
+        'bodies_present',
+        'building_type',
+        'building_use',
+        'building_material',
+        'building_age',
+        'building_roof_type',
+        'building_ownership',
+        'owner_status',
+        'building_responsible',
+        'building_authorization',
+        'has_elevator',
+        'elevator_status',
+        'has_solar',
+        'solar_damage_status',
+        'has_well',
+        'well_damage_status',
+        'has_fence',
+        'fence_damage_status',
+        'has_parking',
+        'parking_status',
+    ];
+
     public function applyFilters(Builder $query, Request $request, bool $includeAssignmentFilters = true): void
     {
         if ($includeAssignmentFilters) {
@@ -107,6 +139,8 @@ class AuditTableService
         if ($request->filled('filter_to_date')) {
             $query->whereDate('buildings.creationdate', '<=', $request->input('filter_to_date'));
         }
+
+        $this->applyAdvancedBuildingFilters($query, $request);
     }
 
     public function applyStatusDateFilters(Builder $query, Request $request): void
@@ -193,6 +227,47 @@ class AuditTableService
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function applyAdvancedBuildingFilters(Builder $query, Request $request): void
+    {
+        $advancedFilters = $request->input('advanced_filters', []);
+
+        if (! is_array($advancedFilters)) {
+            return;
+        }
+
+        foreach (self::ADVANCED_BUILDING_FILTERS as $field) {
+            $values = $advancedFilters[$field] ?? [];
+
+            if (! is_array($values)) {
+                $values = [$values];
+            }
+
+            $values = collect($values)
+                ->map(fn ($value): string => trim((string) $value))
+                ->filter(fn (string $value): bool => $value !== '')
+                ->unique()
+                ->values()
+                ->all();
+
+            if ($values !== []) {
+                $query->whereIn($field, $values);
+            }
+        }
+
+        foreach (['floor_nos', 'units_nos', 'damaged_units_nos'] as $field) {
+            $from = $advancedFilters[$field.'_from'] ?? null;
+            $to = $advancedFilters[$field.'_to'] ?? null;
+
+            if ($from !== null && $from !== '') {
+                $query->where($field, '>=', $from);
+            }
+
+            if ($to !== null && $to !== '') {
+                $query->where($field, '<=', $to);
+            }
+        }
     }
 
     /**

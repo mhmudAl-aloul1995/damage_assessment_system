@@ -32,6 +32,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -3042,6 +3043,7 @@ class auditController extends Controller
         $assessments = Assessment::all();
         $filterName = Filter::distinct('list_name')->pluck('list_name');
         $filters = Filter::all();
+        $buildingFilterSections = $this->buildingFilterSections($filters->groupBy('list_name'));
         $engineers = User::role('QC/QA Engineer')->get();
         $lawyers = User::role('Legal Auditor')->get();
 
@@ -3065,8 +3067,82 @@ class auditController extends Controller
 
         return View::make(
             'damage-assessment::audit.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges', 'canManageAuditReviewers', 'auditReviewers', 'auditReviewerCandidates')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'buildingFilterSections', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges', 'canManageAuditReviewers', 'auditReviewers', 'auditReviewerCandidates')
         );
+    }
+
+    /**
+     * @return array<int, array{title: string, filters: array<int, array{field: string, label: string, options: mixed}>}>
+     */
+    private function buildingFilterSections($groupedFilters): array
+    {
+        $sections = [
+            [
+                'title' => __('ui.buildings_page.filter_section_damage'),
+                'filters' => [
+                    ['field' => 'building_status_visit', 'label' => __('ui.buildings_page.visit_status')],
+                    ['field' => 'building_debris_exist', 'label' => __('ui.buildings_page.debris_exists')],
+                    ['field' => 'building_debris_qty', 'label' => __('ui.buildings_page.debris_quantity')],
+                    ['field' => 'building_debris_blocking', 'label' => __('ui.buildings_page.debris_blocking')],
+                    ['field' => 'assessment_obstacle', 'label' => __('ui.damage_dashboard.assessment_blocked')],
+                    ['field' => 'uxo_present', 'label' => __('ui.buildings_page.uxo_present')],
+                    ['field' => 'bodies_present', 'label' => __('ui.buildings_page.bodies_present')],
+                ],
+            ],
+            [
+                'title' => __('ui.buildings_page.filter_section_building'),
+                'filters' => [
+                    ['field' => 'building_type', 'label' => __('ui.buildings_page.building_type')],
+                    ['field' => 'building_use', 'label' => __('ui.buildings_page.building_use')],
+                    ['field' => 'building_material', 'label' => __('ui.buildings_page.building_material')],
+                    ['field' => 'building_age', 'label' => __('ui.buildings_page.building_age')],
+                    ['field' => 'building_roof_type', 'label' => __('ui.buildings_page.roof_type')],
+                ],
+            ],
+            [
+                'title' => __('ui.buildings_page.filter_section_ownership'),
+                'filters' => [
+                    ['field' => 'building_ownership', 'label' => __('ui.buildings_page.building_ownership')],
+                    ['field' => 'owner_status', 'label' => __('ui.buildings_page.owner_status')],
+                    ['field' => 'building_responsible', 'label' => __('ui.buildings_page.building_responsible')],
+                    ['field' => 'building_authorization', 'label' => __('ui.buildings_page.building_authorization')],
+                ],
+            ],
+            [
+                'title' => __('ui.buildings_page.filter_section_services'),
+                'filters' => [
+                    ['field' => 'has_elevator', 'label' => __('ui.buildings_page.has_elevator')],
+                    ['field' => 'elevator_status', 'label' => __('ui.buildings_page.elevator_status')],
+                    ['field' => 'has_solar', 'label' => __('ui.buildings_page.has_solar')],
+                    ['field' => 'solar_damage_status', 'label' => __('ui.buildings_page.solar_damage_status')],
+                    ['field' => 'has_well', 'label' => __('ui.buildings_page.has_well')],
+                    ['field' => 'well_damage_status', 'label' => __('ui.buildings_page.well_damage_status')],
+                    ['field' => 'has_fence', 'label' => __('ui.buildings_page.has_fence')],
+                    ['field' => 'fence_damage_status', 'label' => __('ui.buildings_page.fence_damage_status')],
+                    ['field' => 'has_parking', 'label' => __('ui.buildings_page.has_parking')],
+                    ['field' => 'parking_status', 'label' => __('ui.buildings_page.parking_status')],
+                ],
+            ],
+        ];
+
+        return collect($sections)
+            ->map(function (array $section) use ($groupedFilters): array {
+                $section['filters'] = collect($section['filters'])
+                    ->filter(fn (array $filter): bool => Schema::hasColumn('buildings', $filter['field']))
+                    ->map(function (array $filter) use ($groupedFilters): array {
+                        $filter['options'] = $groupedFilters[$filter['field']] ?? collect();
+
+                        return $filter;
+                    })
+                    ->filter(fn (array $filter): bool => $filter['options']->isNotEmpty())
+                    ->values()
+                    ->all();
+
+                return $section;
+            })
+            ->filter(fn (array $section): bool => ! empty($section['filters']))
+            ->values()
+            ->all();
     }
 
     public function completeBuildingFieldStatus(Building $building, ArcgisService $arcgisService): JsonResponse

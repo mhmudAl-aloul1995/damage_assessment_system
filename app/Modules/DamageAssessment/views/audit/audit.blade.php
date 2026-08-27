@@ -386,6 +386,75 @@
 							<input type="date" id="filter_status_to_date" placeholder="{{ __('ui.audit.to_status_date') }}"
 								class="form-control form-control-solid">
 						</div>
+						<div class="col-md-3 d-flex align-items-end">
+							<button class="btn btn-light-primary w-100" type="button" data-bs-toggle="collapse"
+								data-bs-target="#advanced_audit_building_filters" aria-expanded="false"
+								aria-controls="advanced_audit_building_filters">
+								<i class="ki-duotone ki-filter fs-2"></i>
+								{{ __('ui.buildings_page.advanced_filters') }}
+							</button>
+						</div>
+					</div>
+
+					<div id="advanced_audit_building_filters" class="collapse mt-8">
+						<div class="separator separator-dashed mb-6"></div>
+						<div class="accordion" id="audit_building_filter_sections">
+							@foreach (($buildingFilterSections ?? []) as $sectionIndex => $section)
+								<div class="accordion-item border border-gray-200 rounded mb-3">
+									<h2 class="accordion-header" id="audit_building_filter_heading_{{ $sectionIndex }}">
+										<button class="accordion-button fs-6 fw-semibold collapsed" type="button"
+											data-bs-toggle="collapse"
+											data-bs-target="#audit_building_filter_panel_{{ $sectionIndex }}"
+											aria-expanded="false"
+											aria-controls="audit_building_filter_panel_{{ $sectionIndex }}">
+											{{ $section['title'] }}
+										</button>
+									</h2>
+									<div id="audit_building_filter_panel_{{ $sectionIndex }}" class="accordion-collapse collapse"
+										aria-labelledby="audit_building_filter_heading_{{ $sectionIndex }}"
+										data-bs-parent="#audit_building_filter_sections">
+										<div class="accordion-body">
+											<div class="row g-5">
+												@foreach ($section['filters'] as $filter)
+													<div class="col-md-3">
+														<label class="form-label fw-semibold">{{ $filter['label'] }}</label>
+														<select data-audit-building-filter="{{ $filter['field'] }}"
+															class="form-select form-select-solid audit-building-filter-control"
+															data-control="select2"
+															data-placeholder="{{ __('ui.buildings_page.select_filter', ['label' => $filter['label']]) }}"
+															data-allow-clear="true" data-close-on-select="false" multiple>
+															@foreach ($filter['options'] as $option)
+																<option value="{{ $option->name }}">{{ $option->label }}</option>
+															@endforeach
+														</select>
+													</div>
+												@endforeach
+											</div>
+										</div>
+									</div>
+								</div>
+							@endforeach
+						</div>
+
+						<div class="row g-5 mt-2">
+							@foreach ([
+								'floor_nos' => __('ui.buildings_page.floor_count'),
+								'units_nos' => __('ui.buildings_page.units_count'),
+								'damaged_units_nos' => __('ui.buildings_page.damaged_units_count'),
+							] as $field => $label)
+								<div class="col-md-4">
+									<label class="form-label fw-semibold">{{ $label }}</label>
+									<div class="d-flex gap-2">
+										<input type="number" data-audit-building-filter="{{ $field }}_from"
+											class="form-control form-control-solid audit-building-filter-control"
+											placeholder="{{ __('ui.buildings_page.from') }}">
+										<input type="number" data-audit-building-filter="{{ $field }}_to"
+											class="form-control form-control-solid audit-building-filter-control"
+											placeholder="{{ __('ui.buildings_page.to') }}">
+									</div>
+								</div>
+							@endforeach
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1757,6 +1826,34 @@
 			const renderAuditLtrCell = function (data) {
 				return `<span class="audit-cell-text audit-cell-ltr">${escapeAuditCell(data)}</span>`;
 			};
+			const auditAdvancedBuildingFilterPayload = function () {
+				const filters = {};
+
+				$('.audit-building-filter-control').each(function () {
+					const field = $(this).data('audit-building-filter');
+					const value = $(this).val();
+
+					if (!field) {
+						return;
+					}
+
+					if (Array.isArray(value)) {
+						const values = value.filter(Boolean);
+
+						if (values.length > 0) {
+							filters[field] = values;
+						}
+
+						return;
+					}
+
+					if (value !== null && value !== undefined && value !== '') {
+						filters[field] = value;
+					}
+				});
+
+				return filters;
+			};
 			const auditFilterPayload = function () {
 				return {
 					building_name: $('#filter_building_name').val(),
@@ -1776,7 +1873,8 @@
 					filter_from_date: $('#filter_from_date').val(),
 					filter_to_date: $('#filter_to_date').val(),
 					status_from_date: $('#filter_status_from_date').val(),
-					status_to_date: $('#filter_status_to_date').val()
+					status_to_date: $('#filter_status_to_date').val(),
+					advanced_filters: auditAdvancedBuildingFilterPayload()
 				};
 			};
 			const appendAuditExportParams = function (params, key, value) {
@@ -2518,10 +2616,10 @@
 				}, 350);
 			};
 
-			$('#filter_engineer, #filter_lawyer, #filter_eng_status, #filter_legal_status, #filter_final_status, #filter_field_status, #filter_field_engineer, #filter_damage_status, #filter_legal_challenge')
+			$('#filter_engineer, #filter_lawyer, #filter_eng_status, #filter_legal_status, #filter_final_status, #filter_field_status, #filter_field_engineer, #filter_damage_status, #filter_legal_challenge, .audit-building-filter-control')
 				.on('change', scheduleFilterReload);
 
-			$('#filter_building_name, #filter_objectid, #filter_area, #filter_from_date, #filter_to_date, #filter_status_from_date, #filter_status_to_date')
+			$('#filter_building_name, #filter_objectid, #filter_area, #filter_from_date, #filter_to_date, #filter_status_from_date, #filter_status_to_date, .audit-building-filter-control')
 				.on('input change', scheduleFilterReload);
 			$('#resetFilters').on('click', function () {
 				/* 			$('#filter_building_name').val('');
