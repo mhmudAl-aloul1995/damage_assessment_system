@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
-// s
 beforeEach(function (): void {
     DB::statement('DROP VIEW IF EXISTS warda_buildings');
     DB::statement('DROP VIEW IF EXISTS warda_units');
@@ -217,6 +217,12 @@ it('exports a dry run spreadsheet with previous and next edit values', function 
     expect($buildingRow[14])->toBe('Yes');
     expect($buildingRow[16])->toBe('later_building_edit');
     expect($housingRow[6])->toBe('http://213.6.135.115/damage_assessment_system/showAssessmentAudit/building-pending/housing-pending');
+
+    $spreadsheet = IOFactory::load(Storage::disk('local')->path($path));
+    $sheet = $spreadsheet->getActiveSheet();
+
+    expect($sheet->getCell('G2')->getHyperlink()->getUrl())->toBe($buildingRow[6]);
+    expect($sheet->getCell('G3')->getHyperlink()->getUrl())->toBe($housingRow[6]);
     expect(DB::table('edit_assessments')->where('id', 101)->exists())->toBeTrue();
     expect(DB::table('audit_edit_deletion_batches')->count())->toBe(0);
 });
