@@ -46,7 +46,6 @@
 				'municipalities' => route('road-facilities.index') . '?' . http_build_query(['has_municipality' => 1]),
 				'neighborhoods' => route('road-facilities.index') . '?' . http_build_query(['has_neighborhood' => 1]),
 				'potholes' => route('road-facilities.index') . '?' . http_build_query(['potholes_only' => 1]),
-				'obstacles' => route('road-facilities.index') . '?' . http_build_query(['obstacles_only' => 1]),
 				'buried_bodies' => route('road-facilities.index') . '?' . http_build_query(['buried_bodies_only' => 1]),
 				'uxo' => route('road-facilities.index') . '?' . http_build_query(['uxo_only' => 1]),
 			],
@@ -2067,21 +2066,6 @@
 								</div>
 								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
 									{{ $roadFacilityStats['potholes_locations'] }}
-								</div>
-							</div>
-						</div>
-						<div class="d-flex align-items-center mb-6">
-							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-information-4"><span
-											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
-							</div>
-							<div class="d-flex align-items-center flex-wrap w-100">
-								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['road_facilities']['obstacles'] }}"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold">{{ __('ui.damage_dashboard.obstacles') }}</a>
-								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
-									{{ $roadFacilityStats['obstacle_locations'] }}
 								</div>
 							</div>
 						</div>

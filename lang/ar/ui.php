@@ -470,7 +470,7 @@ return [
         'organizations' => 'المنظمات',
         'without_units' => 'بدون وحدات',
         'without_organization' => 'بدون منظمة',
-        'items' => 'العناصر',
+        'items' => 'جدول الكميات',
         'potholes' => 'الحفر',
         'obstacles' => 'العوائق',
         'buried_bodies' => 'الجثث المدفونة',

@@ -474,7 +474,7 @@ return [
         'without_units' => 'Without Units',
         'without_organization' => 'Without Organization',
         'total_road_facilities' => 'Total Road Facilities',
-        'items' => 'Items',
+        'items' => 'BOQ Table',
         'potholes' => 'Potholes',
         'obstacles' => 'Obstacles',
         'buried_bodies' => 'Buried Bodies',

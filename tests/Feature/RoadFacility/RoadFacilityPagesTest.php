@@ -115,6 +115,7 @@ it('shows the road facility survey page with all dynamic road filters and export
     $indexResponse->assertSee('Galvanized steel pole');
     $indexResponse->assertSee('High voltage');
     $indexResponse->assertSee('Export Neighborhood Lengths');
+    $indexResponse->assertSee('BOQ Table');
 
     $dataResponse = $this->actingAs($user)->get(route('road-facilities.data', [
         'draw' => 1,
@@ -134,6 +135,7 @@ it('shows the road facility survey page with all dynamic road filters and export
     ]));
     $dataResponse->assertOk();
     $dataResponse->assertSee('Coastal Road');
+    $dataResponse->assertSee('Has BOQ');
     $dataResponse->assertDontSee('Northern Street');
 
     $undamagedResponse = $this->actingAs($user)->get(route('road-facilities.data', [
@@ -144,6 +146,7 @@ it('shows the road facility survey page with all dynamic road filters and export
     ]));
     $undamagedResponse->assertOk();
     $undamagedResponse->assertSee('Clear Street');
+    $undamagedResponse->assertSee('None');
     $undamagedResponse->assertDontSee('Coastal Road');
 
     $csvResponse = $this->actingAs($user)->get(route('road-facilities.export', [

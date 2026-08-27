@@ -76,8 +76,17 @@ class RoadFacilityController extends Controller
             ->editColumn('road_damage_level', function (RoadFacilitySurvey $survey): string {
                 return '<span class="badge badge-light-danger">'.e($survey->road_damage_level ?? '-').'</span>';
             })
+            ->editColumn('items_count', function (RoadFacilitySurvey $survey): string {
+                $itemsCount = (int) $survey->items_count;
+
+                if ($itemsCount === 0) {
+                    return '<span class="badge badge-light">'.__('multilingual.road_facilities_page.no_boq').'</span>';
+                }
+
+                return '<span class="badge badge-light-primary">'.__('multilingual.road_facilities_page.has_boq').' ('.number_format($itemsCount).')</span>';
+            })
             ->addColumn('assignedto', fn (RoadFacilitySurvey $survey): string => $survey->assignedto ?? '-')
-            ->rawColumns(['actions', 'road_damage_level'])
+            ->rawColumns(['actions', 'road_damage_level', 'items_count'])
             ->toJson();
     }
 
