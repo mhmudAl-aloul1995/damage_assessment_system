@@ -24,7 +24,9 @@ class ArtisanCommandController extends Controller
         $arguments = $validated['arguments'] ?? [];
         $options = $validated['options'] ?? [];
 
-        if (! $catalog->runInBackground($command, $arguments, $options)) {
+        $run = $catalog->runInBackground($command, $arguments, $options);
+
+        if ($run === false) {
             return response()->json([
                 'message' => __('ui.artisan_commands.run_failed'),
             ], 422);
@@ -32,6 +34,18 @@ class ArtisanCommandController extends Controller
 
         return response()->json([
             'message' => __('ui.artisan_commands.run_started', ['command' => $command]),
+            'run_id' => $run['run_id'],
+            'status_url' => route('admin.artisan-commands.runs.show', $run['run_id']),
+            'preview' => $run['preview'],
         ], 202);
+    }
+
+    public function showRun(string $run, ArtisanCommandCatalog $catalog): JsonResponse
+    {
+        $status = $catalog->runStatus($run);
+
+        abort_if($status === null, 404);
+
+        return response()->json($status);
     }
 }

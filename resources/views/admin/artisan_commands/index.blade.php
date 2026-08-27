@@ -301,6 +301,10 @@ $(document).ready(function () {
                 },
             }).done(function (response) {
                 toastr.success(response.message || @json(__('ui.artisan_commands.run_started_generic')));
+
+                if (response.status_url) {
+                    openRunMonitor(response.status_url, response.preview || command);
+                }
             }).fail(function (xhr) {
                 toastr.error(xhr.responseJSON?.message || @json(__('ui.artisan_commands.run_failed')));
             }).always(function () {
@@ -308,6 +312,86 @@ $(document).ready(function () {
             });
         });
     });
+
+    function openRunMonitor(statusUrl, previewCommand) {
+        let monitorTimer = null;
+
+        Swal.fire({
+            title: @json(__('ui.artisan_commands.monitor_title')),
+            html: `
+                <div class="text-start">
+                    <div class="alert alert-light-primary py-3 px-4 mb-4">
+                        <code dir="ltr">${escapeHtml(previewCommand)}</code>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="spinner-border spinner-border-sm text-primary" id="artisan-run-spinner"></span>
+                        <span class="badge badge-light-primary" id="artisan-run-status">${escapeHtml(@json(__('ui.artisan_commands.status_running')))}</span>
+                    </div>
+                    <pre id="artisan-run-output" class="bg-dark text-white rounded p-4 text-start" dir="ltr" style="min-height: 260px; max-height: 420px; overflow: auto; white-space: pre-wrap;"></pre>
+                </div>
+            `,
+            showConfirmButton: true,
+            confirmButtonText: @json(__('ui.buttons.close')),
+            customClass: {
+                confirmButton: 'btn btn-light',
+            },
+            buttonsStyling: false,
+            didOpen: function () {
+                const statusBadge = document.getElementById('artisan-run-status');
+                const output = document.getElementById('artisan-run-output');
+                const spinner = document.getElementById('artisan-run-spinner');
+
+                const refreshStatus = function () {
+                    $.get(statusUrl).done(function (response) {
+                        statusBadge.textContent = statusLabel(response.status);
+                        statusBadge.className = `badge ${statusClass(response.status)}`;
+                        output.textContent = response.output || @json(__('ui.artisan_commands.no_output_yet'));
+                        output.scrollTop = output.scrollHeight;
+
+                        if (response.status !== 'running') {
+                            clearInterval(monitorTimer);
+                            spinner.classList.add('d-none');
+                        }
+                    }).fail(function () {
+                        statusBadge.textContent = @json(__('ui.artisan_commands.status_unknown'));
+                        statusBadge.className = 'badge badge-light-danger';
+                    });
+                };
+
+                refreshStatus();
+                monitorTimer = setInterval(refreshStatus, 2000);
+            },
+            willClose: function () {
+                if (monitorTimer) {
+                    clearInterval(monitorTimer);
+                }
+            },
+        });
+    }
+
+    function statusLabel(status) {
+        if (status === 'success') {
+            return @json(__('ui.artisan_commands.status_success'));
+        }
+
+        if (status === 'failed') {
+            return @json(__('ui.artisan_commands.status_failed'));
+        }
+
+        return @json(__('ui.artisan_commands.status_running'));
+    }
+
+    function statusClass(status) {
+        if (status === 'success') {
+            return 'badge-light-success';
+        }
+
+        if (status === 'failed') {
+            return 'badge-light-danger';
+        }
+
+        return 'badge-light-primary';
+    }
 
     function buildCommandForm(commandDefinition) {
         let html = `

@@ -1,12 +1,14 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function (): void {
     app(PermissionRegistrar::class)->forgetCachedPermissions();
+    File::deleteDirectory(storage_path('app/artisan-command-runs'));
 });
 
 it('shows application console commands to database officers', function (): void {
@@ -50,6 +52,11 @@ it('starts eligible commands in the background for database officers', function 
         ->assertAccepted()
         ->assertJson([
             'message' => __('ui.artisan_commands.run_started', ['command' => 'sync:arcgis-layers']),
+        ])
+        ->assertJsonStructure([
+            'run_id',
+            'status_url',
+            'preview',
         ]);
 
     Process::assertRan(function ($process): bool {
@@ -57,8 +64,8 @@ it('starts eligible commands in the background for database officers', function 
             ? implode(' ', $process->command)
             : $process->command;
 
-        return str_contains($command, 'sync:arcgis-layers')
-            && str_contains($command, '--no-interaction');
+        return str_contains($command, 'run.')
+            && (str_contains($command, '.bat') || str_contains($command, '.sh'));
     });
 });
 
@@ -72,7 +79,7 @@ it('starts eligible commands with selected arguments and options', function (): 
         '*' => Process::result(),
     ]);
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->postJson(route('admin.artisan-commands.run'), [
             'command' => 'sync:arcgis-layers',
             'arguments' => [
@@ -85,16 +92,54 @@ it('starts eligible commands with selected arguments and options', function (): 
         ])
         ->assertAccepted();
 
+    expect($response->json('preview'))
+        ->toContain('sync:arcgis-layers')
+        ->toContain('housing_units')
+        ->toContain('--chunk=250')
+        ->toContain('--force');
+
     Process::assertRan(function ($process): bool {
         $command = is_array($process->command)
             ? implode(' ', $process->command)
             : $process->command;
 
-        return str_contains($command, 'sync:arcgis-layers')
-            && str_contains($command, 'housing_units')
-            && str_contains($command, '--chunk=250')
-            && str_contains($command, '--force');
+        return str_contains($command, 'run.')
+            && (str_contains($command, '.bat') || str_contains($command, '.sh'));
     });
+});
+
+it('shows live output status for a started command run', function (): void {
+    $user = User::factory()->create();
+    $databaseOfficer = Role::findOrCreate('Database Officer', 'web');
+
+    $user->assignRole($databaseOfficer);
+
+    Process::fake([
+        '*' => Process::result(),
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('admin.artisan-commands.run'), [
+            'command' => 'sync:arcgis-layers',
+            'options' => [
+                'force' => '1',
+            ],
+        ])
+        ->assertAccepted();
+
+    $this->actingAs($user)
+        ->getJson($response->json('status_url'))
+        ->assertOk()
+        ->assertJson([
+            'run_id' => $response->json('run_id'),
+            'status' => 'running',
+            'exit_code' => null,
+            'preview' => 'php artisan sync:arcgis-layers --force',
+        ])
+        ->assertJsonStructure([
+            'output',
+            'started_at',
+        ]);
 });
 
 it('does not run blocked risky commands', function (): void {

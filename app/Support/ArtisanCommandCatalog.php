@@ -4,7 +4,9 @@ namespace App\Support;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 use ReflectionClass;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -45,8 +47,9 @@ class ArtisanCommandCatalog
     /**
      * @param  array<string, mixed>  $arguments
      * @param  array<string, mixed>  $options
+     * @return array<string, string>|false
      */
-    public function runInBackground(string $name, array $arguments = [], array $options = []): bool
+    public function runInBackground(string $name, array $arguments = [], array $options = []): array|false
     {
         $command = $this->find($name);
 
@@ -60,9 +63,61 @@ class ArtisanCommandCatalog
             return false;
         }
 
-        $result = Process::path(base_path())->run($this->backgroundCommand($artisanArguments));
+        $runId = (string) Str::uuid();
+        $paths = $this->runPaths($runId);
 
-        return $result->successful();
+        File::ensureDirectoryExists($paths['directory']);
+        File::put($paths['log'], '['.now()->toDateTimeString()."] Starting command...\n");
+        File::put($paths['meta'], json_encode([
+            'command' => $name,
+            'preview' => $this->previewCommand($artisanArguments),
+            'started_at' => now()->toDateTimeString(),
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        $scriptPath = $this->writeRunScript($artisanArguments, $paths);
+        $result = Process::path(base_path())->run($this->backgroundCommand($scriptPath));
+
+        if (! $result->successful()) {
+            File::put($paths['exit'], '1');
+            File::append($paths['log'], "\nCould not start the background process.\n".($result->errorOutput() ?: $result->output()));
+
+            return false;
+        }
+
+        return [
+            'run_id' => $runId,
+            'preview' => $this->previewCommand($artisanArguments),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function runStatus(string $runId): ?array
+    {
+        if (! preg_match('/^[a-f0-9-]{36}$/i', $runId)) {
+            return null;
+        }
+
+        $paths = $this->runPaths($runId);
+
+        if (! File::exists($paths['meta'])) {
+            return null;
+        }
+
+        $meta = json_decode((string) File::get($paths['meta']), true) ?: [];
+        $exitCode = File::exists($paths['exit']) ? trim((string) File::get($paths['exit'])) : null;
+        $status = $exitCode === null ? 'running' : ((int) $exitCode === 0 ? 'success' : 'failed');
+
+        return [
+            'run_id' => $runId,
+            'status' => $status,
+            'exit_code' => $exitCode !== null ? (int) $exitCode : null,
+            'command' => $meta['command'] ?? '',
+            'preview' => $meta['preview'] ?? '',
+            'started_at' => $meta['started_at'] ?? null,
+            'output' => $this->tailFile($paths['log']),
+        ];
     }
 
     private function toCatalogItem(Command $command): ?array
@@ -187,28 +242,125 @@ class ArtisanCommandCatalog
     }
 
     /**
-     * @param  array<int, string>  $artisanArguments
-     * @return array<int, string>
+     * @return array<string, string>
      */
-    private function backgroundCommand(array $artisanArguments): array
+    private function runPaths(string $runId): array
+    {
+        $directory = storage_path('app/artisan-command-runs/'.$runId);
+
+        return [
+            'directory' => $directory,
+            'log' => $directory.'/output.log',
+            'exit' => $directory.'/exit.code',
+            'meta' => $directory.'/meta.json',
+            'script' => $directory.(PHP_OS_FAMILY === 'Windows' ? '/run.bat' : '/run.sh'),
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $artisanArguments
+     */
+    private function writeRunScript(array $artisanArguments, array $paths): string
+    {
+        $command = $this->scriptCommand($artisanArguments);
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            File::put($paths['script'], implode("\r\n", [
+                '@echo off',
+                'cd /d '.$this->windowsQuote(base_path()),
+                'echo ['.$this->windowsDateExpression().'] Running: '.$this->previewCommand($artisanArguments).' >> '.$this->windowsQuote($paths['log']),
+                $command.' >> '.$this->windowsQuote($paths['log']).' 2>&1',
+                'echo %ERRORLEVEL% > '.$this->windowsQuote($paths['exit']),
+            ])."\r\n");
+
+            return $paths['script'];
+        }
+
+        File::put($paths['script'], implode("\n", [
+            '#!/usr/bin/env sh',
+            'cd '.escapeshellarg(base_path()),
+            'echo "['.'$(date "+%Y-%m-%d %H:%M:%S")'.'] Running: '.$this->previewCommand($artisanArguments).'" >> '.escapeshellarg($paths['log']),
+            $command.' >> '.escapeshellarg($paths['log']).' 2>&1',
+            'echo $? > '.escapeshellarg($paths['exit']),
+        ])."\n");
+        @chmod($paths['script'], 0755);
+
+        return $paths['script'];
+    }
+
+    /**
+     * @param  array<int, string>  $artisanArguments
+     */
+    private function scriptCommand(array $artisanArguments): string
     {
         $escapedArguments = collect($artisanArguments)
-            ->map(fn (string $argument): string => escapeshellarg($argument))
+            ->map(fn (string $argument): string => PHP_OS_FAMILY === 'Windows' ? $this->windowsQuote($argument) : escapeshellarg($argument))
             ->join(' ');
 
+        $phpBinary = PHP_OS_FAMILY === 'Windows' ? $this->windowsQuote(PHP_BINARY) : escapeshellarg(PHP_BINARY);
+
+        return $phpBinary.' artisan '.$escapedArguments;
+    }
+
+    /**
+     * @param  array<int, string>  $artisanArguments
+     */
+    private function previewCommand(array $artisanArguments): string
+    {
+        return 'php artisan '.collect($artisanArguments)
+            ->reject(fn (string $argument): bool => $argument === '--no-interaction')
+            ->map(fn (string $argument): string => preg_match('/^[A-Za-z0-9_\.\/:@=-]+$/', $argument) ? $argument : '"'.str_replace('"', '\"', $argument).'"')
+            ->join(' ');
+    }
+
+    private function tailFile(string $path): string
+    {
+        if (! File::exists($path)) {
+            return '';
+        }
+
+        $size = File::size($path);
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return '';
+        }
+
+        fseek($handle, max(0, $size - 80000));
+        $output = stream_get_contents($handle) ?: '';
+        fclose($handle);
+
+        return $output;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function backgroundCommand(string $scriptPath): array
+    {
         if (PHP_OS_FAMILY === 'Windows') {
             return [
                 'cmd',
                 '/C',
-                sprintf('start /B "" %s artisan %s > NUL 2>&1', escapeshellarg(PHP_BINARY), $escapedArguments),
+                'start /B "" '.$this->windowsQuote($scriptPath),
             ];
         }
 
         return [
             'sh',
             '-c',
-            escapeshellarg(PHP_BINARY).' artisan '.$escapedArguments.' > /dev/null 2>&1 &',
+            escapeshellarg($scriptPath).' > /dev/null 2>&1 &',
         ];
+    }
+
+    private function windowsQuote(string $value): string
+    {
+        return '"'.str_replace('"', '\"', $value).'"';
+    }
+
+    private function windowsDateExpression(): string
+    {
+        return '%DATE% %TIME%';
     }
 
     private function commandsPath(): string

@@ -399,6 +399,10 @@ Route::middleware('auth')->group(function () {
             ->middleware('role:Database Officer')
             ->name('artisan-commands.run');
 
+        Route::get('/artisan-commands/runs/{run}', [ArtisanCommandController::class, 'showRun'])
+            ->middleware('role:Database Officer')
+            ->name('artisan-commands.runs.show');
+
         Route::get('/team-leader-field-engineers', [TeamLeaderFieldEngineerController::class, 'index'])
             ->name('team-leader-field-engineers.index');
 
