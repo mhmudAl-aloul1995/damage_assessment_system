@@ -130,6 +130,8 @@ return [
         'optional_value' => 'Optional value',
         'required_field' => 'Please fill all required arguments.',
         'no_inputs' => 'This command has no extra inputs.',
+        'preview_title' => 'Command preview',
+        'preview_hint' => 'This is the command that will be started in the background.',
         'search' => 'Search:',
         'length_menu' => 'Show _MENU_',
         'info' => 'Showing _START_ to _END_ of _TOTAL_ commands',

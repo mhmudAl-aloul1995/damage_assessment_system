@@ -163,6 +163,20 @@ $(document).ready(function () {
             },
             buttonsStyling: false,
             focusConfirm: false,
+            didOpen: function () {
+                const form = document.getElementById('artisan-command-run-form');
+                const preview = document.getElementById('artisan-command-preview');
+                const updatePreview = function () {
+                    preview.textContent = buildPreviewCommand(commandDefinition, form);
+                };
+
+                form.querySelectorAll('input').forEach(function (input) {
+                    input.addEventListener('input', updatePreview);
+                    input.addEventListener('change', updatePreview);
+                });
+
+                updatePreview();
+            },
             preConfirm: function () {
                 const form = document.getElementById('artisan-command-run-form');
                 const payload = {
@@ -299,10 +313,59 @@ $(document).ready(function () {
 
         html += `
                 </form>
+                <div class="mt-5">
+                    <div class="fw-bold mb-2">${escapeHtml(@json(__('ui.artisan_commands.preview_title')))}</div>
+                    <div class="bg-light rounded px-4 py-3">
+                        <code id="artisan-command-preview" dir="ltr" class="d-block text-break"></code>
+                    </div>
+                    <div class="form-text">${escapeHtml(@json(__('ui.artisan_commands.preview_hint')))}</div>
+                </div>
             </div>
         `;
 
         return html;
+    }
+
+    function buildPreviewCommand(commandDefinition, form) {
+        const segments = [commandDefinition.full_command];
+
+        commandDefinition.arguments.forEach(function (argument) {
+            const input = form.querySelector(`[name="argument:${argument.name}"]`);
+
+            if (input && input.value.trim() !== '') {
+                segments.push(shellPreviewValue(input.value.trim()));
+            }
+        });
+
+        commandDefinition.options.forEach(function (option) {
+            const input = form.querySelector(`[name="option:${option.name}"]`);
+
+            if (!input) {
+                return;
+            }
+
+            if (!option.accepts_value) {
+                if (input.checked) {
+                    segments.push(`--${option.name}`);
+                }
+
+                return;
+            }
+
+            if (input.value.trim() !== '') {
+                segments.push(`--${option.name}=${shellPreviewValue(input.value.trim())}`);
+            }
+        });
+
+        return segments.join(' ');
+    }
+
+    function shellPreviewValue(value) {
+        if (/^[A-Za-z0-9_./:@=-]+$/.test(value)) {
+            return value;
+        }
+
+        return `"${value.replace(/"/g, '\\"')}"`;
     }
 
     function escapeHtml(value) {

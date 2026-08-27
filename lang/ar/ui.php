@@ -130,6 +130,8 @@ return [
         'optional_value' => 'قيمة اختيارية',
         'required_field' => 'يرجى تعبئة كل المدخلات الإجبارية.',
         'no_inputs' => 'هذا الأمر لا يحتوي على مدخلات إضافية.',
+        'preview_title' => 'معاينة الأمر',
+        'preview_hint' => 'هذا هو الأمر الذي سيتم تشغيله في الخلفية.',
         'search' => 'بحث:',
         'length_menu' => 'إظهار _MENU_',
         'info' => 'عرض _START_ إلى _END_ من أصل _TOTAL_ أمر',

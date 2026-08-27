@@ -21,7 +21,8 @@ it('shows application console commands to database officers', function (): void 
         ->assertSee('php artisan sync:arcgis-layers')
         ->assertSee('Sync ArcGIS layers')
         ->assertSee('data-copy-command', false)
-        ->assertSee('data-run-command', false);
+        ->assertSee('data-run-command', false)
+        ->assertSee('artisan-command-preview', false);
 });
 
 it('blocks the artisan commands page from ordinary authenticated users', function (): void {
