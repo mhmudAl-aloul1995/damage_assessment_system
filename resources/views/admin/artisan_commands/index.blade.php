@@ -170,7 +170,7 @@ $(document).ready(function () {
                     preview.textContent = buildPreviewCommand(commandDefinition, form);
                 };
 
-                form.querySelectorAll('input').forEach(function (input) {
+                form.querySelectorAll('input, select').forEach(function (input) {
                     input.addEventListener('input', updatePreview);
                     input.addEventListener('change', updatePreview);
                 });
@@ -255,6 +255,9 @@ $(document).ready(function () {
                 <div class="alert alert-light-primary py-3 px-4 mb-5">
                     <code dir="ltr">${escapeHtml(commandDefinition.full_command)}</code>
                 </div>
+                <div class="alert alert-light-info py-3 px-4 mb-5">
+                    ${escapeHtml(@json(__('ui.artisan_commands.inputs_hint')))}
+                </div>
                 <form id="artisan-command-run-form">
         `;
 
@@ -282,12 +285,39 @@ $(document).ready(function () {
             html += `<div class="fw-bold mb-3">${escapeHtml(@json(__('ui.artisan_commands.options_title')))}</div>`;
 
             commandDefinition.options.forEach(function (option) {
+                const optionUi = commandOptionUi(commandDefinition.name, option);
+
                 if (!option.accepts_value) {
                     html += `
-                        <div class="form-check form-switch mb-4">
-                            <input class="form-check-input" type="checkbox" name="option:${escapeHtml(option.name)}" id="option_${escapeHtml(option.name)}">
-                            <label class="form-check-label" for="option_${escapeHtml(option.name)}">--${escapeHtml(option.name)}</label>
-                            ${option.description ? `<div class="form-text">${escapeHtml(option.description)}</div>` : ''}
+                        <div class="border rounded p-4 mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="option:${escapeHtml(option.name)}" id="option_${escapeHtml(option.name)}">
+                                <label class="form-check-label fw-semibold" for="option_${escapeHtml(option.name)}">
+                                    ${escapeHtml(optionUi.label)}
+                                    <code class="ms-2" dir="ltr">--${escapeHtml(option.name)}</code>
+                                </label>
+                            </div>
+                            <div class="form-text">${escapeHtml(optionUi.help)}</div>
+                        </div>
+                    `;
+
+                    return;
+                }
+
+                if (optionUi.type === 'select') {
+                    html += `
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                ${escapeHtml(optionUi.label)}
+                                <code class="ms-2" dir="ltr">--${escapeHtml(option.name)}</code>
+                            </label>
+                            <select class="form-select" name="option:${escapeHtml(option.name)}">
+                                <option value="">${escapeHtml(@json(__('ui.artisan_commands.leave_empty')))}</option>
+                                ${optionUi.choices.map(function (choice) {
+                                    return `<option value="${escapeHtml(choice.value)}">${escapeHtml(choice.label)}</option>`;
+                                }).join('')}
+                            </select>
+                            <div class="form-text">${escapeHtml(optionUi.help)}</div>
                         </div>
                     `;
 
@@ -296,12 +326,15 @@ $(document).ready(function () {
 
                 html += `
                     <div class="mb-4">
-                        <label class="form-label">--${escapeHtml(option.name)}</label>
-                        <input type="text"
+                        <label class="form-label fw-semibold">
+                            ${escapeHtml(optionUi.label)}
+                            <code class="ms-2" dir="ltr">--${escapeHtml(option.name)}</code>
+                        </label>
+                        <input type="${escapeHtml(optionUi.type)}"
                             class="form-control"
                             name="option:${escapeHtml(option.name)}"
-                            placeholder="${option.value_required ? '' : escapeHtml(@json(__('ui.artisan_commands.optional_value')))}">
-                        ${option.description ? `<div class="form-text">${escapeHtml(option.description)}</div>` : ''}
+                            placeholder="${escapeHtml(optionUi.placeholder)}">
+                        <div class="form-text">${escapeHtml(optionUi.help)}</div>
                     </div>
                 `;
             });
@@ -359,6 +392,70 @@ $(document).ready(function () {
 
         return segments.join(' ');
     }
+
+    function commandOptionUi(commandName, option) {
+        const guide = commandOptionGuides[commandName]?.[option.name] || {};
+
+        return {
+            label: guide.label || option.name,
+            help: guide.help || option.description || @json(__('ui.artisan_commands.value_option_hint')),
+            placeholder: guide.placeholder || @json(__('ui.artisan_commands.optional_value')),
+            type: guide.type || 'text',
+            choices: guide.choices || [],
+        };
+    }
+
+    const commandOptionGuides = {
+        'arcgis:upload-audited': {
+            'buildings-limit': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.help')),
+                placeholder: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.buildings_limit.placeholder')),
+                type: 'number',
+            },
+            'only': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.help')),
+                type: 'select',
+                choices: [
+                    {
+                        value: 'buildings',
+                        label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.buildings')),
+                    },
+                    {
+                        value: 'units',
+                        label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only.units')),
+                    },
+                ],
+            },
+            'changed-since': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.help')),
+                placeholder: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.changed_since.placeholder')),
+                type: 'datetime-local',
+            },
+            'only-audit-edits': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only_audit_edits.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.only_audit_edits.help')),
+            },
+            'skip-counts': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.skip_counts.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.skip_counts.help')),
+            },
+            'without-attachments': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.without_attachments.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.without_attachments.help')),
+            },
+            'attachments-only': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.attachments_only.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.attachments_only.help')),
+            },
+            'refresh-cache': {
+                label: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.refresh_cache.label')),
+                help: @json(__('ui.artisan_commands.guides.arcgis_upload_audited.refresh_cache.help')),
+            },
+        },
+    };
 
     function shellPreviewValue(value) {
         if (/^[A-Za-z0-9_./:@=-]+$/.test(value)) {

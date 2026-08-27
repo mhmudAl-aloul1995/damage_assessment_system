@@ -128,10 +128,53 @@ return [
         'arguments_title' => 'Arguments',
         'options_title' => 'Options',
         'optional_value' => 'Optional value',
+        'leave_empty' => 'Leave empty and do not add this option',
+        'inputs_hint' => 'Choose only what you need. Empty fields will not appear in the preview and will not be sent for execution.',
+        'value_option_hint' => 'Enter a value for this option or leave it empty.',
         'required_field' => 'Please fill all required arguments.',
         'no_inputs' => 'This command has no extra inputs.',
         'preview_title' => 'Command preview',
         'preview_hint' => 'This is the command that will be started in the background.',
+        'guides' => [
+            'arcgis_upload_audited' => [
+                'buildings_limit' => [
+                    'label' => 'Limit buildings for a test run',
+                    'help' => 'Optional. Enter a number to upload only the first N buildings and their units.',
+                    'placeholder' => 'Example: 10',
+                ],
+                'only' => [
+                    'label' => 'Data type to upload',
+                    'help' => 'Optional. Leave empty to upload both buildings and units.',
+                    'buildings' => 'Buildings only',
+                    'units' => 'Units only',
+                ],
+                'changed_since' => [
+                    'label' => 'Upload changes after a date',
+                    'help' => 'Optional. Pick a date and time to upload only records changed after it.',
+                    'placeholder' => 'Pick date and time',
+                ],
+                'only_audit_edits' => [
+                    'label' => 'Use audit edits only',
+                    'help' => 'Use with changed-since to ignore editdate and rely only on edit_assessments.',
+                ],
+                'skip_counts' => [
+                    'label' => 'Start without counting records',
+                    'help' => 'Starts faster, but does not count candidates before upload.',
+                ],
+                'without_attachments' => [
+                    'label' => 'Upload data without attachments',
+                    'help' => 'Uploads or updates features only and does not copy attachments.',
+                ],
+                'attachments_only' => [
+                    'label' => 'Copy attachments only',
+                    'help' => 'Copies missing attachments for existing uploaded ArcGIS features.',
+                ],
+                'refresh_cache' => [
+                    'label' => 'Refresh cache before upload',
+                    'help' => 'Rebuilds audited cache tables before uploading.',
+                ],
+            ],
+        ],
         'search' => 'Search:',
         'length_menu' => 'Show _MENU_',
         'info' => 'Showing _START_ to _END_ of _TOTAL_ commands',
