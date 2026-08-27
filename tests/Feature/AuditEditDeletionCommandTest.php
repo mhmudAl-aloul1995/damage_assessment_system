@@ -7,18 +7,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
+    DB::statement('DROP VIEW IF EXISTS warda_buildings');
+    DB::statement('DROP VIEW IF EXISTS warda_units');
     Schema::dropIfExists('warda_buildings');
     Schema::dropIfExists('warda_units');
 
-    Schema::create('warda_buildings', function (Blueprint $table): void {
+    Schema::create('test_warda_buildings', function (Blueprint $table): void {
         $table->text('globalid');
         $table->string('audit_status')->nullable();
     });
 
-    Schema::create('warda_units', function (Blueprint $table): void {
+    Schema::create('test_warda_units', function (Blueprint $table): void {
         $table->text('globalid');
         $table->string('audit_status')->nullable();
     });
+
+    DB::statement('CREATE VIEW warda_buildings AS SELECT globalid, audit_status FROM test_warda_buildings');
+    DB::statement('CREATE VIEW warda_units AS SELECT globalid, audit_status FROM test_warda_units');
 
     DB::table('buildings')->insert([
         [
@@ -56,12 +61,12 @@ beforeEach(function (): void {
         ],
     ]);
 
-    DB::table('warda_buildings')->insert([
+    DB::table('test_warda_buildings')->insert([
         ['globalid' => 'building-pending', 'audit_status' => 'Pending'],
         ['globalid' => 'building-approved', 'audit_status' => 'Accepted'],
     ]);
 
-    DB::table('warda_units')->insert([
+    DB::table('test_warda_units')->insert([
         ['globalid' => 'housing-pending', 'audit_status' => 'Pending'],
         ['globalid' => 'housing-approved', 'audit_status' => 'Accepted'],
     ]);

@@ -8,6 +8,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use Throwable;
 
 class DeleteNullPendingAuditEdits extends Command
 {
@@ -181,9 +182,34 @@ class DeleteNullPendingAuditEdits extends Command
         }
 
         foreach ($targets as $target) {
-            if (! Schema::hasTable($target['view'])) {
+            if (! $this->relationExists($target['view'])) {
                 throw new InvalidArgumentException("Required view {$target['view']} does not exist.");
             }
+        }
+    }
+
+    private function relationExists(string $name): bool
+    {
+        if (Schema::hasTable($name)) {
+            return true;
+        }
+
+        $driver = DB::connection()->getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            return DB::table('information_schema.tables')
+                ->where('table_schema', DB::connection()->getDatabaseName())
+                ->where('table_name', $name)
+                ->whereIn('table_type', ['BASE TABLE', 'VIEW'])
+                ->exists();
+        }
+
+        try {
+            DB::table($name)->limit(1)->exists();
+
+            return true;
+        } catch (Throwable) {
+            return false;
         }
     }
 
