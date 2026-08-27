@@ -42,7 +42,11 @@ class ArtisanCommandCatalog
             ->first(fn (array $command): bool => $command['name'] === $name);
     }
 
-    public function runInBackground(string $name): bool
+    /**
+     * @param  array<string, mixed>  $arguments
+     * @param  array<string, mixed>  $options
+     */
+    public function runInBackground(string $name, array $arguments = [], array $options = []): bool
     {
         $command = $this->find($name);
 
@@ -50,7 +54,13 @@ class ArtisanCommandCatalog
             return false;
         }
 
-        $result = Process::path(base_path())->run($this->backgroundCommand($name));
+        $artisanArguments = $this->artisanArguments($command, $arguments, $options);
+
+        if ($artisanArguments === null) {
+            return false;
+        }
+
+        $result = Process::path(base_path())->run($this->backgroundCommand($artisanArguments));
 
         return $result->successful();
     }
@@ -70,6 +80,7 @@ class ArtisanCommandCatalog
                 'name' => $argument->getName(),
                 'required' => $argument->isRequired(),
                 'description' => $argument->getDescription(),
+                'is_array' => $argument->isArray(),
             ])
             ->values();
         $options = collect($definition->getOptions())
@@ -78,6 +89,8 @@ class ArtisanCommandCatalog
                 'name' => $option->getName(),
                 'description' => $option->getDescription(),
                 'accepts_value' => $option->acceptValue(),
+                'value_required' => $option->isValueRequired(),
+                'is_array' => $option->isArray(),
             ])
             ->values();
         $requiredArguments = $arguments->filter(fn (array $argument): bool => $argument['required'])->values();
@@ -91,7 +104,7 @@ class ArtisanCommandCatalog
             'file' => $this->normalizePath($fileName),
             'arguments' => $arguments,
             'options' => $options,
-            'can_run' => $requiredArguments->isEmpty() && ! $isBlocked,
+            'can_run' => ! $isBlocked,
             'disabled_reason' => $this->disabledReason($requiredArguments, $isBlocked),
         ];
     }
@@ -100,12 +113,6 @@ class ArtisanCommandCatalog
     {
         if ($isBlocked) {
             return __('ui.artisan_commands.blocked_dangerous');
-        }
-
-        if ($requiredArguments->isNotEmpty()) {
-            return __('ui.artisan_commands.required_arguments', [
-                'arguments' => $requiredArguments->pluck('name')->join(', '),
-            ]);
         }
 
         return null;
@@ -122,20 +129,85 @@ class ArtisanCommandCatalog
     /**
      * @return array<int, string>
      */
-    private function backgroundCommand(string $name): array
+    private function artisanArguments(array $command, array $arguments, array $options): ?array
     {
+        $segments = [$command['name']];
+        $allowedArguments = collect($command['arguments'])->keyBy('name');
+        $allowedOptions = collect($command['options'])->keyBy('name');
+
+        foreach ($allowedArguments as $argument) {
+            $value = $arguments[$argument['name']] ?? null;
+
+            if ($argument['required'] && blank($value)) {
+                return null;
+            }
+
+            if (blank($value)) {
+                continue;
+            }
+
+            if ($argument['is_array']) {
+                foreach ((array) $value as $item) {
+                    if (! blank($item)) {
+                        $segments[] = (string) $item;
+                    }
+                }
+
+                continue;
+            }
+
+            $segments[] = (string) $value;
+        }
+
+        foreach ($options as $name => $value) {
+            $option = $allowedOptions->get($name);
+
+            if ($option === null || blank($value)) {
+                continue;
+            }
+
+            if (! $option['accepts_value']) {
+                if (filter_var($value, FILTER_VALIDATE_BOOL)) {
+                    $segments[] = '--'.$name;
+                }
+
+                continue;
+            }
+
+            foreach ((array) $value as $item) {
+                if (! blank($item)) {
+                    $segments[] = '--'.$name.'='.(string) $item;
+                }
+            }
+        }
+
+        $segments[] = '--no-interaction';
+
+        return $segments;
+    }
+
+    /**
+     * @param  array<int, string>  $artisanArguments
+     * @return array<int, string>
+     */
+    private function backgroundCommand(array $artisanArguments): array
+    {
+        $escapedArguments = collect($artisanArguments)
+            ->map(fn (string $argument): string => escapeshellarg($argument))
+            ->join(' ');
+
         if (PHP_OS_FAMILY === 'Windows') {
             return [
                 'cmd',
                 '/C',
-                sprintf('start /B "" "%s" artisan %s --no-interaction > NUL 2>&1', PHP_BINARY, $name),
+                sprintf('start /B "" %s artisan %s > NUL 2>&1', escapeshellarg(PHP_BINARY), $escapedArguments),
             ];
         }
 
         return [
             'sh',
             '-c',
-            escapeshellarg(PHP_BINARY).' artisan '.escapeshellarg($name).' --no-interaction > /dev/null 2>&1 &',
+            escapeshellarg(PHP_BINARY).' artisan '.$escapedArguments.' > /dev/null 2>&1 &',
         ];
     }
 

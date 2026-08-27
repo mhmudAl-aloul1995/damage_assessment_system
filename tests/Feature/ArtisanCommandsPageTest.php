@@ -61,21 +61,39 @@ it('starts eligible commands in the background for database officers', function 
     });
 });
 
-it('does not run commands that require arguments', function (): void {
+it('starts eligible commands with selected arguments and options', function (): void {
     $user = User::factory()->create();
     $databaseOfficer = Role::findOrCreate('Database Officer', 'web');
 
     $user->assignRole($databaseOfficer);
 
-    Process::fake();
+    Process::fake([
+        '*' => Process::result(),
+    ]);
 
     $this->actingAs($user)
         ->postJson(route('admin.artisan-commands.run'), [
-            'command' => 'exports:run',
+            'command' => 'sync:arcgis-layers',
+            'arguments' => [
+                'table' => 'housing_units',
+            ],
+            'options' => [
+                'chunk' => '250',
+                'force' => '1',
+            ],
         ])
-        ->assertUnprocessable();
+        ->assertAccepted();
 
-    Process::assertNothingRan();
+    Process::assertRan(function ($process): bool {
+        $command = is_array($process->command)
+            ? implode(' ', $process->command)
+            : $process->command;
+
+        return str_contains($command, 'sync:arcgis-layers')
+            && str_contains($command, 'housing_units')
+            && str_contains($command, '--chunk=250')
+            && str_contains($command, '--force');
+    });
 });
 
 it('does not run blocked risky commands', function (): void {

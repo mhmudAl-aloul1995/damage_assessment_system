@@ -19,9 +19,12 @@ class ArtisanCommandController extends Controller
 
     public function store(RunArtisanCommandRequest $request, ArtisanCommandCatalog $catalog): JsonResponse
     {
-        $command = (string) $request->validated('command');
+        $validated = $request->validated();
+        $command = (string) $validated['command'];
+        $arguments = $validated['arguments'] ?? [];
+        $options = $validated['options'] ?? [];
 
-        if (! $catalog->runInBackground($command)) {
+        if (! $catalog->runInBackground($command, $arguments, $options)) {
             return response()->json([
                 'message' => __('ui.artisan_commands.run_failed'),
             ], 422);

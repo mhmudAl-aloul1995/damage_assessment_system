@@ -17,6 +17,10 @@
         </div>
 
         <div class="card-body pt-0">
+            @php
+                $commandsByName = $commands->keyBy('name');
+            @endphp
+
             <div class="alert alert-warning d-flex align-items-center p-5 mb-7">
                 <i class="ki-duotone ki-shield-tick fs-2hx text-warning me-4">
                     <span class="path1"></span>
@@ -107,6 +111,8 @@
 @section('script')
 <script>
 $(document).ready(function () {
+    const commandsByName = @json($commandsByName);
+
     $('#artisan_commands_table').DataTable({
         responsive: true,
         autoWidth: false,
@@ -136,14 +142,17 @@ $(document).ready(function () {
     $('[data-run-command]').on('click', function () {
         const button = $(this);
         const command = button.data('run-command');
+        const commandDefinition = commandsByName[command];
 
-        if (button.prop('disabled') || !command) {
+        if (button.prop('disabled') || !command || !commandDefinition) {
             return;
         }
 
+        const formHtml = buildCommandForm(commandDefinition);
+
         Swal.fire({
             title: @json(__('ui.artisan_commands.confirm_title')),
-            text: @json(__('ui.artisan_commands.confirm_text')),
+            html: formHtml,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: @json(__('ui.artisan_commands.confirm_button')),
@@ -153,6 +162,51 @@ $(document).ready(function () {
                 cancelButton: 'btn btn-light',
             },
             buttonsStyling: false,
+            focusConfirm: false,
+            preConfirm: function () {
+                const form = document.getElementById('artisan-command-run-form');
+                const payload = {
+                    arguments: {},
+                    options: {},
+                };
+                let hasValidationError = false;
+
+                commandDefinition.arguments.forEach(function (argument) {
+                    const input = form.querySelector(`[name="argument:${argument.name}"]`);
+
+                    if (input && input.value.trim() !== '') {
+                        payload.arguments[argument.name] = input.value.trim();
+                    }
+
+                    if (argument.required && (!input || input.value.trim() === '')) {
+                        hasValidationError = true;
+                        Swal.showValidationMessage(@json(__('ui.artisan_commands.required_field')));
+                    }
+                });
+
+                if (hasValidationError) {
+                    return false;
+                }
+
+                commandDefinition.options.forEach(function (option) {
+                    const input = form.querySelector(`[name="option:${option.name}"]`);
+
+                    if (!input) {
+                        return;
+                    }
+
+                    if (!option.accepts_value) {
+                        payload.options[option.name] = input.checked ? '1' : '';
+                        return;
+                    }
+
+                    if (input.value.trim() !== '') {
+                        payload.options[option.name] = input.value.trim();
+                    }
+                });
+
+                return payload;
+            },
         }).then(function (result) {
             if (!result.isConfirmed) {
                 return;
@@ -168,6 +222,8 @@ $(document).ready(function () {
                 },
                 data: {
                     command: command,
+                    arguments: result.value.arguments,
+                    options: result.value.options,
                 },
             }).done(function (response) {
                 toastr.success(response.message || @json(__('ui.artisan_commands.run_started_generic')));
@@ -178,6 +234,80 @@ $(document).ready(function () {
             });
         });
     });
+
+    function buildCommandForm(commandDefinition) {
+        let html = `
+            <div class="text-start">
+                <div class="alert alert-light-primary py-3 px-4 mb-5">
+                    <code dir="ltr">${escapeHtml(commandDefinition.full_command)}</code>
+                </div>
+                <form id="artisan-command-run-form">
+        `;
+
+        if (commandDefinition.arguments.length > 0) {
+            html += `<div class="fw-bold mb-3">${escapeHtml(@json(__('ui.artisan_commands.arguments_title')))}</div>`;
+
+            commandDefinition.arguments.forEach(function (argument) {
+                html += `
+                    <div class="mb-4">
+                        <label class="form-label">
+                            ${escapeHtml(argument.name)}
+                            ${argument.required ? '<span class="text-danger">*</span>' : ''}
+                        </label>
+                        <input type="text"
+                            class="form-control"
+                            name="argument:${escapeHtml(argument.name)}"
+                            placeholder="${escapeHtml(argument.description || '')}">
+                        ${argument.description ? `<div class="form-text">${escapeHtml(argument.description)}</div>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        if (commandDefinition.options.length > 0) {
+            html += `<div class="fw-bold mb-3">${escapeHtml(@json(__('ui.artisan_commands.options_title')))}</div>`;
+
+            commandDefinition.options.forEach(function (option) {
+                if (!option.accepts_value) {
+                    html += `
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" name="option:${escapeHtml(option.name)}" id="option_${escapeHtml(option.name)}">
+                            <label class="form-check-label" for="option_${escapeHtml(option.name)}">--${escapeHtml(option.name)}</label>
+                            ${option.description ? `<div class="form-text">${escapeHtml(option.description)}</div>` : ''}
+                        </div>
+                    `;
+
+                    return;
+                }
+
+                html += `
+                    <div class="mb-4">
+                        <label class="form-label">--${escapeHtml(option.name)}</label>
+                        <input type="text"
+                            class="form-control"
+                            name="option:${escapeHtml(option.name)}"
+                            placeholder="${option.value_required ? '' : escapeHtml(@json(__('ui.artisan_commands.optional_value')))}">
+                        ${option.description ? `<div class="form-text">${escapeHtml(option.description)}</div>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        if (commandDefinition.arguments.length === 0 && commandDefinition.options.length === 0) {
+            html += `<div class="text-muted">${escapeHtml(@json(__('ui.artisan_commands.no_inputs')))}</div>`;
+        }
+
+        html += `
+                </form>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function escapeHtml(value) {
+        return $('<div>').text(value ?? '').html();
+    }
 });
 </script>
 @endsection

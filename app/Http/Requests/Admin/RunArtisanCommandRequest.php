@@ -23,6 +23,10 @@ class RunArtisanCommandRequest extends FormRequest
     {
         return [
             'command' => ['required', 'string', 'max:255'],
+            'arguments' => ['nullable', 'array'],
+            'arguments.*' => ['nullable'],
+            'options' => ['nullable', 'array'],
+            'options.*' => ['nullable'],
         ];
     }
 }
