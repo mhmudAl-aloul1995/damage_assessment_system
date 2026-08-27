@@ -24,6 +24,7 @@ class DeleteNullPendingAuditEdits extends Command
         {target=all : all, building, or housing}
         {--dry-run : Report matching rows without deleting}
         {--export= : Export matching rows to an XLSX file. Leave empty to use the default storage pathh}
+        {--base-url= : Base URL used for Audit URL values in the export}
         {--chunk=500 : Number of rows to process per chunk}';
 
     /**
@@ -323,6 +324,7 @@ class DeleteNullPendingAuditEdits extends Command
             'global_id' => $row->global_id,
             'objectid' => $row->objectid,
             'parentglobalid' => $row->parentglobalid,
+            'audit_url' => $this->auditUrl($row),
             'field_name' => $row->field_name,
             'deleted_field_value' => $row->field_value,
             'deleted_edit_created_at' => $row->created_at,
@@ -342,6 +344,24 @@ class DeleteNullPendingAuditEdits extends Command
     {
         return array_key_exists('export', $this->options())
             && $this->option('export') !== null;
+    }
+
+    private function auditUrl(object $row): string
+    {
+        $baseUrl = $this->baseUrl();
+
+        if ($row->type === 'housing_table' && filled($row->parentglobalid)) {
+            return $baseUrl.'/showAssessmentAudit/'.rawurlencode((string) $row->parentglobalid).'/'.rawurlencode((string) $row->global_id);
+        }
+
+        return $baseUrl.'/showAssessmentAudit/'.rawurlencode((string) $row->global_id);
+    }
+
+    private function baseUrl(): string
+    {
+        $baseUrl = trim((string) ($this->option('base-url') ?: config('app.url')));
+
+        return rtrim($baseUrl, '/');
     }
 
     private function exportPath(): string

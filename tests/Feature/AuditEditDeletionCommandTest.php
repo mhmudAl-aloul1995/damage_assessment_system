@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
-//s
+
+// s
 beforeEach(function (): void {
     DB::statement('DROP VIEW IF EXISTS warda_buildings');
     DB::statement('DROP VIEW IF EXISTS warda_units');
@@ -195,6 +196,7 @@ it('exports a dry run spreadsheet with previous and next edit values', function 
     $this->artisan('audit-edits:delete-null-pending', [
         '--dry-run' => true,
         '--export' => $path,
+        '--base-url' => 'http://213.6.135.115/damage_assessment_system',
     ])->assertSuccessful();
 
     expect(Storage::disk('local')->exists($path))->toBeTrue();
@@ -204,13 +206,17 @@ it('exports a dry run spreadsheet with previous and next edit values', function 
     expect($rows[0])->toContain('Previous Value');
     expect($rows[0])->toContain('Has Later Edit For Same Field');
     expect($rows[0])->toContain('Next Value');
+    expect($rows[0])->toContain('Audit URL');
 
     $buildingRow = collect($rows)->first(fn (array $row): bool => $row[1] === 101);
+    $housingRow = collect($rows)->first(fn (array $row): bool => $row[1] === 104);
 
     expect($buildingRow[3])->toBe('building-pending');
-    expect($buildingRow[11])->toBe('previous_building_edit');
-    expect($buildingRow[13])->toBe('Yes');
-    expect($buildingRow[15])->toBe('later_building_edit');
+    expect($buildingRow[6])->toBe('http://213.6.135.115/damage_assessment_system/showAssessmentAudit/building-pending');
+    expect($buildingRow[12])->toBe('previous_building_edit');
+    expect($buildingRow[14])->toBe('Yes');
+    expect($buildingRow[16])->toBe('later_building_edit');
+    expect($housingRow[6])->toBe('http://213.6.135.115/damage_assessment_system/showAssessmentAudit/building-pending/housing-pending');
     expect(DB::table('edit_assessments')->where('id', 101)->exists())->toBeTrue();
     expect(DB::table('audit_edit_deletion_batches')->count())->toBe(0);
 });
