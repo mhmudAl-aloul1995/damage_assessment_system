@@ -7,10 +7,10 @@
 	@php
 		$dashboardStatLinks = [
 			'buildings' => [
-				'fully_damaged' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'fully_damaged']),
-				'partially_damaged' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'partially_damaged']),
-				'committee_review' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => 'committee_review']),
-				'unclassified' => url('damage-assessment/building') . '?' . http_build_query(['building_damage_status' => '__blank__']),
+				'fully_damaged' => url('damage-assessment/building') . '?' . http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => 'fully_damaged']),
+				'partially_damaged' => url('damage-assessment/building') . '?' . http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => 'partially_damaged']),
+				'committee_review' => url('damage-assessment/building') . '?' . http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => 'committee_review']),
+				'unclassified' => url('damage-assessment/building') . '?' . http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => '__blank__']),
 				'assessment_blocked' => url('damage-assessment/building') . '?' . http_build_query(['assessment_obstacle' => 'yes']),
 				'bodies_present' => url('damage-assessment/building') . '?' . http_build_query(['bodies_present' => 'yes3']),
 				'uxo_present' => url('damage-assessment/building') . '?' . http_build_query(['uxo_present' => 'yes3']),

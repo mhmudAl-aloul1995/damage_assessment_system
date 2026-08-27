@@ -791,6 +791,7 @@ it('counts assessed buildings from completed building surveys', function () {
                 && (int) $buildingStats['assessed_total'] === 8;
         })
         ->assertSee(__('ui.damage_dashboard.unclassified'), false)
+        ->assertSee('field_status=COMPLETED', false)
         ->assertSee('building_damage_status=__blank__', false)
         ->assertDontSee('building_damage_status=no_damage', false);
 });
