@@ -2,29 +2,37 @@
 
 use App\Exports\HousingUnitBoqExport;
 use App\Models\Assessment;
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
 use App\Models\User;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 
+beforeEach(function (): void {
+    ensureAuditedHousingSurveyColumns();
+});
+
 it('shows grouped housing unit filters from the assessment survey', function () {
     $user = User::factory()->create();
 
     seedHousingFilterOptions();
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2001,
         'globalid' => 'building-housing-1',
         'assignedto' => 'Engineer One',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3001,
         'globalid' => 'housing-unit-1',
         'parentglobalid' => 'building-housing-1',
@@ -63,19 +71,19 @@ it('shows grouped housing unit filters from the assessment survey', function () 
 it('counts housing page total units from fully and partially damaged units only', function () {
     $user = User::factory()->create();
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3003,
         'globalid' => 'housing-total-fully',
         'unit_damage_status' => 'fully_damaged2',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3004,
         'globalid' => 'housing-total-partially',
         'unit_damage_status' => 'partially_damaged2',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3005,
         'globalid' => 'housing-total-committee',
         'unit_damage_status' => 'committee_review2',
@@ -97,19 +105,19 @@ it('filters housing unit datatable records using grouped filters and ranges', fu
 
     seedHousingFilterOptions();
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2001,
         'globalid' => 'building-housing-1',
         'assignedto' => 'Engineer One',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2002,
         'globalid' => 'building-housing-2',
         'assignedto' => 'Engineer Two',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3001,
         'globalid' => 'housing-unit-1',
         'parentglobalid' => 'building-housing-1',
@@ -130,7 +138,7 @@ it('filters housing unit datatable records using grouped filters and ranges', fu
         'editdate' => '2026-06-02 10:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3002,
         'globalid' => 'housing-unit-2',
         'parentglobalid' => 'building-housing-2',
@@ -178,21 +186,21 @@ it('filters housing unit datatable records using grouped filters and ranges', fu
 it('filters housing unit datatable records by unclassified damage status', function () {
     $user = User::factory()->create();
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3006,
         'globalid' => 'housing-unit-unclassified-null',
         'housing_unit_number' => '91',
         'unit_damage_status' => null,
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3007,
         'globalid' => 'housing-unit-unclassified-empty',
         'housing_unit_number' => '92',
         'unit_damage_status' => '',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3008,
         'globalid' => 'housing-unit-classified',
         'housing_unit_number' => '93',
@@ -219,19 +227,19 @@ it('filters housing unit datatable records by unclassified damage status', funct
 it('filters housing unit datatable records by housing unit objectid', function () {
     $user = User::factory()->create();
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3001,
         'globalid' => 'housing-unit-objectid-1',
         'housing_unit_number' => '12',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3002,
         'globalid' => 'housing-unit-objectid-2',
         'housing_unit_number' => '13',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 13001,
         'globalid' => 'housing-unit-objectid-partial',
         'housing_unit_number' => '14',
@@ -258,7 +266,7 @@ it('filters housing unit datatable records by housing unit objectid', function (
 it('filters housing unit datatable records by submission date range', function () {
     $user = User::factory()->create();
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3101,
         'globalid' => 'housing-unit-submission-date-inside',
         'housing_unit_number' => '21',
@@ -267,7 +275,7 @@ it('filters housing unit datatable records by submission date range', function (
         'building_submit_date' => '2026-06-15 09:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3102,
         'globalid' => 'housing-unit-submission-date-outside',
         'housing_unit_number' => '22',
@@ -297,19 +305,19 @@ it('filters housing unit datatable records by submission date range', function (
 it('filters housing unit datatable records by the assigned building researcher', function () {
     $user = User::factory()->create();
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2201,
         'globalid' => 'building-assigned-one',
         'assignedto' => 'Engineer One',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2202,
         'globalid' => 'building-assigned-two',
         'assignedto' => 'Engineer Two',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3201,
         'globalid' => 'housing-unit-assigned-one',
         'parentglobalid' => 'building-assigned-one',
@@ -318,7 +326,7 @@ it('filters housing unit datatable records by the assigned building researcher',
         'q_9_3_4_last_name' => 'One',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3202,
         'globalid' => 'housing-unit-assigned-two',
         'parentglobalid' => 'building-assigned-two',
@@ -349,21 +357,21 @@ it('filters housing unit datatable records by the assigned building researcher',
 it('filters housing unit datatable records by the building save date', function () {
     $user = User::factory()->create();
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2301,
         'globalid' => 'building-save-date-inside',
         'assignedto' => 'Engineer Inside',
         'end' => '2026-06-15 09:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 2302,
         'globalid' => 'building-save-date-outside',
         'assignedto' => 'Engineer Outside',
         'end' => '2026-06-30 09:00:00',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3301,
         'globalid' => 'housing-unit-save-date-inside',
         'parentglobalid' => 'building-save-date-inside',
@@ -372,7 +380,7 @@ it('filters housing unit datatable records by the building save date', function 
         'q_9_3_4_last_name' => 'Inside',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3302,
         'globalid' => 'housing-unit-save-date-outside',
         'parentglobalid' => 'building-save-date-outside',
@@ -402,7 +410,7 @@ it('filters housing unit datatable records by the building save date', function 
 it('shows housing unit excel and pdf export links in the row actions menu', function () {
     $user = User::factory()->create();
 
-    HousingUnit::query()->create([
+    AuditedHousingUnit::query()->create([
         'objectid' => 3401,
         'globalid' => 'housing-unit-actions-export',
         'housing_unit_number' => '51',
@@ -707,6 +715,59 @@ it('opens a signed housing unit BOQ PDF export link without authentication', fun
             && $pdf->contains('Signed PDF Owner');
     });
 });
+
+function ensureAuditedHousingSurveyColumns(): void
+{
+    Schema::table('audited_buildings', function (Blueprint $table): void {
+        foreach ([
+            'assignedto',
+            'owner_name',
+            'municipalitie',
+            'end',
+        ] as $columnName) {
+            if (! Schema::hasColumn('audited_buildings', $columnName)) {
+                $table->text($columnName)->nullable();
+            }
+        }
+    });
+
+    Schema::table('audited_housing_units', function (Blueprint $table): void {
+        foreach ([
+            'housing_unit_type',
+            'floor_number',
+            'housing_unit_number',
+            'unit_direction',
+            'damaged_area_m2',
+            'infra_type2',
+            'house_unit_ownership',
+            'occupied',
+            'unit_roof_type',
+            'sex',
+            'marital_status',
+            'are_there_people_with_disability',
+            'is_refugee',
+            'the_unit_resident',
+            'current_residence',
+            'number_of_rooms',
+            'age',
+            'unit_owner',
+            'q_9_3_1_first_name',
+            'q_9_3_2_second_name__father',
+            'q_9_3_3_third_name__grandfather',
+            'q_9_3_4_last_name',
+            'id_number1',
+            'mobile_number',
+            'municipalitie',
+            'rubble_removal_is_needed',
+            'activation_of_uxo_ha_d_material_clearance',
+            'editdate',
+        ] as $columnName) {
+            if (! Schema::hasColumn('audited_housing_units', $columnName)) {
+                $table->text($columnName)->nullable();
+            }
+        }
+    });
+}
 
 function seedHousingFilterOptions(): void
 {

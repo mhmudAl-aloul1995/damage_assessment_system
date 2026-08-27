@@ -21,6 +21,6 @@ class AuditedHousingUnit extends Model
 
     public function building(): BelongsTo
     {
-        return $this->belongsTo(Building::class, 'parentglobalid', 'globalid');
+        return $this->belongsTo(AuditedBuilding::class, 'parentglobalid', 'globalid');
     }
 }

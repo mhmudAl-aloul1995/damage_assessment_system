@@ -7,6 +7,8 @@ use App\Exports\TableExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HousingUnitExportRequest;
 use App\Models\Assessment;
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\Filter;
 use App\Models\HousingUnit;
@@ -56,10 +58,10 @@ class HousingUnitController extends Controller
             'filters' => $filters,
             'filterName' => $filterName,
             'globalid' => $globalid,
-            'engineers' => Building::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
-            'owners' => Building::query()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
-            'municip' => Building::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
-            'neighborhoods' => HousingUnit::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
+            'engineers' => AuditedBuilding::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
+            'owners' => AuditedBuilding::query()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
+            'municip' => AuditedBuilding::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
+            'neighborhoods' => AuditedHousingUnit::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
             'assessments' => Assessment::query()->get(),
             'groupedFilters' => $filters->groupBy('list_name'),
         ]);
@@ -73,7 +75,7 @@ class HousingUnitController extends Controller
             $filters = [];
         }
 
-        $housingUnits = HousingUnit::query()
+        $housingUnits = AuditedHousingUnit::query()
             ->with('building:globalid,objectid,assignedto')
             ->select([
                 'id',
@@ -114,16 +116,16 @@ class HousingUnitController extends Controller
             $housingUnits->where('parentglobalid', $request->string('parentglobalid')->toString());
         }
 
-        $this->applyHousingFilters($housingUnits, $filters);
+        $this->applyHousingFilters($housingUnits, $filters, 'audited_housing_units');
 
         return Datatables::of($housingUnits->orderBy('objectid'))
-            ->addColumn('assignedto', function (HousingUnit $housingUnit): string {
+            ->addColumn('assignedto', function (AuditedHousingUnit $housingUnit): string {
                 return $housingUnit->building?->assignedto ?? '-';
             })
-            ->addColumn('building_objectid', function (HousingUnit $housingUnit): string {
+            ->addColumn('building_objectid', function (AuditedHousingUnit $housingUnit): string {
                 return (string) ($housingUnit->building?->objectid ?? '-');
             })
-            ->addColumn('full_name', function (HousingUnit $housingUnit): string {
+            ->addColumn('full_name', function (AuditedHousingUnit $housingUnit): string {
                 $name = collect([
                     $housingUnit->q_9_3_1_first_name,
                     $housingUnit->q_9_3_2_second_name__father,
@@ -133,7 +135,7 @@ class HousingUnitController extends Controller
 
                 return $name !== '' ? $name : ($housingUnit->unit_owner ?? '-');
             })
-            ->editColumn('unit_damage_status', function (HousingUnit $housingUnit): string {
+            ->editColumn('unit_damage_status', function (AuditedHousingUnit $housingUnit): string {
                 return $this->statusBadge($housingUnit->unit_damage_status, [
                     'fully_damaged2' => 'danger',
                     'partially_damaged2' => 'warning',
@@ -146,7 +148,7 @@ class HousingUnitController extends Controller
                     'no_damaged' => 'No Damage',
                 ]);
             })
-            ->addColumn('support_summary', function (HousingUnit $housingUnit): string {
+            ->addColumn('support_summary', function (AuditedHousingUnit $housingUnit): string {
                 $items = collect([
                     $housingUnit->unit_support_needed === 'yes' ? __('ui.housing_page.support_needed') : null,
                     $housingUnit->rubble_removal_is_needed === 'yes' ? __('ui.housing_page.rubble_removal') : null,
@@ -233,7 +235,7 @@ class HousingUnitController extends Controller
         return collect($sections)
             ->map(function (array $section) use ($groupedFilters): array {
                 $section['filters'] = collect($section['filters'])
-                    ->filter(fn (array $filter): bool => Schema::hasColumn('housing_units', $filter['field']))
+                    ->filter(fn (array $filter): bool => Schema::hasColumn('audited_housing_units', $filter['field']))
                     ->map(function (array $filter) use ($groupedFilters): array {
                         $filter['options'] = $groupedFilters[$filter['field']] ?? collect();
 
@@ -439,7 +441,7 @@ class HousingUnitController extends Controller
 
     private function housingSummary(?string $parentGlobalId): array
     {
-        $query = HousingUnit::query();
+        $query = AuditedHousingUnit::query();
 
         if ($parentGlobalId !== null) {
             $query->where('parentglobalid', $parentGlobalId);
