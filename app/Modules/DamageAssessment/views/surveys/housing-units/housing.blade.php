@@ -72,6 +72,14 @@
                         </select>
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label">{{ __('ui.housing_page.security_situation') }}</label>
+                        <select name="filters[security_situation_unit][]" class="form-select form-select-solid housing-filter-control" data-control="select2" data-placeholder="{{ __('ui.housing_page.select_security_situation') }}" data-allow-clear="true" data-close-on-select="false" multiple>
+                            @foreach ($securitySituationOptions as $option)
+                                <option value="{{ $option->name }}">{{ $option->label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">{{ __('ui.housing_page.first_name') }}</label>
                         <input type="text" name="filters[q_9_3_1_first_name]" class="form-control form-control-solid housing-filter-control" placeholder="{{ __('ui.housing_page.first_name') }}">
                     </div>

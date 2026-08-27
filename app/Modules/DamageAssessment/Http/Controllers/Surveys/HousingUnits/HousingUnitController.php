@@ -52,8 +52,10 @@ class HousingUnitController extends Controller
             ? $filters->whereNotNull('list_name_arabic')->pluck('list_name', 'list_name_arabic')
             : $filters->pluck('list_name', 'list_name');
 
+        $groupedFilters = $filters->groupBy('list_name');
+
         return View::make('damage-assessment::surveys.housing-units.housing', [
-            'housingFilterSections' => $this->housingFilterSections($filters->groupBy('list_name')),
+            'housingFilterSections' => $this->housingFilterSections($groupedFilters),
             'housingSummary' => $this->housingSummary($globalid),
             'filters' => $filters,
             'filterName' => $filterName,
@@ -63,7 +65,8 @@ class HousingUnitController extends Controller
             'municip' => AuditedBuilding::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
             'neighborhoods' => AuditedHousingUnit::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
             'assessments' => Assessment::query()->get(),
-            'groupedFilters' => $filters->groupBy('list_name'),
+            'groupedFilters' => $groupedFilters,
+            'securitySituationOptions' => $this->housingFilterOptions('security_situation_unit', $groupedFilters),
         ]);
     }
 

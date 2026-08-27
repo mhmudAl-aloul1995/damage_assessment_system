@@ -540,6 +540,7 @@ return [
         'select_municipality' => 'Select municipality',
         'select_neighborhood' => 'Select neighborhood',
         'select_damage_status' => 'Select damage status',
+        'select_security_situation' => 'Select unit security situation',
         'select_filter' => 'Select :label',
         'table_title' => 'Housing Unit Assessment Records',
         'total_units' => 'Total units',

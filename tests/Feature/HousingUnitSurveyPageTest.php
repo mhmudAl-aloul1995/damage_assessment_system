@@ -55,6 +55,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('Resident and household');
     $response->assertSee('Unit security situation');
     $response->assertSee('name="filters[security_situation_unit][]"', false);
+    $response->assertSee('value="yes"', false);
+    $response->assertSee('value="no"', false);
     $response->assertSee('Housing Unit Object IDs');
     $response->assertSee('Paste up to 200 Object IDs from Excel');
     $response->assertSee('var url_phc', false);

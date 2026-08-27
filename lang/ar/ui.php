@@ -521,6 +521,7 @@ return [
         'select_municipality' => 'اختر البلدية',
         'select_neighborhood' => 'اختر الحي',
         'select_damage_status' => 'اختر حالة الضرر',
+        'select_security_situation' => 'اختر الوضع الأمني للوحدة',
         'select_filter' => 'اختر :label',
         'table_title' => 'سجلات حصر الوحدات السكنية',
         'total_units' => 'إجمالي الوحدات',
