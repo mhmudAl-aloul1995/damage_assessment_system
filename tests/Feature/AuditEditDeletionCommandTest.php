@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 beforeEach(function (): void {
     DB::statement('DROP VIEW IF EXISTS warda_buildings');
@@ -126,6 +128,15 @@ beforeEach(function (): void {
             'created_at' => now(),
             'updated_at' => now(),
         ],
+        [
+            'id' => 106,
+            'global_id' => 'building-pending',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'later_building_edit',
+            'created_at' => now()->addMinutes(5),
+            'updated_at' => now()->addMinutes(5),
+        ],
     ]);
 
     DB::table('audited_buildings')->insert([
@@ -162,9 +173,9 @@ it('deletes null pending building and housing edits with backup and restores the
 
     expect($batchId)->not->toBeNull();
     expect(DB::table('edit_assessments')->whereIn('id', [101, 104])->count())->toBe(0);
-    expect(DB::table('edit_assessments')->whereIn('id', [100, 102, 103, 105])->count())->toBe(4);
+    expect(DB::table('edit_assessments')->whereIn('id', [100, 102, 103, 105, 106])->count())->toBe(5);
     expect(DB::table('audit_edit_deletion_items')->where('batch_id', $batchId)->count())->toBe(2);
-    expect(DB::table('audited_buildings')->where('globalid', 'building-pending')->value('building_damage_status'))->toBe('previous_building_edit');
+    expect(DB::table('audited_buildings')->where('globalid', 'building-pending')->value('building_damage_status'))->toBe('later_building_edit');
     expect(DB::table('audited_housing_units')->where('globalid', 'housing-pending')->value('unit_damage_status'))->toBe('source_unit');
 
     $this->artisan('audit-edits:restore-deleted', ['batch' => $batchId])
@@ -173,6 +184,31 @@ it('deletes null pending building and housing edits with backup and restores the
     expect(DB::table('edit_assessments')->whereIn('id', [101, 104])->count())->toBe(2);
     expect(DB::table('audit_edit_deletion_items')->where('batch_id', $batchId)->whereNull('restored_at')->count())->toBe(0);
     expect(DB::table('audit_edit_deletion_batches')->where('id', $batchId)->value('restored_at'))->not->toBeNull();
-    expect(DB::table('audited_buildings')->where('globalid', 'building-pending')->value('building_damage_status'))->toBeNull();
+    expect(DB::table('audited_buildings')->where('globalid', 'building-pending')->value('building_damage_status'))->toBe('later_building_edit');
     expect(DB::table('audited_housing_units')->where('globalid', 'housing-pending')->value('unit_damage_status'))->toBeNull();
+});
+
+it('exports a dry run spreadsheet with previous and next edit values', function (): void {
+    $path = 'testing/null-pending-audit-edits.xlsx';
+    Storage::disk('local')->delete($path);
+
+    $this->artisan('audit-edits:delete-null-pending', [
+        '--dry-run' => true,
+        '--export' => $path,
+    ])->assertSuccessful();
+
+    expect(Storage::disk('local')->exists($path))->toBeTrue();
+
+    $rows = Excel::toArray(null, Storage::disk('local')->path($path))[0];
+
+    expect($rows[0])->toContain('Previous Value');
+    expect($rows[0])->toContain('Next Value');
+
+    $buildingRow = collect($rows)->first(fn (array $row): bool => $row[1] === 101);
+
+    expect($buildingRow[3])->toBe('building-pending');
+    expect($buildingRow[11])->toBe('previous_building_edit');
+    expect($buildingRow[14])->toBe('later_building_edit');
+    expect(DB::table('edit_assessments')->where('id', 101)->exists())->toBeTrue();
+    expect(DB::table('audit_edit_deletion_batches')->count())->toBe(0);
 });
