@@ -584,6 +584,7 @@
             display: block;
             aspect-ratio: 1;
             overflow: hidden;
+            position: relative;
         }
 
         .audit-attachments-panel img {
@@ -592,6 +593,35 @@
             height: 100% !important;
             object-fit: cover;
             width: 100% !important;
+        }
+
+        .audit-attachment-preview-modal .modal-dialog {
+            max-width: min(1100px, 94vw);
+        }
+
+        .audit-attachment-preview-modal .modal-content {
+            background: #111827;
+            border: 0;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .audit-attachment-preview-modal .modal-header {
+            border-bottom: 1px solid rgba(255, 255, 255, .12);
+        }
+
+        .audit-attachment-preview-modal .modal-title,
+        .audit-attachment-preview-modal .btn-close,
+        .audit-attachment-preview-modal .btn {
+            color: #fff;
+        }
+
+        .audit-attachment-preview-image {
+            background: #0b1020;
+            display: block;
+            max-height: 78vh;
+            object-fit: contain;
+            width: 100%;
         }
 
         /* إلغاء الـ sticky في الجوال لضمان الظهور */
@@ -1168,6 +1198,26 @@
         </div>
     </div>
 
+    <div class="modal fade audit-attachment-preview-modal" id="attachmentPreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title fw-bold">معاينة المرفق</h3>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="#" target="_blank" class="btn btn-sm btn-light" id="attachmentPreviewOpenOriginal">
+                            فتح الأصل
+                        </a>
+                        <button type="button" class="btn btn-icon btn-sm btn-light" data-bs-dismiss="modal">✖</button>
+                    </div>
+                </div>
+
+                <div class="modal-body p-0">
+                    <img src="" alt="معاينة المرفق" class="audit-attachment-preview-image" id="attachmentPreviewImage">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="notesModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered mw-1000px mw-lg-1400px">
             <div class="modal-content">
@@ -1534,14 +1584,44 @@
 
                 if (links.length) {
                     links.each(function () {
-                        attachments.push(this.outerHTML);
+                        let link = $(this);
+                        let image = link.find('img').first();
+                        let imageUrl = image.attr('src') || link.attr('href') || '';
+                        let originalUrl = link.attr('href') || imageUrl;
+
+                        if (!imageUrl) {
+                            return;
+                        }
+
+                        link
+                            .addClass('js-attachment-preview')
+                            .attr('href', originalUrl)
+                            .attr('data-preview-src', imageUrl)
+                            .attr('data-original-src', originalUrl);
+
+                        attachments.push(link.prop('outerHTML'));
                     });
 
                     return;
                 }
 
                 content.find('img').each(function () {
-                    attachments.push(this.outerHTML);
+                    let image = $(this);
+                    let imageUrl = image.attr('src') || '';
+
+                    if (!imageUrl) {
+                        return;
+                    }
+
+                    attachments.push(
+                        $('<a>')
+                            .addClass('js-attachment-preview')
+                            .attr('href', imageUrl)
+                            .attr('data-preview-src', imageUrl)
+                            .attr('data-original-src', imageUrl)
+                            .append(image.clone())
+                            .prop('outerHTML')
+                    );
                 });
             });
 
@@ -1551,6 +1631,17 @@
                 .toggleClass('is-empty', html === '')
                 .html(html || '<div class="text-muted text-center py-4">لا توجد مرفقات</div>');
         }
+
+        $(document).on('click', '.js-attachment-preview', function (event) {
+            event.preventDefault();
+
+            let previewSrc = $(this).data('preview-src') || $(this).attr('href');
+            let originalSrc = $(this).data('original-src') || previewSrc;
+
+            $('#attachmentPreviewImage').attr('src', previewSrc);
+            $('#attachmentPreviewOpenOriginal').attr('href', originalSrc);
+            $('#attachmentPreviewModal').modal('show');
+        });
 
         function plainAuditAnswer(row) {
             return cleanAuditText(row?.summaryValue || $('<div>').html(row?.answer || '').text()).toLowerCase();
