@@ -9,6 +9,19 @@
 		->filter(fn ($assessment) => filled($assessment->name) && \Illuminate\Support\Facades\Schema::hasColumn('housing_units', $assessment->name))
 		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
 		->values();
+	$bulkInlineFilterOptions = \App\Models\Filter::query()
+		->whereIn('list_name', $bulkEditableBuildingFields->pluck('name')->merge($bulkEditableHousingFields->pluck('name'))->unique()->values())
+		->orderBy('list_name')
+		->orderBy('label')
+		->get(['list_name', 'name', 'label'])
+		->groupBy('list_name')
+		->map(fn ($options) => $options
+			->map(fn ($option) => [
+				'value' => $option->name,
+				'label' => $option->label ?: $option->name,
+			])
+			->values())
+		->toArray();
 @endphp
 @section('title', $isFieldEngineerAudit ? 'مباني المهندس الميداني' : __('ui.audit.title'))
 @section('pageName', $isFieldEngineerAudit ? 'مباني المهندس الميداني' : __('ui.audit.title'))
@@ -809,10 +822,22 @@
 								<div class="form-text">يمكن إدخال القيم كسطور منفصلة أو مفصولة بفواصل.</div>
 							</div>
 
-							<div class="col-12">
+							<input type="hidden" name="value" id="bulk_inline_value">
+
+							<div class="col-12" id="bulk_inline_value_text_wrapper">
 								<label class="form-label fw-semibold">القيمة الجديدة</label>
-								<textarea name="value" id="bulk_inline_value" rows="3" class="form-control form-control-solid"
+								<textarea id="bulk_inline_value_text" rows="3" class="form-control form-control-solid"
 									placeholder="اكتب القيمة التي ستظهر كآخر تعديل"></textarea>
+							</div>
+
+							<div class="col-12 d-none" id="bulk_inline_value_select_wrapper">
+								<label class="required form-label fw-semibold">القيمة الجديدة</label>
+								<select id="bulk_inline_value_select" class="form-select form-select-solid"
+									data-control="select2" data-dropdown-parent="#bulkInlineEditModal"
+									data-placeholder="اختر القيمة من الاستبيان">
+									<option></option>
+								</select>
+								<div class="form-text">هذه الخيارات مأخوذة من نفس قائمة الاستبيان لهذا الحقل.</div>
 							</div>
 						</div>
 
@@ -2001,6 +2026,37 @@
 					.map(item => item.trim())
 					.filter(item => /^\d+$/.test(item)))];
 			};
+			const bulkInlineFilterOptions = @json($bulkInlineFilterOptions);
+			const activeBulkInlineValue = function () {
+				const field = $('#bulk_inline_field').val();
+
+				return (bulkInlineFilterOptions[field] || []).length
+					? $('#bulk_inline_value_select').val()
+					: $('#bulk_inline_value_text').val();
+			};
+			const syncBulkInlineValueControl = function () {
+				const field = $('#bulk_inline_field').val();
+				const options = bulkInlineFilterOptions[field] || [];
+				const select = $('#bulk_inline_value_select');
+
+				if (options.length) {
+					select.empty().append('<option></option>');
+
+					options.forEach(function (option) {
+						select.append(new Option(option.label, option.value, false, false));
+					});
+
+					$('#bulk_inline_value_text_wrapper').addClass('d-none');
+					$('#bulk_inline_value_select_wrapper').removeClass('d-none');
+					select.val(null).trigger('change.select2');
+
+					return;
+				}
+
+				$('#bulk_inline_value_select_wrapper').addClass('d-none');
+				$('#bulk_inline_value_text_wrapper').removeClass('d-none');
+				select.val(null).trigger('change.select2');
+			};
 			const syncBulkInlineFieldOptions = function () {
 				const type = $('#bulk_inline_type').val();
 				const selected = $('#bulk_inline_field').val();
@@ -2022,6 +2078,7 @@
 				}
 
 				$('#bulk_inline_field').trigger('change.select2');
+				syncBulkInlineValueControl();
 			};
 			const renderBulkInlineResult = function (response) {
 				const missing = response.missing_objectids || [];
@@ -2828,6 +2885,7 @@
 			});
 
 			$('#bulk_inline_type').on('change', syncBulkInlineFieldOptions);
+			$('#bulk_inline_field').on('change', syncBulkInlineValueControl);
 
 			$('#bulk_inline_edit_form').on('submit', function (event) {
 				event.preventDefault();
@@ -2836,6 +2894,8 @@
 				const button = $('#bulk_inline_submit');
 				const objectIds = parseBulkObjectIds($('#bulk_inline_objectids').val());
 				const fieldLabel = $('#bulk_inline_field option:selected').text().trim();
+				const field = $('#bulk_inline_field').val();
+				const value = activeBulkInlineValue();
 
 				if (!objectIds.length) {
 					Swal.fire({
@@ -2850,6 +2910,36 @@
 
 					return;
 				}
+
+				if (!field) {
+					Swal.fire({
+						text: 'يرجى اختيار الحقل المراد تعديله.',
+						icon: 'warning',
+						buttonsStyling: false,
+						confirmButtonText: @json(__('ui.buttons.ok')),
+						customClass: {
+							confirmButton: 'btn btn-primary'
+						}
+					});
+
+					return;
+				}
+
+				if (($('#bulk_inline_value_select_wrapper').is(':visible')) && !value) {
+					Swal.fire({
+						text: 'يرجى اختيار القيمة من قائمة الاستبيان.',
+						icon: 'warning',
+						buttonsStyling: false,
+						confirmButtonText: @json(__('ui.buttons.ok')),
+						customClass: {
+							confirmButton: 'btn btn-primary'
+						}
+					});
+
+					return;
+				}
+
+				$('#bulk_inline_value').val(value || '');
 
 				Swal.fire({
 					title: 'تأكيد التعديل الجماعي',

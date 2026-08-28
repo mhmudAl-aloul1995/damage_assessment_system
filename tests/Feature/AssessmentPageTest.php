@@ -10,6 +10,7 @@ use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\EditAssessment;
+use App\Models\Filter;
 use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
@@ -249,6 +250,13 @@ it('stores bulk inline edits by pasted object ids for buildings and housing unit
         'globalid' => 'bulk-inline-housing',
         'parentglobalid' => $parentBuilding->globalid,
         'unit_owner' => 'Original Unit Owner',
+        'unit_damage_status' => 'partially_damaged2',
+    ]);
+
+    Filter::query()->create([
+        'list_name' => 'unit_damage_status',
+        'name' => 'fully_damaged2',
+        'label' => 'Fully Damaged',
     ]);
 
     $this->actingAs($user)
@@ -300,6 +308,33 @@ it('stores bulk inline edits by pasted object ids for buildings and housing unit
         'new_value' => 'Bulk Unit Owner',
         'edited_by' => $user->id,
         'source' => 'manual',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.bulkUpdate'), [
+            'type' => 'housing_table',
+            'objectids_text' => '17503',
+            'field' => 'unit_damage_status',
+            'value' => 'invalid_status',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('value');
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.bulkUpdate'), [
+            'type' => 'housing_table',
+            'objectids_text' => '17503',
+            'field' => 'unit_damage_status',
+            'value' => 'fully_damaged2',
+        ])
+        ->assertOk()
+        ->assertJsonPath('updated_count', 1);
+
+    $this->assertDatabaseHas('edit_assessments', [
+        'global_id' => $housing->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_damage_status',
+        'field_value' => 'fully_damaged2',
     ]);
 });
 

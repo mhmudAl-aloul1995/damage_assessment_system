@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Filter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -43,6 +44,23 @@ class BulkAssessmentInlineEditRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             if ($this->objectIds() === []) {
                 $validator->errors()->add('objectids_text', 'يرجى إدخال ObjectID صحيح واحد على الأقل.');
+            }
+
+            $field = (string) $this->input('field');
+            $filterValues = Filter::query()
+                ->where('list_name', $field)
+                ->pluck('name')
+                ->filter()
+                ->values();
+
+            if ($filterValues->isEmpty()) {
+                return;
+            }
+
+            $value = (string) $this->input('value');
+
+            if ($value === '' || ! $filterValues->contains($value)) {
+                $validator->errors()->add('value', 'القيمة المختارة غير موجودة ضمن خيارات هذا الحقل في الاستبيان.');
             }
         });
     }
