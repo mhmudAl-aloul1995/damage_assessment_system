@@ -40,7 +40,7 @@ Artisan::command('phc:queue-status', function () {
     return Command::SUCCESS;
 })->purpose('Display PHC queue status and pending job counts');
 
-Artisan::command('phc:queue-work-arcgis {--once : Process only one job}', function () {
+Artisan::command('phc:queue-work-arcgis {--once : Process only one job} {--daemon : Keep the worker running when the queue is empty} {--slot=manual : Worker slot id for scheduler mutexes and logs}', function () {
     $options = [
         'connection' => 'database',
         '--queue' => 'arcgis,default',
@@ -51,7 +51,7 @@ Artisan::command('phc:queue-work-arcgis {--once : Process only one job}', functi
 
     if ($this->option('once')) {
         $options['--once'] = true;
-    } else {
+    } elseif (! $this->option('daemon')) {
         $options['--stop-when-empty'] = true;
     }
 
@@ -93,12 +93,14 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
     ->name('exports-queue-worker')
     ->appendOutputTo(storage_path('logs/queue-schedule.log'));
 
-Schedule::command('queue:work database --queue=arcgis,default --stop-when-empty --tries=3 --timeout=180 --memory=512')
-    ->everyMinute()
-    ->withoutOverlapping(10)
-    ->runInBackground()
-    ->name('arcgis-queue-worker')
-    ->appendOutputTo(storage_path('logs/queue-schedule.log'));
+foreach (range(1, 3) as $workerSlot) {
+    Schedule::command("phc:queue-work-arcgis --slot={$workerSlot}")
+        ->everyMinute()
+        ->withoutOverlapping(10)
+        ->runInBackground()
+        ->name("arcgis-queue-worker-{$workerSlot}")
+        ->appendOutputTo(storage_path('logs/queue-schedule.log'));
+}
 
 /*
 |--------------------------------------------------------------------------
