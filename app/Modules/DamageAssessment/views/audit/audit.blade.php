@@ -508,8 +508,8 @@
 						</div>
 					</div>
 					<div class="card-toolbar audit-main-toolbar">
-						<button onclick="refreshTable(this)" class="btn btn-icon btn-light-success btn-sm" title="{{ __('ui.audit.refresh') }}">
-							<i class="ki-duotone ki-update-file fs-2"></i>
+						<button onclick="refreshTable(this)" class="btn btn-light-success btn-sm">
+							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-arrows-circle fs-3"></i>
 						</button>
 
 						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
