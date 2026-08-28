@@ -43,7 +43,7 @@ it('shows grouped building filters based on survey sections', function () {
     $response->assertSee('Building Filters');
     $response->assertSee('Damage, hazards, and debris');
     $response->assertSee('Building specifications');
-    $response->assertSee('Risk summary');
+    $response->assertDontSee('Risk summary');
     $response->assertSee('يوجد عائق؟');
     $response->assertSee('name="filters[assessment_obstacle][]"', false);
     $response->assertSee('value="yes"', false);
@@ -124,8 +124,7 @@ it('filters building datatable records with grouped filters and ranges', functio
     $response->assertSee('Al Amal Tower');
     $response->assertSee('Totally Damaged');
     $response->assertSee(__('ui.buildings_page.yes'));
-    $response->assertSee('Debris');
-    $response->assertSee('UXO');
+    $response->assertDontSee('risk_summary');
     $response->assertDontSee('Al Noor House');
 });
 

@@ -611,6 +611,8 @@ return [
         'owner_name' => 'Owner name',
         'units_count' => 'Units count',
         'floor_count' => 'Floor count',
+        'yes' => 'Yes',
+        'no' => 'No',
         'from' => 'From',
         'to' => 'To',
         'risk_summary' => 'Risk summary',

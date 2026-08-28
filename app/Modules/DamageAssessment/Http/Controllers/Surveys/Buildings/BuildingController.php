@@ -123,21 +123,6 @@ class BuildingController extends Controller
                     'no' => __('ui.buildings_page.no'),
                 ]);
             })
-            ->addColumn('risk_summary', function ($ctr) {
-                $risks = collect([
-                    $ctr->building_debris_exist === 'yes' ? __('ui.buildings_page.debris') : null,
-                    in_array($ctr->uxo_present, ['yes', 'yes3'], true) ? __('ui.buildings_page.uxo') : null,
-                    in_array($ctr->bodies_present, ['yes', 'yes3'], true) ? __('ui.buildings_page.bodies') : null,
-                ])->filter();
-
-                if ($risks->isEmpty()) {
-                    return '<span class="text-muted">-</span>';
-                }
-
-                return $risks
-                    ->map(fn (string $risk): string => '<span class="badge badge-light-danger me-1 mb-1">'.e($risk).'</span>')
-                    ->implode('');
-            })
             ->editColumn('action', function ($ctr) {
                 $housingUrl = url("/damage-assessment/showHousing/{$ctr->globalid}");
                 $assessmentUrl = url("/damage-assessment/assessment/{$ctr->globalid}");
@@ -155,7 +140,7 @@ class BuildingController extends Controller
                 </div>';
             })
             ->setRowId('globalid')
-            ->rawColumns(['action', 'id', 'field_status', 'building_damage_status', 'assessment_obstacle', 'risk_summary'])
+            ->rawColumns(['action', 'id', 'field_status', 'building_damage_status', 'assessment_obstacle'])
             ->make(true);
     }
 

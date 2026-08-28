@@ -197,7 +197,6 @@
                             <th class="min-w-100px">{{ __('ui.buildings_page.district') }}</th>
                             <th class="min-w-100px">يوجد عائق؟</th>
                             <th class="min-w-90px">{{ __('ui.buildings_page.units_count') }}</th>
-                            <th class="min-w-120px">{{ __('ui.buildings_page.risk_summary') }}</th>
                             <th class="min-w-120px">{{ __('ui.buildings_page.updated_at') }}</th>
                             <th class="text-end min-w-100px">{{ __('ui.buildings_page.action') }}</th>
                         </tr>
@@ -377,7 +376,7 @@
                     serverSide: true,
                     processing: true,
                     pageLength: 10,
-                    order: [[10, 'desc']],
+                    order: [[9, 'desc']],
                     ajax: {
                         url: "{{ url('damage-assessment/building/show') }}",
                         data: function (d) {
@@ -394,7 +393,6 @@
                         { data: 'neighborhood', name: 'neighborhood' },
                         { data: 'assessment_obstacle', name: 'assessment_obstacle' },
                         { data: 'units_nos', name: 'units_nos' },
-                        { data: 'risk_summary', name: 'risk_summary', orderable: false, searchable: false },
                         { data: 'editdate', name: 'editdate' },
                         { data: 'action', responsivePriority: -1, className: 'text-end', orderable: false, searchable: false },
                     ],
