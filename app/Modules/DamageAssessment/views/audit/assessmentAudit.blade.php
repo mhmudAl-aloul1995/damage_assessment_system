@@ -221,8 +221,20 @@
             top: 70px;
             z-index: 50;
             background: #fff;
-            padding: 10px 0;
+            padding: .55rem 0;
             border-bottom: 1px solid #eef1f5
+        }
+
+        .audit-toolbar-row {
+            align-items: flex-end;
+            background: #fff;
+            border: 1px solid #eef2f7;
+            border-radius: .85rem;
+            box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .035);
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+            padding: .55rem;
         }
 
         .audit-filter-btn.is-active {
@@ -233,12 +245,17 @@
         .audit-action-group {
             display: inline-flex;
             flex-direction: column;
-            gap: .35rem;
-            padding: .5rem .6rem;
+            gap: .3rem;
+            padding: .4rem .5rem;
             border: 1px solid #eef2f7;
-            border-radius: .65rem;
-            background: #fff;
+            border-radius: .7rem;
+            background: #f9fbfd;
             min-width: max-content
+        }
+
+        .audit-action-group.audit-status-group {
+            background: #fff;
+            border-color: #e4e9f2;
         }
 
         .audit-action-label {
@@ -254,6 +271,24 @@
             align-items: center;
             gap: .35rem;
             flex-wrap: wrap
+        }
+
+        .audit-status-group .audit-action-controls {
+            background: #f1f4f9;
+            border-radius: .6rem;
+            gap: 0;
+            overflow: hidden;
+            padding: .16rem;
+        }
+
+        .audit-status-group .btn {
+            border-radius: .45rem !important;
+            box-shadow: none !important;
+            margin: 0;
+        }
+
+        .audit-status-group .btn:not(:last-child) {
+            margin-inline-end: .16rem;
         }
 
         .assessment-section {
@@ -587,6 +622,32 @@
             position: relative;
         }
 
+        .audit-attachments-panel a::after {
+            align-items: center;
+            background: rgba(17, 24, 39, .62);
+            border-radius: .65rem;
+            color: #fff;
+            content: 'تكبير';
+            display: flex;
+            font-size: .78rem;
+            font-weight: 800;
+            inset: 0;
+            justify-content: center;
+            opacity: 0;
+            position: absolute;
+            transition: opacity .18s ease;
+        }
+
+        .audit-attachments-panel a:hover::after {
+            opacity: 1;
+        }
+
+        .audit-attachments-count {
+            border-radius: 999px;
+            font-weight: 800;
+            min-width: 34px;
+        }
+
         .audit-attachments-panel img {
             aspect-ratio: 1;
             border-radius: .65rem !important;
@@ -784,7 +845,7 @@
 
                                 <div class="col-12 col-lg-7 col-xl-8">
                                     <div class="audit-toolbar-sticky mb-4">
-                                        <div class="d-flex flex-wrap gap-2">
+                                        <div class="audit-toolbar-row">
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">فلترة العرض</div>
                                                 <div class="audit-action-controls">
@@ -823,7 +884,7 @@
                                                 </span>
                                             @elseif($canViewStatusButtons)
                                             @hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <div class="audit-action-group">
+                                            <div class="audit-action-group audit-status-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success building-status-btn"
@@ -840,7 +901,7 @@
                                             @endhasanyrole
 
                                             @hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')
-                                            <div class="audit-action-group">
+                                            <div class="audit-action-group audit-status-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger building-status-btn"
@@ -914,8 +975,9 @@
                                 <div class="col-12 col-lg-2">
                                     <div class="audit-sticky-menu audit-attachments-card bg-white border rounded-3 shadow-sm">
                                         <div class="card-header py-3 px-4">
-                                            <div class="card-title m-0">
+                                            <div class="card-title m-0 d-flex align-items-center justify-content-between w-100">
                                                 <h3 class="fw-bold fs-4 mb-0">مرفقات المبنى</h3>
+                                                <span id="building_attachments_count" class="badge badge-light-primary audit-attachments-count">0</span>
                                             </div>
                                         </div>
 
@@ -1148,7 +1210,7 @@
 
                                 <div class="card-body pt-0 pb-4">
                                     <div class="audit-toolbar-sticky mb-4">
-                                        <div class="d-flex flex-wrap gap-2">
+                                        <div class="audit-toolbar-row">
                                             <div class="audit-action-group">
                                                 <div class="audit-action-label">فلترة العرض</div>
                                                 <div class="audit-action-controls">
@@ -1186,7 +1248,7 @@
                                                     آخر حالة: <span id="housing_current_status_preview">-</span>
                                                 </span>
                                             @elseif($canViewStatusButtons)
-                                            <div class="audit-action-group">
+                                            <div class="audit-action-group audit-status-group">
                                                 <div class="audit-action-label">التدقيق القانوني</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-success housing-status-btn"
@@ -1199,7 +1261,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="audit-action-group">
+                                            <div class="audit-action-group audit-status-group">
                                                 <div class="audit-action-label">التدقيق الهندسي</div>
                                                 <div class="audit-action-controls">
                                                     <button type="button" class="btn btn-sm btn-light-danger housing-status-btn"
@@ -1262,8 +1324,9 @@
                         <div class="col-12 col-lg-2">
                             <div class="card card-flush shadow-sm border-0 audit-sticky-menu audit-attachments-card">
                                 <div class="card-header py-3 px-4">
-                                    <div class="card-title m-0">
+                                    <div class="card-title m-0 d-flex align-items-center justify-content-between w-100">
                                         <h3 class="fw-bold fs-4 mb-0">مرفقات الوحدة</h3>
+                                        <span id="housing_attachments_count" class="badge badge-light-primary audit-attachments-count">0</span>
                                     </div>
                                 </div>
 
@@ -1721,6 +1784,11 @@
             });
 
             let html = attachments.join('');
+            let countTarget = target === '#building_attachments_panel'
+                ? '#building_attachments_count'
+                : '#housing_attachments_count';
+
+            $(countTarget).text(attachments.length);
 
             panel
                 .toggleClass('is-empty', html === '')
