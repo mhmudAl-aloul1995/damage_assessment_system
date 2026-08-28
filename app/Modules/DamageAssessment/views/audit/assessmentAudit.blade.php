@@ -1107,11 +1107,7 @@
                                             @endhasanyrole
                                             @hasanyrole('Database Officer|Auditing Supervisor|Project Officer')
                                             <button type="button" class="dropdown-item text-danger"
-                                                onclick="scheduleHousingUnitsDeletion('database')">حذف الوحدات المحددة من قاعدة البيانات</button>
-                                            <button type="button" class="dropdown-item text-danger"
-                                                onclick="scheduleHousingUnitsDeletion('arcgis')">حذف الوحدات المحددة من ArcGIS</button>
-                                            <button type="button" class="dropdown-item text-danger"
-                                                onclick="scheduleHousingUnitsDeletion('both')">حذف الوحدات المحددة من قاعدة البيانات و ArcGIS</button>
+                                                onclick="scheduleHousingUnitsDeletion('both')">حذف الوحدة</button>
                                             @endhasanyrole
                                             @endif
                                             <button type="button" class="dropdown-item"
@@ -2580,7 +2576,7 @@
             return {
                 database: 'قاعدة البيانات',
                 arcgis: 'ArcGIS',
-                both: 'قاعدة البيانات و ArcGIS'
+                both: 'الطبقة الأساسية والـ target وقاعدة البيانات'
             }[mode] || mode;
         }
 

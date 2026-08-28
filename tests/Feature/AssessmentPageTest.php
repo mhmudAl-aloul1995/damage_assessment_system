@@ -4,6 +4,7 @@ use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
@@ -1579,6 +1580,13 @@ it('commits scheduled housing unit database deletion and removes related audit r
         'unit_owner' => 'Owner Before Delete',
     ]);
 
+    AuditedHousingUnit::query()->create([
+        'objectid' => 19661,
+        'globalid' => $housing->globalid,
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Audited Owner Before Delete',
+    ]);
+
     HousingStatus::query()->create([
         'housing_id' => $housing->objectid,
         'status_id' => $status->id,
@@ -1601,10 +1609,28 @@ it('commits scheduled housing unit database deletion and removes related audit r
         'user_id' => $user->id,
     ]);
 
+    config()->set('services.arcgis.housing_units_url', 'https://source.example.test/FeatureServer/1');
+    config()->set('services.arcgis.target_service', 'https://target.example.test/FeatureServer');
+    config()->set('services.arcgis.target_units_layer', 1);
+
+    Http::fake([
+        'www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'fake-token']),
+        'source.example.test/FeatureServer/1/deleteFeatures' => Http::response([
+            'deleteResults' => [
+                ['objectId' => $housing->objectid, 'success' => true],
+            ],
+        ]),
+        'target.example.test/FeatureServer/1/deleteFeatures' => Http::response([
+            'deleteResults' => [
+                ['objectId' => 19661, 'success' => true],
+            ],
+        ]),
+    ]);
+
     $schedule = $this->actingAs($user)
         ->postJson(route('housing.assessment.delete.schedule'), [
             'globalids' => [$housing->globalid],
-            'mode' => 'database',
+            'mode' => 'both',
             'building_globalid' => $building->globalid,
         ])
         ->assertOk()
@@ -1616,9 +1642,15 @@ it('commits scheduled housing unit database deletion and removes related audit r
         ])
         ->assertOk()
         ->assertJsonPath('deleted_from_database', 1)
+        ->assertJsonPath('deleted_audited_from_database', 1)
+        ->assertJsonPath('deleted_from_arcgis', 2)
         ->assertJsonPath('archived_before_database_deletion', 1);
 
     $this->assertDatabaseMissing('housing_units', [
+        'globalid' => $housing->globalid,
+    ]);
+
+    $this->assertDatabaseMissing('audited_housing_units', [
         'globalid' => $housing->globalid,
     ]);
 
@@ -1647,6 +1679,12 @@ it('commits scheduled housing unit database deletion and removes related audit r
         ->and($archive->archived_by)->toBe($user->id)
         ->and($archive->building_snapshot['building_name'])->toBe('Building Before Housing Delete')
         ->and($archive->housing_unit_snapshot['unit_owner'])->toBe('Owner Before Delete');
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'source.example.test/FeatureServer/1/deleteFeatures')
+        && str_contains((string) $request['objectIds'], (string) $housing->objectid));
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'target.example.test/FeatureServer/1/deleteFeatures')
+        && str_contains((string) $request['objectIds'], '19661'));
 });
 
 it('returns structured status history payload for rendering badges safely', function () {

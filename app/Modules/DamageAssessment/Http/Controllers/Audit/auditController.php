@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateHousingLegalChallengeRequest;
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\BuildingStatusHistory;
@@ -3773,10 +3774,16 @@ class auditController extends Controller
         $units = collect($payload['units'] ?? []);
         $objectIds = $units->pluck('objectid')->filter()->values()->all();
         $globalIds = $units->pluck('globalid')->filter()->values()->all();
+        $targetObjectIds = AuditedHousingUnit::query()
+            ->whereIn('globalid', $globalIds)
+            ->pluck('objectid')
+            ->filter()
+            ->values()
+            ->all();
         $mode = (string) ($payload['mode'] ?? 'database');
 
         if (in_array($mode, ['arcgis', 'both'], true)) {
-            $arcgisResult = $this->deleteHousingUnitsFromArcgis($arcgis, $objectIds);
+            $arcgisResult = $this->deleteHousingUnitsFromArcgis($arcgis, $objectIds, $targetObjectIds);
 
             if (! ($arcgisResult['success'] ?? false)) {
                 return response()->json([
@@ -3787,29 +3794,70 @@ class auditController extends Controller
         }
 
         $deletedFromDatabase = 0;
+        $deletedAuditedFromDatabase = 0;
         $archivedBeforeDatabaseDeletion = 0;
 
         if (in_array($mode, ['database', 'both'], true)) {
             $databaseDeletionSummary = $this->deleteHousingUnitsFromDatabase($globalIds, $objectIds, (int) $request->user()->id);
             $deletedFromDatabase = $databaseDeletionSummary['deleted'];
+            $deletedAuditedFromDatabase = $databaseDeletionSummary['deleted_audited'];
             $archivedBeforeDatabaseDeletion = $databaseDeletionSummary['archived'];
         }
 
         return response()->json([
             'message' => 'تم تنفيذ حذف الوحدات بنجاح.',
             'deleted_from_database' => $deletedFromDatabase,
-            'deleted_from_arcgis' => in_array($mode, ['arcgis', 'both'], true) ? count($objectIds) : 0,
+            'deleted_audited_from_database' => $deletedAuditedFromDatabase,
+            'deleted_from_arcgis' => in_array($mode, ['arcgis', 'both'], true) ? count($objectIds) + count($targetObjectIds) : 0,
             'archived_before_database_deletion' => $archivedBeforeDatabaseDeletion,
         ]);
     }
 
-    private function deleteHousingUnitsFromArcgis(ArcgisService $arcgis, array $objectIds): array
+    private function deleteHousingUnitsFromArcgis(ArcgisService $arcgis, array $sourceObjectIds, array $targetObjectIds = []): array
     {
-        $layerUrl = (string) config('services.arcgis.housing_units_url', '');
+        $token = $arcgis->getToken();
+        $results = [];
+        $sourceLayerUrl = (string) config('services.arcgis.housing_units_url', '');
 
-        return filled($layerUrl)
-            ? $arcgis->deleteFeaturesFromLayerUrl($layerUrl, $objectIds, $arcgis->getToken())
-            : $arcgis->deleteFeatures($objectIds, $arcgis->getLayerId(HousingUnit::class), $arcgis->getToken());
+        if ($sourceObjectIds !== []) {
+            $results['source'] = filled($sourceLayerUrl)
+                ? $arcgis->deleteFeaturesFromLayerUrl($sourceLayerUrl, $sourceObjectIds, $token)
+                : $arcgis->deleteFeatures($sourceObjectIds, $arcgis->getLayerId(HousingUnit::class), $token);
+        }
+
+        $targetLayerUrl = $this->targetHousingUnitsLayerUrl();
+
+        if ($targetLayerUrl !== null && $targetObjectIds !== []) {
+            $results['target'] = $arcgis->deleteFeaturesFromLayerUrl($targetLayerUrl, $targetObjectIds, $token);
+        }
+
+        if ($results === []) {
+            return [
+                'success' => false,
+                'message' => 'Missing ArcGIS object ids.',
+            ];
+        }
+
+        $failedResults = collect($results)
+            ->filter(fn (array $result): bool => ! ($result['success'] ?? false))
+            ->all();
+
+        return [
+            'success' => $failedResults === [],
+            'message' => $failedResults === [] ? 'Features deleted.' : collect($failedResults)->pluck('message')->filter()->implode(' | '),
+            'response' => $results,
+        ];
+    }
+
+    private function targetHousingUnitsLayerUrl(): ?string
+    {
+        $targetService = (string) config('services.arcgis.target_service', '');
+
+        if (! filled($targetService)) {
+            return null;
+        }
+
+        return rtrim($targetService, '/').'/'.config('services.arcgis.target_units_layer', 1);
     }
 
     private function deleteBuildingsFromArcgis(ArcgisService $arcgis, array $objectIds): array
@@ -3940,7 +3988,7 @@ class auditController extends Controller
     }
 
     /**
-     * @return array{deleted: int, archived: int}
+     * @return array{deleted: int, deleted_audited: int, archived: int}
      */
     private function deleteHousingUnitsFromDatabase(array $globalIds, array $objectIds, int $archivedBy): array
     {
@@ -3990,6 +4038,12 @@ class auditController extends Controller
                     ->delete();
             }
 
+            $deletedAudited = $existingGlobalIds === []
+                ? 0
+                : AuditedHousingUnit::query()
+                    ->whereIn('globalid', $existingGlobalIds)
+                    ->delete();
+
             if ($unitIds !== []) {
                 CommitteeDecision::query()
                     ->where('decisionable_type', HousingUnit::class)
@@ -4004,6 +4058,7 @@ class auditController extends Controller
 
             return [
                 'deleted' => $deleted,
+                'deleted_audited' => $deletedAudited,
                 'archived' => $archived,
             ];
         });
