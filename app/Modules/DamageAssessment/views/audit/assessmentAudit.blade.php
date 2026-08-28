@@ -637,6 +637,48 @@
             padding: 1rem !important;
         }
 
+        .audit-attachment-preview-counter {
+            color: rgba(255, 255, 255, .72);
+            font-weight: 800;
+            min-width: 56px;
+            text-align: center;
+        }
+
+        .audit-attachment-nav {
+            align-items: center;
+            background: rgba(255, 255, 255, .1);
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            height: 44px;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: background .2s ease, opacity .2s ease;
+            width: 44px;
+            z-index: 2;
+        }
+
+        .audit-attachment-nav:hover {
+            background: rgba(255, 255, 255, .18);
+            color: #fff;
+        }
+
+        .audit-attachment-nav:disabled {
+            cursor: not-allowed;
+            opacity: .35;
+        }
+
+        .audit-attachment-nav-prev {
+            inset-inline-start: 1rem;
+        }
+
+        .audit-attachment-nav-next {
+            inset-inline-end: 1rem;
+        }
+
         .audit-attachment-preview-image {
             display: block;
             max-height: calc(90vh - 104px);
@@ -1225,6 +1267,7 @@
                 <div class="modal-header">
                     <h3 class="modal-title fw-bold">معاينة المرفق</h3>
                     <div class="d-flex align-items-center gap-2">
+                        <span class="audit-attachment-preview-counter" id="attachmentPreviewCounter">1 / 1</span>
                         <a href="#" target="_blank" class="btn btn-sm attachment-preview-open-original" id="attachmentPreviewOpenOriginal">
                             فتح الأصل
                         </a>
@@ -1233,7 +1276,13 @@
                 </div>
 
                 <div class="modal-body p-0">
+                    <button type="button" class="audit-attachment-nav audit-attachment-nav-prev" id="attachmentPreviewPrev">
+                        ‹
+                    </button>
                     <img src="" alt="معاينة المرفق" class="audit-attachment-preview-image" id="attachmentPreviewImage">
+                    <button type="button" class="audit-attachment-nav audit-attachment-nav-next" id="attachmentPreviewNext">
+                        ›
+                    </button>
                 </div>
             </div>
         </div>
@@ -1653,15 +1702,76 @@
                 .html(html || '<div class="text-muted text-center py-4">لا توجد مرفقات</div>');
         }
 
+        let attachmentPreviewItems = [];
+        let attachmentPreviewIndex = 0;
+
+        function collectAttachmentPreviewItems(clickedLink) {
+            return clickedLink
+                .closest('.audit-attachments-panel')
+                .find('.js-attachment-preview')
+                .map(function () {
+                    let link = $(this);
+                    let previewSrc = link.data('preview-src') || link.attr('href');
+                    let originalSrc = link.data('original-src') || previewSrc;
+
+                    return {
+                        previewSrc: previewSrc,
+                        originalSrc: originalSrc
+                    };
+                })
+                .get()
+                .filter(item => item.previewSrc);
+        }
+
+        function showAttachmentPreview(index) {
+            if (!attachmentPreviewItems.length) {
+                return;
+            }
+
+            attachmentPreviewIndex = Math.max(0, Math.min(index, attachmentPreviewItems.length - 1));
+
+            let item = attachmentPreviewItems[attachmentPreviewIndex];
+            let hasMultiple = attachmentPreviewItems.length > 1;
+
+            $('#attachmentPreviewImage').attr('src', item.previewSrc);
+            $('#attachmentPreviewOpenOriginal').attr('href', item.originalSrc);
+            $('#attachmentPreviewCounter').text((attachmentPreviewIndex + 1) + ' / ' + attachmentPreviewItems.length);
+            $('#attachmentPreviewPrev').prop('disabled', !hasMultiple || attachmentPreviewIndex === 0);
+            $('#attachmentPreviewNext').prop('disabled', !hasMultiple || attachmentPreviewIndex === attachmentPreviewItems.length - 1);
+        }
+
         $(document).on('click', '.js-attachment-preview', function (event) {
             event.preventDefault();
 
-            let previewSrc = $(this).data('preview-src') || $(this).attr('href');
-            let originalSrc = $(this).data('original-src') || previewSrc;
+            let clickedLink = $(this);
 
-            $('#attachmentPreviewImage').attr('src', previewSrc);
-            $('#attachmentPreviewOpenOriginal').attr('href', originalSrc);
+            attachmentPreviewItems = collectAttachmentPreviewItems(clickedLink);
+            attachmentPreviewIndex = clickedLink.closest('.audit-attachments-panel').find('.js-attachment-preview').index(this);
+
+            showAttachmentPreview(attachmentPreviewIndex);
             $('#attachmentPreviewModal').modal('show');
+        });
+
+        $('#attachmentPreviewPrev').on('click', function () {
+            showAttachmentPreview(attachmentPreviewIndex - 1);
+        });
+
+        $('#attachmentPreviewNext').on('click', function () {
+            showAttachmentPreview(attachmentPreviewIndex + 1);
+        });
+
+        $(document).on('keydown', function (event) {
+            if (!$('#attachmentPreviewModal').hasClass('show')) {
+                return;
+            }
+
+            if (event.key === 'ArrowLeft') {
+                showAttachmentPreview(attachmentPreviewIndex - 1);
+            }
+
+            if (event.key === 'ArrowRight') {
+                showAttachmentPreview(attachmentPreviewIndex + 1);
+            }
         });
 
         function plainAuditAnswer(row) {
