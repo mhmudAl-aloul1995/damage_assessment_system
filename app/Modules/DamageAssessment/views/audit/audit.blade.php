@@ -178,6 +178,41 @@
 			justify-content: center !important;
 		}
 
+		.audit-main-toolbar {
+			align-items: center;
+			display: flex;
+			flex-wrap: wrap;
+			gap: .6rem;
+			justify-content: flex-end;
+		}
+
+		.audit-main-toolbar .btn {
+			white-space: nowrap;
+		}
+
+		.audit-toolbar-menu {
+			min-width: 230px;
+			padding: .45rem;
+		}
+
+		.audit-toolbar-menu .dropdown-item {
+			align-items: center;
+			border-radius: .475rem;
+			display: flex;
+			gap: .5rem;
+			justify-content: space-between;
+			padding: .65rem .8rem;
+			text-align: start;
+			white-space: normal;
+		}
+
+		.audit-toolbar-menu .dropdown-header {
+			color: var(--bs-gray-600);
+			font-size: .72rem;
+			font-weight: 800;
+			padding: .35rem .8rem .55rem;
+		}
+
 		#kt_datatable_audits .btn {
 			padding: 0.35rem 0.45rem;
 			font-size: .95rem;
@@ -472,71 +507,123 @@
 								placeholder="{{ __('ui.audit.search_buildings') }}" />
 						</div>
 					</div>
-					<div class="card-toolbar gap-3 flex-wrap justify-content-end">
-						@if($canManageAuditReviewers ?? false)
-						<button type="button" class="btn btn-light-primary btn-sm" data-bs-toggle="modal"
-							data-bs-target="#auditReviewersModal">
-							Audit Reviewers <i class="ki-duotone ki-profile-user"></i>
+					<div class="card-toolbar audit-main-toolbar">
+						<button onclick="refreshTable(this)" class="btn btn-icon btn-light-success btn-sm" title="{{ __('ui.audit.refresh') }}">
+							<i class="ki-duotone ki-update-file fs-2"></i>
 						</button>
-						@endif
-						@if(! $isFieldEngineerAudit)
-						<button type="button" class="btn btn-light-success btn-sm" data-bs-toggle="modal"
-							data-bs-target="#auditExportModal">
-							تصدير Excel <i class="ki-duotone ki-file-down"></i>
-						</button>
-						@endif
-						<button onclick="refreshTable(this)" class="btn btn-success btn-sm">
-							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-update-file"></i>
-						</button>
-						@if(! $isFieldEngineerAudit)
-						<button type="button" id="toggle_accepted_with_unevaluated_units" class="btn btn-light-danger btn-sm"
-							data-filter-active="false">
-							مقبول وبداخله وحدات غير مقيمة
-							<i class="ki-duotone ki-information-5"></i>
-						</button>
-						<button type="button" id="toggle_floor_area_mismatch" class="btn btn-light-warning btn-sm"
-							data-filter-active="false">
-							مخالف لمساحات الطوابق
-							<i class="ki-duotone ki-chart-line-down"></i>
-						</button>
-						<button type="button" id="export_floor_area_mismatch" class="btn btn-light-success btn-sm">
-							تصدير مخالفات المساحات Excel
-							<i class="ki-duotone ki-file-down"></i>
-						</button>
-						<button type="button" id="btn_engineer_change_log" class="btn btn-light-info btn-sm">
-							تغييرات مهندسي التدقيق
-							<i class="ki-duotone ki-notepad-edit"></i>
-						</button>
-						@endif
-						@if(! $isFieldEngineerAudit && ! $hideAuditManagementActions)
-						<button type="button" id="toggle_select_column" class="btn btn-light-primary btn-sm"
-							data-select-visible="false">
-							إظهار التحديد <i class="ki-duotone ki-check-square"></i>
-						</button>
-						@endif
+
 						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
 							<button id="btn_final_approve" class="btn btn-warning btn-sm">
 								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
 							</button>
-
-							@hasanyrole('Database Officer|undp-Project Manager')
-							<button id="btn_undp_final_approve" class="btn btn-light-primary btn-sm">
-								UNDP Final Approve <i class="ki-duotone ki-check-circle"></i>
-							</button>
-							@endhasanyrole
-
-							<button id="btn_assign_to_lawyer" class="btn btn-primary btn-sm">
-								{{ __('ui.audit.assign_to_lawyer') }} <i class="ki-duotone ki-plus"></i>
-							</button>
-
-							<button id="btn_assign_to_engineer" class="btn btn-info btn-sm">
-								{{ __('ui.audit.assign_to_engineer') }} <i class="ki-duotone ki-plus"></i>
-							</button>
-							<button id="btn_import_final_approve" class="btn btn-dark btn-sm">
-								ObjectIDs Final Approve
-								<i class="ki-duotone ki-file-up"></i>
-							</button>
 						@endunless
+
+						@if(! $isFieldEngineerAudit)
+							<div class="dropdown">
+								<button type="button" class="btn btn-light-success btn-sm dropdown-toggle"
+									data-bs-toggle="dropdown" aria-expanded="false">
+									التقارير والتصفية
+								</button>
+								<div class="dropdown-menu dropdown-menu-end audit-toolbar-menu">
+									<div class="dropdown-header">التقارير</div>
+									<button type="button" class="dropdown-item" data-bs-toggle="modal"
+										data-bs-target="#auditExportModal">
+										<span>تصدير Excel</span>
+										<i class="ki-duotone ki-file-down"></i>
+									</button>
+									<button type="button" id="export_floor_area_mismatch" class="dropdown-item">
+										<span>تصدير مخالفات المساحات Excel</span>
+										<i class="ki-duotone ki-file-down"></i>
+									</button>
+									<div class="dropdown-divider"></div>
+									<div class="dropdown-header">فلاتر سريعة</div>
+									<button type="button" id="toggle_accepted_with_unevaluated_units" class="dropdown-item"
+										data-filter-active="false">
+										<span>مقبول وبداخله وحدات غير مقيمة</span>
+										<i class="ki-duotone ki-information-5"></i>
+									</button>
+									<button type="button" id="toggle_floor_area_mismatch" class="dropdown-item"
+										data-filter-active="false">
+										<span>مخالف لمساحات الطوابق</span>
+										<i class="ki-duotone ki-chart-line-down"></i>
+									</button>
+								</div>
+							</div>
+						@endif
+
+						@if(($canManageAuditReviewers ?? false) || (! auth()->user()->hasRole('Area Manager') && ! $hideAuditManagementActions))
+							<div class="dropdown">
+								<button type="button" class="btn btn-light-primary btn-sm dropdown-toggle"
+									data-bs-toggle="dropdown" aria-expanded="false">
+									التعيينات
+								</button>
+								<div class="dropdown-menu dropdown-menu-end audit-toolbar-menu">
+									<div class="dropdown-header">إدارة الفريق</div>
+									@if($canManageAuditReviewers ?? false)
+										<button type="button" class="dropdown-item" data-bs-toggle="modal"
+											data-bs-target="#auditReviewersModal">
+											<span>Audit Reviewers</span>
+											<i class="ki-duotone ki-profile-user"></i>
+										</button>
+									@endif
+									@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
+										<button id="btn_assign_to_lawyer" class="dropdown-item">
+											<span>{{ __('ui.audit.assign_to_lawyer') }}</span>
+											<i class="ki-duotone ki-plus"></i>
+										</button>
+										<button id="btn_assign_to_engineer" class="dropdown-item">
+											<span>{{ __('ui.audit.assign_to_engineer') }}</span>
+											<i class="ki-duotone ki-plus"></i>
+										</button>
+									@endunless
+								</div>
+							</div>
+						@endif
+
+						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
+							<div class="dropdown">
+								<button type="button" class="btn btn-light-warning btn-sm dropdown-toggle"
+									data-bs-toggle="dropdown" aria-expanded="false">
+									اعتمادات إضافية
+								</button>
+								<div class="dropdown-menu dropdown-menu-end audit-toolbar-menu">
+									<div class="dropdown-header">اعتماد جماعي</div>
+									@hasanyrole('Database Officer|undp-Project Manager')
+										<button id="btn_undp_final_approve" class="dropdown-item">
+											<span>UNDP Final Approve</span>
+											<i class="ki-duotone ki-check-circle"></i>
+										</button>
+									@endhasanyrole
+									<button id="btn_import_final_approve" class="dropdown-item">
+										<span>ObjectIDs Final Approve</span>
+										<i class="ki-duotone ki-file-up"></i>
+									</button>
+								</div>
+							</div>
+						@endunless
+
+						@if(! $isFieldEngineerAudit)
+							<div class="dropdown">
+								<button type="button" class="btn btn-light-info btn-sm dropdown-toggle"
+									data-bs-toggle="dropdown" aria-expanded="false">
+									العرض والسجلات
+								</button>
+								<div class="dropdown-menu dropdown-menu-end audit-toolbar-menu">
+									<div class="dropdown-header">أدوات العرض</div>
+									@if(! $hideAuditManagementActions)
+										<button type="button" id="toggle_select_column" class="dropdown-item"
+											data-select-visible="false">
+											<span>إظهار التحديد</span>
+											<i class="ki-duotone ki-check-square"></i>
+										</button>
+									@endif
+									<button type="button" id="btn_engineer_change_log" class="dropdown-item">
+										<span>تغييرات مهندسي التدقيق</span>
+										<i class="ki-duotone ki-notepad-edit"></i>
+									</button>
+								</div>
+							</div>
+						@endif
 					</div>
 				</div>
 
