@@ -595,6 +595,27 @@
             width: 100% !important;
         }
 
+        .audit-attachment-hover-preview {
+            background: #0b1020;
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: .85rem;
+            box-shadow: 0 1rem 3rem rgba(15, 23, 42, .28);
+            display: none;
+            max-width: min(360px, 40vw);
+            padding: .5rem;
+            pointer-events: none;
+            position: fixed;
+            z-index: 1085;
+        }
+
+        .audit-attachment-hover-preview img {
+            border-radius: .6rem;
+            display: block;
+            max-height: min(420px, 56vh);
+            max-width: 100%;
+            object-fit: contain;
+        }
+
         .audit-attachment-preview-modal .modal-dialog {
             max-width: min(1180px, 96vw);
         }
@@ -1261,6 +1282,10 @@
         </div>
     </div>
 
+    <div class="audit-attachment-hover-preview" id="attachmentHoverPreview">
+        <img src="" alt="معاينة سريعة للمرفق" id="attachmentHoverPreviewImage">
+    </div>
+
     <div class="modal fade audit-attachment-preview-modal" id="attachmentPreviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1740,6 +1765,48 @@
             $('#attachmentPreviewNext').prop('disabled', !hasMultiple || attachmentPreviewIndex === attachmentPreviewItems.length - 1);
         }
 
+        function positionAttachmentHoverPreview(event) {
+            let preview = $('#attachmentHoverPreview');
+            let offset = 18;
+            let left = event.clientX + offset;
+            let top = event.clientY + offset;
+            let previewWidth = preview.outerWidth();
+            let previewHeight = preview.outerHeight();
+
+            if (left + previewWidth > window.innerWidth - offset) {
+                left = event.clientX - previewWidth - offset;
+            }
+
+            if (top + previewHeight > window.innerHeight - offset) {
+                top = window.innerHeight - previewHeight - offset;
+            }
+
+            preview.css({
+                left: Math.max(offset, left),
+                top: Math.max(offset, top)
+            });
+        }
+
+        $(document).on('mouseenter', '.js-attachment-preview', function (event) {
+            let previewSrc = $(this).data('preview-src') || $(this).attr('href');
+
+            if (!previewSrc) {
+                return;
+            }
+
+            $('#attachmentHoverPreviewImage').attr('src', previewSrc);
+            $('#attachmentHoverPreview').show();
+            positionAttachmentHoverPreview(event);
+        });
+
+        $(document).on('mousemove', '.js-attachment-preview', function (event) {
+            positionAttachmentHoverPreview(event);
+        });
+
+        $(document).on('mouseleave', '.js-attachment-preview', function () {
+            $('#attachmentHoverPreview').hide();
+        });
+
         $(document).on('click', '.js-attachment-preview', function (event) {
             event.preventDefault();
 
@@ -1749,6 +1816,7 @@
             attachmentPreviewIndex = clickedLink.closest('.audit-attachments-panel').find('.js-attachment-preview').index(this);
 
             showAttachmentPreview(attachmentPreviewIndex);
+            $('#attachmentHoverPreview').hide();
             $('#attachmentPreviewModal').modal('show');
         });
 
