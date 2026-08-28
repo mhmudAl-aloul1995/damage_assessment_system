@@ -1566,18 +1566,6 @@ class DamageAssessmentController extends Controller
             </div>
         ';
 
-                $modalHistoryButton = '
-            <div class="mt-2">
-                <button class="btn btn-sm btn-light-info js-assessment-history"
-                        type="button"
-                        data-global-id="'.e($globalid).'"
-                        data-type="'.e($type).'"
-                        data-field-name="'.e($row->name).'">
-                    عرض سجل التعديلات
-                </button>
-            </div>
-        ';
-
                 return '
             <div class="audit-edit-card audit-existing-edit-card">
                 <div class="mb-2">
@@ -1600,7 +1588,7 @@ class DamageAssessmentController extends Controller
                     <span class="text-gray-600">'.e($editedAt ?? '-').'</span>
                 </div>
 
-                '.$modalHistoryButton.$historyHtml.'
+                '.$historyHtml.'
             </div>
         ';
             })

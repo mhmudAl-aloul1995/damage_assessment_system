@@ -3171,6 +3171,9 @@
         }
 
         function renderEditCard(originalText, displayValue, userName, updatedAt, type, globalid, field, history) {
+            let collapseId = editHistoryCollapseId(type, globalid, field);
+            let historyCount = Array.isArray(history) ? history.length : 0;
+
             return `
                                                                                                                                                     <div class="audit-edit-card">
                                                                                                                                                         <div class="audit-label">الأصل</div>
@@ -3184,6 +3187,17 @@
 
                                                                                                                                                         <div class="audit-label text-primary mt-3">وقت التعديل</div>
                                                                                                                                                         <div>${escapeHtml(updatedAt)}</div>
+
+                                                                                                                                                        <button type="button"
+                                                                                                                                                                class="btn btn-sm btn-light-primary mt-4"
+                                                                                                                                                                data-bs-toggle="collapse"
+                                                                                                                                                                data-bs-target="#${collapseId}">
+                                                                                                                                                            عرض سجل التعديلات (${historyCount})
+                                                                                                                                                        </button>
+
+                                                                                                                                                        <div class="collapse mt-3" id="${collapseId}">
+                                                                                                                                                            ${renderEditHistoryItems(history)}
+                                                                                                                                                        </div>
                                                                                                                                                     </div>
                                                                                                                                                 `;
         }
