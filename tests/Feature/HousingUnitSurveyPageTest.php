@@ -457,6 +457,7 @@ it('shows housing unit excel and pdf export links in the row actions menu', func
         'globalid' => 'housing-unit-actions-export',
         'parentglobalid' => 'building-actions-export',
         'housing_unit_number' => '51',
+        'security_situation_unit' => 'yes',
     ]);
 
     $response = $this->actingAs($user)->get('/damage-assessment/housing/show?'.http_build_query([
@@ -468,6 +469,8 @@ it('shows housing unit excel and pdf export links in the row actions menu', func
     $response->assertOk();
 
     $actionHtml = $response->json('data.0.action');
+
+    expect($response->json('data.0.security_situation_unit'))->toContain('Yes');
 
     expect($actionHtml)
         ->toContain('الاستبيان المدقق')

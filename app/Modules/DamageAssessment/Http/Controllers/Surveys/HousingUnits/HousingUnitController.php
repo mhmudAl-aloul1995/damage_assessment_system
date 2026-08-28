@@ -87,6 +87,7 @@ class HousingUnitController extends Controller
                 'parentglobalid',
                 'housing_unit_type',
                 'unit_damage_status',
+                'security_situation_unit',
                 'floor_number',
                 'housing_unit_number',
                 'unit_direction',
@@ -151,6 +152,17 @@ class HousingUnitController extends Controller
                     'no_damaged' => 'No Damage',
                 ]);
             })
+            ->editColumn('security_situation_unit', function (AuditedHousingUnit $housingUnit): string {
+                return $this->statusBadge($housingUnit->security_situation_unit, [
+                    'yes' => 'warning',
+                    'unsafe' => 'warning',
+                    'no' => 'secondary',
+                ], [
+                    'yes' => 'Yes',
+                    'unsafe' => 'Unsafe',
+                    'no' => 'No',
+                ]);
+            })
             ->addColumn('support_summary', function (AuditedHousingUnit $housingUnit): string {
                 $items = collect([
                     $housingUnit->unit_support_needed === 'yes' ? __('ui.housing_page.support_needed') : null,
@@ -195,7 +207,7 @@ class HousingUnitController extends Controller
 															</div>';
             })
             ->setRowId('globalid')
-            ->rawColumns(['action', 'id', 'unit_damage_status', 'support_summary'])
+            ->rawColumns(['action', 'id', 'unit_damage_status', 'security_situation_unit', 'support_summary'])
             ->make(true);
     }
 
