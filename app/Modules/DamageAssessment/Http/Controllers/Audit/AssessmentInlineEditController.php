@@ -3,6 +3,7 @@
 namespace App\Modules\DamageAssessment\Http\Controllers\Audit;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkAssessmentInlineEditRequest;
 use App\Models\AssessmentEditHistory;
 use App\Models\AssignedAssessmentUser;
 use App\Models\Building;
@@ -10,8 +11,10 @@ use App\Models\HousingUnit;
 use App\Models\User;
 use App\Services\AssessmentEditService;
 use App\Support\Audit\RestrictedLawyerAuditAccess;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
 class AssessmentInlineEditController extends Controller
 {
@@ -98,6 +101,82 @@ class AssessmentInlineEditController extends Controller
             'user_name' => $edit->user?->name ?? '-',
             'updated_at' => $edit->updated_at?->format('Y-m-d h:i A'),
             'history' => $this->historyRows($request->type, $request->globalid, $request->field),
+        ]);
+    }
+
+    public function bulkUpdate(BulkAssessmentInlineEditRequest $request, AssessmentEditService $assessmentEditService): JsonResponse
+    {
+        $this->abortIfBulkEditForbidden($request);
+
+        $type = (string) $request->input('type');
+        $field = (string) $request->input('field');
+        $value = $request->input('value');
+        $objectIds = $request->objectIds();
+        $modelClass = $type === 'building_table'
+            ? Building::class
+            : HousingUnit::class;
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Building|HousingUnit> $records */
+        $records = $modelClass::query()
+            ->whereIn('objectid', $objectIds)
+            ->get();
+
+        $foundObjectIds = $records
+            ->pluck('objectid')
+            ->map(fn (mixed $objectId): int => (int) $objectId)
+            ->all();
+
+        $missingObjectIds = collect($objectIds)
+            ->diff($foundObjectIds)
+            ->values()
+            ->all();
+
+        $updated = 0;
+        $unchanged = 0;
+        $deniedObjectIds = [];
+        $failed = [];
+
+        foreach ($records as $record) {
+            if (! $this->canBulkEditRecord($request->user(), $type, $record)) {
+                $deniedObjectIds[] = (int) $record->objectid;
+
+                continue;
+            }
+
+            try {
+                $result = $assessmentEditService->save(
+                    $type,
+                    (string) $record->globalid,
+                    $field,
+                    $value,
+                    $request
+                );
+
+                if ($result['changed']) {
+                    $updated++;
+                } else {
+                    $unchanged++;
+                }
+            } catch (Throwable $throwable) {
+                report($throwable);
+
+                $failed[] = [
+                    'objectid' => (int) $record->objectid,
+                    'message' => $throwable->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json([
+            'status' => $failed === [] && $deniedObjectIds === [],
+            'message' => 'تم تنفيذ التعديل الجماعي.',
+            'requested_count' => count($objectIds),
+            'found_count' => $records->count(),
+            'updated_count' => $updated,
+            'unchanged_count' => $unchanged,
+            'missing_objectids' => $missingObjectIds,
+            'denied_objectids' => $deniedObjectIds,
+            'failed' => $failed,
         ]);
     }
 
@@ -202,6 +281,34 @@ class AssessmentInlineEditController extends Controller
             ->where('user_id', $user->id)
             ->whereIn('type', $assignmentTypes)
             ->exists();
+    }
+
+    private function abortIfBulkEditForbidden(Request $request): void
+    {
+        if (RestrictedLawyerAuditAccess::isRestrictedLawyer($request->user())) {
+            abort(403, 'هذا الحساب مخصص للعرض فقط ولا يمكنه تعديل التدقيق أو إضافة ملاحظات.');
+        }
+
+        if ($request->user()?->hasRole('Team Leader')) {
+            abort(403, 'This assessment is read only.');
+        }
+    }
+
+    private function canBulkEditRecord(?User $user, string $type, Model $record): bool
+    {
+        if (! $user instanceof User) {
+            return false;
+        }
+
+        if (! $user->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+            return true;
+        }
+
+        $building = $type === 'building_table'
+            ? $record
+            : Building::query()->where('globalid', $record->getAttribute('parentglobalid'))->first();
+
+        return $building instanceof Building && $this->canEditAssessmentForBuilding($user, $building);
     }
 
     private function hasTemporaryStatusAssignmentException(User $user): bool

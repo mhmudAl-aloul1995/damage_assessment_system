@@ -368,6 +368,8 @@ Route::middleware('auth')->group(function () {
         ->name('audit.building.undpFinalApprove');
     Route::post('/assessment/inline-update', [AssessmentInlineEditController::class, 'update'])
         ->name('assessment.inline.update');
+    Route::post('/assessment/inline-bulk-update', [AssessmentInlineEditController::class, 'bulkUpdate'])
+        ->name('assessment.inline.bulkUpdate');
     Route::get('/assessment/inline-history', [AssessmentInlineEditController::class, 'history'])
         ->name('assessment.inline.history');
 

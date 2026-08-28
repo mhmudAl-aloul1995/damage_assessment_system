@@ -1,6 +1,14 @@
 @extends('layouts.app')
 @php
 	$isFieldEngineerAudit = $isFieldEngineerAudit ?? false;
+	$bulkEditableBuildingFields = $assessments
+		->filter(fn ($assessment) => filled($assessment->name) && \Illuminate\Support\Facades\Schema::hasColumn('buildings', $assessment->name))
+		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
+		->values();
+	$bulkEditableHousingFields = $assessments
+		->filter(fn ($assessment) => filled($assessment->name) && \Illuminate\Support\Facades\Schema::hasColumn('housing_units', $assessment->name))
+		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
+		->values();
 @endphp
 @section('title', $isFieldEngineerAudit ? 'مباني المهندس الميداني' : __('ui.audit.title'))
 @section('pageName', $isFieldEngineerAudit ? 'مباني المهندس الميداني' : __('ui.audit.title'))
@@ -581,6 +589,11 @@
 						@endif
 
 						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
+							<button type="button" class="btn btn-light-primary btn-sm" data-bs-toggle="modal"
+								data-bs-target="#bulkInlineEditModal">
+								تعديل جماعي <i class="ki-duotone ki-notepad-edit"></i>
+							</button>
+
 							<div class="dropdown">
 								<button type="button" class="btn btn-light-warning btn-sm dropdown-toggle"
 									data-bs-toggle="dropdown" aria-expanded="false">
@@ -744,6 +757,81 @@
 		</div>
 	</div>
 	@endif
+	<div class="modal fade" id="bulkInlineEditModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered mw-lg-800px">
+			<div class="modal-content">
+				<form id="bulk_inline_edit_form">
+					@csrf
+					<div class="modal-header">
+						<h2 class="fw-bold">تعديل جماعي</h2>
+						<div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
+							<i class="ki-duotone ki-cross fs-1"></i>
+						</div>
+					</div>
+
+					<div class="modal-body py-8 px-lg-10">
+						<div class="row g-5">
+							<div class="col-md-6">
+								<label class="required form-label fw-semibold">نوع السجلات</label>
+								<select name="type" id="bulk_inline_type" class="form-select form-select-solid"
+									data-control="select2" data-dropdown-parent="#bulkInlineEditModal">
+									<option value="building_table">مباني</option>
+									<option value="housing_table">وحدات</option>
+								</select>
+							</div>
+
+							<div class="col-md-6">
+								<label class="required form-label fw-semibold">الحقل</label>
+								<select name="field" id="bulk_inline_field" class="form-select form-select-solid"
+									data-control="select2" data-dropdown-parent="#bulkInlineEditModal"
+									data-placeholder="اختر الحقل">
+									<option></option>
+									@foreach($bulkEditableBuildingFields as $assessment)
+										<option value="{{ $assessment->name }}" data-type="building_table">
+											{{ $assessment->hint ?: $assessment->label ?: $assessment->name }}
+											- {{ $assessment->name }}
+										</option>
+									@endforeach
+									@foreach($bulkEditableHousingFields as $assessment)
+										<option value="{{ $assessment->name }}" data-type="housing_table">
+											{{ $assessment->hint ?: $assessment->label ?: $assessment->name }}
+											- {{ $assessment->name }}
+										</option>
+									@endforeach
+								</select>
+							</div>
+
+							<div class="col-12">
+								<label class="required form-label fw-semibold">ObjectIDs</label>
+								<textarea name="objectids_text" id="bulk_inline_objectids" rows="7"
+									class="form-control form-control-solid"
+									placeholder="الصق ObjectID لكل سطر، أو افصل بينها بفواصل"></textarea>
+								<div class="form-text">يمكن إدخال القيم كسطور منفصلة أو مفصولة بفواصل.</div>
+							</div>
+
+							<div class="col-12">
+								<label class="form-label fw-semibold">القيمة الجديدة</label>
+								<textarea name="value" id="bulk_inline_value" rows="3" class="form-control form-control-solid"
+									placeholder="اكتب القيمة التي ستظهر كآخر تعديل"></textarea>
+							</div>
+						</div>
+
+						<div id="bulk_inline_result" class="alert alert-light-primary d-none mt-6 mb-0"></div>
+					</div>
+
+					<div class="modal-footer">
+						<button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('ui.buttons.cancel') }}</button>
+						<button type="submit" class="btn btn-primary" id="bulk_inline_submit">
+							<span class="indicator-label">تنفيذ التعديل</span>
+							<span class="indicator-progress">جاري التنفيذ...
+								<span class="spinner-border spinner-border-sm align-middle ms-2"></span>
+							</span>
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 	<div class="modal fade" id="kt_modal_assign" tabindex="-1" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered mw-650px">
 			<div class="modal-content">
@@ -1907,6 +1995,64 @@
 			const escapeAuditCell = function (value) {
 				return $('<div>').text(value ?? '-').html();
 			};
+			const parseBulkObjectIds = function (value) {
+				return [...new Set(String(value || '')
+					.split(/[\s,;،]+/)
+					.map(item => item.trim())
+					.filter(item => /^\d+$/.test(item)))];
+			};
+			const syncBulkInlineFieldOptions = function () {
+				const type = $('#bulk_inline_type').val();
+				const selected = $('#bulk_inline_field').val();
+
+				$('#bulk_inline_field option').each(function () {
+					const option = $(this);
+					const optionType = option.data('type');
+
+					if (!option.val()) {
+						return;
+					}
+
+					const isVisible = optionType === type;
+					option.prop('disabled', !isVisible).toggle(isVisible);
+				});
+
+				if (selected && $('#bulk_inline_field option:selected').prop('disabled')) {
+					$('#bulk_inline_field').val(null);
+				}
+
+				$('#bulk_inline_field').trigger('change.select2');
+			};
+			const renderBulkInlineResult = function (response) {
+				const missing = response.missing_objectids || [];
+				const denied = response.denied_objectids || [];
+				const failed = response.failed || [];
+				let html = `
+					<div class="fw-bold mb-2">${escapeAuditCell(response.message || 'تم تنفيذ التعديل الجماعي.')}</div>
+					<div>المطلوب: ${escapeAuditCell(response.requested_count)}</div>
+					<div>الموجود: ${escapeAuditCell(response.found_count)}</div>
+					<div>تم التعديل: ${escapeAuditCell(response.updated_count)}</div>
+					<div>بدون تغيير: ${escapeAuditCell(response.unchanged_count)}</div>
+				`;
+
+				if (missing.length) {
+					html += `<div class="mt-2 text-warning">غير موجود: ${escapeAuditCell(missing.join(', '))}</div>`;
+				}
+
+				if (denied.length) {
+					html += `<div class="mt-2 text-danger">لا تملك صلاحية تعديلها: ${escapeAuditCell(denied.join(', '))}</div>`;
+				}
+
+				if (failed.length) {
+					html += `<div class="mt-2 text-danger">فشل: ${escapeAuditCell(failed.map(item => item.objectid).join(', '))}</div>`;
+				}
+
+				$('#bulk_inline_result')
+					.toggleClass('alert-light-primary', failed.length === 0 && denied.length === 0)
+					.toggleClass('alert-light-warning', failed.length > 0 || denied.length > 0)
+					.removeClass('d-none')
+					.html(html);
+			};
 			const renderAuditTextCell = function (data) {
 				return `<span class="audit-cell-text">${escapeAuditCell(data)}</span>`;
 			};
@@ -2674,6 +2820,81 @@
 				$("[type='checkbox']").prop('checked', false);
 				button.attr('data-select-visible', shouldShow ? 'true' : 'false');
 				button.html((shouldShow ? 'إخفاء التحديد' : 'إظهار التحديد') + ' <i class="ki-duotone ki-check-square"></i>');
+			});
+
+			$('#bulkInlineEditModal').on('shown.bs.modal', function () {
+				$('#bulk_inline_result').addClass('d-none').empty();
+				syncBulkInlineFieldOptions();
+			});
+
+			$('#bulk_inline_type').on('change', syncBulkInlineFieldOptions);
+
+			$('#bulk_inline_edit_form').on('submit', function (event) {
+				event.preventDefault();
+
+				const form = $(this);
+				const button = $('#bulk_inline_submit');
+				const objectIds = parseBulkObjectIds($('#bulk_inline_objectids').val());
+				const fieldLabel = $('#bulk_inline_field option:selected').text().trim();
+
+				if (!objectIds.length) {
+					Swal.fire({
+						text: 'يرجى إدخال ObjectID صحيح واحد على الأقل.',
+						icon: 'warning',
+						buttonsStyling: false,
+						confirmButtonText: @json(__('ui.buttons.ok')),
+						customClass: {
+							confirmButton: 'btn btn-primary'
+						}
+					});
+
+					return;
+				}
+
+				Swal.fire({
+					title: 'تأكيد التعديل الجماعي',
+					text: 'سيتم إضافة تعديل على ' + objectIds.length + ' سجل للحقل: ' + fieldLabel,
+					icon: 'question',
+					showCancelButton: true,
+					confirmButtonText: 'تنفيذ التعديل',
+					cancelButtonText: @json(__('ui.buttons.cancel')),
+					buttonsStyling: false,
+					customClass: {
+						confirmButton: 'btn btn-primary',
+						cancelButton: 'btn btn-light'
+					}
+				}).then(function (result) {
+					if (!result.isConfirmed) {
+						return;
+					}
+
+					button.attr('data-kt-indicator', 'on').prop('disabled', true);
+					$('#bulk_inline_result').addClass('d-none').empty();
+
+					$.ajax({
+						url: "{{ route('assessment.inline.bulkUpdate') }}",
+						type: 'POST',
+						data: form.serialize(),
+						success: function (response) {
+							renderBulkInlineResult(response);
+							table.ajax.reload(null, false);
+						},
+						error: function (xhr) {
+							const errors = xhr.responseJSON?.errors;
+							const message = errors
+								? Object.values(errors).flat().join(' ')
+								: (xhr.responseJSON?.message || 'تعذر تنفيذ التعديل الجماعي.');
+
+							$('#bulk_inline_result')
+								.removeClass('d-none alert-light-primary')
+								.addClass('alert-light-warning')
+								.html(escapeAuditCell(message));
+						},
+						complete: function () {
+							button.removeAttr('data-kt-indicator').prop('disabled', false);
+						}
+					});
+				});
 			});
 
 			$('#applyFilters').on('click', function () {

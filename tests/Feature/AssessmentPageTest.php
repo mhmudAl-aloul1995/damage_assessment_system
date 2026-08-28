@@ -227,6 +227,82 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     expect(Cache::get('damage_dashboard.stats_version'))->toBe(8);
 });
 
+it('stores bulk inline edits by pasted object ids for buildings and housing units', function () {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 17501,
+        'globalid' => 'bulk-inline-building',
+        'building_name' => 'Original Bulk Building',
+    ]);
+
+    $parentBuilding = Building::query()->create([
+        'objectid' => 17502,
+        'globalid' => 'bulk-inline-parent-building',
+        'building_name' => 'Parent Building',
+    ]);
+
+    $housing = HousingUnit::query()->create([
+        'objectid' => 17503,
+        'globalid' => 'bulk-inline-housing',
+        'parentglobalid' => $parentBuilding->globalid,
+        'unit_owner' => 'Original Unit Owner',
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.bulkUpdate'), [
+            'type' => 'building_table',
+            'objectids_text' => "17501\n999999",
+            'field' => 'building_name',
+            'value' => 'Bulk Building Name',
+        ])
+        ->assertOk()
+        ->assertJsonPath('requested_count', 2)
+        ->assertJsonPath('found_count', 1)
+        ->assertJsonPath('updated_count', 1)
+        ->assertJsonPath('missing_objectids.0', 999999);
+
+    $this->assertDatabaseHas('edit_assessments', [
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'field_value' => 'Bulk Building Name',
+        'user_id' => $user->id,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.bulkUpdate'), [
+            'type' => 'housing_table',
+            'objectids_text' => '17503',
+            'field' => 'unit_owner',
+            'value' => 'Bulk Unit Owner',
+        ])
+        ->assertOk()
+        ->assertJsonPath('requested_count', 1)
+        ->assertJsonPath('found_count', 1)
+        ->assertJsonPath('updated_count', 1);
+
+    $this->assertDatabaseHas('edit_assessments', [
+        'global_id' => $housing->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_owner',
+        'field_value' => 'Bulk Unit Owner',
+        'user_id' => $user->id,
+    ]);
+
+    $this->assertDatabaseHas('assessment_edit_histories', [
+        'global_id' => $housing->globalid,
+        'objectid' => $housing->objectid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_owner',
+        'new_value' => 'Bulk Unit Owner',
+        'edited_by' => $user->id,
+        'source' => 'manual',
+    ]);
+});
+
 it('returns a readable Arabic message when an inline audit edit has no value change', function () {
     $user = User::factory()->create();
 
