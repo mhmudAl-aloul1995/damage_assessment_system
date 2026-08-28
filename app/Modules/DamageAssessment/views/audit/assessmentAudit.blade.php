@@ -596,7 +596,7 @@
         }
 
         .audit-attachment-preview-modal .modal-dialog {
-            max-width: min(1100px, 94vw);
+            max-width: min(1180px, 96vw);
         }
 
         .audit-attachment-preview-modal .modal-content {
@@ -608,20 +608,41 @@
 
         .audit-attachment-preview-modal .modal-header {
             border-bottom: 1px solid rgba(255, 255, 255, .12);
+            padding: 1rem 1.25rem;
         }
 
-        .audit-attachment-preview-modal .modal-title,
-        .audit-attachment-preview-modal .btn-close,
-        .audit-attachment-preview-modal .btn {
+        .audit-attachment-preview-modal .modal-title {
             color: #fff;
         }
 
-        .audit-attachment-preview-image {
+        .audit-attachment-preview-modal .attachment-preview-open-original {
+            background: #fff;
+            border-color: #fff;
+            color: #111827 !important;
+            font-weight: 800;
+        }
+
+        .audit-attachment-preview-modal .attachment-preview-close {
+            background: rgba(255, 255, 255, .1);
+            border: 1px solid rgba(255, 255, 255, .18);
+            color: #fff !important;
+        }
+
+        .audit-attachment-preview-modal .modal-body {
+            align-items: center;
             background: #0b1020;
+            display: flex;
+            justify-content: center;
+            min-height: min(620px, 78vh);
+            padding: 1rem !important;
+        }
+
+        .audit-attachment-preview-image {
             display: block;
-            max-height: 78vh;
+            max-height: calc(90vh - 104px);
             object-fit: contain;
-            width: 100%;
+            width: auto;
+            max-width: 100%;
         }
 
         /* إلغاء الـ sticky في الجوال لضمان الظهور */
@@ -1204,10 +1225,10 @@
                 <div class="modal-header">
                     <h3 class="modal-title fw-bold">معاينة المرفق</h3>
                     <div class="d-flex align-items-center gap-2">
-                        <a href="#" target="_blank" class="btn btn-sm btn-light" id="attachmentPreviewOpenOriginal">
+                        <a href="#" target="_blank" class="btn btn-sm attachment-preview-open-original" id="attachmentPreviewOpenOriginal">
                             فتح الأصل
                         </a>
-                        <button type="button" class="btn btn-icon btn-sm btn-light" data-bs-dismiss="modal">✖</button>
+                        <button type="button" class="btn btn-icon btn-sm attachment-preview-close" data-bs-dismiss="modal">✖</button>
                     </div>
                 </div>
 
