@@ -234,6 +234,71 @@
 			padding: .35rem .8rem .55rem;
 		}
 
+		#bulkInlineEditModal .modal-dialog {
+			max-width: min(980px, 96vw);
+		}
+
+		.bulk-inline-field-option {
+			display: flex;
+			flex-direction: column;
+			gap: .2rem;
+			line-height: 1.35;
+			padding-block: .15rem;
+			text-align: start;
+		}
+
+		.bulk-inline-field-option__label {
+			color: #1f2937;
+			font-weight: 700;
+			white-space: normal;
+		}
+
+		.bulk-inline-field-option__meta {
+			align-items: center;
+			color: var(--bs-gray-600);
+			display: flex;
+			flex-wrap: wrap;
+			font-size: .76rem;
+			gap: .35rem;
+		}
+
+		.bulk-inline-field-option__code {
+			direction: ltr;
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+			unicode-bidi: plaintext;
+		}
+
+		.bulk-inline-field-option__kind {
+			background: var(--bs-light-primary);
+			border-radius: 999px;
+			color: var(--bs-primary);
+			font-size: .68rem;
+			font-weight: 800;
+			padding: .1rem .45rem;
+		}
+
+		#bulkInlineEditModal .select2-results__option {
+			padding: .65rem .85rem;
+		}
+
+		#bulkInlineEditModal .select2-selection__rendered .bulk-inline-field-option {
+			gap: 0;
+			padding-block: .05rem;
+		}
+
+		#bulkInlineEditModal .select2-selection__rendered .bulk-inline-field-option__meta {
+			display: none;
+		}
+
+		#bulkInlineEditModal #select2-bulk_inline_field-container {
+			line-height: 1.35;
+			white-space: normal;
+		}
+
+		#bulkInlineEditModal .select2-container--bootstrap5 .select2-selection--single {
+			min-height: 46px;
+		}
+
 		#kt_datatable_audits .btn {
 			padding: 0.35rem 0.45rem;
 			font-size: .95rem;
@@ -800,15 +865,25 @@
 									data-placeholder="اختر الحقل">
 									<option></option>
 									@foreach($bulkEditableBuildingFields as $assessment)
-										<option value="{{ $assessment->name }}" data-type="building_table">
-											{{ $assessment->hint ?: $assessment->label ?: $assessment->name }}
-											- {{ $assessment->name }}
+										@php
+											$fieldLabel = $assessment->hint ?: $assessment->label ?: $assessment->name;
+											$fieldHasOptions = isset($bulkInlineFilterOptions[$assessment->name]) && count($bulkInlineFilterOptions[$assessment->name]) > 0;
+										@endphp
+										<option value="{{ $assessment->name }}" data-type="building_table"
+											data-label="{{ $fieldLabel }}" data-code="{{ $assessment->name }}"
+											data-kind="{{ $fieldHasOptions ? 'قائمة منسدلة' : 'نص حر' }}">
+											{{ $fieldLabel }}
 										</option>
 									@endforeach
 									@foreach($bulkEditableHousingFields as $assessment)
-										<option value="{{ $assessment->name }}" data-type="housing_table">
-											{{ $assessment->hint ?: $assessment->label ?: $assessment->name }}
-											- {{ $assessment->name }}
+										@php
+											$fieldLabel = $assessment->hint ?: $assessment->label ?: $assessment->name;
+											$fieldHasOptions = isset($bulkInlineFilterOptions[$assessment->name]) && count($bulkInlineFilterOptions[$assessment->name]) > 0;
+										@endphp
+										<option value="{{ $assessment->name }}" data-type="housing_table"
+											data-label="{{ $fieldLabel }}" data-code="{{ $assessment->name }}"
+											data-kind="{{ $fieldHasOptions ? 'قائمة منسدلة' : 'نص حر' }}">
+											{{ $fieldLabel }}
 										</option>
 									@endforeach
 								</select>
@@ -2027,6 +2102,57 @@
 					.filter(item => /^\d+$/.test(item)))];
 			};
 			const bulkInlineFilterOptions = @json($bulkInlineFilterOptions);
+			const formatBulkInlineFieldOption = function (option) {
+				if (!option.id) {
+					return option.text;
+				}
+
+				const element = $(option.element);
+				const label = element.data('label') || option.text;
+				const code = element.data('code') || option.id;
+				const kind = element.data('kind') || 'نص حر';
+
+				return $(`
+					<div class="bulk-inline-field-option">
+						<span class="bulk-inline-field-option__label">${escapeAuditCell(label)}</span>
+						<span class="bulk-inline-field-option__meta">
+							<span class="bulk-inline-field-option__code">${escapeAuditCell(code)}</span>
+							<span class="bulk-inline-field-option__kind">${escapeAuditCell(kind)}</span>
+						</span>
+					</div>
+				`);
+			};
+			const initBulkInlineSelects = function () {
+				if (!$.fn.select2) {
+					return;
+				}
+
+				$('#bulk_inline_type, #bulk_inline_field, #bulk_inline_value_select').each(function () {
+					const select = $(this);
+
+					if (select.hasClass('select2-hidden-accessible')) {
+						select.select2('destroy');
+					}
+				});
+
+				$('#bulk_inline_type').select2({
+					dropdownParent: $('#bulkInlineEditModal'),
+					minimumResultsForSearch: Infinity
+				});
+
+				$('#bulk_inline_field').select2({
+					dropdownParent: $('#bulkInlineEditModal'),
+					templateResult: formatBulkInlineFieldOption,
+					templateSelection: formatBulkInlineFieldOption,
+					width: '100%'
+				});
+
+				$('#bulk_inline_value_select').select2({
+					dropdownParent: $('#bulkInlineEditModal'),
+					width: '100%'
+				});
+			};
+			initBulkInlineSelects();
 			const activeBulkInlineValue = function () {
 				const field = $('#bulk_inline_field').val();
 
