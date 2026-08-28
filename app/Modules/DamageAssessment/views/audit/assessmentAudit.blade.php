@@ -54,41 +54,116 @@
             padding: 0.75rem 0.9rem !important;
         }
 
+        #housing_table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: #fff;
+            box-shadow: inset 0 -1px 0 #e5e7eb;
+        }
+
+        #housing_table tbody tr {
+            transition: background-color .18s ease, box-shadow .18s ease;
+        }
+
+        #housing_table tbody tr:hover {
+            background-color: #f8fafc !important;
+        }
+
+        #housing_table tbody tr.selected,
+        #housing_table tbody tr.multi-selected {
+            background-color: #eef6ff !important;
+            color: #0f172a !important;
+            box-shadow: inset 4px 0 0 #3b82f6;
+        }
+
+        #housing_table.dataTable tbody tr.selected>*,
+        #housing_table.dataTable tbody tr.multi-selected>* {
+            box-shadow: inset 0 0 0 9999px #eef6ff !important;
+            color: #0f172a !important;
+        }
+
+        #housing_table .audit-unit-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            max-width: 100%;
+            border-radius: 999px;
+            padding: .3rem .65rem;
+            font-size: .78rem;
+            font-weight: 700;
+            line-height: 1.25;
+            white-space: normal;
+        }
+
+        #housing_table .audit-legal-challenge-short {
+            display: inline-block;
+            max-width: 118px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        #housing_table .audit-cell-primary {
+            color: #111827;
+            font-weight: 800;
+        }
+
+        #housing_table .form-check-input {
+            cursor: pointer;
+        }
+
         /* أعمدة الحالات تكون أضيق */
-        #housing_table th:nth-child(10),
-        #housing_table td:nth-child(10),
-        #housing_table th:nth-child(11),
-        #housing_table td:nth-child(11),
-        #housing_table th:nth-child(12),
-        #housing_table td:nth-child(12) {
-            width: 140px !important;
-            max-width: 140px !important;
+        #housing_table th:nth-child(5),
+        #housing_table td:nth-child(5),
+        #housing_table th:nth-child(6),
+        #housing_table td:nth-child(6),
+        #housing_table th:nth-child(7),
+        #housing_table td:nth-child(7) {
+            width: 132px !important;
+            max-width: 132px !important;
         }
 
         /* اسم المالك لا يأخذ مساحة كبيرة */
-        #housing_table th:nth-child(6),
-        #housing_table td:nth-child(6) {
-            width: 120px !important;
-            max-width: 120px !important;
+        #housing_table th:nth-child(3),
+        #housing_table td:nth-child(3) {
+            width: 150px !important;
+            max-width: 150px !important;
             word-break: break-word;
         }
 
         /* نوع الوحدة وحالة الضرر */
-        #housing_table th:nth-child(2),
-        #housing_table td:nth-child(2),
-        #housing_table th:nth-child(3),
-        #housing_table td:nth-child(3) {
+        #housing_table th:nth-child(4),
+        #housing_table td:nth-child(4),
+        #housing_table th:nth-child(8),
+        #housing_table td:nth-child(8) {
             width: 130px !important;
             max-width: 130px !important;
         }
 
         /* الأرقام */
+        #housing_table th:nth-child(2),
+        #housing_table td:nth-child(2),
+        #housing_table th:nth-child(9),
+        #housing_table td:nth-child(9),
+        #housing_table th:nth-child(11),
+        #housing_table td:nth-child(11) {
+            width: 82px !important;
+            max-width: 82px !important;
+        }
+
+        #housing_table th:nth-child(12),
+        #housing_table td:nth-child(12) {
+            width: 128px !important;
+            max-width: 128px !important;
+        }
+
         #housing_table th:nth-child(4),
-        #housing_table td:nth-child(4),
-        #housing_table th:nth-child(5),
-        #housing_table td:nth-child(5) {
-            width: 80px !important;
-            max-width: 80px !important;
+        #housing_table td:nth-child(4) {
+            width: 140px !important;
+            max-width: 140px !important;
         }
 
         #housing_table th:nth-child(1),
@@ -145,14 +220,6 @@
         .housing-status-btn:disabled {
             cursor: not-allowed;
             opacity: .8
-        }
-
-        #housing_table tbody tr.selected {
-            background-color: rgba(0, 158, 247, .12) !important
-        }
-
-        #housing_table tbody tr.multi-selected {
-            box-shadow: inset 4px 0 0 var(--bs-warning);
         }
 
         .container-loader {
@@ -234,7 +301,10 @@
             display: flex;
             flex-wrap: wrap;
             gap: .55rem;
+            margin-inline-start: auto;
+            max-width: 100%;
             padding: .55rem;
+            width: fit-content;
         }
 
         .audit-filter-btn.is-active {
@@ -451,6 +521,11 @@
                 position: relative;
                 top: auto;
                 margin-bottom: 1rem
+            }
+
+            .audit-toolbar-row {
+                margin-inline-start: 0;
+                width: 100%;
             }
 
             .summary-box {
@@ -1084,17 +1159,17 @@
                                             <th class="px-2 py-3">
                                                 <input type="checkbox" class="form-check-input" id="select_all_housing_units">
                                             </th>
-                                            <th class="px-2 py-3">نوع الوحدة</th>
-                                            <th class="px-2 py-3">حالة الضرر</th>
-                                            <th class="px-2 py-3">رقم الطابق</th>
                                             <th class="px-2 py-3">رقم الوحدة</th>
                                             <th class="px-2 py-3">اسم المالك</th>
+                                            <th class="px-2 py-3">حالة الضرر</th>
+                                            <th class="px-2 py-3">التدقيق الهندسي</th>
+                                            <th class="px-2 py-3">التدقيق القانوني</th>
+                                            <th class="px-2 py-3">الاعتماد النهائي</th>
+                                            <th class="px-2 py-3">نوع الوحدة</th>
+                                            <th class="px-2 py-3">رقم الطابق</th>
                                             <th class="px-2 py-3">اتجاه الوحدة</th>
                                             <th class="px-2 py-3">مساحة الوحدة</th>
                                             <th class="px-2 py-3">التحديات القانونية</th>
-                                            <th class="px-2 py-3">التدقيق القانوني</th>
-                                            <th class="px-2 py-3">التدقيق الهندسي</th>
-                                            <th class="px-2 py-3">الاعتماد النهائي</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -2762,6 +2837,79 @@
             return $('<div>').text(text).html();
         }
 
+        function plainTextFromHtml(html) {
+            return $('<div>').html(html ?? '').text().replace(/\s+/g, ' ').trim();
+        }
+
+        function auditTableLabel(value) {
+            let text = plainTextFromHtml(value);
+            let normalized = text.toLowerCase().replace(/[_-]+/g, ' ').trim();
+
+            return {
+                pending: 'قيد الانتظار',
+                'accepted by engineer': 'مقبول هندسياً',
+                'rejected by engineer': 'مرفوض هندسياً',
+                'accepted by lawyer': 'مقبول قانونياً',
+                'rejected by lawyer': 'مرفوض قانونياً',
+                'legal notes': 'ملاحظات قانونية',
+                'final approve': 'اعتماد نهائي',
+                'final approval': 'اعتماد نهائي',
+                'undp final approve': 'اعتماد UNDP',
+                'partially damaged': 'ضرر جزئي',
+                'partially damaged2': 'ضرر جزئي',
+                'fully damaged': 'ضرر كلي',
+                'fully damaged2': 'ضرر كلي',
+                'committee review': 'مراجعة اللجنة',
+                'committee review2': 'مراجعة اللجنة',
+                'no damage': 'لا يوجد ضرر',
+                'no damaged': 'لا يوجد ضرر',
+                apartment: 'شقة',
+            }[normalized] || text || '-';
+        }
+
+        function auditTableBadgeClass(value) {
+            let text = plainTextFromHtml(value).toLowerCase();
+
+            if (text.includes('rejected') || text.includes('مرفوض') || text.includes('fully')) {
+                return 'badge-light-danger text-danger';
+            }
+
+            if (text.includes('accepted') || text.includes('مقبول') || text.includes('no damage') || text.includes('no_damaged')) {
+                return 'badge-light-success text-success';
+            }
+
+            if (text.includes('legal notes') || text.includes('pending') || text.includes('review') || text.includes('ملاحظات') || text.includes('انتظار') || text.includes('مراجعة')) {
+                return 'badge-light-warning text-warning';
+            }
+
+            if (text.includes('partial') || text.includes('جزئي')) {
+                return 'badge-light-info text-info';
+            }
+
+            if (text.includes('final') || text.includes('undp')) {
+                return 'badge-light-primary text-primary';
+            }
+
+            return 'badge-light text-gray-700';
+        }
+
+        function renderAuditTableBadge(value) {
+            let label = auditTableLabel(value);
+
+            return `<span class="badge ${auditTableBadgeClass(value)} audit-unit-status-badge">${escapeHtml(label)}</span>`;
+        }
+
+        function renderHousingPrimaryCell(value) {
+            return `<span class="audit-cell-primary">${escapeHtml(auditTableLabel(value))}</span>`;
+        }
+
+        function renderLegalChallengeCell(value) {
+            let label = auditTableLabel(value);
+            let title = escapeAttribute(label);
+
+            return `<span class="audit-legal-challenge-short" title="${title}">${escapeHtml(label)}</span>`;
+        }
+
         function renderStatusBadge(item) {
             let label = item.status_label ?? item.status_name ?? '-';
             let badgeClass = item.status_badge_class ?? 'badge badge-light fw-bold';
@@ -3471,28 +3619,82 @@
                                 return '<input type="checkbox" class="form-check-input housing-unit-select" value="' + $('<div>').text(data || '').html() + '">';
                             }
                         },
-                        { data: 'housing_unit_type', name: 'housing_unit_type', className: 'text-start px-2 py-3' },
-                        { data: 'unit_damage_status', name: 'unit_damage_status', className: 'text-center px-2 py-3' },
+                        {
+                            data: 'housing_unit_number',
+                            name: 'housing_unit_number',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                return type === 'display' ? renderHousingPrimaryCell(data) : data;
+                            }
+                        },
+                        {
+                            data: 'owner_name',
+                            name: 'owner_name',
+                            className: 'text-start px-2 py-3',
+                            render: function (data, type) {
+                                if (type !== 'display') {
+                                    return plainTextFromHtml(data);
+                                }
+
+                                let label = auditTableLabel(data);
+                                return '<span title="' + escapeAttribute(label) + '">' + escapeHtml(label) + '</span>';
+                            }
+                        },
+                        {
+                            data: 'unit_damage_status',
+                            name: 'unit_damage_status',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                return type === 'display' ? renderAuditTableBadge(data) : auditTableLabel(data);
+                            }
+                        },
+                        {
+                            data: 'engineering_audit_status',
+                            name: 'engineering_audit_status',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                return type === 'display' ? renderAuditTableBadge(data) : auditTableLabel(data);
+                            }
+                        },
+                        {
+                            data: 'legal_audit_status',
+                            name: 'legal_audit_status',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                return type === 'display' ? renderAuditTableBadge(data) : auditTableLabel(data);
+                            }
+                        },
+                        {
+                            data: 'final_approval_status',
+                            name: 'final_approval_status',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                return type === 'display' ? renderAuditTableBadge(data) : auditTableLabel(data);
+                            }
+                        },
+                        {
+                            data: 'housing_unit_type',
+                            name: 'housing_unit_type',
+                            className: 'text-center px-2 py-3',
+                            render: function (data, type) {
+                                return type === 'display' ? renderAuditTableBadge(data) : auditTableLabel(data);
+                            }
+                        },
                         { data: 'floor_number', name: 'floor_number', className: 'text-center px-2 py-3' },
-                        { data: 'housing_unit_number', name: 'housing_unit_number', className: 'text-center px-2 py-3' },
-                        { data: 'owner_name', name: 'owner_name', className: 'text-start px-2 py-3 min-w-280px' },
                         { data: 'unit_direction', name: 'unit_direction', className: 'text-center px-2 py-3' },
                         { data: 'damaged_area_m2', name: 'damaged_area_m2', className: 'text-center px-2 py-3' },
                         {
                             data: 'legal_challenge_label',
                             name: 'legal_challenge_label',
                             className: 'text-center px-2 py-3',
-                            render: function (data, type, row) {
+                            render: function (data, type) {
                                 if (type !== 'display') {
-                                    return data;
+                                    return auditTableLabel(data);
                                 }
 
-                                return $('<div>').text(data || '-').html();
+                                return renderLegalChallengeCell(data);
                             }
-                        },
-                        { data: 'legal_audit_status', name: 'legal_audit_status', className: 'text-center px-2 py-3' },
-                        { data: 'engineering_audit_status', name: 'engineering_audit_status', className: 'text-center px-2 py-3' },
-                        { data: 'final_approval_status', name: 'final_approval_status', className: 'text-center px-2 py-3' }
+                        }
                     ],
                     createdRow: function (row) {
                         $(row).css('cursor', 'pointer');
