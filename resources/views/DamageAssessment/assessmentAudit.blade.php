@@ -1486,7 +1486,7 @@
         }
 
         function plainAuditAnswer(row) {
-            return $('<div>').html(row?.answer || '').text().trim().toLowerCase();
+            return cleanAuditText(row?.summaryValue || $('<div>').html(row?.answer || '').text()).toLowerCase();
         }
 
         function buildingHasAssessmentObstacle(rows) {
