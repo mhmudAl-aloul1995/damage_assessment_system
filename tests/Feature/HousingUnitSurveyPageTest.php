@@ -455,6 +455,7 @@ it('shows housing unit excel and pdf export links in the row actions menu', func
     AuditedHousingUnit::query()->create([
         'objectid' => 3401,
         'globalid' => 'housing-unit-actions-export',
+        'parentglobalid' => 'building-actions-export',
         'housing_unit_number' => '51',
     ]);
 
@@ -469,6 +470,8 @@ it('shows housing unit excel and pdf export links in the row actions menu', func
     $actionHtml = $response->json('data.0.action');
 
     expect($actionHtml)
+        ->toContain('الاستبيان المدقق')
+        ->toContain(url('damage-assessment/showAssessmentAudit/building-actions-export/housing-unit-actions-export'))
         ->toContain('تصدير BOQ Excel')
         ->toContain('تصدير BOQ PDF')
         ->toContain(route('housing.export', ['format' => 'xlsx', 'globalid' => 'housing-unit-actions-export']))

@@ -175,12 +175,16 @@ class HousingUnitController extends Controller
             ->editColumn('action', function ($ctr) {
                 $excelUrl = route('housing.export', ['format' => 'xlsx', 'globalid' => $ctr->globalid]);
                 $pdfUrl = route('housing.export', ['format' => 'pdf', 'globalid' => $ctr->globalid]);
+                $auditedAssessmentUrl = url('damage-assessment/showAssessmentAudit/'.rawurlencode((string) $ctr->parentglobalid).'/'.rawurlencode((string) $ctr->globalid));
 
                 return '<a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">'.e(__('ui.damage_common.actions')).'
 															<i class="ki-duotone ki-down fs-5 ms-1"></i></a>
 															<div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4" data-kt-menu="true">
 																<div class="menu-item px-3">
 																	<a class="menu-link px-3" target="_blank" href="'.url('damage-assessment/assessment/'.$ctr->parentglobalid).'" data-kt-users-table-filter="delete_row">'.e(__('ui.damage_common.assessment')).'</a>
+																</div>
+																<div class="menu-item px-3">
+																	<a class="menu-link px-3" target="_blank" href="'.e($auditedAssessmentUrl).'">الاستبيان المدقق</a>
 																</div>
 																<div class="menu-item px-3">
 																	<a class="menu-link px-3" href="'.e($excelUrl).'">تصدير BOQ Excel</a>
