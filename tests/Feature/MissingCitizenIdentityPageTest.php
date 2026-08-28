@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\MissingCitizenIdentityReportExport;
 use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
@@ -8,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -86,7 +88,9 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.issue_owner_without_identity'))
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
+        ->assertSee(__('ui.missing_citizen_identities.export_excel'))
         ->assertSee('data-kt-missing-citizens-action="open-unit-objectids-modal"', false)
+        ->assertSee('data-kt-missing-citizens-action="export"', false)
         ->assertSee('missing_citizen_unit_objectids_modal')
         ->assertSee('data-kt-missing-citizens-action="select-all-visible"', false)
         ->assertSee('kt_table_missing_citizen_identities');
@@ -235,6 +239,77 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['housing_unit_objectid' => '1001'])
         ->assertJsonFragment(['housing_unit_objectid' => '1004'])
         ->assertJsonMissing(['housing_unit_objectid' => '1003']);
+});
+
+it('exports missing citizen identities using the active filters', function (): void {
+    Excel::fake();
+
+    $ownerHousingUnit = HousingUnit::query()->create([
+        'objectid' => 2101,
+        'globalid' => 'export-owner-unit',
+        'unit_owner' => 'Export Owner',
+        'id_number1' => '900000101',
+    ]);
+
+    $spouseHousingUnit = HousingUnit::query()->create([
+        'objectid' => 2102,
+        'globalid' => 'export-spouse-unit',
+        'unit_owner' => 'Export Spouse Owner',
+        'id_number1' => '900000102',
+        'spouse1' => 'Filtered Spouse',
+        'spouse1_id' => '900000103',
+    ]);
+
+    MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $ownerHousingUnit->id,
+        'identity_subject' => 'owner',
+        'identity_index' => null,
+        'identity_name_field' => 'unit_owner',
+        'identity_number_field' => 'id_number1',
+        'owner_name' => 'Export Owner',
+        'id_number' => '900000101',
+        'issue_type' => 'missing_civil_registry_identity',
+        'name_match_status' => 'not_found',
+        'matched_citizens_count' => 0,
+    ]);
+
+    MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $spouseHousingUnit->id,
+        'identity_subject' => 'spouse',
+        'identity_index' => 1,
+        'identity_name_field' => 'spouse1',
+        'identity_number_field' => 'spouse1_id',
+        'owner_name' => 'Filtered Spouse',
+        'id_number' => '900000103',
+        'issue_type' => 'missing_civil_registry_identity',
+        'name_match_status' => 'matched',
+        'matched_citizen_id_card_no' => '900000104',
+        'matched_citizen_full_name' => 'Matched Spouse',
+        'matched_citizens_count' => 1,
+    ]);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->get(route('reports.missing-citizen-identities.export', [
+            'identity_subject' => 'spouse',
+            'name_match_status' => 'matched',
+            'unit_objectid' => '2102, 9999',
+        ]))
+        ->assertOk();
+
+    Excel::assertDownloaded('missing-citizen-identities.xlsx', function (MissingCitizenIdentityReportExport $export): bool {
+        $rows = $export->collection()->values();
+
+        return $rows->count() === 1
+            && $rows[0][0] === __('ui.missing_citizen_identities.identity_spouse_1')
+            && $rows[0][1] === 'Export Spouse Owner'
+            && $rows[0][3] === 'Filtered Spouse'
+            && $rows[0][4] === '900000103'
+            && $rows[0][5] === '2102'
+            && $rows[0][7] === __('ui.missing_citizen_identities.name_match_matched')
+            && $rows[0][8] === 'Matched Spouse'
+            && $rows[0][9] === '900000104';
+    });
 });
 
 it('does not report identities that exist in sgaza civil registry', function (): void {

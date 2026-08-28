@@ -38,6 +38,10 @@
                         <i class="ki-duotone ki-arrows-circle fs-2"></i>
                         {{ __('ui.missing_citizen_identities.refresh') }}
                     </button>
+                    <a href="{{ route('reports.missing-citizen-identities.export') }}" class="btn btn-sm btn-light-info text-nowrap" data-kt-missing-citizens-action="export">
+                        <i class="ki-duotone ki-file-down fs-2"></i>
+                        {{ __('ui.missing_citizen_identities.export_excel') }}
+                    </a>
                     <button type="button" class="btn btn-sm btn-light-warning text-nowrap" data-kt-missing-citizens-action="select-all-visible" disabled>
                         <i class="ki-duotone ki-check-square fs-2"></i>
                         <span data-kt-missing-citizens-select-all-label>{{ __('ui.missing_citizen_identities.select_all_matches') }}</span>
@@ -298,6 +302,7 @@
             var total = document.getElementById('missing_citizens_total');
             var approveUrlTemplate = @json(route('reports.missing-citizen-identities.approve-name-match', ['report' => '__REPORT__']));
             var bulkApproveUrl = @json(route('reports.missing-citizen-identities.bulk-approve-name-matches'));
+            var exportUrl = @json(route('reports.missing-citizen-identities.export'));
             var candidatesUrlTemplate = @json(route('reports.missing-citizen-identities.name-candidates', ['report' => '__REPORT__']));
             var citizenSearchUrlTemplate = @json(route('reports.missing-citizen-identities.citizen-search', ['report' => '__REPORT__']));
             var documentsUrlTemplate = @json(route('reports.missing-citizen-identities.documents', ['report' => '__REPORT__']));
@@ -690,6 +695,16 @@
                 return extractUnitObjectIds(source).join(',');
             };
 
+            var currentFilterParams = function () {
+                return {
+                    search: currentSearch,
+                    unit_objectid: normalizedUnitObjectIds(),
+                    issue_type: currentIssueType,
+                    name_match_status: currentNameMatchStatus,
+                    identity_subject: currentIdentitySubject
+                };
+            };
+
             var updateUnitObjectIdsState = function () {
                 var count = extractUnitObjectIds(currentUnitObjectIds).length;
 
@@ -717,11 +732,7 @@
 
                 var params = {
                     after_id: cursor,
-                    search: currentSearch,
-                    unit_objectid: normalizedUnitObjectIds(),
-                    issue_type: currentIssueType,
-                    name_match_status: currentNameMatchStatus,
-                    identity_subject: currentIdentitySubject,
+                    ...currentFilterParams(),
                     per_page: currentPerPage
                 };
 
@@ -1161,6 +1172,7 @@
                 }
 
                 var refresh = document.querySelector('[data-kt-missing-citizens-action="refresh"]');
+                var exportButton = document.querySelector('[data-kt-missing-citizens-action="export"]');
                 var perPage = document.querySelector('[data-kt-missing-citizens-filter="per-page"]');
                 var issueType = document.querySelector('[data-kt-missing-citizens-filter="issue-type"]');
                 var nameMatchStatus = document.querySelector('[data-kt-missing-citizens-filter="name-match-status"]');
@@ -1176,6 +1188,23 @@
                 if (refresh) {
                     refresh.addEventListener('click', function () {
                         loadCursor(cursorStack[cursorIndex]);
+                    });
+                }
+
+                if (exportButton) {
+                    exportButton.addEventListener('click', function (event) {
+                        event.preventDefault();
+
+                        var params = new URLSearchParams();
+                        var filters = currentFilterParams();
+
+                        Object.keys(filters).forEach(function (key) {
+                            if (filters[key]) {
+                                params.set(key, filters[key]);
+                            }
+                        });
+
+                        window.location.href = exportUrl + (params.toString() ? '?' + params.toString() : '');
                     });
                 }
 

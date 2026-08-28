@@ -2,6 +2,7 @@
 
 namespace App\Modules\DamageAssessment\Http\Controllers\Reports;
 
+use App\Exports\MissingCitizenIdentityReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reports\ApproveMissingCitizenIdentityNameMatchRequest;
 use App\Http\Requests\Reports\BulkApproveMissingCitizenIdentityNameMatchesRequest;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use Throwable;
 
 class MissingCitizenIdentityController extends Controller
@@ -42,6 +44,45 @@ class MissingCitizenIdentityController extends Controller
     {
         $perPage = min(max($request->integer('per_page', 100), 100), 500);
         $afterId = max(0, $request->integer('after_id', 0));
+        $query = $this->filteredMissingCitizenIdentityQuery($request);
+
+        $total = (clone $query)->count();
+
+        $query->when($afterId > 0, fn (Builder $query): Builder => $query->where('missing_citizen_identity_reports.id', '>', $afterId));
+
+        /** @var Collection<int, MissingCitizenIdentityReport> $rows */
+        $rows = $query
+            ->orderBy('missing_citizen_identity_reports.id')
+            ->limit($perPage + 1)
+            ->get();
+
+        return response()->json([
+            'data' => $rows
+                ->take($perPage)
+                ->map(fn (MissingCitizenIdentityReport $report): array => $this->reportRow($report))
+                ->values(),
+            'has_more' => $rows->count() > $perPage,
+            'next_cursor' => $rows->take($perPage)->last()?->id,
+            'per_page' => $perPage,
+            'total' => $total,
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $rows = $this->filteredMissingCitizenIdentityQuery($request)
+            ->orderBy('missing_citizen_identity_reports.id')
+            ->get()
+            ->map(fn (MissingCitizenIdentityReport $report): array => $this->exportRow($report));
+
+        return Excel::download(
+            new MissingCitizenIdentityReportExport($rows),
+            'missing-citizen-identities.xlsx'
+        );
+    }
+
+    private function filteredMissingCitizenIdentityQuery(Request $request): Builder
+    {
         $search = trim($request->string('search')->toString());
         $unitObjectId = trim($request->string('unit_objectid')->toString());
         $issueType = trim($request->string('issue_type')->toString());
@@ -53,6 +94,7 @@ class MissingCitizenIdentityController extends Controller
                 'missing_citizen_identity_reports.id',
                 'missing_citizen_identity_reports.identity_subject',
                 'missing_citizen_identity_reports.identity_index',
+                'missing_citizen_identity_reports.identity_name_field',
                 'missing_citizen_identity_reports.identity_number_field',
                 'missing_citizen_identity_reports.owner_name',
                 'missing_citizen_identity_reports.id_number',
@@ -110,49 +152,53 @@ class MissingCitizenIdentityController extends Controller
             $query->where('missing_citizen_identity_reports.identity_subject', $identitySubject);
         }
 
-        $total = (clone $query)->count();
+        return $query;
+    }
 
-        $query->when($afterId > 0, fn (Builder $query): Builder => $query->where('missing_citizen_identity_reports.id', '>', $afterId));
+    private function reportRow(MissingCitizenIdentityReport $report): array
+    {
+        return [
+            'id' => $report->id,
+            'identity_subject' => $report->identity_subject,
+            'identity_index' => $report->identity_index,
+            'identity_label' => $this->identityLabel($report),
+            'identity_name_field' => $this->identityNameField($report),
+            'identity_number_field' => $report->identity_number_field,
+            'housing_unit_owner_name' => $this->reportHousingUnitOwnerName($report),
+            'owner_name' => $report->owner_name ?: '-',
+            'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
+            'housing_unit_owner_id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
+            'housing_unit_identity_details' => $this->housingUnitIdentityDetails($report),
+            'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
+            'issue_type' => $report->issue_type,
+            'name_match_status' => $report->name_match_status,
+            'matched_citizen_id_card_no' => $report->matched_citizen_id_card_no,
+            'matched_citizen_full_name' => $report->matched_citizen_full_name,
+            'matched_citizens_count' => $report->matched_citizens_count,
+            'can_approve_name_match' => $report->name_match_status === 'matched'
+                && filled($report->matched_citizen_id_card_no),
+            'can_show_name_candidates' => $report->name_match_status === 'ambiguous'
+                && $report->matched_citizens_count > 1,
+            'can_search_citizens' => in_array($report->name_match_status, ['not_found', 'no_owner_name'], true),
+        ];
+    }
 
-        /** @var Collection<int, MissingCitizenIdentityReport> $rows */
-        $rows = $query
-            ->orderBy('missing_citizen_identity_reports.id')
-            ->limit($perPage + 1)
-            ->get();
+    private function exportRow(MissingCitizenIdentityReport $report): array
+    {
+        $row = $this->reportRow($report);
 
-        return response()->json([
-            'data' => $rows
-                ->take($perPage)
-                ->map(fn (MissingCitizenIdentityReport $report): array => [
-                    'id' => $report->id,
-                    'identity_subject' => $report->identity_subject,
-                    'identity_index' => $report->identity_index,
-                    'identity_label' => $this->identityLabel($report),
-                    'identity_name_field' => $this->identityNameField($report),
-                    'identity_number_field' => $report->identity_number_field,
-                    'housing_unit_owner_name' => $this->reportHousingUnitOwnerName($report),
-                    'owner_name' => $report->owner_name ?: '-',
-                    'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
-                    'housing_unit_owner_id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
-                    'housing_unit_identity_details' => $this->housingUnitIdentityDetails($report),
-                    'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
-                    'issue_type' => $report->issue_type,
-                    'name_match_status' => $report->name_match_status,
-                    'matched_citizen_id_card_no' => $report->matched_citizen_id_card_no,
-                    'matched_citizen_full_name' => $report->matched_citizen_full_name,
-                    'matched_citizens_count' => $report->matched_citizens_count,
-                    'can_approve_name_match' => $report->name_match_status === 'matched'
-                        && filled($report->matched_citizen_id_card_no),
-                    'can_show_name_candidates' => $report->name_match_status === 'ambiguous'
-                        && $report->matched_citizens_count > 1,
-                    'can_search_citizens' => in_array($report->name_match_status, ['not_found', 'no_owner_name'], true),
-                ])
-                ->values(),
-            'has_more' => $rows->count() > $perPage,
-            'next_cursor' => $rows->take($perPage)->last()?->id,
-            'per_page' => $perPage,
-            'total' => $total,
-        ]);
+        return [
+            $row['identity_label'],
+            $report->identity_subject === 'spouse' ? $row['housing_unit_owner_name'] : $row['owner_name'],
+            $row['housing_unit_owner_id_number'],
+            $report->identity_subject === 'spouse' ? $row['owner_name'] : '-',
+            $report->identity_subject === 'spouse' ? $row['id_number1'] : '-',
+            $row['housing_unit_objectid'],
+            $this->issueTypeLabel((string) $row['issue_type']),
+            $this->nameMatchStatusLabel((string) $row['name_match_status']),
+            $row['matched_citizen_full_name'] ?: '-',
+            $row['matched_citizen_id_card_no'] ?: '-',
+        ];
     }
 
     public function citizenSearch(Request $request, MissingCitizenIdentityReport $report): JsonResponse
@@ -460,6 +506,25 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return __('ui.missing_citizen_identities.identity_owner');
+    }
+
+    private function issueTypeLabel(string $issueType): string
+    {
+        return match ($issueType) {
+            'owner_without_identity' => __('ui.missing_citizen_identities.issue_owner_without_identity'),
+            default => __('ui.missing_citizen_identities.issue_missing_civil_registry_identity'),
+        };
+    }
+
+    private function nameMatchStatusLabel(string $nameMatchStatus): string
+    {
+        return match ($nameMatchStatus) {
+            'matched' => __('ui.missing_citizen_identities.name_match_matched'),
+            'ambiguous' => __('ui.missing_citizen_identities.name_match_ambiguous'),
+            'not_found' => __('ui.missing_citizen_identities.name_match_not_found'),
+            'no_owner_name' => __('ui.missing_citizen_identities.name_match_no_owner'),
+            default => __('ui.missing_citizen_identities.name_match_not_checked'),
+        };
     }
 
     private function reportHousingUnitOwnerName(MissingCitizenIdentityReport $report): string
