@@ -27,6 +27,7 @@ it('shows grouped building filters based on survey sections', function () {
         'neighborhood' => 'Rimal',
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
+        'assessment_obstacle' => 'yes',
     ]);
 
     Assessment::query()->create([
@@ -43,6 +44,9 @@ it('shows grouped building filters based on survey sections', function () {
     $response->assertSee('Damage, hazards, and debris');
     $response->assertSee('Building specifications');
     $response->assertSee('Risk summary');
+    $response->assertSee('يوجد عائق؟');
+    $response->assertSee('name="filters[assessment_obstacle][]"', false);
+    $response->assertSee('value="yes"', false);
     $response->assertSee('name="filters[field_status][]"', false);
     $response->assertSee('Completed');
     $response->assertSee('Totally Damaged');
@@ -65,6 +69,7 @@ it('filters building datatable records with grouped filters and ranges', functio
         'neighborhood' => 'Rimal',
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
+        'assessment_obstacle' => 'yes',
         'building_material' => 'concrete',
         'units_nos' => 12,
         'damaged_units_nos' => 8,
@@ -86,6 +91,7 @@ it('filters building datatable records with grouped filters and ranges', functio
         'neighborhood' => 'Camp',
         'field_status' => 'Not_Completed',
         'building_damage_status' => 'partially_damaged',
+        'assessment_obstacle' => 'no',
         'building_material' => 'wood',
         'units_nos' => 3,
         'damaged_units_nos' => 1,
@@ -103,6 +109,7 @@ it('filters building datatable records with grouped filters and ranges', functio
         'filters' => [
             'field_status' => ['COMPLETED'],
             'building_damage_status' => ['fully_damaged'],
+            'assessment_obstacle' => ['yes'],
             'building_material' => ['concrete'],
             'municipalitie' => ['Gaza'],
             'damaged_units_nos_from' => 5,
@@ -116,6 +123,7 @@ it('filters building datatable records with grouped filters and ranges', functio
     $response->assertJsonPath('recordsFiltered', 1);
     $response->assertSee('Al Amal Tower');
     $response->assertSee('Totally Damaged');
+    $response->assertSee(__('ui.buildings_page.yes'));
     $response->assertSee('Debris');
     $response->assertSee('UXO');
     $response->assertDontSee('Al Noor House');
@@ -265,6 +273,7 @@ function ensureAuditedBuildingSurveyColumns(): void
             'units_nos',
             'damaged_units_nos',
             'floor_nos',
+            'assessment_obstacle',
             'building_debris_exist',
             'building_debris_qty',
             'building_debris_blocking',

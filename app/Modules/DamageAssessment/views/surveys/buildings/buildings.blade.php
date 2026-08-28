@@ -195,9 +195,8 @@
                             <th class="min-w-130px">{{ __('ui.buildings_page.damage_status') }}</th>
                             <th class="min-w-100px">{{ __('ui.buildings_page.municipality') }}</th>
                             <th class="min-w-100px">{{ __('ui.buildings_page.district') }}</th>
-                            <th class="min-w-90px">{{ __('ui.buildings_page.zone_number') }}</th>
+                            <th class="min-w-100px">يوجد عائق؟</th>
                             <th class="min-w-90px">{{ __('ui.buildings_page.units_count') }}</th>
-                            <th class="min-w-90px">{{ __('ui.buildings_page.damaged_units_count') }}</th>
                             <th class="min-w-120px">{{ __('ui.buildings_page.risk_summary') }}</th>
                             <th class="min-w-120px">{{ __('ui.buildings_page.updated_at') }}</th>
                             <th class="text-end min-w-100px">{{ __('ui.buildings_page.action') }}</th>
@@ -378,7 +377,7 @@
                     serverSide: true,
                     processing: true,
                     pageLength: 10,
-                    order: [[11, 'desc']],
+                    order: [[10, 'desc']],
                     ajax: {
                         url: "{{ url('damage-assessment/building/show') }}",
                         data: function (d) {
@@ -393,9 +392,8 @@
                         { data: 'building_damage_status', name: 'building_damage_status' },
                         { data: 'municipalitie', name: 'municipalitie' },
                         { data: 'neighborhood', name: 'neighborhood' },
-                        { data: 'zone_code', name: 'zone_code' },
+                        { data: 'assessment_obstacle', name: 'assessment_obstacle' },
                         { data: 'units_nos', name: 'units_nos' },
-                        { data: 'damaged_units_nos', name: 'damaged_units_nos' },
                         { data: 'risk_summary', name: 'risk_summary', orderable: false, searchable: false },
                         { data: 'editdate', name: 'editdate' },
                         { data: 'action', responsivePriority: -1, className: 'text-end', orderable: false, searchable: false },

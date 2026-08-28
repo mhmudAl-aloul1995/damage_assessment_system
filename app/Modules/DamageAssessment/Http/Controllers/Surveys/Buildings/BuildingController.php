@@ -12,6 +12,7 @@ use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -69,7 +70,7 @@ class BuildingController extends Controller
         $isHomepage = $request->input('hompage_building') == 1;
         $select = $isHomepage
             ? ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'zone_code', 'neighborhood']
-            : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'owner_id', 'zone_code', 'units_count', 'editdate', 'field_status', 'building_damage_status', 'units_nos', 'damaged_units_nos', 'floor_nos', 'building_debris_exist', 'uxo_present', 'bodies_present', 'neighborhood', 'municipalitie'];
+            : ['assignedto', 'globalid', 'objectid', 'building_name', 'owner_name', 'owner_id', 'units_count', 'editdate', 'field_status', 'building_damage_status', 'assessment_obstacle', 'units_nos', 'floor_nos', 'building_debris_exist', 'uxo_present', 'bodies_present', 'neighborhood', 'municipalitie'];
 
         $query = $this->auditedBuildingQuery()->select($select);
 
@@ -113,6 +114,15 @@ class BuildingController extends Controller
                     'commitee_review2' => 'Committee Review',
                 ]);
             })
+            ->editColumn('assessment_obstacle', function ($ctr) {
+                return $this->statusBadge($ctr->assessment_obstacle, [
+                    'yes' => 'warning',
+                    'no' => 'secondary',
+                ], [
+                    'yes' => __('ui.buildings_page.yes'),
+                    'no' => __('ui.buildings_page.no'),
+                ]);
+            })
             ->addColumn('risk_summary', function ($ctr) {
                 $risks = collect([
                     $ctr->building_debris_exist === 'yes' ? __('ui.buildings_page.debris') : null,
@@ -145,7 +155,7 @@ class BuildingController extends Controller
                 </div>';
             })
             ->setRowId('globalid')
-            ->rawColumns(['action', 'id', 'field_status', 'building_damage_status', 'risk_summary'])
+            ->rawColumns(['action', 'id', 'field_status', 'building_damage_status', 'assessment_obstacle', 'risk_summary'])
             ->make(true);
     }
 
@@ -209,7 +219,7 @@ class BuildingController extends Controller
                 $section['filters'] = collect($section['filters'])
                     ->filter(fn (array $filter): bool => Schema::hasColumn('audited_buildings', $filter['field']))
                     ->map(function (array $filter) use ($groupedFilters): array {
-                        $filter['options'] = $groupedFilters[$filter['field']] ?? collect();
+                        $filter['options'] = $this->buildingFilterOptions($filter['field'], $groupedFilters);
 
                         return $filter;
                     })
@@ -222,6 +232,20 @@ class BuildingController extends Controller
             ->filter(fn (array $section): bool => ! empty($section['filters']))
             ->values()
             ->all();
+    }
+
+    private function buildingFilterOptions(string $field, Collection $groupedFilters): Collection
+    {
+        $options = $groupedFilters[$field] ?? collect();
+
+        if ($options->isNotEmpty() || $field !== 'assessment_obstacle') {
+            return $options;
+        }
+
+        return collect([
+            (object) ['name' => 'yes', 'label' => __('ui.buildings_page.yes')],
+            (object) ['name' => 'no', 'label' => __('ui.buildings_page.no')],
+        ]);
     }
 
     private function applyBuildingFilters(Builder $query, array $filters): void
