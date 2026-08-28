@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Assessment;
 use App\Models\Filter;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Validator;
 
 class BulkAssessmentInlineEditRequest extends FormRequest
@@ -47,6 +49,13 @@ class BulkAssessmentInlineEditRequest extends FormRequest
             }
 
             $field = (string) $this->input('field');
+
+            if (! $this->fieldBelongsToRequestedType((string) $this->input('type'), $field)) {
+                $validator->errors()->add('field', 'الحقل المختار لا يتبع نوع السجلات المحدد.');
+
+                return;
+            }
+
             $filterValues = Filter::query()
                 ->where('list_name', $field)
                 ->pluck('name')
@@ -79,5 +88,34 @@ class BulkAssessmentInlineEditRequest extends FormRequest
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function fieldBelongsToRequestedType(string $type, string $field): bool
+    {
+        if ($field === '' || $field === 'attachments') {
+            return false;
+        }
+
+        $assessmentRows = Assessment::query()
+            ->orderBy('id')
+            ->get(['id', 'name']);
+        $assessment = $assessmentRows->firstWhere('name', $field);
+
+        if (! $assessment) {
+            return false;
+        }
+
+        $housingStartId = $assessmentRows->firstWhere('name', 'housing_unit_group')?->id;
+        $buildingEndId = $assessmentRows->firstWhere('name', 'housing_unit')?->id
+            ?? $housingStartId;
+
+        if ($type === 'housing_table') {
+            return $housingStartId !== null
+                && $assessment->id >= $housingStartId
+                && Schema::hasColumn('housing_units', $field);
+        }
+
+        return ($buildingEndId === null || $assessment->id < $buildingEndId)
+            && Schema::hasColumn('buildings', $field);
     }
 }

@@ -1,12 +1,22 @@
 @extends('layouts.app')
 @php
 	$isFieldEngineerAudit = $isFieldEngineerAudit ?? false;
+	$housingAssessmentStartId = $assessments->firstWhere('name', 'housing_unit_group')?->id;
+	$buildingAssessmentEndId = $assessments->firstWhere('name', 'housing_unit')?->id
+		?? $housingAssessmentStartId;
 	$bulkEditableBuildingFields = $assessments
-		->filter(fn ($assessment) => filled($assessment->name) && \Illuminate\Support\Facades\Schema::hasColumn('buildings', $assessment->name))
+		->filter(fn ($assessment) => filled($assessment->name)
+			&& $assessment->name !== 'attachments'
+			&& ($buildingAssessmentEndId === null || $assessment->id < $buildingAssessmentEndId)
+			&& \Illuminate\Support\Facades\Schema::hasColumn('buildings', $assessment->name))
 		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
 		->values();
 	$bulkEditableHousingFields = $assessments
-		->filter(fn ($assessment) => filled($assessment->name) && \Illuminate\Support\Facades\Schema::hasColumn('housing_units', $assessment->name))
+		->filter(fn ($assessment) => filled($assessment->name)
+			&& $assessment->name !== 'attachments'
+			&& $housingAssessmentStartId !== null
+			&& $assessment->id >= $housingAssessmentStartId
+			&& \Illuminate\Support\Facades\Schema::hasColumn('housing_units', $assessment->name))
 		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
 		->values();
 	$bulkInlineFilterOptions = \App\Models\Filter::query()
