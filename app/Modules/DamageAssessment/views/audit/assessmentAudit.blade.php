@@ -1488,14 +1488,32 @@
             return answer === 'yes' || answer === 'نعم';
         }
 
+        function housingUnitHasSecurityObstacle(rows) {
+            let securityRow = rows.find(function (row) {
+                return normalizeSurveyName(row.name) === 'security_situation_unit';
+            });
+
+            if (!securityRow) return false;
+
+            let answer = plainAuditAnswer(securityRow);
+
+            return answer === 'yes' || answer === 'نعم' || answer === 'unsafe';
+        }
+
         function removeInactiveDependentRows(rows, prefix) {
-            if (prefix !== 'building' || buildingHasAssessmentObstacle(rows)) {
-                return rows;
+            if (prefix === 'building' && !buildingHasAssessmentObstacle(rows)) {
+                return rows.filter(function (row) {
+                    return !['obstacle_type', 'assessment_obstacle_info'].includes(normalizeSurveyName(row.name));
+                });
             }
 
-            return rows.filter(function (row) {
-                return !['obstacle_type', 'assessment_obstacle_info'].includes(normalizeSurveyName(row.name));
-            });
+            if (prefix === 'housing' && !housingUnitHasSecurityObstacle(rows)) {
+                return rows.filter(function (row) {
+                    return normalizeSurveyName(row.name) !== 'security_unit_info';
+                });
+            }
+
+            return rows;
         }
 
         function applyAuditFilter(rows, filter) {
@@ -1708,7 +1726,9 @@
             housing_unit_group: ['7. Unit Introduction', 701],
             housing_unit_type: ['7. Unit Introduction', 702],
             unit_damage_status: ['7. Unit Introduction', 703],
-            final_comments: ['Photos & Final Comments', 704],
+            security_situation_unit: ['7. Unit Introduction', 704],
+            security_unit_info: ['7. Unit Introduction', 705],
+            final_comments: ['Photos & Final Comments', 706],
             page8: ['8. Unit Information', 800],
             floor_number: ['8. Unit Information', 801],
             housing_unit_number: ['8. Unit Information', 802],

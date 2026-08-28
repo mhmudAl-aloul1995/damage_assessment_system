@@ -23,6 +23,26 @@ test('assessment audit hides obstacle details when assessment has no obstacle', 
         ->toContain('rows = removeInactiveDependentRows(rows, prefix)');
 });
 
+test('assessment audit shows housing unit security obstacle fields in unit introduction', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
+    $migration = file_get_contents(dirname(__DIR__, 2).'/database/migrations/2026_08_28_152447_add_security_situation_unit_assessment_question.php');
+
+    expect($view)
+        ->toContain("security_situation_unit: ['7. Unit Introduction', 704]")
+        ->toContain("security_unit_info: ['7. Unit Introduction', 705]")
+        ->toContain('function housingUnitHasSecurityObstacle')
+        ->toContain("normalizeSurveyName(row.name) === 'security_situation_unit'")
+        ->toContain("answer === 'yes' || answer === 'نعم' || answer === 'unsafe'")
+        ->toContain("normalizeSurveyName(row.name) !== 'security_unit_info'");
+
+    expect($migration)
+        ->toContain("'name' => 'security_situation_unit'")
+        ->toContain("'hint' => 'هل يوجد عائق يمنع عملية الحصر'")
+        ->toContain("'name' => 'security_unit_info'")
+        ->toContain("'hint' => 'ما هو العائق'")
+        ->toContain("DB::table('assessments')->updateOrInsert");
+});
+
 test('housing audit detail card fills the row beside the summary card', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
 
