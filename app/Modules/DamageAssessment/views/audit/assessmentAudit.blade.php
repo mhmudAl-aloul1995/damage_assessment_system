@@ -566,6 +566,34 @@
             /* تحسين شكل شريط التمرير */
         }
 
+        .audit-attachments-card .card-body {
+            padding: .85rem;
+        }
+
+        .audit-attachments-panel {
+            display: grid;
+            gap: .75rem;
+            grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+        }
+
+        .audit-attachments-panel.is-empty {
+            display: block;
+        }
+
+        .audit-attachments-panel a {
+            display: block;
+            aspect-ratio: 1;
+            overflow: hidden;
+        }
+
+        .audit-attachments-panel img {
+            aspect-ratio: 1;
+            border-radius: .65rem !important;
+            height: 100% !important;
+            object-fit: cover;
+            width: 100% !important;
+        }
+
         /* إلغاء الـ sticky في الجوال لضمان الظهور */
         @media(max-width:991px) {
             .audit-sticky-menu {
@@ -640,7 +668,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-12 col-lg-9 col-xl-10">
+                                <div class="col-12 col-lg-7 col-xl-8">
                                     <div class="audit-toolbar-sticky mb-4">
                                         <div class="d-flex flex-wrap gap-2">
                                             <div class="audit-action-group">
@@ -767,6 +795,22 @@
                                     </div>
 
                                     <div id="building_assessment_accordion" class="accordion accordion-icon-toggle"></div>
+                                </div>
+
+                                <div class="col-12 col-lg-2">
+                                    <div class="audit-sticky-menu audit-attachments-card bg-white border rounded-3 shadow-sm">
+                                        <div class="card-header py-3 px-4">
+                                            <div class="card-title m-0">
+                                                <h3 class="fw-bold fs-4 mb-0">مرفقات المبنى</h3>
+                                            </div>
+                                        </div>
+
+                                        <div class="card-body">
+                                            <div id="building_attachments_panel" class="audit-attachments-panel is-empty">
+                                                <div class="text-muted text-center py-4">لا توجد مرفقات</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -957,7 +1001,7 @@
                             </div>
                         </div>
 
-                        <div class="col-12 col-lg-8 col-xl-9">
+                        <div class="col-12 col-lg-7 col-xl-8">
                             <div class="card card-flush shadow-sm border-0">
                                 <div class="card-header border-0 pt-6 pb-4">
                                     <div class="card-title">
@@ -1012,9 +1056,6 @@
                                                             <button type="button"
                                                                 class="dropdown-item audit-filter-btn housing-filter-btn"
                                                                 data-filter="answered" data-filter-label="المجاب فقط">المجاب فقط</button>
-                                                            <button type="button"
-                                                                class="dropdown-item audit-filter-btn housing-filter-btn"
-                                                                data-filter="attachments" data-filter-label="المرفقات">المرفقات</button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1100,6 +1141,22 @@
                                         </thead>
                                         <tbody></tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-2">
+                            <div class="card card-flush shadow-sm border-0 audit-sticky-menu audit-attachments-card">
+                                <div class="card-header py-3 px-4">
+                                    <div class="card-title m-0">
+                                        <h3 class="fw-bold fs-4 mb-0">مرفقات الوحدة</h3>
+                                    </div>
+                                </div>
+
+                                <div class="card-body">
+                                    <div id="housing_attachments_panel" class="audit-attachments-panel is-empty">
+                                        <div class="text-muted text-center py-4">لا توجد مرفقات</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1458,18 +1515,41 @@
             return name === 'attachments' || section === 'المرفقات' || section === 'attachments';
         }
 
-        function keepAttachmentRowsVisible(rows, filteredRows) {
-            let pinnedAttachmentRows = [];
-            let pinnedRows = new Set();
+        function assessmentContentRows(rows) {
+            return rows.filter(row => !isAuditAttachmentRow(row));
+        }
 
-            rows.forEach(function (row) {
-                if (isAuditAttachmentRow(row) && !pinnedRows.has(row)) {
-                    pinnedAttachmentRows.push(row);
-                    pinnedRows.add(row);
+        function renderAttachmentsPanel(target, rows) {
+            let panel = $(target);
+
+            if (!panel.length) {
+                return;
+            }
+
+            let attachments = [];
+
+            rows.filter(row => isAuditAttachmentRow(row)).forEach(function (row) {
+                let content = $('<div>').html(row.answer || '');
+                let links = content.find('a');
+
+                if (links.length) {
+                    links.each(function () {
+                        attachments.push(this.outerHTML);
+                    });
+
+                    return;
                 }
+
+                content.find('img').each(function () {
+                    attachments.push(this.outerHTML);
+                });
             });
 
-            return pinnedAttachmentRows.concat(filteredRows.filter(row => !pinnedRows.has(row)));
+            let html = attachments.join('');
+
+            panel
+                .toggleClass('is-empty', html === '')
+                .html(html || '<div class="text-muted text-center py-4">لا توجد مرفقات</div>');
         }
 
         function plainAuditAnswer(row) {
@@ -1517,13 +1597,14 @@
         }
 
         function applyAuditFilter(rows, filter) {
-            if (filter === 'missing') return keepAttachmentRowsVisible(rows, rows.filter(row => !isAnswered(row)));
-            if (filter === 'edited') return keepAttachmentRowsVisible(rows, rows.filter(row => isEdited(row)));
-            if (filter === 'answered') return keepAttachmentRowsVisible(rows, rows.filter(row => isAnswered(row)));
-            if (filter === 'attachments') {
-                return rows.filter(row => isAuditAttachmentRow(row));
-            }
-            return keepAttachmentRowsVisible(rows, rows);
+            rows = assessmentContentRows(rows);
+
+            if (filter === 'missing') return rows.filter(row => !isAnswered(row));
+            if (filter === 'edited') return rows.filter(row => isEdited(row));
+            if (filter === 'answered') return rows.filter(row => isAnswered(row));
+            if (filter === 'attachments') return [];
+
+            return rows;
         }
 
         function renderAccordion(target, rows, filter, prefix) {
@@ -2919,6 +3000,7 @@
 
                             lastBuildingRows = rows;
                             renderBuildingSummaryItems(rows);
+                            renderAttachmentsPanel('#building_attachments_panel', rows);
                             renderAccordion('#building_assessment_accordion', rows, currentBuildingFilter, 'building');
 
                             return rows;
@@ -2948,8 +3030,6 @@
                             return q.includes(keyword) || a.includes(keyword) || n.includes(keyword);
                         });
                     }
-
-                    rows = keepAttachmentRowsVisible(lastBuildingRows, rows);
 
                     renderAccordion('#building_assessment_accordion', rows, currentBuildingFilter, 'building');
                 });
@@ -3158,6 +3238,7 @@
                             });
 
                             lastHousingRows = rows;
+                            renderAttachmentsPanel('#housing_attachments_panel', rows);
                             renderAccordion('#housing_assessment_accordion', rows, currentHousingFilter, 'housing');
 
                             return rows;
@@ -3192,8 +3273,6 @@
                                  return q.includes(keyword) || a.includes(keyword) || n.includes(keyword);
                              });
                          }
-
-                         rows = keepAttachmentRowsVisible(lastHousingRows, rows);
 
                          renderAccordion('#housing_assessment_accordion', rows, currentHousingFilter, 'housing');
                      });
@@ -3237,6 +3316,7 @@
 
             if (!globalid) {
                 renderHousingSummaryItems([]);
+                renderAttachmentsPanel('#housing_attachments_panel', []);
                 return;
             }
 
