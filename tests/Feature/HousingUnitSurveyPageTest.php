@@ -38,6 +38,7 @@ it('shows grouped housing unit filters from the assessment survey', function () 
         'parentglobalid' => 'building-housing-1',
         'housing_unit_type' => 'apartment',
         'unit_damage_status' => 'fully_damaged2',
+        'security_situation_unit' => 'Unsafe',
     ]);
 
     Assessment::query()->create([
@@ -57,6 +58,7 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('name="filters[security_situation_unit][]"', false);
     $response->assertSee('value="yes"', false);
     $response->assertSee('value="no"', false);
+    $response->assertSee('value="Unsafe"', false);
     $response->assertSee('Housing Unit Object IDs');
     $response->assertSee('Paste up to 200 Object IDs from Excel');
     $response->assertSee('var url_phc', false);

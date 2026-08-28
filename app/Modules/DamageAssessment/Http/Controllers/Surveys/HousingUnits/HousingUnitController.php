@@ -276,14 +276,37 @@ class HousingUnitController extends Controller
     {
         $options = $groupedFilters[$field] ?? collect();
 
-        if ($options->isNotEmpty() || $field !== 'security_situation_unit') {
+        if ($field !== 'security_situation_unit') {
             return $options;
         }
 
-        return collect([
+        $defaultOptions = collect([
             (object) ['name' => 'yes', 'label' => __('ui.housing_page.yes')],
             (object) ['name' => 'no', 'label' => __('ui.housing_page.no')],
         ]);
+
+        $databaseOptions = AuditedHousingUnit::query()
+            ->whereNotNull('security_situation_unit')
+            ->where('security_situation_unit', '<>', '')
+            ->distinct()
+            ->orderBy('security_situation_unit')
+            ->pluck('security_situation_unit')
+            ->map(fn (string $value): object => (object) [
+                'name' => $value,
+                'label' => match (strtolower(trim($value))) {
+                    'yes' => __('ui.housing_page.yes'),
+                    'no' => __('ui.housing_page.no'),
+                    'safe' => 'Safe',
+                    'unsafe' => 'Unsafe',
+                    default => str($value)->replace('_', ' ')->title()->toString(),
+                },
+            ]);
+
+        return $options
+            ->concat($defaultOptions)
+            ->concat($databaseOptions)
+            ->unique(fn (object $option): string => strtolower(trim((string) $option->name)))
+            ->values();
     }
 
     private function applyHousingFilters(Builder $query, array $filters, string $table = 'housing_units'): void
