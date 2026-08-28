@@ -115,6 +115,11 @@
             cursor: pointer;
         }
 
+        #housing_table:not(.audit-selection-visible) th:first-child,
+        #housing_table:not(.audit-selection-visible) td:first-child {
+            display: none;
+        }
+
         /* أعمدة الحالات تكون أضيق */
         #housing_table th:nth-child(5),
         #housing_table td:nth-child(5),
@@ -1088,7 +1093,8 @@
                             <div class="card-toolbar">
                                 <div class="d-flex flex-wrap gap-2">
                                     <div class="dropdown">
-                                        <button type="button" class="btn btn-sm btn-light dropdown-toggle"
+                                        <button type="button" id="housing_actions_dropdown"
+                                            class="btn btn-sm btn-light dropdown-toggle"
                                             data-bs-toggle="dropdown" aria-expanded="false">
                                             إجراءات
                                         </button>
@@ -2558,6 +2564,16 @@
             return Array.from(selectedHousingGlobalIds);
         }
 
+        function setHousingSelectionMode(isVisible) {
+            $('#housing_table').toggleClass('audit-selection-visible', isVisible);
+
+            if ($.fn.DataTable.isDataTable('#housing_table')) {
+                $('#housing_table')
+                    .DataTable()
+                    .columns.adjust();
+            }
+        }
+
         const pendingHousingDeletionTimers = {};
 
         function housingDeletionModeLabel(mode) {
@@ -3727,6 +3743,10 @@
                     });
 
                     syncHousingSelectionCheckboxes(datatable);
+                });
+
+                $('#housing_actions_dropdown').on('show.bs.dropdown click', function () {
+                    setHousingSelectionMode(true);
                 });
 
                 $('#housing_table tbody').on('change', '.housing-unit-select', function (event) {
