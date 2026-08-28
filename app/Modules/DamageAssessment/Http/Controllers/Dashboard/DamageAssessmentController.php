@@ -1527,45 +1527,6 @@ class DamageAssessmentController extends Controller
                     return e($originalValue ?? '-');
                 }
 
-                $historyHtml = '';
-                $collapseId = 'history_'.md5($type.'_'.$globalid.'_'.$row->name);
-
-                foreach ($fieldEdits as $edit) {
-                    $historyValue = $this->filterLabelForAssessmentValue($filtersByList, $row->name, $edit->field_value);
-
-                    $historyHtml .= '
-                <div class="border rounded p-2 mb-2 bg-light-info">
-                    <div>
-                        <small class="text-muted">'.e(__('ui.damage_common.value')).':</small>
-                        <span class="fw-semibold">'.e($historyValue ?? '-').'</span>
-                    </div>
-                    <div>
-                        <small class="text-muted">'.e(__('ui.damage_common.by')).':</small>
-                        '.e($edit->user?->name ?? '-').'
-                    </div>
-                    <div>
-                        <small class="text-muted">'.e(__('ui.damage_common.time')).':</small>
-                        '.e(optional($edit->updated_at)->format('Y-m-d h:i A') ?? '-').'
-                    </div>
-                </div>
-            ';
-                }
-
-                $historyHtml = '
-            <div class="mt-3">
-                <button class="btn btn-sm btn-light-primary" type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#'.$collapseId.'"
-                        aria-expanded="false">
-                    '.e(__('ui.damage_common.view_edit_history', ['count' => $fieldEdits->count()])).'
-                </button>
-
-                <div class="collapse mt-2" id="'.$collapseId.'">
-                    '.$historyHtml.'
-                </div>
-            </div>
-        ';
-
                 $modalHistoryButton = '
             <div class="mt-2">
                 <button class="btn btn-sm btn-light-info js-assessment-history"
@@ -1600,7 +1561,7 @@ class DamageAssessmentController extends Controller
                     <span class="text-gray-600">'.e($editedAt ?? '-').'</span>
                 </div>
 
-                '.$modalHistoryButton.$historyHtml.'
+                '.$modalHistoryButton.'
             </div>
         ';
             })
