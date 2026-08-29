@@ -174,7 +174,7 @@ class MissingCitizenIdentityController extends Controller
             'owner_name' => $report->owner_name ?: '-',
             'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
             'housing_unit_owner_id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
-            'marital_status' => filled($report->housing_unit_marital_status) ? (string) $report->housing_unit_marital_status : '-',
+            'marital_status' => $this->maritalStatusLabel($report->housing_unit_marital_status),
             'housing_unit_identity_details' => $this->housingUnitIdentityDetails($report),
             'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
             'issue_type' => $report->issue_type,
@@ -207,6 +207,17 @@ class MissingCitizenIdentityController extends Controller
             $row['matched_citizen_full_name'] ?: '-',
             $row['matched_citizen_id_card_no'] ?: '-',
         ];
+    }
+
+    private function maritalStatusLabel(mixed $value): string
+    {
+        return match ((string) $value) {
+            'Single2' => __('ui.missing_citizen_identities.marital_status_value_single'),
+            'Divorced' => __('ui.missing_citizen_identities.marital_status_value_divorced'),
+            'Widow' => __('ui.missing_citizen_identities.marital_status_value_widow'),
+            'Married' => __('ui.missing_citizen_identities.marital_status_value_married'),
+            default => filled($value) ? (string) $value : '-',
+        };
     }
 
     public function citizenSearch(Request $request, MissingCitizenIdentityReport $report): JsonResponse

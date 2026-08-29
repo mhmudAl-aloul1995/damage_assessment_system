@@ -176,7 +176,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['housing_unit_objectid' => '1001'])
         ->assertJsonFragment(['issue_type' => 'missing_civil_registry_identity'])
         ->assertJsonFragment(['id_number1' => '900000001'])
-        ->assertJsonFragment(['marital_status' => 'Married'])
+        ->assertJsonFragment(['marital_status' => __('ui.missing_citizen_identities.marital_status_value_married')])
         ->assertJsonFragment(['identity_name_field' => 'unit_owner'])
         ->assertJsonFragment(['identity_number_field' => 'id_number1'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
@@ -234,7 +234,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertOk()
         ->assertJsonPath('total', 1)
         ->assertJsonFragment(['housing_unit_objectid' => '1001'])
-        ->assertJsonFragment(['marital_status' => 'Married'])
+        ->assertJsonFragment(['marital_status' => __('ui.missing_citizen_identities.marital_status_value_married')])
         ->assertJsonMissing(['housing_unit_objectid' => '1003'])
         ->assertJsonMissing(['housing_unit_objectid' => '1004']);
 
@@ -327,7 +327,7 @@ it('exports missing citizen identities using the active filters', function (): v
             && $rows[0][1] === 'Export Spouse Owner'
             && $rows[0][3] === 'Filtered Spouse'
             && $rows[0][4] === '900000103'
-            && $rows[0][5] === 'Married'
+            && $rows[0][5] === __('ui.missing_citizen_identities.marital_status_value_married')
             && $rows[0][6] === '2102'
             && $rows[0][8] === __('ui.missing_citizen_identities.name_match_matched')
             && $rows[0][9] === 'Matched Spouse'
