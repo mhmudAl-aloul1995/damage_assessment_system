@@ -52,7 +52,7 @@
                     </button>
                 </div>
             </div>
-            <div class="d-flex align-items-center justify-content-end gap-2 flex-nowrap">
+            <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
                 <div class="btn-group flex-shrink-0" role="group" aria-label="{{ __('ui.missing_citizen_identities.identity_subject') }}">
                     <button type="button" class="btn btn-sm btn-primary" data-kt-missing-citizens-subject="owner">
                         {{ __('ui.missing_citizen_identities.identity_owner') }}
@@ -63,7 +63,7 @@
                 </div>
                 <div class="position-relative flex-shrink-0">
                     <i class="ki-duotone ki-magnifier fs-3 position-absolute top-50 translate-middle-y ms-4"></i>
-                    <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-sm form-control-solid w-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
+                    <input type="text" data-kt-missing-citizens-filter="search" class="form-control form-control-sm form-control-solid w-200px mw-250px ps-12" placeholder="{{ __('ui.missing_citizen_identities.search_placeholder') }}">
                 </div>
                 <div class="input-group input-group-sm flex-shrink-0 w-175px">
                     <span class="input-group-text border-0 bg-light">

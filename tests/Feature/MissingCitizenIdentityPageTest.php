@@ -91,6 +91,7 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
         ->assertSee(__('ui.missing_citizen_identities.export_excel'))
         ->assertSee(__('ui.missing_citizen_identities.all_marital_statuses'))
+        ->assertSee('justify-content-end gap-2 flex-wrap', false)
         ->assertSee('data-kt-missing-citizens-filter="marital-status"', false)
         ->assertSee('data-kt-missing-citizens-action="open-unit-objectids-modal"', false)
         ->assertSee('data-kt-missing-citizens-action="export"', false)
