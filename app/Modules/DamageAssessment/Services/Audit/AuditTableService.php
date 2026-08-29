@@ -89,6 +89,10 @@ class AuditTableService
             $this->applyFloorAreaMismatchFilter($query);
         }
 
+        if ($request->boolean('buildings_without_units')) {
+            $this->applyBuildingsWithoutUnitsFilter($query);
+        }
+
         $damageStatuses = $this->filterValues($request, 'damage_status');
         if ($damageStatuses !== []) {
             $query->whereIn('building_damage_status', $damageStatuses);
@@ -338,6 +342,15 @@ class AuditTableService
                     ->whereRaw($this->floorAreaMismatchSql('0', 'ground_floor_area__m2'))
                     ->orWhereRaw($this->floorAreaMismatchSql('1', 'floor_area_m2'));
             });
+    }
+
+    private function applyBuildingsWithoutUnitsFilter(Builder $query): void
+    {
+        $query->whereNotExists(function ($unitQuery): void {
+            $unitQuery->selectRaw('1')
+                ->from('housing_units')
+                ->whereColumn('housing_units.parentglobalid', 'buildings.globalid');
+        });
     }
 
     private function buildingFullDamageSql(): string

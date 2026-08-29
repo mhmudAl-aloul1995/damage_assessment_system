@@ -645,6 +645,11 @@
 										<span>مخالف لمساحات الطوابق</span>
 										<i class="ki-duotone ki-chart-line-down"></i>
 									</button>
+									<button type="button" id="toggle_buildings_without_units" class="dropdown-item"
+										data-filter-active="false">
+										<span>مباني بدون وحدات</span>
+										<i class="ki-duotone ki-home-2"></i>
+									</button>
 								</div>
 							</div>
 						@endif
@@ -1440,6 +1445,7 @@
 
 			let acceptedWithUnevaluatedUnits = false;
 			let floorAreaMismatch = false;
+			let buildingsWithoutUnits = false;
 			let housingUnitAttachmentUnits = [];
 			const buildingAttachmentRoutes = {
 				index: @json(route('audit.building.attachments.index', ['building' => '__BUILDING__'])),
@@ -2325,6 +2331,7 @@
 					legal_challenge: $('#filter_legal_challenge').val(),
 					accepted_with_unevaluated_units: acceptedWithUnevaluatedUnits ? 1 : '',
 					floor_area_mismatch: floorAreaMismatch ? 1 : '',
+					buildings_without_units: buildingsWithoutUnits ? 1 : '',
 					filter_from_date: $('#filter_from_date').val(),
 					filter_to_date: $('#filter_to_date').val(),
 					status_from_date: $('#filter_status_from_date').val(),
@@ -3078,6 +3085,28 @@
 				table.ajax.reload(null, true);
 			});
 
+			const renderBuildingsWithoutUnitsButton = function () {
+				const button = $('#toggle_buildings_without_units');
+
+				if (!button.length) {
+					return;
+				}
+
+				button.attr('data-filter-active', buildingsWithoutUnits ? 'true' : 'false');
+				button.toggleClass('btn-light-info btn-info', buildingsWithoutUnits);
+				button.html(
+					buildingsWithoutUnits
+						? 'إظهار الكل <i class="ki-duotone ki-eye"></i>'
+						: 'مباني بدون وحدات <i class="ki-duotone ki-home-2"></i>'
+				);
+			};
+
+			$('#toggle_buildings_without_units').on('click', function () {
+				buildingsWithoutUnits = !buildingsWithoutUnits;
+				renderBuildingsWithoutUnitsButton();
+				table.ajax.reload(null, true);
+			});
+
 			$('#export_floor_area_mismatch').on('click', function () {
 				const params = new URLSearchParams();
 				const filters = auditFilterPayload();
@@ -3255,8 +3284,10 @@
 				isResettingFilters = true;
 				acceptedWithUnevaluatedUnits = false;
 				floorAreaMismatch = false;
+				buildingsWithoutUnits = false;
 				renderAcceptedWithUnevaluatedUnitsButton();
 				renderFloorAreaMismatchButton();
+				renderBuildingsWithoutUnitsButton();
 				$('select').val(null).trigger('change');
 				$('input').val('');
 				$('#filter_field_status').val('COMPLETED').trigger('change');

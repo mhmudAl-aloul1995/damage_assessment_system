@@ -417,6 +417,41 @@ it('returns filtered audit building object ids for copying', function () {
         ->assertJsonPath('text', '18001');
 });
 
+it('filters audit buildings without housing units', function () {
+    $user = User::factory()->create();
+
+    $buildingWithoutUnits = Building::query()->create([
+        'objectid' => 18101,
+        'globalid' => 'audit-building-without-units',
+        'building_name' => 'Building Without Units',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $buildingWithUnits = Building::query()->create([
+        'objectid' => 18102,
+        'globalid' => 'audit-building-with-units',
+        'building_name' => 'Building With Units',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 28102,
+        'globalid' => 'audit-unit-for-building-with-units',
+        'parentglobalid' => $buildingWithUnits->globalid,
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.objectids', [
+            'buildings_without_units' => 1,
+        ]))
+        ->assertOk()
+        ->assertJsonPath('count', 1)
+        ->assertJsonPath('objectids.0', (string) $buildingWithoutUnits->objectid)
+        ->assertJsonMissing([
+            'objectids' => [(string) $buildingWithUnits->objectid],
+        ]);
+});
+
 it('returns a readable Arabic message when an inline audit edit has no value change', function () {
     $user = User::factory()->create();
 
