@@ -189,6 +189,53 @@ it('filters housing unit datatable records using grouped filters and ranges', fu
     $response->assertDontSee('Hani Nassar');
 });
 
+it('returns filtered housing unit object ids for copying', function () {
+    $user = User::factory()->create();
+
+    AuditedBuilding::query()->create([
+        'objectid' => 29001,
+        'globalid' => 'copy-housing-building-1',
+        'assignedto' => 'Engineer One',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'objectid' => 29002,
+        'globalid' => 'copy-housing-building-2',
+        'assignedto' => 'Engineer Two',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 39001,
+        'globalid' => 'copy-housing-unit-1',
+        'parentglobalid' => 'copy-housing-building-1',
+        'housing_unit_number' => 'A1',
+        'unit_owner' => 'Copy Unit Owner',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 39002,
+        'globalid' => 'copy-housing-unit-2',
+        'parentglobalid' => 'copy-housing-building-2',
+        'housing_unit_number' => 'A2',
+        'unit_owner' => 'Copy Unit Owner',
+        'unit_damage_status' => 'fully_damaged2',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('housing.objectids', [
+            'parentglobalid' => 'copy-housing-building-1',
+            'filters' => [
+                'unit_damage_status' => ['fully_damaged2'],
+            ],
+            'search' => 'Copy Unit',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('count', 1)
+        ->assertJsonPath('objectids.0', '39001')
+        ->assertJsonPath('text', '39001');
+});
+
 it('filters housing unit datatable records by unclassified damage status', function () {
     $user = User::factory()->create();
 

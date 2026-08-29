@@ -144,6 +144,34 @@ class BuildingController extends Controller
             ->make(true);
     }
 
+    public function objectIds(Request $request): JsonResponse
+    {
+        $filters = $request->input('filters', []);
+
+        if (! is_array($filters)) {
+            $filters = [];
+        }
+
+        $query = $this->auditedBuildingQuery()
+            ->select('objectid');
+
+        $this->applyBuildingFilters($query, $filters);
+        $this->applyBuildingSearch($query, (string) $request->input('search', ''));
+
+        $objectIds = $query
+            ->whereNotNull('objectid')
+            ->orderBy('objectid')
+            ->pluck('objectid')
+            ->map(fn (mixed $objectId): string => (string) $objectId)
+            ->values();
+
+        return response()->json([
+            'count' => $objectIds->count(),
+            'objectids' => $objectIds,
+            'text' => $objectIds->implode("\n"),
+        ]);
+    }
+
     /**
      * @return array<int, array{title: string, filters: array<int, array{field: string, label: string, options: mixed}>}>
      */
@@ -323,6 +351,25 @@ class BuildingController extends Controller
                 $query->where($field, '<=', $to);
             }
         }
+    }
+
+    private function applyBuildingSearch(Builder $query, string $search): void
+    {
+        $search = trim($search);
+
+        if ($search === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($search): void {
+            foreach (['objectid', 'building_name', 'owner_name', 'owner_id', 'field_status', 'building_damage_status', 'municipalitie', 'neighborhood', 'assignedto'] as $field) {
+                if (! Schema::hasColumn('audited_buildings', $field)) {
+                    continue;
+                }
+
+                $query->orWhere($field, 'like', '%'.$search.'%');
+            }
+        });
     }
 
     private function applyBuildingDamageStatusFilter(Builder $query, array|string $value): void

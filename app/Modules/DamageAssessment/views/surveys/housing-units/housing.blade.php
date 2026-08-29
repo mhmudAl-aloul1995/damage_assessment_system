@@ -178,6 +178,7 @@
                 <button type="button" class="btn btn-light-primary" data-kt-Housing-table-action="refresh"><i class="ki-duotone ki-arrows-circle fs-2"></i>{{ __('ui.housing_page.refresh') }}</button>
                 <button type="button" class="btn btn-light-primary" data-bs-toggle="modal" data-bs-target="#kt_modal_export_housing"><i class="ki-duotone ki-exit-up fs-2"></i>{{ __('ui.housing_page.export') }}</button>
                 <button type="button" class="btn btn-light-success" data-bs-toggle="modal" data-bs-target="#kt_modal_export_housing_boq_objectids"><i class="ki-duotone ki-file-up fs-2"></i>BOQ by Object IDs</button>
+                <button type="button" class="btn btn-light-info" data-kt-Housing-table-action="copy-objectids"><i class="ki-duotone ki-copy fs-2"></i>نسخ ObjectIDs حسب الفلتر</button>
             </div>
         </div>
         <div class="card-body"><div class="table-responsive">
@@ -263,6 +264,27 @@
                 });
                 return payload;
             };
+            const copyTextToClipboard = function (text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    return navigator.clipboard.writeText(text);
+                }
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'fixed';
+                textarea.style.top = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                return new Promise(function (resolve, reject) {
+                    try {
+                        document.execCommand('copy') ? resolve() : reject();
+                    } catch (error) {
+                        reject(error);
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                });
+            };
             const activeFilterChips = function () {
                 const container = document.getElementById('housing_active_filters'); if (!container || !filterForm) return; container.innerHTML = '';
                 $(filterForm).find('.housing-filter-control').each(function () {
@@ -284,6 +306,36 @@
                 if (filterForm) { filterForm.addEventListener('submit', function (event) { event.preventDefault(); const button = filterForm.querySelector('[data-kt-Housing-table-filter="filter"]'); button.setAttribute('data-kt-indicator', 'on'); button.disabled = true; datatable.ajax.reload(function () { button.removeAttribute('data-kt-indicator'); button.disabled = false; activeFilterChips(); }, true); }); $(filterForm).find('select').on('change', activeFilterChips); }
                 const reset = document.querySelector('[data-kt-housing-filter-action="reset"]'); if (reset) reset.addEventListener('click', function () { Object.keys(initialDirectFilters).forEach(function (field) { delete initialDirectFilters[field]; }); $(filterForm).find('select').val('').trigger('change'); $(filterForm).find('input').val(''); datatable.search('').ajax.reload(); activeFilterChips(); });
                 const refresh = document.querySelector('[data-kt-Housing-table-action="refresh"]'); if (refresh) refresh.addEventListener('click', function () { datatable.ajax.reload(null, false); });
+                const copyButton = document.querySelector('[data-kt-Housing-table-action="copy-objectids"]');
+                if (copyButton) copyButton.addEventListener('click', function () {
+                    copyButton.disabled = true;
+                    $.ajax({
+                        url: @json(route('housing.objectids')),
+                        type: 'GET',
+                        data: {
+                            filters: filterPayload(),
+                            parentglobalid: parentGlobalId,
+                            search: datatable ? datatable.search() : ''
+                        },
+                        success: function (response) {
+                            if (!response.count) {
+                                toastr.warning('لا توجد ObjectIDs حسب الفلتر الحالي.');
+                                return;
+                            }
+                            copyTextToClipboard(response.text || '').then(function () {
+                                toastr.success('تم نسخ ' + response.count + ' ObjectID حسب الفلتر الحالي.');
+                            }).catch(function () {
+                                toastr.error('تعذر النسخ للحافظة.');
+                            });
+                        },
+                        error: function (xhr) {
+                            toastr.error(xhr.responseJSON?.message || 'تعذر جلب ObjectIDs حسب الفلتر.');
+                        },
+                        complete: function () {
+                            copyButton.disabled = false;
+                        }
+                    });
+                });
             };
             return { init: function () { applyInitialFilters(); initHousingTable(); bindEvents(); activeFilterChips(); } };
         }();

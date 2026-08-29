@@ -139,11 +139,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/sync_buildings/{no_day}', [ArcGISController::class, 'sync_buildings']);
 
     // building
+    Route::get('/building/objectids', [BuildingController::class, 'objectIds'])->name('building.objectids');
     Route::resource('building', controller: BuildingController::class);
     Route::get('export_building', action: [BuildingController::class, 'export_building']);
 
     // housing
     Route::get('/housing/export/{format}', [HousingUnitController::class, 'export'])->name('housing.export');
+    Route::get('/housing/objectids', [HousingUnitController::class, 'objectIds'])->name('housing.objectids');
     Route::get('/export_housings', [HousingUnitController::class, 'export'])->name('housing.export.legacy');
     Route::resource('housing', controller: HousingUnitController::class);
     Route::get('/showHousing/{globalid}', action: [HousingUnitController::class, 'index']);

@@ -181,6 +181,10 @@
                     <i class="ki-duotone ki-exit-up fs-2"></i>
                     {{ __('ui.buildings_page.export') }}
                 </button>
+                <button type="button" class="btn btn-light-info" data-kt-Building-table-action="copy-objectids">
+                    <i class="ki-duotone ki-copy fs-2"></i>
+                    نسخ ObjectIDs حسب الفلتر
+                </button>
             </div>
         </div>
         <div class="card-body">
@@ -341,6 +345,30 @@
                 return payload;
             };
 
+            const copyTextToClipboard = function (text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    return navigator.clipboard.writeText(text);
+                }
+
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'fixed';
+                textarea.style.top = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+
+                return new Promise(function (resolve, reject) {
+                    try {
+                        document.execCommand('copy') ? resolve() : reject();
+                    } catch (error) {
+                        reject(error);
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                });
+            };
+
             const activeFilterChips = function () {
                 const container = document.getElementById('building_active_filters');
 
@@ -478,6 +506,46 @@
                 });
             };
 
+            var handleCopyObjectIds = () => {
+                const copyButton = document.querySelector('[data-kt-Building-table-action="copy-objectids"]');
+
+                if (!copyButton) {
+                    return;
+                }
+
+                copyButton.addEventListener('click', function () {
+                    copyButton.disabled = true;
+
+                    $.ajax({
+                        url: @json(route('building.objectids')),
+                        type: 'GET',
+                        data: {
+                            filters: filterPayload(),
+                            search: datatable ? datatable.search() : ''
+                        },
+                        success: function (response) {
+                            if (!response.count) {
+                                toastr.warning('لا توجد ObjectIDs حسب الفلتر الحالي.');
+
+                                return;
+                            }
+
+                            copyTextToClipboard(response.text || '').then(function () {
+                                toastr.success('تم نسخ ' + response.count + ' ObjectID حسب الفلتر الحالي.');
+                            }).catch(function () {
+                                toastr.error('تعذر النسخ للحافظة.');
+                            });
+                        },
+                        error: function (xhr) {
+                            toastr.error(xhr.responseJSON?.message || 'تعذر جلب ObjectIDs حسب الفلتر.');
+                        },
+                        complete: function () {
+                            copyButton.disabled = false;
+                        }
+                    });
+                });
+            };
+
             return {
                 init: function () {
                     applyInitialFilters();
@@ -486,6 +554,7 @@
                     handleFilterDatatable();
                     handleResetForm();
                     handleRefresh();
+                    handleCopyObjectIds();
                     activeFilterChips();
                 }
             };

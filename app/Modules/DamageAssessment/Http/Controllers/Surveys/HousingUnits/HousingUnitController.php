@@ -211,6 +211,38 @@ class HousingUnitController extends Controller
             ->make(true);
     }
 
+    public function objectIds(Request $request): JsonResponse
+    {
+        $filters = $request->input('filters', []);
+
+        if (! is_array($filters)) {
+            $filters = [];
+        }
+
+        $query = AuditedHousingUnit::query()
+            ->select('objectid');
+
+        if ($request->filled('parentglobalid')) {
+            $query->where('parentglobalid', $request->string('parentglobalid')->toString());
+        }
+
+        $this->applyHousingFilters($query, $filters, 'audited_housing_units');
+        $this->applyHousingSearch($query, (string) $request->input('search', ''));
+
+        $objectIds = $query
+            ->whereNotNull('objectid')
+            ->orderBy('objectid')
+            ->pluck('objectid')
+            ->map(fn (mixed $objectId): string => (string) $objectId)
+            ->values();
+
+        return response()->json([
+            'count' => $objectIds->count(),
+            'objectids' => $objectIds,
+            'text' => $objectIds->implode("\n"),
+        ]);
+    }
+
     /**
      * @return array<int, array{title: string, filters: array<int, array{field: string, label: string, options: mixed}>}>
      */
@@ -448,6 +480,31 @@ class HousingUnitController extends Controller
                 $query->whereDate($submissionDateColumn, '<=', $to);
             }
         }
+    }
+
+    private function applyHousingSearch(Builder $query, string $search): void
+    {
+        $search = trim($search);
+
+        if ($search === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($search): void {
+            foreach (['objectid', 'housing_unit_number', 'unit_owner', 'q_9_3_1_first_name', 'q_9_3_4_last_name', 'id_number1', 'unit_damage_status', 'security_situation_unit', 'floor_number', 'damaged_area_m2', 'municipalitie', 'neighborhood'] as $field) {
+                if (! Schema::hasColumn('audited_housing_units', $field)) {
+                    continue;
+                }
+
+                $query->orWhere($field, 'like', '%'.$search.'%');
+            }
+
+            $query->orWhereHas('building', function (Builder $buildingQuery) use ($search): void {
+                $buildingQuery
+                    ->where('objectid', 'like', '%'.$search.'%')
+                    ->orWhere('assignedto', 'like', '%'.$search.'%');
+            });
+        });
     }
 
     private function applyUnitDamageStatusFilter(Builder $query, array|string $value, string $field): void

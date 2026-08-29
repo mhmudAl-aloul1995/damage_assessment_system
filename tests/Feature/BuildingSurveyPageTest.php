@@ -128,6 +128,40 @@ it('filters building datatable records with grouped filters and ranges', functio
     $response->assertDontSee('Al Noor House');
 });
 
+it('returns filtered building object ids for copying', function () {
+    $user = User::factory()->create();
+
+    AuditedBuilding::query()->create([
+        'assignedto' => 'Engineer One',
+        'globalid' => 'copy-building-1',
+        'objectid' => 19001,
+        'building_name' => 'Copy Building Target',
+        'owner_name' => 'Owner One',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'assignedto' => 'Engineer Two',
+        'globalid' => 'copy-building-2',
+        'objectid' => 19002,
+        'building_name' => 'Other Building',
+        'owner_name' => 'Owner Two',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('building.objectids', [
+            'filters' => [
+                'field_status' => ['COMPLETED'],
+            ],
+            'search' => 'Copy Building',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('count', 1)
+        ->assertJsonPath('objectids.0', '19001')
+        ->assertJsonPath('text', '19001');
+});
+
 it('filters building datatable records by unclassified damage status', function () {
     $user = User::factory()->create();
 
