@@ -2110,6 +2110,7 @@
 					.filter(item => /^\d+$/.test(item)))];
 			};
 			const bulkInlineFilterOptions = @json($bulkInlineFilterOptions);
+			const bulkInlineNullValue = '__NULL__';
 			const formatBulkInlineFieldOption = function (option) {
 				if (!option.id) {
 					return option.text;
@@ -2199,6 +2200,7 @@
 
 				if (options.length) {
 					select.empty().append('<option></option>');
+					select.append(new Option('بدون قيمة (Null)', bulkInlineNullValue, false, false));
 
 					options.forEach(function (option) {
 						select.append(new Option(option.label, option.value, false, false));
@@ -3087,7 +3089,7 @@
 					return;
 				}
 
-				if (($('#bulk_inline_value_select_wrapper').is(':visible')) && !value) {
+				if (($('#bulk_inline_value_select_wrapper').is(':visible')) && (value === null || value === undefined || value === '')) {
 					Swal.fire({
 						text: 'يرجى اختيار القيمة من قائمة الاستبيان.',
 						icon: 'warning',
@@ -3101,7 +3103,7 @@
 					return;
 				}
 
-				$('#bulk_inline_value').val(value || '');
+				$('#bulk_inline_value').val(value ?? '');
 
 				Swal.fire({
 					title: 'تأكيد التعديل الجماعي',

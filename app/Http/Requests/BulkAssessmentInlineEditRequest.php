@@ -10,9 +10,20 @@ use Illuminate\Validation\Validator;
 
 class BulkAssessmentInlineEditRequest extends FormRequest
 {
+    private const NULL_VALUE_SENTINEL = '__NULL__';
+
     public function authorize(): bool
     {
         return auth()->check();
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('value') === self::NULL_VALUE_SENTINEL) {
+            $this->merge([
+                'value' => null,
+            ]);
+        }
     }
 
     /**
@@ -66,9 +77,13 @@ class BulkAssessmentInlineEditRequest extends FormRequest
                 return;
             }
 
-            $value = (string) $this->input('value');
+            $value = $this->input('value');
 
-            if ($value === '' || ! $filterValues->contains($value)) {
+            if ($value === null) {
+                return;
+            }
+
+            if ($value === '' || ! $filterValues->contains((string) $value)) {
                 $validator->errors()->add('value', 'القيمة المختارة غير موجودة ضمن خيارات هذا الحقل في الاستبيان.');
             }
         });

@@ -370,6 +370,23 @@ it('stores bulk inline edits by pasted object ids for buildings and housing unit
         'field_name' => 'unit_damage_status',
         'field_value' => 'fully_damaged2',
     ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.bulkUpdate'), [
+            'type' => 'housing_table',
+            'objectids_text' => '17503',
+            'field' => 'unit_damage_status',
+            'value' => '__NULL__',
+        ])
+        ->assertOk()
+        ->assertJsonPath('updated_count', 1);
+
+    $this->assertDatabaseHas('edit_assessments', [
+        'global_id' => $housing->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_damage_status',
+        'field_value' => null,
+    ]);
 });
 
 it('returns a readable Arabic message when an inline audit edit has no value change', function () {
