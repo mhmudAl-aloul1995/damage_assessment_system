@@ -629,6 +629,10 @@
 										<span>تصدير مخالفات المساحات Excel</span>
 										<i class="ki-duotone ki-file-down"></i>
 									</button>
+									<button type="button" id="copy_filtered_objectids" class="dropdown-item">
+										<span>نسخ ObjectIDs حسب الفلتر</span>
+										<i class="ki-duotone ki-copy"></i>
+									</button>
 									<div class="dropdown-divider"></div>
 									<div class="dropdown-header">فلاتر سريعة</div>
 									<button type="button" id="toggle_accepted_with_unevaluated_units" class="dropdown-item"
@@ -2342,6 +2346,63 @@
 					params.append(key, value);
 				}
 			};
+			const copyTextToClipboard = function (text) {
+				if (navigator.clipboard && window.isSecureContext) {
+					return navigator.clipboard.writeText(text);
+				}
+
+				const textarea = document.createElement('textarea');
+				textarea.value = text;
+				textarea.setAttribute('readonly', '');
+				textarea.style.position = 'fixed';
+				textarea.style.top = '-9999px';
+				document.body.appendChild(textarea);
+				textarea.select();
+
+				return new Promise(function (resolve, reject) {
+					try {
+						document.execCommand('copy') ? resolve() : reject();
+					} catch (error) {
+						reject(error);
+					} finally {
+						document.body.removeChild(textarea);
+					}
+				});
+			};
+
+			$('#copy_filtered_objectids').on('click', function () {
+				const button = $(this);
+
+				button.prop('disabled', true);
+
+				$.ajax({
+					url: "{{ route('audit.objectids') }}",
+					type: 'GET',
+					data: {
+						...auditFilterPayload(),
+						field_engineer_audit: @json($isFieldEngineerAudit)
+					},
+					success: function (response) {
+						if (!response.count) {
+							toastr.warning('لا توجد ObjectIDs حسب الفلتر الحالي.');
+
+							return;
+						}
+
+						copyTextToClipboard(response.text || '').then(function () {
+							toastr.success('تم نسخ ' + response.count + ' ObjectID حسب الفلتر الحالي.');
+						}).catch(function () {
+							toastr.error('تعذر النسخ للحافظة.');
+						});
+					},
+					error: function (xhr) {
+						toastr.error(xhr.responseJSON?.message || 'تعذر جلب ObjectIDs حسب الفلتر.');
+					},
+					complete: function () {
+						button.prop('disabled', false);
+					}
+				});
+			});
 
 			@if(! $isFieldEngineerAudit)
 			let engineerChangeLogTable = null;

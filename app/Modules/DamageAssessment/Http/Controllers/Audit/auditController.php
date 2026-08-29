@@ -4186,6 +4186,48 @@ class auditController extends Controller
         );
     }
 
+    public function filteredObjectIds(Request $request, AuditTableService $auditTableService): JsonResponse
+    {
+        $user = $request->user();
+        $isFieldEngineerAudit = $request->boolean('field_engineer_audit');
+
+        if ($isFieldEngineerAudit) {
+            abort_unless($user?->hasAnyRole(['Field Engineer', 'field Engineer']), 403);
+        } else {
+            $roleNames = $user?->getRoleNames() ?? collect();
+
+            abort_if(
+                $roleNames->count() === 1 && $roleNames->contains(fn (string $role): bool => in_array($role, ['Field Engineer', 'field Engineer'], true)),
+                403
+            );
+        }
+
+        $query = Building::query()->select('buildings.objectid');
+
+        if ($isFieldEngineerAudit) {
+            $fieldEngineerUsername = strtolower(trim((string) $user?->username_arcgis));
+            $query->whereRaw('LOWER(TRIM(assignedto)) = ?', [$fieldEngineerUsername]);
+            $auditTableService->applyFilters($query, $request, includeAssignmentFilters: false);
+        } else {
+            $auditTableService->applyFilters($query, $request);
+        }
+
+        $auditTableService->applyStatusDateFilters($query, $request);
+
+        $objectIds = $query
+            ->whereNotNull('buildings.objectid')
+            ->orderBy('buildings.objectid')
+            ->pluck('buildings.objectid')
+            ->map(fn (mixed $objectId): string => (string) $objectId)
+            ->values();
+
+        return response()->json([
+            'count' => $objectIds->count(),
+            'objectids' => $objectIds,
+            'text' => $objectIds->implode("\n"),
+        ]);
+    }
+
     public function auditBuilding(Request $request, AuditTableService $auditTableService)
     {
         if ($request->ajax()) {

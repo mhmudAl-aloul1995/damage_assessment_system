@@ -784,6 +784,20 @@
             font-weight: 800;
         }
 
+        .audit-attachment-preview-modal .attachment-preview-zoom {
+            background: rgba(255, 255, 255, .1);
+            border: 1px solid rgba(255, 255, 255, .18);
+            color: #fff !important;
+            font-weight: 800;
+        }
+
+        .audit-attachment-preview-modal .attachment-preview-zoom:hover,
+        .audit-attachment-preview-modal .attachment-preview-zoom.is-active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff !important;
+        }
+
         .audit-attachment-preview-modal .attachment-preview-close {
             background: rgba(255, 255, 255, .1);
             border: 1px solid rgba(255, 255, 255, .18);
@@ -796,7 +810,13 @@
             display: flex;
             justify-content: center;
             min-height: min(620px, 78vh);
+            overflow: auto;
             padding: 1rem !important;
+        }
+
+        .audit-attachment-preview-modal.is-zoomed .modal-body {
+            align-items: flex-start;
+            justify-content: flex-start;
         }
 
         .audit-attachment-preview-counter {
@@ -847,6 +867,13 @@
             object-fit: contain;
             width: auto;
             max-width: 100%;
+        }
+
+        .audit-attachment-preview-modal.is-zoomed .audit-attachment-preview-image {
+            cursor: zoom-out;
+            max-height: none;
+            max-width: none;
+            width: min(1400px, 160vw);
         }
 
         /* إلغاء الـ sticky في الجوال لضمان الظهور */
@@ -1436,6 +1463,9 @@
                         <a href="#" target="_blank" class="btn btn-sm attachment-preview-open-original" id="attachmentPreviewOpenOriginal">
                             فتح الأصل
                         </a>
+                        <button type="button" class="btn btn-sm attachment-preview-zoom" id="attachmentPreviewZoom">
+                            تكبير
+                        </button>
                         <button type="button" class="btn btn-icon btn-sm attachment-preview-close" data-bs-dismiss="modal">✖</button>
                     </div>
                 </div>
@@ -1875,6 +1905,13 @@
         let attachmentPreviewItems = [];
         let attachmentPreviewIndex = 0;
 
+        function setAttachmentPreviewZoom(isZoomed) {
+            $('#attachmentPreviewModal').toggleClass('is-zoomed', isZoomed);
+            $('#attachmentPreviewZoom')
+                .toggleClass('is-active', isZoomed)
+                .text(isZoomed ? 'تصغير' : 'تكبير');
+        }
+
         function collectAttachmentPreviewItems(clickedLink) {
             return clickedLink
                 .closest('.audit-attachments-panel')
@@ -1903,6 +1940,7 @@
             let item = attachmentPreviewItems[attachmentPreviewIndex];
             let hasMultiple = attachmentPreviewItems.length > 1;
 
+            setAttachmentPreviewZoom(false);
             $('#attachmentPreviewImage').attr('src', item.previewSrc);
             $('#attachmentPreviewOpenOriginal').attr('href', item.originalSrc);
             $('#attachmentPreviewCounter').text((attachmentPreviewIndex + 1) + ' / ' + attachmentPreviewItems.length);
@@ -1973,6 +2011,14 @@
             showAttachmentPreview(attachmentPreviewIndex + 1);
         });
 
+        $('#attachmentPreviewZoom, #attachmentPreviewImage').on('click', function () {
+            setAttachmentPreviewZoom(!$('#attachmentPreviewModal').hasClass('is-zoomed'));
+        });
+
+        $('#attachmentPreviewModal').on('hidden.bs.modal', function () {
+            setAttachmentPreviewZoom(false);
+        });
+
         $(document).on('keydown', function (event) {
             if (!$('#attachmentPreviewModal').hasClass('show')) {
                 return;
@@ -1984,6 +2030,14 @@
 
             if (event.key === 'ArrowRight') {
                 showAttachmentPreview(attachmentPreviewIndex + 1);
+            }
+
+            if (event.key === '+' || event.key === '=') {
+                setAttachmentPreviewZoom(true);
+            }
+
+            if (event.key === '-' || event.key === '_') {
+                setAttachmentPreviewZoom(false);
             }
         });
 

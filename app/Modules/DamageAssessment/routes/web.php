@@ -313,6 +313,7 @@ Route::middleware('auth')->group(function () {
     // Ensure this matches your URL: phc/audit
     Route::get('/audit', [auditController::class, 'index'])->name('audit.index');
     Route::get('/field-engineer-audit', [auditController::class, 'fieldEngineerAudit'])->name('audit.fieldEngineer');
+    Route::get('/audit/objectids', [auditController::class, 'filteredObjectIds'])->name('audit.objectids');
     Route::get('/audit/export', AuditExportController::class)->name('audit.export');
     Route::get('/audit/floor-area-mismatches/export', AuditFloorAreaMismatchExportController::class)
         ->name('audit.floor-area-mismatches.export');

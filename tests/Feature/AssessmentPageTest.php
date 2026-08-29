@@ -389,6 +389,34 @@ it('stores bulk inline edits by pasted object ids for buildings and housing unit
     ]);
 });
 
+it('returns filtered audit building object ids for copying', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 18001,
+        'globalid' => 'copy-filter-building-1',
+        'building_name' => 'Copy Target Building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 18002,
+        'globalid' => 'copy-filter-building-2',
+        'building_name' => 'Other Building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('audit.objectids', [
+            'building_name' => 'Copy Target',
+            'field_status' => 'COMPLETED',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('count', 1)
+        ->assertJsonPath('objectids.0', '18001')
+        ->assertJsonPath('text', '18001');
+});
+
 it('returns a readable Arabic message when an inline audit edit has no value change', function () {
     $user = User::factory()->create();
 
