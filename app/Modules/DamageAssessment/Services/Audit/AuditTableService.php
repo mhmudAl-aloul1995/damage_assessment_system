@@ -346,11 +346,17 @@ class AuditTableService
 
     private function applyBuildingsWithoutUnitsFilter(Builder $query): void
     {
-        $query->whereNotExists(function ($unitQuery): void {
-            $unitQuery->selectRaw('1')
-                ->from('housing_units')
-                ->whereColumn('housing_units.parentglobalid', 'buildings.globalid');
-        });
+        $query
+            ->whereNotExists(function ($unitQuery): void {
+                $unitQuery->selectRaw('1')
+                    ->from('housing_units')
+                    ->whereColumn('housing_units.parentglobalid', 'buildings.globalid');
+            })
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereNull('assessment_obstacle')
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(assessment_obstacle, ''))) NOT IN ('yes', 'نعم')");
+            });
     }
 
     private function buildingFullDamageSql(): string

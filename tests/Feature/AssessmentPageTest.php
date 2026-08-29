@@ -434,6 +434,14 @@ it('filters audit buildings without housing units', function () {
         'field_status' => 'COMPLETED',
     ]);
 
+    $buildingWithoutUnitsWithObstacle = Building::query()->create([
+        'objectid' => 18103,
+        'globalid' => 'audit-building-without-units-with-obstacle',
+        'building_name' => 'Building Without Units With Obstacle',
+        'field_status' => 'COMPLETED',
+        'assessment_obstacle' => 'yes',
+    ]);
+
     HousingUnit::query()->create([
         'objectid' => 28102,
         'globalid' => 'audit-unit-for-building-with-units',
@@ -449,6 +457,9 @@ it('filters audit buildings without housing units', function () {
         ->assertJsonPath('objectids.0', (string) $buildingWithoutUnits->objectid)
         ->assertJsonMissing([
             'objectids' => [(string) $buildingWithUnits->objectid],
+        ])
+        ->assertJsonMissing([
+            'objectids' => [(string) $buildingWithoutUnitsWithObstacle->objectid],
         ]);
 });
 
