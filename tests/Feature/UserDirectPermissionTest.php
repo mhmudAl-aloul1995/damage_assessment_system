@@ -47,6 +47,8 @@ it('stores direct permissions for a managed user', function (): void {
             'phone' => '0599000000',
             'roles' => [$managedRole->name],
             'permissions' => ['reports.export'],
+            'default_phase_number' => 2,
+            'allowed_phase_numbers' => [2, 3],
         ])
         ->assertOk()
         ->assertJson([
@@ -56,5 +58,7 @@ it('stores direct permissions for a managed user', function (): void {
     $managedUser = User::query()->where('email', 'managed@example.com')->firstOrFail();
 
     expect($managedUser->hasRole($managedRole))->toBeTrue()
-        ->and($managedUser->hasDirectPermission('reports.export'))->toBeTrue();
+        ->and($managedUser->hasDirectPermission('reports.export'))->toBeTrue()
+        ->and($managedUser->default_phase_number)->toBe(2)
+        ->and($managedUser->allowed_phase_numbers)->toBe([2, 3]);
 });

@@ -94,6 +94,49 @@ it('adds the phase number column to all phase-filtered survey tables', function 
         ->and(Schema::hasColumn('audited_housing_units', 'phase_number'))->toBeTrue();
 });
 
+it('uses the user default phase when their profile restricts allowed phases', function (): void {
+    $user = User::factory()->create([
+        'default_phase_number' => 2,
+        'allowed_phase_numbers' => [2],
+    ]);
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    Building::query()->create([
+        'objectid' => 501,
+        'globalid' => 'restricted-phase-one-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'submission_date' => '2026-08-01 10:00:00',
+        'phase_number' => 1,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 502,
+        'globalid' => 'restricted-phase-two-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partially_damaged',
+        'submission_date' => '2026-08-02 10:00:00',
+        'phase_number' => 2,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', ['phase' => 'all']))
+        ->assertOk()
+        ->assertSee('PH2')
+        ->assertViewHas('buildingStats', function (array $stats): bool {
+            return (int) $stats['completed'] === 1
+                && (int) $stats['fully_damaged'] === 0
+                && (int) $stats['partially_damaged'] === 1;
+        });
+});
+
 it('filters public building reports by the selected phase', function (): void {
     $viewerRole = Role::query()->create([
         'name' => 'Database Officer',

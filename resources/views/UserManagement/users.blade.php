@@ -193,6 +193,28 @@
                             </div>
 
                             <div class="fv-row mb-7">
+                                <label class="fw-semibold fs-6 mb-2">{{ __('ui.users.default_phase_number') }}</label>
+                                <select name="default_phase_number" id="default_phase_number_select" class="form-select form-select-solid"
+                                    data-control="select2" data-placeholder="{{ __('ui.users.select_default_phase') }}">
+                                    <option value="">{{ __('ui.phase.all') }}</option>
+                                    @foreach($phaseOptions as $phaseOption)
+                                        <option value="{{ $phaseOption }}">{{ __('ui.phase.item', ['number' => $phaseOption]) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="fv-row mb-7">
+                                <label class="fw-semibold fs-6 mb-2">{{ __('ui.users.allowed_phase_numbers') }}</label>
+                                <select name="allowed_phase_numbers[]" id="allowed_phase_numbers_select" class="form-select form-select-solid"
+                                    data-control="select2" data-placeholder="{{ __('ui.users.select_allowed_phases') }}" multiple>
+                                    @foreach($phaseOptions as $phaseOption)
+                                        <option value="{{ $phaseOption }}">{{ __('ui.phase.item', ['number' => $phaseOption]) }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">{{ __('ui.users.allowed_phase_numbers_help') }}</div>
+                            </div>
+
+                            <div class="fv-row mb-7">
                                 <label class="fw-semibold fs-6 mb-2">{{ __('ui.users.send_password') }}</label>
                                 <select name="send_password" class="form-select form-select-solid">
                                     <option value="">{{ __('ui.options.send_password') }}</option>
@@ -275,6 +297,18 @@
             width: '100%'
         });
 
+        $('#default_phase_number_select').select2({
+            placeholder: @json(__('ui.users.select_default_phase')),
+            allowClear: true,
+            width: '100%'
+        });
+
+        $('#allowed_phase_numbers_select').select2({
+            placeholder: @json(__('ui.users.select_allowed_phases')),
+            allowClear: true,
+            width: '100%'
+        });
+
         let usersTable;
 
         function showSwalError(message) {
@@ -296,6 +330,8 @@
             $('#user_id').val('');
             $('#user_modal_title').text(userTranslations.createTitle);
             $('#user_avatar_preview').css('background-image', 'none');
+            $('#default_phase_number_select').val(null).trigger('change');
+            $('#allowed_phase_numbers_select').val(null).trigger('change');
             $('#permissions_select').val(null).trigger('change');
         }
 
@@ -327,6 +363,8 @@
                     $('#kt_modal_user_form input[name="phone"]').val(user.phone ?? '');
                     $('#kt_modal_user_form input[name="address"]').val(user.address ?? '');
                     $('#kt_modal_user_form select[name="region"]').val(user.region ?? '');
+                    $('#default_phase_number_select').val(user.default_phase_number ?? '').trigger('change');
+                    $('#allowed_phase_numbers_select').val(user.allowed_phase_numbers ?? []).trigger('change');
 
                     if (response.roles && response.roles.length > 0) {
                         $('#roles_select').val(response.roles).trigger('change');

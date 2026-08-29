@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\WelcomeUserMail;
 use App\Models\User;
 use App\Services\ImageService;
+use App\Support\Phase\PhaseContext;
 use Hash;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,6 +36,7 @@ class userController extends Controller
         $data['user'] = User::all();
         $data['roles'] = Role::all();
         $data['permissions'] = Permission::orderBy('name')->get();
+        $data['phaseOptions'] = app(PhaseContext::class)->options();
 
         return View::make('UserManagement.users', $data);
     }
@@ -107,6 +109,8 @@ class userController extends Controller
                 'address' => $user->address,
                 'avatar_url' => $user->avatar ? asset('storage/'.$user->avatar) : null,
                 'region' => $user->region,
+                'default_phase_number' => $user->default_phase_number,
+                'allowed_phase_numbers' => $user->allowed_phase_numbers ?? [],
             ],
             'roles' => $user->roles->pluck('name')->toArray(),
             'permissions' => $user->permissions->pluck('name')->toArray(),
@@ -127,6 +131,9 @@ class userController extends Controller
             'roles.*' => 'required|string|exists:roles,name',
             'permissions' => 'nullable|array',
             'permissions.*' => 'required|string|exists:permissions,name',
+            'default_phase_number' => 'nullable|integer|min:1',
+            'allowed_phase_numbers' => 'nullable|array',
+            'allowed_phase_numbers.*' => 'integer|min:1',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
@@ -146,6 +153,7 @@ class userController extends Controller
                 'contract_type' => $request->contract_type,
                 'phone' => $request->phone,
                 'address' => $request->address,
+                ...$this->phasePreferencesData($request),
                 'password' => $hashedPassword,
                 'avatar' => null,
             ]);
@@ -188,6 +196,9 @@ class userController extends Controller
             'roles.*' => 'required|string|exists:roles,name',
             'permissions' => 'nullable|array',
             'permissions.*' => 'required|string|exists:permissions,name',
+            'default_phase_number' => 'nullable|integer|min:1',
+            'allowed_phase_numbers' => 'nullable|array',
+            'allowed_phase_numbers.*' => 'integer|min:1',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
@@ -200,6 +211,7 @@ class userController extends Controller
             'contract_type' => $request->contract_type,
             'phone' => $request->phone,
             'address' => $request->address,
+            ...$this->phasePreferencesData($request),
         ];
 
         $newPassword = null;
@@ -238,6 +250,32 @@ class userController extends Controller
         return response()->json([
             'message' => __('ui.users.saved'),
         ]);
+    }
+
+    /**
+     * @return array{default_phase_number: int|null, allowed_phase_numbers: array<int, int>|null}
+     */
+    private function phasePreferencesData(Request $request): array
+    {
+        $defaultPhase = $request->filled('default_phase_number')
+            ? (int) $request->input('default_phase_number')
+            : null;
+        $allowedPhases = collect($request->input('allowed_phase_numbers', []))
+            ->map(fn (mixed $phase): int => (int) $phase)
+            ->filter(fn (int $phase): bool => $phase > 0)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($defaultPhase !== null && ! $allowedPhases->contains($defaultPhase)) {
+            $allowedPhases->push($defaultPhase);
+            $allowedPhases = $allowedPhases->unique()->sort()->values();
+        }
+
+        return [
+            'default_phase_number' => $defaultPhase,
+            'allowed_phase_numbers' => $allowedPhases->isEmpty() ? null : $allowedPhases->all(),
+        ];
     }
 
     private function processAvatar($file, $userId = null)

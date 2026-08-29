@@ -574,16 +574,18 @@
 									<i class="ki-duotone ki-down fs-5"></i>
 								</button>
 								<div class="dropdown-menu dropdown-menu-end menu-rounded w-150px py-2">
-									<a class="dropdown-item d-flex align-items-center justify-content-between fw-semibold {{ ($selectedPhaseNumber ?? null) === null ? 'active' : '' }}"
-										href="{{ request()->fullUrlWithQuery(['phase' => 'all']) }}">
-										<span>{{ __('ui.phase.all') }}</span>
-										@if(($selectedPhaseNumber ?? null) === null)
-											<i class="ki-duotone ki-check fs-3 text-primary">
-												<span class="path1"></span>
-												<span class="path2"></span>
-											</i>
-										@endif
-									</a>
+									@if($canSelectAllPhases ?? true)
+										<a class="dropdown-item d-flex align-items-center justify-content-between fw-semibold {{ ($selectedPhaseNumber ?? null) === null ? 'active' : '' }}"
+											href="{{ request()->fullUrlWithQuery(['phase' => 'all']) }}">
+											<span>{{ __('ui.phase.all') }}</span>
+											@if(($selectedPhaseNumber ?? null) === null)
+												<i class="ki-duotone ki-check fs-3 text-primary">
+													<span class="path1"></span>
+													<span class="path2"></span>
+												</i>
+											@endif
+										</a>
+									@endif
 									@foreach(($phaseOptions ?? collect([1, 2, 3])) as $phaseOption)
 										<a class="dropdown-item d-flex align-items-center justify-content-between fw-semibold {{ (int) ($selectedPhaseNumber ?? 0) === (int) $phaseOption ? 'active' : '' }}"
 											href="{{ request()->fullUrlWithQuery(['phase' => $phaseOption]) }}">

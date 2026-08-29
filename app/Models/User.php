@@ -39,6 +39,8 @@ class User extends Authenticatable
         'name_en',
         'username_arcgis',
         'preferred_locale',
+        'default_phase_number',
+        'allowed_phase_numbers',
     ];
 
     protected $hidden = [
@@ -66,6 +68,8 @@ class User extends Authenticatable
             'address' => 'string',
             'username_arcgis' => 'string',
             'preferred_locale' => 'string',
+            'default_phase_number' => 'integer',
+            'allowed_phase_numbers' => 'array',
             'email_verified_at' => 'datetime',
             'password' => 'string',
             'remember_token' => 'string',
