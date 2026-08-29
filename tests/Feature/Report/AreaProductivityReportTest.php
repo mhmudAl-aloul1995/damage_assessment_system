@@ -36,6 +36,21 @@ function ensureAuditedAreaProductivityColumns(): void
     }
 }
 
+it('renders empty area productivity tables without tbody colspan rows', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('Database Officer');
+
+    $response = $this->actingAs($user)
+        ->get(route('reports.area-productivity.buildings'))
+        ->assertOk();
+
+    expect($response->getContent())
+        ->toContain('https:\/\/cdn.datatables.net\/plug-ins\/1.13.4\/i18n\/')
+        ->not->toContain('<tbody>
+                                    <tr>
+                                        <td colspan=');
+});
+
 it('renders separated area productivity reports for all supported datasets with filtering', function () {
     $user = User::factory()->create();
     $user->assignRole('Database Officer');

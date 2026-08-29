@@ -721,7 +721,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse ($rows as $row)
+                                @foreach ($rows as $row)
                                     <tr>
                                         <td class="fw-bold">{{ $row->total_count }}</td>
                                         @if ($showRoadDamageColumns)
@@ -759,13 +759,7 @@
                                         <td>{{ $row->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
                                         <td>{{ __($sector_key) }}</td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="{{ $emptyTableColspan }}" class="text-center text-muted">
-                                            {{ __('multilingual.area_productivity_reports.labels.empty') }}
-                                        </td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                             <tfoot class="border-top-2">
                                 <tr class="fw-bold bg-light">
@@ -844,7 +838,9 @@
                     }
                 ],
                 language: {
-                    url: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json')
+                    emptyTable: @json(__('multilingual.area_productivity_reports.labels.empty')),
+                    zeroRecords: @json(__('multilingual.area_productivity_reports.labels.empty')),
+                    url: @json(app()->getLocale() === 'ar' ? 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json')
                 }
             });
 
