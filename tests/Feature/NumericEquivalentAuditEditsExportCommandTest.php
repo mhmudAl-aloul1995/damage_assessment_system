@@ -94,3 +94,78 @@ it('exports audit edits that differ as text but match as numbers with later edit
 
     expect($sheet->getCell('G2')->getHyperlink()->getUrl())->toBe((string) $buildingRow[6]);
 });
+
+it('deletes only numeric equivalent audit edits without later edits and tracks rollback', function (): void {
+    DB::table('buildings')->insert([
+        'objectid' => 1001,
+        'globalid' => 'building-numeric',
+        'building_damage_status' => '130.00',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 2001,
+        'globalid' => 'housing-numeric',
+        'parentglobalid' => 'building-numeric',
+        'unit_damage_status' => '130',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('audited_housing_units')->insert([
+        'objectid' => 2001,
+        'globalid' => 'housing-numeric',
+        'parentglobalid' => 'building-numeric',
+        'unit_damage_status' => '0130.000',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        [
+            'id' => 201,
+            'global_id' => 'building-numeric',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => '130',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'id' => 202,
+            'global_id' => 'building-numeric',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => '140',
+            'created_at' => now()->addMinute(),
+            'updated_at' => now()->addMinute(),
+        ],
+        [
+            'id' => 203,
+            'global_id' => 'housing-numeric',
+            'type' => 'housing_table',
+            'field_name' => 'unit_damage_status',
+            'field_value' => '0130.000',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    $this->artisan('audit-edits:delete-numeric-equivalent')
+        ->assertSuccessful();
+
+    $batchId = DB::table('audit_edit_deletion_batches')->value('id');
+
+    expect(DB::table('edit_assessments')->where('id', 201)->exists())->toBeTrue();
+    expect(DB::table('edit_assessments')->where('id', 202)->exists())->toBeTrue();
+    expect(DB::table('edit_assessments')->where('id', 203)->exists())->toBeFalse();
+    expect(DB::table('audit_edit_deletion_items')->where('batch_id', $batchId)->where('edit_assessment_id', 203)->exists())->toBeTrue();
+    expect(DB::table('audited_housing_units')->where('globalid', 'housing-numeric')->value('unit_damage_status'))->toBe('130');
+
+    $this->artisan('audit-edits:restore-deleted', ['batch' => $batchId])
+        ->assertSuccessful();
+
+    expect(DB::table('edit_assessments')->where('id', 203)->exists())->toBeTrue();
+    expect(DB::table('audited_housing_units')->where('globalid', 'housing-numeric')->value('unit_damage_status'))->toBe('0130.000');
+});

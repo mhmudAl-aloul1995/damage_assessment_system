@@ -15,7 +15,7 @@ class RestoreDeletedAuditEdits extends Command
      * @var string
      */
     protected $signature = 'audit-edits:restore-deleted
-        {batch : Batch id returned by audit-edits:delete-null-pending}
+        {batch : Batch id returned by an audit edit deletion command}
         {--dry-run : Report rows that would be restored without changing data}
         {--chunk=500 : Number of rows to process per chunk}';
 
@@ -24,7 +24,7 @@ class RestoreDeletedAuditEdits extends Command
      *
      * @var string
      */
-    protected $description = 'Restore audit edit rows deleted by audit-edits:delete-null-pending.';
+    protected $description = 'Restore audit edit rows deleted by an audit edit deletion command.';
 
     /**
      * Execute the console command.
