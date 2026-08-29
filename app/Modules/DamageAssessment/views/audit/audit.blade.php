@@ -9,7 +9,6 @@
 			&& $assessment->name !== 'attachments'
 			&& ($buildingAssessmentEndId === null || $assessment->id < $buildingAssessmentEndId)
 			&& \Illuminate\Support\Facades\Schema::hasColumn('buildings', $assessment->name))
-		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
 		->values();
 	$bulkEditableHousingFields = $assessments
 		->filter(fn ($assessment) => filled($assessment->name)
@@ -17,7 +16,6 @@
 			&& $housingAssessmentStartId !== null
 			&& $assessment->id >= $housingAssessmentStartId
 			&& \Illuminate\Support\Facades\Schema::hasColumn('housing_units', $assessment->name))
-		->sortBy(fn ($assessment) => $assessment->hint ?: $assessment->label ?: $assessment->name)
 		->values();
 	$bulkInlineFilterOptions = \App\Models\Filter::query()
 		->whereIn('list_name', $bulkEditableBuildingFields->pluck('name')->merge($bulkEditableHousingFields->pluck('name'))->unique()->values())
@@ -2132,6 +2130,29 @@
 					</div>
 				`);
 			};
+			const matchBulkInlineFieldOption = function (params, option) {
+				if (!option.id) {
+					return option;
+				}
+
+				const element = $(option.element);
+				const selectedType = $('#bulk_inline_type').val();
+
+				if (element.data('type') !== selectedType) {
+					return null;
+				}
+
+				const term = $.trim(params.term || '').toLowerCase();
+
+				if (!term) {
+					return option;
+				}
+
+				const label = String(element.data('label') || option.text || '').toLowerCase();
+				const code = String(element.data('code') || option.id || '').toLowerCase();
+
+				return label.includes(term) || code.includes(term) ? option : null;
+			};
 			const initBulkInlineSelects = function () {
 				if (!$.fn.select2) {
 					return;
@@ -2152,6 +2173,7 @@
 
 				$('#bulk_inline_field').select2({
 					dropdownParent: $('#bulkInlineEditModal'),
+					matcher: matchBulkInlineFieldOption,
 					templateResult: formatBulkInlineFieldOption,
 					templateSelection: formatBulkInlineFieldOption,
 					width: '100%'
@@ -2195,7 +2217,8 @@
 			};
 			const syncBulkInlineFieldOptions = function () {
 				const type = $('#bulk_inline_type').val();
-				const selected = $('#bulk_inline_field').val();
+				const fieldSelect = $('#bulk_inline_field');
+				const selected = fieldSelect.val();
 
 				$('#bulk_inline_field option').each(function () {
 					const option = $(this);
@@ -2210,10 +2233,10 @@
 				});
 
 				if (selected && $('#bulk_inline_field option:selected').prop('disabled')) {
-					$('#bulk_inline_field').val(null);
+					fieldSelect.val(null);
 				}
 
-				$('#bulk_inline_field').trigger('change.select2');
+				fieldSelect.trigger('change.select2');
 				syncBulkInlineValueControl();
 			};
 			const renderBulkInlineResult = function (response) {
@@ -3020,7 +3043,10 @@
 				syncBulkInlineFieldOptions();
 			});
 
-			$('#bulk_inline_type').on('change', syncBulkInlineFieldOptions);
+			$('#bulk_inline_type').on('change', function () {
+				$('#bulk_inline_field').val(null);
+				syncBulkInlineFieldOptions();
+			});
 			$('#bulk_inline_field').on('change', syncBulkInlineValueControl);
 
 			$('#bulk_inline_edit_form').on('submit', function (event) {
