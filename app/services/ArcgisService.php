@@ -382,6 +382,138 @@ class ArcgisService
         ];
     }
 
+    public function ensurePhaseNumberField(string $layerUrl, string $token): array
+    {
+        $layerUrl = $this->normalizeLayerUrl($layerUrl);
+        $metadata = $this->layerMetadata($layerUrl, $token);
+
+        if (! ($metadata['success'] ?? false)) {
+            return $metadata;
+        }
+
+        $hasPhaseField = collect($metadata['fields'] ?? [])
+            ->contains(fn (array $field): bool => strtolower((string) ($field['name'] ?? '')) === 'phase_number');
+
+        $fieldCreated = $hasPhaseField;
+
+        if (! $hasPhaseField) {
+            $created = $this->addPhaseNumberField($layerUrl, $token);
+
+            if (! ($created['success'] ?? false)) {
+                return $created;
+            }
+
+            $fieldCreated = true;
+        }
+
+        $backfill = $this->backfillMissingPhaseNumber($layerUrl, $token);
+
+        return [
+            'success' => $fieldCreated && (bool) ($backfill['success'] ?? false),
+            'status' => $hasPhaseField ? 'already_exists' : 'created',
+            'message' => $backfill['message'] ?? 'Phase number field is ready.',
+            'response' => [
+                'field_exists' => $hasPhaseField,
+                'backfill' => $backfill['response'] ?? null,
+            ],
+        ];
+    }
+
+    private function layerMetadata(string $layerUrl, string $token): array
+    {
+        $response = Http::timeout(60)
+            ->withoutVerifying()
+            ->get($layerUrl, [
+                'f' => 'json',
+                'token' => $token,
+            ]);
+
+        $body = $response->json();
+        $error = data_get($body, 'error');
+
+        if (! $response->successful() || is_array($error)) {
+            return [
+                'success' => false,
+                'status' => 'failed',
+                'message' => is_array($error) ? (string) data_get($error, 'message', $response->body()) : $response->body(),
+                'response' => $body,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => 'loaded',
+            'message' => 'Layer metadata loaded.',
+            'fields' => $body['fields'] ?? [],
+            'response' => $body,
+        ];
+    }
+
+    private function addPhaseNumberField(string $layerUrl, string $token): array
+    {
+        $adminLayerUrl = $this->adminLayerUrl($layerUrl);
+
+        $response = Http::asForm()
+            ->timeout(60)
+            ->withoutVerifying()
+            ->acceptJson()
+            ->post($adminLayerUrl.'/addToDefinition', [
+                'f' => 'json',
+                'token' => $token,
+                'addToDefinition' => json_encode([
+                    'fields' => [
+                        [
+                            'name' => 'phase_number',
+                            'type' => 'esriFieldTypeSmallInteger',
+                            'alias' => 'Phase Number',
+                            'nullable' => true,
+                            'editable' => true,
+                            'defaultValue' => 1,
+                        ],
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+        $body = $response->json();
+        $success = $response->successful() && empty($body['error']) && (bool) ($body['success'] ?? true);
+
+        return [
+            'success' => $success,
+            'status' => $success ? 'created' : 'failed',
+            'message' => $success ? 'Phase number field created.' : $response->body(),
+            'response' => $body,
+        ];
+    }
+
+    private function backfillMissingPhaseNumber(string $layerUrl, string $token): array
+    {
+        $response = Http::asForm()
+            ->timeout(120)
+            ->withoutVerifying()
+            ->acceptJson()
+            ->post($layerUrl.'/calculate', [
+                'f' => 'json',
+                'token' => $token,
+                'where' => 'phase_number IS NULL',
+                'calcExpression' => json_encode([
+                    [
+                        'field' => 'phase_number',
+                        'value' => 1,
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+        $body = $response->json();
+        $success = $response->successful() && empty($body['error']) && (bool) ($body['success'] ?? true);
+
+        return [
+            'success' => $success,
+            'status' => $success ? 'backfilled' : 'failed',
+            'message' => $success ? 'Missing phase numbers backfilled.' : $response->body(),
+            'response' => $body,
+        ];
+    }
+
     public function buildUrlFromLayerUrl(string $layerUrl, int|string $objectId, int|string $attachmentId, string $token): string
     {
         return $this->normalizeLayerUrl($layerUrl).'/'.$objectId.'/attachments/'.$attachmentId.'?token='.urlencode($token);
@@ -396,6 +528,13 @@ class ArcgisService
         }
 
         return $url;
+    }
+
+    private function adminLayerUrl(string $layerUrl): string
+    {
+        $adminUrl = preg_replace('~/arcgis/rest/services/~i', '/arcgis/admin/services/', $layerUrl) ?? $layerUrl;
+
+        return preg_replace('~/FeatureServer(?=/|$)~i', '.FeatureServer', $adminUrl) ?? $adminUrl;
     }
 
     private function isTokenError(string $message, int $code = 0): bool

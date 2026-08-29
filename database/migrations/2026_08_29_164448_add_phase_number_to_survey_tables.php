@@ -13,8 +13,12 @@ return new class extends Migration
         'buildings',
         'housing_units',
         'public_building_surveys',
+        'public_building_survey_units',
         'road_facility_surveys',
+        'road_facility_survey_items',
         'cso_surveys',
+        'cso_survey_organizations',
+        'cso_survey_units',
         'audited_buildings',
         'audited_housing_units',
     ];

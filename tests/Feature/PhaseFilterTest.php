@@ -88,8 +88,12 @@ it('adds the phase number column to all phase-filtered survey tables', function 
     expect(Schema::hasColumn('buildings', 'phase_number'))->toBeTrue()
         ->and(Schema::hasColumn('housing_units', 'phase_number'))->toBeTrue()
         ->and(Schema::hasColumn('public_building_surveys', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('public_building_survey_units', 'phase_number'))->toBeTrue()
         ->and(Schema::hasColumn('road_facility_surveys', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('road_facility_survey_items', 'phase_number'))->toBeTrue()
         ->and(Schema::hasColumn('cso_surveys', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('cso_survey_organizations', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('cso_survey_units', 'phase_number'))->toBeTrue()
         ->and(Schema::hasColumn('audited_buildings', 'phase_number'))->toBeTrue()
         ->and(Schema::hasColumn('audited_housing_units', 'phase_number'))->toBeTrue();
 });

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\SystemOperationLog;
+use App\services\ArcgisService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -172,6 +173,7 @@ class SyncArcGISLayers extends Command
             }
 
             $serviceUrl = $this->normalizeQueryUrl($url);
+            $this->ensureArcgisPhaseField($name, $url, $token);
             $this->syncSchemaFromArcgisMetadata($table, $url, $token);
 
             $tableColumns = Schema::getColumnListing($table);
@@ -641,6 +643,21 @@ class SyncArcGISLayers extends Command
             $this->warn($message);
             Log::warning($message, ['exception' => $exception]);
         }
+    }
+
+    private function ensureArcgisPhaseField(string $name, string $url, string $token): void
+    {
+        $result = app(ArcgisService::class)->ensurePhaseNumberField($url, $token);
+
+        if ($result['success'] ?? false) {
+            $this->line("ArcGIS phase_number ready for {$name}.");
+
+            return;
+        }
+
+        $message = "Could not ensure ArcGIS phase_number field for {$name}: ".($result['message'] ?? 'Unknown error');
+        $this->warn($message);
+        Log::warning($message, ['response' => $result['response'] ?? null]);
     }
 
     private function addArcgisMetadataColumn(Blueprint $schema, string $column, array $field, string $table): void
