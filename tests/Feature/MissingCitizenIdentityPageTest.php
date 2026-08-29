@@ -83,12 +83,15 @@ it('shows the missing citizen identities page', function (): void {
         ->assertOk()
         ->assertSee(__('ui.missing_citizen_identities.title'))
         ->assertSee(__('ui.missing_citizen_identities.housing_unit_objectid'))
+        ->assertSee(__('ui.missing_citizen_identities.marital_status'))
         ->assertSee(__('ui.missing_citizen_identities.issue_type'))
         ->assertSee(__('ui.missing_citizen_identities.unit_objectid_placeholder'))
         ->assertSee(__('ui.missing_citizen_identities.issue_owner_without_identity'))
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
         ->assertSee(__('ui.missing_citizen_identities.export_excel'))
+        ->assertSee(__('ui.missing_citizen_identities.all_marital_statuses'))
+        ->assertSee('data-kt-missing-citizens-filter="marital-status"', false)
         ->assertSee('data-kt-missing-citizens-action="open-unit-objectids-modal"', false)
         ->assertSee('data-kt-missing-citizens-action="export"', false)
         ->assertSee('missing_citizen_unit_objectids_modal')
@@ -125,24 +128,28 @@ it('returns housing unit identities that are not active citizens', function (): 
             'globalid' => 'missing-citizen-id',
             'unit_owner' => 'Missing Owner',
             'id_number1' => '900000001',
+            'marital_status' => 'Married',
         ],
         [
             'objectid' => 1002,
             'globalid' => 'active-citizen-id',
             'unit_owner' => 'Active Owner',
             'id_number1' => '900000002',
+            'marital_status' => null,
         ],
         [
             'objectid' => 1003,
             'globalid' => 'inactive-citizen-id',
             'unit_owner' => 'Inactive Owner',
             'id_number1' => '900000003',
+            'marital_status' => null,
         ],
         [
             'objectid' => 1004,
             'globalid' => 'blank-citizen-id',
             'unit_owner' => 'Blank Owner',
             'id_number1' => '',
+            'marital_status' => null,
         ],
     ]);
 
@@ -169,6 +176,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['housing_unit_objectid' => '1001'])
         ->assertJsonFragment(['issue_type' => 'missing_civil_registry_identity'])
         ->assertJsonFragment(['id_number1' => '900000001'])
+        ->assertJsonFragment(['marital_status' => 'Married'])
         ->assertJsonFragment(['identity_name_field' => 'unit_owner'])
         ->assertJsonFragment(['identity_number_field' => 'id_number1'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
@@ -221,6 +229,18 @@ it('returns housing unit identities that are not active citizens', function (): 
     $this
         ->actingAs(missingCitizenIdentityUser())
         ->getJson(route('reports.missing-citizen-identities.data', [
+            'marital_status' => 'Married',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['housing_unit_objectid' => '1001'])
+        ->assertJsonFragment(['marital_status' => 'Married'])
+        ->assertJsonMissing(['housing_unit_objectid' => '1003'])
+        ->assertJsonMissing(['housing_unit_objectid' => '1004']);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
             'unit_objectid' => "1001\n1004, 9999",
         ]))
         ->assertOk()
@@ -256,6 +276,7 @@ it('exports missing citizen identities using the active filters', function (): v
         'globalid' => 'export-spouse-unit',
         'unit_owner' => 'Export Spouse Owner',
         'id_number1' => '900000102',
+        'marital_status' => 'Married',
         'spouse1' => 'Filtered Spouse',
         'spouse1_id' => '900000103',
     ]);
@@ -292,6 +313,7 @@ it('exports missing citizen identities using the active filters', function (): v
         ->actingAs(missingCitizenIdentityUser())
         ->get(route('reports.missing-citizen-identities.export', [
             'identity_subject' => 'spouse',
+            'marital_status' => 'Married',
             'name_match_status' => 'matched',
             'unit_objectid' => '2102, 9999',
         ]))
@@ -305,10 +327,11 @@ it('exports missing citizen identities using the active filters', function (): v
             && $rows[0][1] === 'Export Spouse Owner'
             && $rows[0][3] === 'Filtered Spouse'
             && $rows[0][4] === '900000103'
-            && $rows[0][5] === '2102'
-            && $rows[0][7] === __('ui.missing_citizen_identities.name_match_matched')
-            && $rows[0][8] === 'Matched Spouse'
-            && $rows[0][9] === '900000104';
+            && $rows[0][5] === 'Married'
+            && $rows[0][6] === '2102'
+            && $rows[0][8] === __('ui.missing_citizen_identities.name_match_matched')
+            && $rows[0][9] === 'Matched Spouse'
+            && $rows[0][10] === '900000104';
     });
 });
 

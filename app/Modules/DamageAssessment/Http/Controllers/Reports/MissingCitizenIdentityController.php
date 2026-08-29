@@ -88,6 +88,7 @@ class MissingCitizenIdentityController extends Controller
         $issueType = trim($request->string('issue_type')->toString());
         $nameMatchStatus = trim($request->string('name_match_status')->toString());
         $identitySubject = trim($request->string('identity_subject')->toString());
+        $maritalStatus = trim($request->string('marital_status')->toString());
 
         $query = MissingCitizenIdentityReport::query()
             ->select([
@@ -106,6 +107,7 @@ class MissingCitizenIdentityController extends Controller
                 'housing_units.objectid as housing_unit_objectid',
                 'housing_units.unit_owner as housing_unit_owner_name',
                 'housing_units.id_number1 as housing_unit_owner_id_number',
+                'housing_units.marital_status as housing_unit_marital_status',
                 'housing_units.q_9_3_1_first_name',
                 'housing_units.q_9_3_2_second_name__father',
                 'housing_units.q_9_3_3_third_name__grandfather',
@@ -152,6 +154,10 @@ class MissingCitizenIdentityController extends Controller
             $query->where('missing_citizen_identity_reports.identity_subject', $identitySubject);
         }
 
+        if (in_array($maritalStatus, ['Single2', 'Divorced', 'Widow', 'Married'], true)) {
+            $query->where('housing_units.marital_status', $maritalStatus);
+        }
+
         return $query;
     }
 
@@ -168,6 +174,7 @@ class MissingCitizenIdentityController extends Controller
             'owner_name' => $report->owner_name ?: '-',
             'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
             'housing_unit_owner_id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
+            'marital_status' => filled($report->housing_unit_marital_status) ? (string) $report->housing_unit_marital_status : '-',
             'housing_unit_identity_details' => $this->housingUnitIdentityDetails($report),
             'id_number1' => filled($report->id_number) ? (string) $report->id_number : '-',
             'issue_type' => $report->issue_type,
@@ -193,6 +200,7 @@ class MissingCitizenIdentityController extends Controller
             $row['housing_unit_owner_id_number'],
             $report->identity_subject === 'spouse' ? $row['owner_name'] : '-',
             $report->identity_subject === 'spouse' ? $row['id_number1'] : '-',
+            $row['marital_status'],
             $row['housing_unit_objectid'],
             $this->issueTypeLabel((string) $row['issue_type']),
             $this->nameMatchStatusLabel((string) $row['name_match_status']),

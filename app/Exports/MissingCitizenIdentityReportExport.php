@@ -26,6 +26,7 @@ class MissingCitizenIdentityReportExport implements FromCollection, ShouldAutoSi
             __('ui.missing_citizen_identities.owner_id_number'),
             __('ui.missing_citizen_identities.spouse_name'),
             __('ui.missing_citizen_identities.spouse_id_number'),
+            __('ui.missing_citizen_identities.marital_status'),
             __('ui.missing_citizen_identities.housing_unit_objectid'),
             __('ui.missing_citizen_identities.issue_type'),
             __('ui.missing_citizen_identities.name_match_status'),
@@ -44,7 +45,7 @@ class MissingCitizenIdentityReportExport implements FromCollection, ShouldAutoSi
                 $sheet->setRightToLeft(true);
                 $sheet->freezePane('A2');
 
-                $sheet->getStyle("A1:J{$highestRow}")->applyFromArray([
+                $sheet->getStyle("A1:K{$highestRow}")->applyFromArray([
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => 'thin',
@@ -57,7 +58,7 @@ class MissingCitizenIdentityReportExport implements FromCollection, ShouldAutoSi
                     ],
                 ]);
 
-                $sheet->getStyle('A1:J1')->applyFromArray([
+                $sheet->getStyle('A1:K1')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'color' => ['rgb' => 'FFFFFF'],

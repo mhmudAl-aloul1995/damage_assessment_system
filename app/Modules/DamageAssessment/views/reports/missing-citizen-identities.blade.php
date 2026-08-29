@@ -88,6 +88,13 @@
                     <option value="no_owner_name">{{ __('ui.missing_citizen_identities.name_match_no_owner') }}</option>
                     <option value="not_checked">{{ __('ui.missing_citizen_identities.name_match_not_checked') }}</option>
                 </select>
+                <select class="form-select form-select-sm form-select-solid w-175px flex-shrink-0" data-kt-missing-citizens-filter="marital-status">
+                    <option value="">{{ __('ui.missing_citizen_identities.all_marital_statuses') }}</option>
+                    <option value="Single2">{{ __('ui.missing_citizen_identities.marital_status_single') }}</option>
+                    <option value="Divorced">{{ __('ui.missing_citizen_identities.marital_status_divorced') }}</option>
+                    <option value="Widow">{{ __('ui.missing_citizen_identities.marital_status_widow') }}</option>
+                    <option value="Married">{{ __('ui.missing_citizen_identities.marital_status_married') }}</option>
+                </select>
             </div>
         </div>
         <div class="card-body">
@@ -103,6 +110,7 @@
                             <th class="d-none" data-kt-missing-citizens-owner-context>{{ __('ui.missing_citizen_identities.owner_id_number') }}</th>
                             <th id="missing_citizen_identity_name_header">{{ __('ui.missing_citizen_identities.owner_name') }}</th>
                             <th id="missing_citizen_identity_number_header">{{ __('ui.missing_citizen_identities.id_number') }}</th>
+                            <th>{{ __('ui.missing_citizen_identities.marital_status') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.housing_unit_objectid') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.issue_type') }}</th>
                             <th>{{ __('ui.missing_citizen_identities.name_match_status') }}</th>
@@ -290,6 +298,7 @@
             var currentUnitObjectId = '';
             var currentIssueType = '';
             var currentNameMatchStatus = '';
+            var currentMaritalStatus = '';
             var currentIdentitySubject = 'owner';
             var nameHeader = document.getElementById('missing_citizen_identity_name_header');
             var idNumberHeader = document.getElementById('missing_citizen_identity_number_header');
@@ -613,6 +622,7 @@
                         + '<td class="' + ownerContextClass() + '" data-kt-missing-citizens-owner-context><span class="badge badge-light-primary">' + escapeHtml(row.housing_unit_owner_id_number) + '</span></td>'
                         + '<td>' + escapeHtml(row.owner_name) + '</td>'
                         + '<td><span class="badge badge-light-danger">' + escapeHtml(row.id_number1) + '</span></td>'
+                        + '<td>' + escapeHtml(row.marital_status) + '</td>'
                         + '<td><span class="badge badge-light-info">' + escapeHtml(row.housing_unit_objectid) + '</span></td>'
                         + '<td>' + issue + '</td>'
                         + '<td>' + status + '</td>'
@@ -701,6 +711,7 @@
                     unit_objectid: normalizedUnitObjectIds(),
                     issue_type: currentIssueType,
                     name_match_status: currentNameMatchStatus,
+                    marital_status: currentMaritalStatus,
                     identity_subject: currentIdentitySubject
                 };
             };
@@ -1176,6 +1187,7 @@
                 var perPage = document.querySelector('[data-kt-missing-citizens-filter="per-page"]');
                 var issueType = document.querySelector('[data-kt-missing-citizens-filter="issue-type"]');
                 var nameMatchStatus = document.querySelector('[data-kt-missing-citizens-filter="name-match-status"]');
+                var maritalStatus = document.querySelector('[data-kt-missing-citizens-filter="marital-status"]');
                 var bulkApproveButton = document.querySelector('[data-kt-missing-citizens-action="bulk-approve"]');
                 var selectAll = document.querySelector('[data-kt-missing-citizens-action="select-all"]');
                 var selectAllVisible = document.querySelector('[data-kt-missing-citizens-action="select-all-visible"]');
@@ -1231,6 +1243,16 @@
                 if (nameMatchStatus) {
                     nameMatchStatus.addEventListener('change', function (event) {
                         currentNameMatchStatus = event.target.value || '';
+                        cursorStack = [0];
+                        cursorIndex = 0;
+                        nextCursor = null;
+                        loadCursor(0);
+                    });
+                }
+
+                if (maritalStatus) {
+                    maritalStatus.addEventListener('change', function (event) {
+                        currentMaritalStatus = event.target.value || '';
                         cursorStack = [0];
                         cursorIndex = 0;
                         nextCursor = null;
