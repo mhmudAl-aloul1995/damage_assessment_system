@@ -253,6 +253,30 @@ it('stores bulk inline edits by pasted object ids for buildings and housing unit
         'unit_damage_status' => 'partially_damaged2',
     ]);
 
+    Assessment::query()->create([
+        'name' => 'building_name',
+        'label' => 'Building Name',
+        'hint' => 'اسم المبنى',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'housing_unit_group',
+        'label' => 'Housing Unit Group',
+        'hint' => 'بداية أسئلة الوحدات',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'unit_owner',
+        'label' => 'Unit Owner',
+        'hint' => 'مالك الوحدة',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'unit_damage_status',
+        'label' => 'Unit Damage Status',
+        'hint' => 'حالة ضرر الوحدة',
+    ]);
+
     Filter::query()->create([
         'list_name' => 'unit_damage_status',
         'name' => 'fully_damaged2',
@@ -279,6 +303,16 @@ it('stores bulk inline edits by pasted object ids for buildings and housing unit
         'field_value' => 'Bulk Building Name',
         'user_id' => $user->id,
     ]);
+
+    $this->actingAs($user)
+        ->postJson(route('assessment.inline.bulkUpdate'), [
+            'type' => 'building_table',
+            'objectids_text' => '17501',
+            'field' => 'unit_owner',
+            'value' => 'Wrong Type Value',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('field');
 
     $this->actingAs($user)
         ->postJson(route('assessment.inline.bulkUpdate'), [
