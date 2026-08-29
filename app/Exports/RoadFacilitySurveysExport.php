@@ -24,6 +24,7 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
     {
         return [
             'Object ID',
+            'Phase Number',
             'Road Name',
             'Municipality',
             'Neighborhood',
@@ -40,6 +41,7 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
         /** @var RoadFacilitySurvey $row */
         return [
             $row->objectid,
+            $row->phase_number,
             $row->str_name,
             $row->municipalitie,
             $row->neighborhood,

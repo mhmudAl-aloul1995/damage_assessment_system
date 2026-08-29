@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPhaseScope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -175,6 +176,8 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  */
 class Building extends Model
 {
+    use HasPhaseScope;
+
     protected $table = 'buildings';
 
     /**
@@ -392,6 +395,7 @@ class Building extends Model
         'neighborhood',
         'latitude',
         'longitude',
+        'phase_number',
 
     ];
 

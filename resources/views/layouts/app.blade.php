@@ -390,6 +390,34 @@
 		display: none !important;
 	}
 
+	.phc-phase-switcher .phc-phase-button {
+		min-width: 92px;
+		border: 1px solid #d8e2f1;
+		background: #fff;
+		color: #1f2937;
+	}
+
+	.phc-phase-switcher .phc-phase-button:hover,
+	.phc-phase-switcher .phc-phase-button.show {
+		border-color: #3e97ff;
+		background: #f1f8ff;
+		color: #1b84ff;
+	}
+
+	.phc-phase-switcher .phc-phase-dot {
+		display: inline-flex;
+		width: 8px;
+		height: 8px;
+		border-radius: 999px;
+		background: #50cd89;
+	}
+
+	.phc-phase-switcher .dropdown-item.active,
+	.phc-phase-switcher .dropdown-item:active {
+		background: #f1f8ff;
+		color: #1b84ff;
+	}
+
 	@media (max-width: 991.98px) {
 		body.phc-top-menu-mode #kt_app_header_menu {
 			display: none;
@@ -534,6 +562,44 @@
 					<!--end::Menu wrapper-->
 					<!--begin::Navbar-->
 					<div class="app-navbar flex-shrink-0">
+						<!--begin::Phase switcher-->
+						<div class="app-navbar-item ms-1 ms-md-4">
+							<div class="dropdown phc-phase-switcher">
+								<button type="button"
+									class="btn btn-sm phc-phase-button d-inline-flex align-items-center gap-2 h-35px px-3"
+									data-bs-toggle="dropdown" aria-expanded="false"
+									title="{{ __('ui.phase.switcher') }}">
+									<span class="phc-phase-dot"></span>
+									<span class="fw-bold">{{ $selectedPhaseLabel ?? __('ui.phase.all') }}</span>
+									<i class="ki-duotone ki-down fs-5"></i>
+								</button>
+								<div class="dropdown-menu dropdown-menu-end menu-rounded w-150px py-2">
+									<a class="dropdown-item d-flex align-items-center justify-content-between fw-semibold {{ ($selectedPhaseNumber ?? null) === null ? 'active' : '' }}"
+										href="{{ request()->fullUrlWithQuery(['phase' => 'all']) }}">
+										<span>{{ __('ui.phase.all') }}</span>
+										@if(($selectedPhaseNumber ?? null) === null)
+											<i class="ki-duotone ki-check fs-3 text-primary">
+												<span class="path1"></span>
+												<span class="path2"></span>
+											</i>
+										@endif
+									</a>
+									@foreach(($phaseOptions ?? collect([1, 2, 3])) as $phaseOption)
+										<a class="dropdown-item d-flex align-items-center justify-content-between fw-semibold {{ (int) ($selectedPhaseNumber ?? 0) === (int) $phaseOption ? 'active' : '' }}"
+											href="{{ request()->fullUrlWithQuery(['phase' => $phaseOption]) }}">
+											<span>{{ __('ui.phase.item', ['number' => $phaseOption]) }}</span>
+											@if((int) ($selectedPhaseNumber ?? 0) === (int) $phaseOption)
+												<i class="ki-duotone ki-check fs-3 text-primary">
+													<span class="path1"></span>
+													<span class="path2"></span>
+												</i>
+											@endif
+										</a>
+									@endforeach
+								</div>
+							</div>
+						</div>
+						<!--end::Phase switcher-->
 						<!--begin::Navigation layout toggle-->
 						<div class="app-navbar-item ms-1 ms-md-4 d-none d-lg-flex">
 							<button type="button"

@@ -301,6 +301,8 @@ class ExportAttachmentsJob implements ShouldQueue
         $buildingsSource ??= ExportDataColumns::buildingTableForSource($exportSource);
         $housingUnitsSource ??= ExportDataColumns::housingTableForSource($exportSource);
 
+        $this->applySelectedPhaseFilter($query, $params, $buildingsSource);
+
         foreach ($filters as $field => $values) {
             $values = array_filter((array) $values, fn ($value): bool => $value !== null && $value !== '');
 
@@ -355,6 +357,34 @@ class ExportAttachmentsJob implements ShouldQueue
             : 'building';
 
         $query->whereIn($target === 'housing_unit' ? 'h.objectid' : 'b.objectid', $importedObjectIds);
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    private function applySelectedPhaseFilter(mixed $query, array $params, string $buildingsSource): void
+    {
+        $phase = $this->selectedPhaseNumber($params);
+
+        if ($phase === null || ! ExportDataColumns::hasColumn($buildingsSource, 'phase_number')) {
+            return;
+        }
+
+        $query->where('b.phase_number', $phase);
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    private function selectedPhaseNumber(array $params): ?int
+    {
+        $phase = filter_var($params['selected_phase_number'] ?? null, FILTER_VALIDATE_INT, [
+            'options' => [
+                'min_range' => 1,
+            ],
+        ]);
+
+        return $phase === false ? null : $phase;
     }
 
     /**

@@ -284,6 +284,70 @@ test('it filters audited survey exports from audited cache tables', function () 
     }
 });
 
+test('it filters data exports by the selected phase payload', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 2101,
+        'globalid' => 'phase-one-export-building',
+        'phase_number' => 1,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 2102,
+        'globalid' => 'phase-two-export-building',
+        'phase_number' => 2,
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid'],
+            'selected_phase_number' => 2,
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->not->toBeNull();
+
+        $reader = new Reader;
+        $reader->open(storage_path('app/public/'.$export->file_name));
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        expect($rows)->toBe([
+            ['Objectid'],
+            [2102],
+        ]);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
 test('it can update filtered selected housing names from civil registry before exporting', function () {
     Schema::create('citizens', function (Blueprint $table): void {
         $table->id();
@@ -689,6 +753,14 @@ test('it exports data with selected arcgis building attachments to a zip with an
         'objectid' => 4001,
         'globalid' => 'building-with-attachment',
         'owner_name' => 'Attachment Owner',
+        'phase_number' => 2,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 4002,
+        'globalid' => 'outside-phase-building-with-attachment',
+        'owner_name' => 'Outside Phase Owner',
+        'phase_number' => 1,
     ]);
 
     $export = Export::query()->create([
@@ -704,6 +776,7 @@ test('it exports data with selected arcgis building attachments to a zip with an
             'attachment_grouping' => 'by_building',
             'attachment_filename_strategy' => 'objectid_type',
             'include_attachment_index' => '1',
+            'selected_phase_number' => 2,
         ], JSON_UNESCAPED_UNICODE),
         'user_id' => $user->id,
         'progress' => 0,

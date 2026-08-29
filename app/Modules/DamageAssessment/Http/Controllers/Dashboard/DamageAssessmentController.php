@@ -19,6 +19,7 @@ use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\Modules\DamageAssessment\Http\Requests\HudBuildingUnitsRequest;
 use App\Services\ArcgisService;
+use App\Support\Phase\PhaseContext;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -1052,6 +1053,7 @@ class DamageAssessmentController extends Controller
     private function dashboardCoreStats(Request $request): array
     {
         $buildingQuery = $this->dashboardTargetBackedQuery(AuditedBuilding::class, Building::class);
+        app(PhaseContext::class)->applyToEloquent($buildingQuery);
         $this->applyDashboardMapFilters($buildingQuery, $request, '', 'submission_date');
         $buildingTable = $buildingQuery->getModel()->getTable();
         $buildingDebrisBlockingColumn = Schema::hasColumn($buildingTable, 'building_debris_blocking')
@@ -1148,6 +1150,7 @@ class DamageAssessmentController extends Controller
             'governorate',
             'neighborhood',
         ]);
+        $filters['phase'] = app(PhaseContext::class)->selected();
 
         ksort($filters);
 
@@ -2245,6 +2248,11 @@ class DamageAssessmentController extends Controller
     private function applyDashboardHousingFilters(Builder $query, Request $request): void
     {
         [$startDate, $endDate] = $this->dashboardDateRange($request);
+        $buildingTable = $query->getModel()->getTable() === 'audited_housing_units'
+            ? 'audited_buildings'
+            : 'buildings';
+
+        app(PhaseContext::class)->applyToParentBuildingPhase($query, 'parentglobalid', $buildingTable);
 
         if ($startDate !== null) {
             $query->whereDate('building_submit_date', '>=', $startDate);

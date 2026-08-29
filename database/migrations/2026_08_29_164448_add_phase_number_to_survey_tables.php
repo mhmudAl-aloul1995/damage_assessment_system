@@ -1,0 +1,45 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * @var list<string>
+     */
+    private array $tables = [
+        'buildings',
+        'public_building_surveys',
+        'road_facility_surveys',
+        'cso_surveys',
+        'audited_buildings',
+    ];
+
+    public function up(): void
+    {
+        foreach ($this->tables as $tableName) {
+            if (! Schema::hasTable($tableName) || Schema::hasColumn($tableName, 'phase_number')) {
+                continue;
+            }
+
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->unsignedSmallInteger('phase_number')->default(1)->index();
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        foreach (array_reverse($this->tables) as $tableName) {
+            if (! Schema::hasTable($tableName) || ! Schema::hasColumn($tableName, 'phase_number')) {
+                continue;
+            }
+
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->dropColumn('phase_number');
+            });
+        }
+    }
+};

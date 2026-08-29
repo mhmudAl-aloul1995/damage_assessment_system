@@ -11,6 +11,11 @@ return [
         'english' => 'English',
         'arabic' => 'العربية',
     ],
+    'phase' => [
+        'switcher' => 'Phase filter',
+        'all' => 'All phases',
+        'item' => 'PH:number',
+    ],
     'nav' => [
         'home' => 'Home',
         'profile' => 'My Profile',

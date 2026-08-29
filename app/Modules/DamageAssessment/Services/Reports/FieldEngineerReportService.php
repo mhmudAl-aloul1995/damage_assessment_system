@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Services\Reports;
 
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
+use App\Support\Phase\PhaseContext;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -20,45 +21,54 @@ class FieldEngineerReportService
     public function filterOptions(): array
     {
         return [
-            'engineers' => Cache::remember('field-engineer-report:engineers', now()->addMinutes(30), function () {
-                return DB::table('buildings')
+            'engineers' => Cache::remember('field-engineer-report:engineers:'.($this->selectedPhaseCacheKey()), now()->addMinutes(30), function () {
+                $query = DB::table('buildings')
                     ->select('assignedto')
                     ->whereNotNull('assignedto')
                     ->where('assignedto', '!=', '')
                     ->distinct()
-                    ->orderBy('assignedto')
-                    ->pluck('assignedto')
+                    ->orderBy('assignedto');
+
+                app(PhaseContext::class)->applyToBase($query, 'buildings.phase_number');
+
+                return $query->pluck('assignedto')
                     ->values()
                     ->all();
             }),
-            'municipalities' => Cache::remember('field-engineer-report:municipalities', now()->addMinutes(30), function () {
-                return DB::table('buildings')
+            'municipalities' => Cache::remember('field-engineer-report:municipalities:'.($this->selectedPhaseCacheKey()), now()->addMinutes(30), function () {
+                $query = DB::table('buildings')
                     ->select('municipalitie')
                     ->whereNotNull('municipalitie')
                     ->where('municipalitie', '!=', '')
                     ->distinct()
-                    ->orderBy('municipalitie')
-                    ->pluck('municipalitie')
+                    ->orderBy('municipalitie');
+
+                app(PhaseContext::class)->applyToBase($query, 'buildings.phase_number');
+
+                return $query->pluck('municipalitie')
                     ->values()
                     ->all();
             }),
-            'neighborhoods' => Cache::remember('field-engineer-report:neighborhoods', now()->addMinutes(30), function () {
-                return DB::table('buildings')
+            'neighborhoods' => Cache::remember('field-engineer-report:neighborhoods:'.($this->selectedPhaseCacheKey()), now()->addMinutes(30), function () {
+                $query = DB::table('buildings')
                     ->select('neighborhood')
                     ->whereNotNull('neighborhood')
                     ->where('neighborhood', '!=', '')
                     ->distinct()
-                    ->orderBy('neighborhood')
-                    ->pluck('neighborhood')
+                    ->orderBy('neighborhood');
+
+                app(PhaseContext::class)->applyToBase($query, 'buildings.phase_number');
+
+                return $query->pluck('neighborhood')
                     ->values()
                     ->all();
             }),
-            'building_damage_statuses' => DB::table('buildings')
+            'building_damage_statuses' => tap(DB::table('buildings')
                 ->select('building_damage_status')
                 ->whereNotNull('building_damage_status')
                 ->where('building_damage_status', '!=', '')
                 ->distinct()
-                ->orderBy('building_damage_status')
+                ->orderBy('building_damage_status'), fn (Builder $query) => app(PhaseContext::class)->applyToBase($query, 'buildings.phase_number'))
                 ->pluck('building_damage_status')
                 ->values()
                 ->all(),
@@ -1188,6 +1198,8 @@ class FieldEngineerReportService
             $query->where("{$buildingTable}.assignedto", $filters['assignedto']);
         }
 
+        app(PhaseContext::class)->applyToBase($query, "{$buildingTable}.phase_number");
+
         if ($filters['building_objectid']) {
             $query->where("{$buildingTable}.objectid", (int) $filters['building_objectid']);
         }
@@ -1261,6 +1273,8 @@ class FieldEngineerReportService
         if ($filters['assignedto']) {
             $query->where('buildings.assignedto', $filters['assignedto']);
         }
+
+        app(PhaseContext::class)->applyToBase($query, 'buildings.phase_number');
 
         if ($filters['building_objectid']) {
             $query->where('buildings.objectid', (int) $filters['building_objectid']);
@@ -1423,6 +1437,11 @@ class FieldEngineerReportService
         $trimmedValue = trim($value);
 
         return $trimmedValue === '' ? null : $trimmedValue;
+    }
+
+    private function selectedPhaseCacheKey(): string
+    {
+        return (string) (app(PhaseContext::class)->selected() ?? 'all');
     }
 
     private function trans(string $key): string

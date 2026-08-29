@@ -11,6 +11,11 @@ return [
         'english' => 'English',
         'arabic' => 'العربية',
     ],
+    'phase' => [
+        'switcher' => 'فلتر المرحلة',
+        'all' => 'كل المراحل',
+        'item' => 'PH:number',
+    ],
     'nav' => [
         'home' => 'الرئيسية',
         'profile' => 'ملفي الشخصي',

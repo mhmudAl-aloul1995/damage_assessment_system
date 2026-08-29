@@ -122,6 +122,8 @@ class ExportDataJob implements ShouldQueue
                 ? DB::table("{$housingUnitsSource} as h")->join("{$buildingsSource} as b", 'b.globalid', '=', 'h.parentglobalid')
                 : DB::table("{$buildingsSource} as b");
 
+            $this->applySelectedPhaseFilter($query, $params, $buildingsSource);
+
             $buildingEndExpression = $this->sourceColumnExpression('b', 'end');
 
             if ($buildingEndFrom !== null && $buildingEndFrom !== '') {
@@ -462,6 +464,34 @@ class ExportDataJob implements ShouldQueue
         }
 
         return min(95, max(1, (int) floor($processed / 100)));
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    private function applySelectedPhaseFilter(mixed $query, array $params, string $buildingsSource): void
+    {
+        $phase = $this->selectedPhaseNumber($params);
+
+        if ($phase === null || ! ExportDataColumns::hasColumn($buildingsSource, 'phase_number')) {
+            return;
+        }
+
+        $query->where('b.phase_number', $phase);
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    private function selectedPhaseNumber(array $params): ?int
+    {
+        $phase = filter_var($params['selected_phase_number'] ?? null, FILTER_VALIDATE_INT, [
+            'options' => [
+                'min_range' => 1,
+            ],
+        ]);
+
+        return $phase === false ? null : $phase;
     }
 
     /**

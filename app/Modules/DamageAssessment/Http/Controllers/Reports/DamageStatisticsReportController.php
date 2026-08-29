@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Reports;
 
 use App\Exports\DamageStatisticsReportExport;
 use App\Http\Controllers\Controller;
+use App\Support\Phase\PhaseContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -12,28 +13,36 @@ class DamageStatisticsReportController extends Controller
 {
     public function index()
     {
-        $municipalities = DB::table('buildings')
+        $municipalitiesQuery = DB::table('buildings');
+        app(PhaseContext::class)->applyToBase($municipalitiesQuery, 'buildings.phase_number');
+        $municipalities = $municipalitiesQuery
             ->whereNotNull('municipalitie')
             ->where('municipalitie', '!=', '')
             ->distinct()
             ->orderBy('municipalitie')
             ->pluck('municipalitie');
 
-        $neighborhoods = DB::table('buildings')
+        $neighborhoodsQuery = DB::table('buildings');
+        app(PhaseContext::class)->applyToBase($neighborhoodsQuery, 'buildings.phase_number');
+        $neighborhoods = $neighborhoodsQuery
             ->whereNotNull('neighborhood')
             ->where('neighborhood', '!=', '')
             ->distinct()
             ->orderBy('neighborhood')
             ->pluck('neighborhood');
 
-        $fieldEngineers = DB::table('buildings')
+        $fieldEngineersQuery = DB::table('buildings');
+        app(PhaseContext::class)->applyToBase($fieldEngineersQuery, 'buildings.phase_number');
+        $fieldEngineers = $fieldEngineersQuery
             ->whereNotNull('assignedto')
             ->where('assignedto', '!=', '')
             ->distinct()
             ->orderBy('assignedto')
             ->pluck('assignedto');
 
-        $damageStatuses = DB::table('buildings')
+        $damageStatusesQuery = DB::table('buildings');
+        app(PhaseContext::class)->applyToBase($damageStatusesQuery, 'buildings.phase_number');
+        $damageStatuses = $damageStatusesQuery
             ->whereNotNull('building_damage_status')
             ->where('building_damage_status', '!=', '')
             ->distinct()
@@ -93,8 +102,8 @@ class DamageStatisticsReportController extends Controller
         return [
             $this->section('احصائيات المباني والوحدات السكنية في مناطق العمل'),
 
-            $this->row(1, 'عدد المباني السكنية في مناطق العمل', DB::table('buildings')->count(), 'مبنى سكني'),
-            $this->row(2, 'عدد الوحدات السكنية في مناطق العمل', DB::table('housing_units')->count(), 'وحدة سكنية'),
+            $this->row(1, 'عدد المباني السكنية في مناطق العمل', $this->allBuildingsQuery()->count(), 'مبنى سكني'),
+            $this->row(2, 'عدد الوحدات السكنية في مناطق العمل', $this->allHousingUnitsQuery()->count(), 'وحدة سكنية'),
 
             $this->section('احصائيات المباني والوحدات السكنية التي تم حصرها حسب تاريخ التعديل'),
 
@@ -140,11 +149,29 @@ class DamageStatisticsReportController extends Controller
         return $query;
     }
 
+    private function allBuildingsQuery()
+    {
+        $query = DB::table('buildings as b');
+        app(PhaseContext::class)->applyToBase($query, 'b.phase_number');
+
+        return $query;
+    }
+
+    private function allHousingUnitsQuery()
+    {
+        $query = DB::table('housing_units as hu')
+            ->leftJoin('buildings as b', 'b.globalid', '=', 'hu.parentglobalid');
+        app(PhaseContext::class)->applyToBase($query, 'b.phase_number');
+
+        return $query;
+    }
+
     private function applyFilters($query, Request $request): void
     {
         // التقرير حسب تاريخ التعديل من جدول buildings فقط
 
         $query->where('b.field_status', 'COMPLETED');
+        app(PhaseContext::class)->applyToBase($query, 'b.phase_number');
 
         if ($request->filled('from_date')) {
             $query->whereDate('b.editdate', '>=', $request->from_date);

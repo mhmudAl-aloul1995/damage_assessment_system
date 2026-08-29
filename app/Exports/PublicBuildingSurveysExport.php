@@ -20,6 +20,7 @@ class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, Wit
      */
     private const BASE_COLUMNS = [
         'objectid' => 'Object ID',
+        'phase_number' => 'Phase Number',
         'building_name' => 'Building Name',
         'municipalitie' => 'Municipality',
         'neighborhood' => 'Neighborhood',
@@ -102,6 +103,7 @@ class PublicBuildingSurveysExport implements FromCollection, ShouldAutoSize, Wit
         /** @var PublicBuildingSurvey $row */
         $baseValues = [
             'objectid' => $row->objectid,
+            'phase_number' => $row->phase_number,
             'building_name' => $row->building_name,
             'municipalitie' => $row->municipalitie,
             'neighborhood' => $row->neighborhood,

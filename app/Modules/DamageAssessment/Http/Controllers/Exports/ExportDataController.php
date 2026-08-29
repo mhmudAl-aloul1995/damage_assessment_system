@@ -12,6 +12,7 @@ use App\Models\Export;
 use App\Modules\DamageAssessment\Http\Requests\ObjectIdImportRequest;
 use App\services\ArcgisService;
 use App\Support\Exports\ExportDataColumns;
+use App\Support\Phase\PhaseContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -91,12 +92,16 @@ class ExportDataController extends Controller
 
         $this->ensureAssessmentObstacleFilter($filters);
 
-        $filters['neighborhood'] = DB::table(ExportDataColumns::BUILDINGS_TABLE)
+        $neighborhoodQuery = DB::table(ExportDataColumns::BUILDINGS_TABLE)
             ->select('neighborhood')
             ->whereNotNull('neighborhood')
             ->where('neighborhood', '<>', '')
             ->distinct()
-            ->orderBy('neighborhood')
+            ->orderBy('neighborhood');
+
+        app(PhaseContext::class)->applyToBase($neighborhoodQuery, ExportDataColumns::BUILDINGS_TABLE.'.phase_number');
+
+        $filters['neighborhood'] = $neighborhoodQuery
             ->pluck('neighborhood')
             ->map(fn (string $neighborhood): object => (object) [
                 'name' => $neighborhood,
@@ -208,6 +213,11 @@ class ExportDataController extends Controller
             }
 
             $payload = $request->all();
+            $selectedPhase = app(PhaseContext::class)->selected();
+
+            if ($selectedPhase !== null) {
+                $payload['selected_phase_number'] = $selectedPhase;
+            }
 
             if (($payload['export_type'] ?? null) === 'zip' && ($payload['export_mode'] ?? 'data') === 'data') {
                 $payload['export_mode'] = 'attachments';

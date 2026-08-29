@@ -8,6 +8,7 @@ use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
+use App\Support\Phase\PhaseContext;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -156,6 +157,8 @@ class AreaProductivityReportService
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
 
+        app(PhaseContext::class)->applyToEloquent($query, 'buildings.phase_number');
+
         $this->applyFilters($query, $filters, [
             'governorate' => 'buildings.governorate',
             'municipalitie' => 'buildings.municipalitie',
@@ -199,6 +202,8 @@ class AreaProductivityReportService
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
 
+        app(PhaseContext::class)->applyToEloquent($query, 'buildings.phase_number');
+
         $this->applyFilters($query, $filters, [
             'governorate' => 'buildings.governorate',
             'municipalitie' => 'buildings.municipalitie',
@@ -222,6 +227,8 @@ class AreaProductivityReportService
                 COUNT(*) as housing_units_count
             ")
             ->groupByRaw($groupKey);
+
+        app(PhaseContext::class)->applyToEloquent($query, 'unit_buildings.phase_number');
 
         $this->applyFilters($query, $filters, [
             'governorate' => 'unit_buildings.governorate',
@@ -377,12 +384,15 @@ class AreaProductivityReportService
 
     private function buildingBackedFilterOptions(): array
     {
+        $query = AuditedBuilding::query();
+        app(PhaseContext::class)->applyToEloquent($query);
+
         return [
-            'governorates' => AuditedBuilding::query()->orderBy('governorate')->pluck('governorate')->filter()->unique()->values(),
-            'municipalities' => AuditedBuilding::query()->orderBy('municipalitie')->pluck('municipalitie')->filter()->unique()->values(),
-            'neighborhoods' => AuditedBuilding::query()->orderBy('neighborhood')->pluck('neighborhood')->filter()->unique()->values(),
-            'zone_codes' => AuditedBuilding::query()->orderBy('zone_code')->pluck('zone_code')->filter()->unique()->values(),
-            'assignedto' => AuditedBuilding::query()->orderBy('assignedto')->pluck('assignedto')->filter()->unique()->values(),
+            'governorates' => (clone $query)->orderBy('governorate')->pluck('governorate')->filter()->unique()->values(),
+            'municipalities' => (clone $query)->orderBy('municipalitie')->pluck('municipalitie')->filter()->unique()->values(),
+            'neighborhoods' => (clone $query)->orderBy('neighborhood')->pluck('neighborhood')->filter()->unique()->values(),
+            'zone_codes' => (clone $query)->orderBy('zone_code')->pluck('zone_code')->filter()->unique()->values(),
+            'assignedto' => (clone $query)->orderBy('assignedto')->pluck('assignedto')->filter()->unique()->values(),
         ];
     }
 
