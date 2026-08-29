@@ -369,6 +369,7 @@ class HousingUnit extends Model
     protected $fillable = [
         'id',
         'attachments',
+        'phase_number',
         'housing_unit_type',
         'unit_damage_status',
         'security_unit_info',

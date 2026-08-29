@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -81,6 +82,16 @@ it('filters dashboard building and housing statistics by the selected phase', fu
                 && (int) $stats['fully_damaged'] === 0
                 && (int) $stats['partially_damaged'] === 1;
         });
+});
+
+it('adds the phase number column to all phase-filtered survey tables', function (): void {
+    expect(Schema::hasColumn('buildings', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('housing_units', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('public_building_surveys', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('road_facility_surveys', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('cso_surveys', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('audited_buildings', 'phase_number'))->toBeTrue()
+        ->and(Schema::hasColumn('audited_housing_units', 'phase_number'))->toBeTrue();
 });
 
 it('filters public building reports by the selected phase', function (): void {

@@ -57,10 +57,12 @@ class PhaseContext
         $defaultOptions = collect([1, 2, 3]);
         $tables = [
             'buildings',
+            'housing_units',
             'public_building_surveys',
             'road_facility_surveys',
             'cso_surveys',
             'audited_buildings',
+            'audited_housing_units',
         ];
 
         try {

@@ -11,10 +11,12 @@ return new class extends Migration
      */
     private array $tables = [
         'buildings',
+        'housing_units',
         'public_building_surveys',
         'road_facility_surveys',
         'cso_surveys',
         'audited_buildings',
+        'audited_housing_units',
     ];
 
     public function up(): void
