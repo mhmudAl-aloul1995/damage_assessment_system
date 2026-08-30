@@ -10,6 +10,7 @@ use App\Models\BuildingSurveyReturnRequestLog;
 use App\Models\TeamLeaderFieldEngineer;
 use App\Models\User;
 use App\services\ArcgisService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,10 +35,7 @@ class BuildingSurveyReturnRequestController extends Controller
 
         $requests = $query->latest()->get();
 
-        $buildings = Building::query()
-            ->orderBy('objectid')
-            ->limit(1000)
-            ->get(['id', 'objectid', 'globalid', 'building_name']);
+        $buildings = $this->buildingOptionsFor(auth()->user());
 
         return view('damage-assessment::field-operations.building-survey-return-requests.index', compact('requests', 'buildings'));
     }
@@ -46,10 +44,7 @@ class BuildingSurveyReturnRequestController extends Controller
     {
         abort_unless(auth()->user()->hasRole('Field Engineer'), 403);
 
-        $buildings = Building::query()
-            ->orderBy('objectid')
-            ->limit(1000)
-            ->get(['id', 'objectid', 'globalid', 'building_name']);
+        $buildings = $this->buildingOptionsFor(auth()->user());
 
         return view('damage-assessment::field-operations.building-survey-return-requests.create', compact('buildings'));
     }
@@ -75,6 +70,14 @@ class BuildingSurveyReturnRequestController extends Controller
         $building = Building::query()
             ->where('objectid', $validated['building_objectid'])
             ->firstOrFail();
+
+        $assignedTo = trim((string) auth()->user()->username_arcgis);
+
+        if ($assignedTo === '' || (string) $building->assignedto !== $assignedTo) {
+            throw ValidationException::withMessages([
+                'building_objectid' => 'لا يمكنك إنشاء طلب إرجاع لمبنى غير مخصص لك.',
+            ]);
+        }
 
         $link = TeamLeaderFieldEngineer::query()
             ->where('field_engineer_id', auth()->id())
@@ -290,6 +293,25 @@ class BuildingSurveyReturnRequestController extends Controller
     private function currentUserIsTeamLeader(): bool
     {
         return auth()->user()->hasAnyRole(['Team Leader', 'Team Leader']);
+    }
+
+    /**
+     * @return Collection<int, Building>
+     */
+    private function buildingOptionsFor(User $user): Collection
+    {
+        $assignedTo = trim((string) $user->username_arcgis);
+
+        if ($assignedTo === '') {
+            return Building::query()
+                ->whereKey([])
+                ->get(['id', 'objectid', 'globalid', 'building_name']);
+        }
+
+        return Building::query()
+            ->where('assignedto', $assignedTo)
+            ->orderBy('objectid')
+            ->get(['id', 'objectid', 'globalid', 'building_name']);
     }
 
     private function areaManagerForBuildingGovernorate(Building $building): ?User

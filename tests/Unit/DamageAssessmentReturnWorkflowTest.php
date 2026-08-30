@@ -80,7 +80,10 @@ it('runs the building survey return workflow and archives the full building snap
         ]),
     ]);
 
-    $fieldEngineer = User::factory()->create(['region' => 'south']);
+    $fieldEngineer = User::factory()->create([
+        'region' => 'south',
+        'username_arcgis' => 'field.engineer',
+    ]);
     $teamLeader = User::factory()->create();
     $areaManager = User::factory()->create(['region' => 'north']);
 
@@ -98,6 +101,7 @@ it('runs the building survey return workflow and archives the full building snap
         'globalid' => 'return-building-7201',
         'building_name' => 'Return Building',
         'governorate' => 'Gaza',
+        'assignedto' => 'field.engineer',
     ]);
 
     $this->actingAs($fieldEngineer)
@@ -161,7 +165,7 @@ it('runs the building survey return workflow and archives the full building snap
 });
 
 it('creates a building survey return request through ajax json', function () {
-    $fieldEngineer = User::factory()->create();
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
     $teamLeader = User::factory()->create();
 
     $fieldEngineer->assignRole('Field Engineer');
@@ -176,6 +180,7 @@ it('creates a building survey return request through ajax json', function () {
         'objectid' => 7301,
         'globalid' => 'ajax-return-building-7301',
         'building_name' => 'Ajax Return Building',
+        'assignedto' => 'field.engineer',
     ]);
 
     $this->actingAs($fieldEngineer)
@@ -357,13 +362,21 @@ it('shows team leader requests for lowercase team leader users even when they al
 });
 
 it('renders the create return request modal on the requests index for field engineers', function () {
-    $fieldEngineer = User::factory()->create();
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
     $fieldEngineer->assignRole('Field Engineer');
 
-    $building = Building::query()->create([
+    $assignedBuilding = Building::query()->create([
         'objectid' => 7401,
         'globalid' => 'modal-return-building-7401',
         'building_name' => 'Modal Return Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    $unassignedBuilding = Building::query()->create([
+        'objectid' => 7402,
+        'globalid' => 'other-engineer-return-building-7402',
+        'building_name' => 'Other Engineer Return Building',
+        'assignedto' => 'other.engineer',
     ]);
 
     $this->actingAs($fieldEngineer)
@@ -371,8 +384,40 @@ it('renders the create return request modal on the requests index for field engi
         ->assertOk()
         ->assertSee('createReturnRequestModal', false)
         ->assertSee('createReturnRequestForm', false)
-        ->assertSee((string) $building->objectid, false)
-        ->assertSee('Modal Return Building', false);
+        ->assertSee((string) $assignedBuilding->objectid, false)
+        ->assertSee('Modal Return Building', false)
+        ->assertDontSee((string) $unassignedBuilding->objectid, false)
+        ->assertDontSee('Other Engineer Return Building', false);
+});
+
+it('prevents field engineers from creating return requests for buildings assigned to another arcgis user', function () {
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $teamLeader = User::factory()->create();
+
+    $fieldEngineer->assignRole('Field Engineer');
+    $teamLeader->assignRole('Team Leader');
+
+    TeamLeaderFieldEngineer::query()->create([
+        'team_leader_id' => $teamLeader->id,
+        'field_engineer_id' => $fieldEngineer->id,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 7451,
+        'globalid' => 'another-engineer-return-building-7451',
+        'building_name' => 'Another Engineer Return Building',
+        'assignedto' => 'other.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->postJson(route('building-survey-return-requests.store'), [
+            'building_objectid' => $building->objectid,
+            'reason' => 'Wrong assignment',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('building_objectid');
+
+    expect(BuildingSurveyReturnRequest::query()->count())->toBe(0);
 });
 
 it('does not render the create return request modal for database officers and returns json permission errors', function () {
