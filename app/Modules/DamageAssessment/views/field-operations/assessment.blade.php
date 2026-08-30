@@ -244,7 +244,7 @@
                             <td>${escapeAssessmentHistoryHtml(item.new_value)}</td>
                             <td>${escapeAssessmentHistoryHtml(item.edited_by)}</td>
                             <td>${escapeAssessmentHistoryHtml(item.created_at)}</td>
-                            <td>${escapeAssessmentHistoryHtml(item.source)}</td>
+                            <td>${escapeAssessmentHistoryHtml(item.source_label || item.source)}</td>
                             <td>${escapeAssessmentHistoryHtml(item.return_request_id)}</td>
                         </tr>
                     `;

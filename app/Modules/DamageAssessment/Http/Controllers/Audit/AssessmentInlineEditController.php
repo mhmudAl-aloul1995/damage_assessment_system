@@ -224,9 +224,19 @@ class AssessmentInlineEditController extends Controller
                 'user_name' => $history->user?->name ?? '-',
                 'updated_at' => $history->created_at?->format('Y-m-d h:i A') ?? '-',
                 'source' => $history->source ?? '-',
+                'source_label' => $this->sourceLabel($history->source),
                 'return_request_id' => $history->return_request_id,
             ])
             ->all();
+    }
+
+    private function sourceLabel(?string $source): string
+    {
+        return match ($source) {
+            'field_sync' => 'تغيير ميداني',
+            'manual' => 'تعديل يدوي',
+            default => $source ?: '-',
+        };
     }
 
     private function buildingForAssessmentEdit(string $type, string $globalid): ?Building

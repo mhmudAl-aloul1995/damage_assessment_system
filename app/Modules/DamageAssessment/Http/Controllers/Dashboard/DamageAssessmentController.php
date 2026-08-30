@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
+use App\Models\AssessmentEditHistory;
 use App\Models\AssignedAssessmentUser;
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
@@ -1303,6 +1304,7 @@ class DamageAssessmentController extends Controller
 
         $edits = collect();
         $allEdits = collect();
+        $oldestHistoryByField = collect();
         $user = request()->user();
         $building = $model instanceof Building
             ? $model
@@ -1327,6 +1329,15 @@ class DamageAssessmentController extends Controller
                 ->orderByDesc('id')
                 ->get()
                 ->groupBy('field_name');
+
+            $oldestHistoryByField = AssessmentEditHistory::query()
+                ->where('type', $type)
+                ->where('global_id', $globalid)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get()
+                ->groupBy('field_name')
+                ->map(fn (Collection $group): AssessmentEditHistory => $group->first());
         }
 
         $layerId = $arcgis->getLayerId($modelClass);
@@ -1459,7 +1470,7 @@ class DamageAssessmentController extends Controller
                     $this->filterLabelForAssessmentValue($filtersByList, $row->name, $rawValue)
                 );
             })
-            ->addColumn('answer', function ($row) use ($record, $allEdits, $canEditAssessment, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList, $identityFields) {
+            ->addColumn('answer', function ($row) use ($record, $allEdits, $oldestHistoryByField, $canEditAssessment, $isAssessmentReadOnly, $model, $attachments, $token, $arcgis, $layerId, $type, $globalid, $filtersByList, $identityFields) {
                 if ($row->name === 'attachments') {
                     if (! $model || ! $model->objectid || ! $token || $attachments->isEmpty()) {
                         return '<span class="text-muted">'.e(__('ui.damage_common.no_attachments')).'</span>';
@@ -1498,7 +1509,7 @@ class DamageAssessmentController extends Controller
                     : $allEdits->get($row->name, collect());
                 $lastEdit = $fieldEdits->first();
 
-                $originalRawValue = $record[$row->name] ?? null;
+                $originalRawValue = $oldestHistoryByField->get($row->name)?->old_value ?? $record[$row->name] ?? null;
                 $editedRawValue = $lastEdit?->field_value;
 
                 $originalValue = $this->filterLabelForAssessmentValue($filtersByList, $row->name, $originalRawValue);

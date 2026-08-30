@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\SystemOperationLog;
 use App\services\ArcgisService;
+use App\Services\FieldReturnAssessmentChangeService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -149,8 +150,10 @@ class SyncArcGISLayers extends Command
         $updated = 0;
         $skipped = 0;
         $deleted = 0;
+        $fieldReturnChanges = 0;
         $force = (bool) $this->option('force');
         $arcgisObjectIds = [];
+        $fieldReturnAssessmentChangeService = app(FieldReturnAssessmentChangeService::class);
 
         try {
             $table = $config['table'];
@@ -420,6 +423,14 @@ class SyncArcGISLayers extends Command
                         continue;
                     }
 
+                    if ($table === 'buildings') {
+                        $fieldReturnChanges += $fieldReturnAssessmentChangeService->recordBuildingChanges(
+                            $existing,
+                            $row,
+                            $tableColumns,
+                        );
+                    }
+
                     if ($hasArcgisHashColumn) {
                         $row['arcgis_hash'] = $newHash;
                     }
@@ -465,7 +476,7 @@ class SyncArcGISLayers extends Command
                 'updated' => $updated,
                 'skipped' => $skipped,
                 'duration_seconds' => $speed,
-                'message' => "Inserted: {$inserted} | Updated: {$updated} | Skipped: {$skipped} | Deleted: {$deleted} | Speed: {$speed}/s | Duration: {$duration}s",
+                'message' => "Inserted: {$inserted} | Updated: {$updated} | Skipped: {$skipped} | Deleted: {$deleted} | Field return changes: {$fieldReturnChanges} | Speed: {$speed}/s | Duration: {$duration}s",
             ]);
 
             $this->info("{$name} done.");
@@ -473,6 +484,7 @@ class SyncArcGISLayers extends Command
             $this->info("Updated : {$updated}");
             $this->info("Skipped : {$skipped}");
             $this->info("Deleted : {$deleted}");
+            $this->info("Field return changes : {$fieldReturnChanges}");
         } catch (\Throwable $exception) {
             $log->update([
                 'status' => 'failed',

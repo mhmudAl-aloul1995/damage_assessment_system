@@ -4226,6 +4226,7 @@
                                                                                                                                                         <div class="border rounded p-2 mb-2 bg-light-info text-start">
                                                                                                                                                             <div><span class="audit-label">القيمة</span>: <span class="fw-semibold">${escapeHtml(cleanAuditText(item.value))}</span></div>
                                                                                                                                                             <div><span class="audit-label">المستخدم</span>: ${escapeHtml(item.user_name || '-')}</div>
+                                                                                                                                                            <div><span class="audit-label">المصدر</span>: ${escapeHtml(item.source_label || item.source || '-')}</div>
                                                                                                                                                             <div><span class="audit-label">الوقت</span>: ${escapeHtml(item.updated_at || '-')}</div>
                                                                                                                                                         </div>
                                                                                                                                                     `;

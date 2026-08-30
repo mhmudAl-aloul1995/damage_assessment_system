@@ -37,6 +37,7 @@ class AssessmentEditHistoryController extends Controller
                 'edited_by' => $history->user?->name ?? '-',
                 'created_at' => $history->created_at?->format('Y-m-d h:i A') ?? '-',
                 'source' => $history->source ?? '-',
+                'source_label' => $this->sourceLabel($history->source),
                 'return_request_id' => $history->return_request_id,
             ]);
 
@@ -45,5 +46,14 @@ class AssessmentEditHistoryController extends Controller
             'data' => $histories,
             'message' => $histories->isEmpty() ? 'لا يوجد سجل تعديلات.' : null,
         ]);
+    }
+
+    private function sourceLabel(?string $source): string
+    {
+        return match ($source) {
+            'field_sync' => 'تغيير ميداني',
+            'manual' => 'تعديل يدوي',
+            default => $source ?: '-',
+        };
     }
 }

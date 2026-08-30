@@ -2,6 +2,7 @@
 
 use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\Assessment;
+use App\Models\AssessmentEditHistory;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
 use App\Models\AuditedHousingUnit;
@@ -515,15 +516,27 @@ it('shows inline edit history cards to area managers without edit controls', fun
         'objectid' => 5601,
         'globalid' => 'area-manager-inline-history-building',
         'building_name' => 'History Building',
-        'owner_name' => 'Original Owner',
+        'owner_name' => 'Synced Owner',
     ]);
 
-    EditAssessment::query()->create([
+    $edit = EditAssessment::query()->create([
         'global_id' => $building->globalid,
         'type' => 'building_table',
         'field_name' => 'owner_name',
         'field_value' => 'Edited Owner',
         'user_id' => $editor->id,
+    ]);
+
+    AssessmentEditHistory::query()->create([
+        'global_id' => $building->globalid,
+        'objectid' => $building->objectid,
+        'type' => 'building_table',
+        'field_name' => 'owner_name',
+        'old_value' => 'Snapshot Owner',
+        'new_value' => 'Edited Owner',
+        'edited_by' => $editor->id,
+        'edit_assessment_id' => $edit->id,
+        'source' => 'field_sync',
     ]);
 
     $response = $this
@@ -540,9 +553,10 @@ it('shows inline edit history cards to area managers without edit controls', fun
 
     expect($row['answer'])
         ->toContain('audit-existing-edit-card')
-        ->toContain('Original Owner')
+        ->toContain('Snapshot Owner')
         ->toContain('Edited Owner')
         ->toContain('Audit Editor')
+        ->not->toContain('Synced Owner')
         ->and($row['editAnswer'])
         ->toBeNull();
 });

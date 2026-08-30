@@ -56,6 +56,53 @@ beforeEach(function (): void {
         $table->text('message')->nullable();
         $table->timestamps();
     });
+
+    Schema::connection('mysql')->create('building_survey_return_requests', function (Blueprint $table): void {
+        $table->id();
+        $table->unsignedBigInteger('building_id')->nullable();
+        $table->unsignedBigInteger('building_objectid')->nullable();
+        $table->string('building_globalid')->nullable();
+        $table->unsignedBigInteger('requested_by')->nullable();
+        $table->string('current_step')->nullable();
+        $table->string('status')->nullable();
+        $table->timestamps();
+    });
+
+    Schema::connection('mysql')->create('building_survey_archive_objects', function (Blueprint $table): void {
+        $table->id();
+        $table->unsignedBigInteger('building_objectid')->nullable();
+        $table->string('building_globalid')->nullable();
+        $table->foreignId('return_request_id')->nullable();
+        $table->unsignedBigInteger('archived_by')->nullable();
+        $table->timestamp('archived_at')->nullable();
+        $table->json('building_snapshot')->nullable();
+        $table->timestamps();
+    });
+
+    Schema::connection('mysql')->create('edit_assessments', function (Blueprint $table): void {
+        $table->id();
+        $table->string('global_id')->index();
+        $table->string('type')->default('building_table');
+        $table->string('field_name');
+        $table->text('field_value')->nullable();
+        $table->unsignedBigInteger('user_id')->nullable();
+        $table->timestamps();
+    });
+
+    Schema::connection('mysql')->create('assessment_edit_histories', function (Blueprint $table): void {
+        $table->id();
+        $table->string('global_id')->index();
+        $table->unsignedBigInteger('objectid')->nullable();
+        $table->string('type');
+        $table->string('field_name');
+        $table->longText('old_value')->nullable();
+        $table->longText('new_value')->nullable();
+        $table->unsignedBigInteger('edited_by')->nullable();
+        $table->unsignedBigInteger('edit_assessment_id')->nullable();
+        $table->unsignedBigInteger('return_request_id')->nullable();
+        $table->string('source')->nullable();
+        $table->timestamps();
+    });
 });
 
 it('fills missing assessment obstacle when building security situation is unsafe', function (): void {
@@ -72,6 +119,7 @@ it('fills missing assessment obstacle when building security situation is unsafe
                 ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
                 ['name' => 'Security_Situation', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'assessment_obstacle', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'phase_number', 'type' => 'esriFieldTypeSmallInteger'],
             ],
         ]),
         'https://example.com/FeatureServer/0/query*' => Http::response([
@@ -132,6 +180,7 @@ it('syncs building latitude and longitude from arcgis geometry', function (): vo
                 ['name' => 'New_ArcGIS_Field', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'Shape__Area', 'type' => 'esriFieldTypeDouble'],
                 ['name' => 'Shape__Length', 'type' => 'esriFieldTypeDouble'],
+                ['name' => 'phase_number', 'type' => 'esriFieldTypeSmallInteger'],
             ],
         ]),
         'https://example.com/FeatureServer/0/query*' => function ($request) {
@@ -229,6 +278,7 @@ it('fills missing owner mobile from alternate arcgis owner mobile fields', funct
                 ['name' => 'owner_mobile', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'owner_mobile_1', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'owner_mobile_v_1', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'phase_number', 'type' => 'esriFieldTypeSmallInteger'],
             ],
         ]),
         'https://example.com/FeatureServer/0/query*' => Http::response([
@@ -304,6 +354,7 @@ it('forces updates when arcgis hash already matches', function (): void {
                 ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
                 ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
                 ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'phase_number', 'type' => 'esriFieldTypeSmallInteger'],
             ],
         ]),
         'https://example.com/FeatureServer/0/query*' => Http::response([
@@ -327,4 +378,117 @@ it('forces updates when arcgis hash already matches', function (): void {
 
     expect($exitCode)->toBe(0);
     expect(DB::table('buildings')->where('objectid', 701)->value('building_name'))->toBe('Updated Building Name');
+});
+
+it('records field return changes only for completed buildings with a completed return archive', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.buildings_url', 'https://example.com/FeatureServer/0');
+
+    DB::table('buildings')->insert([
+        [
+            'id' => 1,
+            'objectid' => 901,
+            'globalid' => 'completed-without-return',
+            'field_status' => 'COMPLETED',
+            'building_name' => 'Old ordinary name',
+            'arcgis_hash' => 'old-hash',
+        ],
+        [
+            'id' => 2,
+            'objectid' => 902,
+            'globalid' => 'completed-with-return',
+            'field_status' => 'COMPLETED',
+            'building_name' => 'Old returned name',
+            'arcgis_hash' => 'old-hash',
+        ],
+    ]);
+
+    $returnRequestId = DB::table('building_survey_return_requests')->insertGetId([
+        'building_id' => 2,
+        'building_objectid' => 902,
+        'building_globalid' => 'completed-with-return',
+        'current_step' => 'completed',
+        'status' => 'completed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('building_survey_archive_objects')->insert([
+        'building_objectid' => 902,
+        'building_globalid' => 'completed-with-return',
+        'return_request_id' => $returnRequestId,
+        'archived_at' => now(),
+        'building_snapshot' => json_encode([
+            'objectid' => 902,
+            'globalid' => 'completed-with-return',
+            'field_status' => 'COMPLETED',
+            'building_name' => 'Old returned name',
+        ], JSON_UNESCAPED_UNICODE),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/FeatureServer/0?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
+                ['name' => 'field_status', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'phase_number', 'type' => 'esriFieldTypeSmallInteger'],
+            ],
+        ]),
+        'https://example.com/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                [
+                    'attributes' => [
+                        'objectid' => 901,
+                        'globalid' => 'completed-without-return',
+                        'field_status' => 'COMPLETED',
+                        'building_name' => 'New ordinary name',
+                    ],
+                ],
+                [
+                    'attributes' => [
+                        'objectid' => 902,
+                        'globalid' => 'completed-with-return',
+                        'field_status' => 'COMPLETED',
+                        'building_name' => 'New returned name',
+                    ],
+                ],
+            ],
+            'exceededTransferLimit' => false,
+        ]),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', ['table' => 'buildings']);
+
+    expect($exitCode)->toBe(0);
+
+    $this->assertDatabaseMissing('assessment_edit_histories', [
+        'global_id' => 'completed-without-return',
+        'field_name' => 'building_name',
+    ]);
+
+    $this->assertDatabaseHas('assessment_edit_histories', [
+        'global_id' => 'completed-with-return',
+        'objectid' => 902,
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'old_value' => 'Old returned name',
+        'new_value' => 'New returned name',
+        'return_request_id' => $returnRequestId,
+        'source' => 'field_sync',
+    ]);
+
+    $this->assertDatabaseHas('edit_assessments', [
+        'global_id' => 'completed-with-return',
+        'type' => 'building_table',
+        'field_name' => 'building_name',
+        'field_value' => 'New returned name',
+    ]);
 });
