@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\services;
 
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;

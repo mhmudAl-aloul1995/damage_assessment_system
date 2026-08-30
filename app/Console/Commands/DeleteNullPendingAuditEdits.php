@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Exports\AuditEditDeletionPreviewExport;
-use App\Services\AuditEditCacheRefresher;
+use App\services\AuditEditCacheRefresher;
 use Illuminate\Console\Command;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;

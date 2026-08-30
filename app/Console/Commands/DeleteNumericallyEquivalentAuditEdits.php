@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Exports\NumericallyEquivalentAuditEditsExport;
-use App\Services\ArcgisAuditedCacheService;
-use App\Services\ArcgisAuditedUploadService;
-use App\Services\AuditEditCacheRefresher;
+use App\services\ArcgisAuditedCacheService;
+use App\services\ArcgisAuditedUploadService;
+use App\services\AuditEditCacheRefresher;
 use Illuminate\Console\Command;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;

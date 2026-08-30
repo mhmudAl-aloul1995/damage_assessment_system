@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Services\ArcgisAuditedCacheService;
-use App\Services\ArcgisAuditedUploadService;
+use App\services\ArcgisAuditedCacheService;
+use App\services\ArcgisAuditedUploadService;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;

@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Services\ArcgisAuditedCacheService;
-use App\Services\ArcgisAuditedUploadService;
+use App\services\ArcgisAuditedCacheService;
+use App\services\ArcgisAuditedUploadService;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\DB;

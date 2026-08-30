@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\services;
 
 use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\AssessmentEditHistory;

@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\ArcgisAuditedUploadService;
+use App\services\ArcgisAuditedUploadService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;

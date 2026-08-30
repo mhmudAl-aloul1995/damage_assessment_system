@@ -8,7 +8,7 @@ use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
-use App\Services\ArcgisService;
+use App\services\ArcgisService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -518,7 +518,7 @@ it('filters dashboard housing totals by building submit date without hiding inco
         'building_field_status' => 'Not_Completed',
     ]);
 
-    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+    app(\App\services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index', [
@@ -579,7 +579,7 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         'building_field_status' => 'COMPLETED',
     ]);
 
-    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+    app(\App\services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
@@ -631,7 +631,7 @@ it('counts dashboard housing assessment blocked from yes security situation valu
         'building_field_status' => 'COMPLETED',
     ]);
 
-    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+    app(\App\services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
@@ -670,7 +670,7 @@ it('uses latest housing edit assessments in dashboard unit statistics', function
         'updated_at' => now(),
     ]);
 
-    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+    app(\App\services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
@@ -828,7 +828,7 @@ it('uses target cached building statistics after audit edits are refreshed', fun
         'updated_at' => now(),
     ]);
 
-    app(\App\Services\ArcgisAuditedCacheService::class)->refresh();
+    app(\App\services\ArcgisAuditedCacheService::class)->refresh();
 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))

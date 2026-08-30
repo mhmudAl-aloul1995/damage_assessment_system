@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\services;
 
 use App\Models\EditAssessment;
 use Illuminate\Support\Facades\DB;

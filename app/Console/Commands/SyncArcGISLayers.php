@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\SystemOperationLog;
 use App\services\ArcgisService;
-use App\Services\FieldReturnAssessmentChangeService;
+use App\services\FieldReturnAssessmentChangeService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;

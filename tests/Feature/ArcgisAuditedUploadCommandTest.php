@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\ArcgisAuditedUploadService;
+use App\services\ArcgisAuditedUploadService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -956,7 +956,7 @@ it('uploads only records edited on or after the changed since date', function ()
         },
     ]);
 
-    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(
+    $summary = app(\App\services\ArcgisAuditedUploadService::class)->upload(
         withoutAttachments: true,
         changedSince: \Carbon\CarbonImmutable::parse('2026-07-28'),
     );
@@ -1097,7 +1097,7 @@ it('can ignore editdate and sync only audit edits', function () {
         ]),
     ]);
 
-    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(
+    $summary = app(\App\services\ArcgisAuditedUploadService::class)->upload(
         withoutAttachments: true,
         changedSince: \Carbon\CarbonImmutable::parse('2026-07-28'),
         onlyAuditEdits: true,
@@ -1269,7 +1269,7 @@ it('partially updates existing target features from audit edits and still copies
         ]),
     ]);
 
-    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(
+    $summary = app(\App\services\ArcgisAuditedUploadService::class)->upload(
         changedSince: \Carbon\CarbonImmutable::parse('2026-07-28'),
     );
 
@@ -1639,7 +1639,7 @@ it('can skip candidate counts before syncing', function () {
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
     ]);
 
-    $summary = app(\App\Services\ArcgisAuditedUploadService::class)->upload(skipCounts: true);
+    $summary = app(\App\services\ArcgisAuditedUploadService::class)->upload(skipCounts: true);
 
     expect($summary['candidate_counts_skipped'])->toBe(1);
     expect($summary)->not->toHaveKey('buildings_to_sync');
