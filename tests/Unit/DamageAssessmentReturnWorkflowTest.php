@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -69,6 +70,10 @@ it('links a team leader with a field engineer and prevents duplicates', function
 });
 
 it('runs the building survey return workflow and archives the full building snapshot', function () {
+    Schema::table('buildings', function ($table): void {
+        $table->string('snapshot_only_field')->nullable();
+    });
+
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'fake-arcgis-token',
@@ -102,6 +107,37 @@ it('runs the building survey return workflow and archives the full building snap
         'building_name' => 'Return Building',
         'governorate' => 'Gaza',
         'assignedto' => 'field.engineer',
+    ]);
+
+    DB::table('buildings')
+        ->where('objectid', $building->objectid)
+        ->update([
+            'building_damage_status' => null,
+            'snapshot_only_field' => 'Archived even when not fillable',
+        ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'building_damage_status',
+        'field_value' => 'Partially Damaged',
+        'user_id' => $areaManager->id,
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8201,
+        'globalid' => 'return-housing-unit-8201',
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Unit Owner Before Return',
+        'unit_damage_status' => null,
+    ]);
+
+    EditAssessment::query()->create([
+        'global_id' => $housingUnit->globalid,
+        'type' => 'housing_table',
+        'field_name' => 'unit_damage_status',
+        'field_value' => 'Partially Damaged',
+        'user_id' => $areaManager->id,
     ]);
 
     $this->actingAs($fieldEngineer)
@@ -149,10 +185,19 @@ it('runs the building survey return workflow and archives the full building snap
         'archived_by' => $areaManager->id,
     ]);
 
-    $archiveObject = BuildingSurveyArchiveObject::query()->firstOrFail();
+    $archiveObject = BuildingSurveyArchiveObject::query()
+        ->whereNull('housing_unit_objectid')
+        ->firstOrFail();
+    $unitArchiveObject = BuildingSurveyArchiveObject::query()
+        ->where('housing_unit_objectid', $housingUnit->objectid)
+        ->firstOrFail();
 
-    expect(BuildingSurveyArchiveObject::query()->count())->toBe(1);
+    expect(BuildingSurveyArchiveObject::query()->count())->toBe(2);
     expect($archiveObject->building_snapshot['building_name'])->toBe('Return Building');
+    expect($archiveObject->building_snapshot['building_damage_status'])->toBe('Partially Damaged');
+    expect($archiveObject->building_snapshot['snapshot_only_field'])->toBe('Archived even when not fillable');
+    expect($unitArchiveObject->housing_unit_snapshot['unit_owner'])->toBe('Unit Owner Before Return');
+    expect($unitArchiveObject->housing_unit_snapshot['unit_damage_status'])->toBe('Partially Damaged');
     expect(Building::query()->where('objectid', $building->objectid)->value('building_name'))->toBe('Return Building');
 
     Http::assertSent(function ($request) use ($building) {

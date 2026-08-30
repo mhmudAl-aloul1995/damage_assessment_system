@@ -14,6 +14,7 @@ beforeEach(function (): void {
     DB::purge('mysql');
 
     Schema::connection('mysql')->dropIfExists('system_operation_logs');
+    Schema::connection('mysql')->dropIfExists('users');
     Schema::connection('mysql')->dropIfExists('buildings');
 
     Schema::connection('mysql')->create('buildings', function (Blueprint $table): void {
@@ -24,6 +25,9 @@ beforeEach(function (): void {
         $table->string('security_situation')->nullable();
         $table->string('assessment_obstacle')->nullable();
         $table->string('building_name')->nullable();
+        $table->string('building_damage_status')->nullable();
+        $table->string('service_ownership')->nullable();
+        $table->string('assignedto')->nullable();
         $table->string('owner_mobile')->nullable();
         $table->string('owner_mobile_1')->nullable();
         $table->string('owner_mobile_v_1')->nullable();
@@ -57,6 +61,14 @@ beforeEach(function (): void {
         $table->timestamps();
     });
 
+    Schema::connection('mysql')->create('users', function (Blueprint $table): void {
+        $table->id();
+        $table->string('name');
+        $table->string('email')->nullable();
+        $table->string('username_arcgis')->nullable();
+        $table->timestamps();
+    });
+
     Schema::connection('mysql')->create('building_survey_return_requests', function (Blueprint $table): void {
         $table->id();
         $table->unsignedBigInteger('building_id')->nullable();
@@ -72,6 +84,8 @@ beforeEach(function (): void {
         $table->id();
         $table->unsignedBigInteger('building_objectid')->nullable();
         $table->string('building_globalid')->nullable();
+        $table->unsignedBigInteger('housing_unit_objectid')->nullable();
+        $table->string('housing_unit_globalid')->nullable();
         $table->foreignId('return_request_id')->nullable();
         $table->unsignedBigInteger('archived_by')->nullable();
         $table->timestamp('archived_at')->nullable();
@@ -392,6 +406,9 @@ it('records field return changes only for completed buildings with a completed r
             'globalid' => 'completed-without-return',
             'field_status' => 'COMPLETED',
             'building_name' => 'Old ordinary name',
+            'building_damage_status' => null,
+            'service_ownership' => null,
+            'assignedto' => null,
             'arcgis_hash' => 'old-hash',
         ],
         [
@@ -400,8 +417,30 @@ it('records field return changes only for completed buildings with a completed r
             'globalid' => 'completed-with-return',
             'field_status' => 'COMPLETED',
             'building_name' => 'Old returned name',
+            'building_damage_status' => null,
+            'service_ownership' => 'All_Owners',
+            'assignedto' => 'field.engineer',
             'arcgis_hash' => 'old-hash',
         ],
+        [
+            'id' => 3,
+            'objectid' => 903,
+            'globalid' => 'completed-with-equal-return',
+            'field_status' => 'COMPLETED',
+            'building_name' => 'Equal returned name',
+            'building_damage_status' => 'Partially Damaged',
+            'service_ownership' => null,
+            'assignedto' => 'field.engineer',
+            'arcgis_hash' => 'old-hash',
+        ],
+    ]);
+
+    $fieldEngineerId = DB::table('users')->insertGetId([
+        'name' => 'Field Engineer Name',
+        'email' => 'field.engineer@example.test',
+        'username_arcgis' => 'field.engineer',
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     $returnRequestId = DB::table('building_survey_return_requests')->insertGetId([
@@ -424,6 +463,33 @@ it('records field return changes only for completed buildings with a completed r
             'globalid' => 'completed-with-return',
             'field_status' => 'COMPLETED',
             'building_name' => 'Old returned name',
+            'service_ownership' => 'All_Owners',
+        ], JSON_UNESCAPED_UNICODE),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $equalReturnRequestId = DB::table('building_survey_return_requests')->insertGetId([
+        'building_id' => 3,
+        'building_objectid' => 903,
+        'building_globalid' => 'completed-with-equal-return',
+        'current_step' => 'completed',
+        'status' => 'completed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('building_survey_archive_objects')->insert([
+        'building_objectid' => 903,
+        'building_globalid' => 'completed-with-equal-return',
+        'return_request_id' => $equalReturnRequestId,
+        'archived_at' => now(),
+        'building_snapshot' => json_encode([
+            'objectid' => 903,
+            'globalid' => 'completed-with-equal-return',
+            'field_status' => 'COMPLETED',
+            'building_name' => 'Equal returned name',
+            'building_damage_status' => 'Partially Damaged',
         ], JSON_UNESCAPED_UNICODE),
         'created_at' => now(),
         'updated_at' => now(),
@@ -439,6 +505,9 @@ it('records field return changes only for completed buildings with a completed r
                 ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
                 ['name' => 'field_status', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'building_name', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'building_damage_status', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'service_ownership', 'type' => 'esriFieldTypeString', 'length' => 255],
+                ['name' => 'assignedto', 'type' => 'esriFieldTypeString', 'length' => 255],
                 ['name' => 'phase_number', 'type' => 'esriFieldTypeSmallInteger'],
             ],
         ]),
@@ -450,6 +519,8 @@ it('records field return changes only for completed buildings with a completed r
                         'globalid' => 'completed-without-return',
                         'field_status' => 'COMPLETED',
                         'building_name' => 'New ordinary name',
+                        'service_ownership' => null,
+                        'assignedto' => null,
                     ],
                 ],
                 [
@@ -458,6 +529,20 @@ it('records field return changes only for completed buildings with a completed r
                         'globalid' => 'completed-with-return',
                         'field_status' => 'COMPLETED',
                         'building_name' => 'New returned name',
+                        'building_damage_status' => 'Totally Damaged',
+                        'service_ownership' => 'جميع الملاك / All_Owners',
+                        'assignedto' => 'field.engineer',
+                    ],
+                ],
+                [
+                    'attributes' => [
+                        'objectid' => 903,
+                        'globalid' => 'completed-with-equal-return',
+                        'field_status' => 'COMPLETED',
+                        'building_name' => 'Equal returned name',
+                        'building_damage_status' => 'Partially Damaged',
+                        'service_ownership' => null,
+                        'assignedto' => 'field.engineer',
                     ],
                 ],
             ],
@@ -481,6 +566,7 @@ it('records field return changes only for completed buildings with a completed r
         'field_name' => 'building_name',
         'old_value' => 'Old returned name',
         'new_value' => 'New returned name',
+        'edited_by' => $fieldEngineerId,
         'return_request_id' => $returnRequestId,
         'source' => 'field_sync',
     ]);
@@ -490,5 +576,31 @@ it('records field return changes only for completed buildings with a completed r
         'type' => 'building_table',
         'field_name' => 'building_name',
         'field_value' => 'New returned name',
+        'user_id' => $fieldEngineerId,
+    ]);
+
+    $this->assertDatabaseHas('assessment_edit_histories', [
+        'global_id' => 'completed-with-return',
+        'field_name' => 'building_damage_status',
+        'old_value' => null,
+        'new_value' => 'Totally Damaged',
+        'edited_by' => $fieldEngineerId,
+        'return_request_id' => $returnRequestId,
+        'source' => 'field_sync',
+    ]);
+
+    $this->assertDatabaseMissing('assessment_edit_histories', [
+        'global_id' => 'completed-with-return',
+        'field_name' => 'service_ownership',
+    ]);
+
+    $this->assertDatabaseMissing('assessment_edit_histories', [
+        'global_id' => 'completed-with-equal-return',
+        'field_name' => 'building_damage_status',
+    ]);
+
+    $this->assertDatabaseMissing('edit_assessments', [
+        'global_id' => 'completed-with-equal-return',
+        'field_name' => 'building_damage_status',
     ]);
 });

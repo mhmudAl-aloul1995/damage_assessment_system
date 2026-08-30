@@ -532,11 +532,26 @@ it('shows inline edit history cards to area managers without edit controls', fun
         'objectid' => $building->objectid,
         'type' => 'building_table',
         'field_name' => 'owner_name',
+        'old_value' => null,
+        'new_value' => 'Snapshot Owner',
+        'edited_by' => $editor->id,
+        'source' => 'field_sync',
+        'created_at' => now()->subDay(),
+        'updated_at' => now()->subDay(),
+    ]);
+
+    AssessmentEditHistory::query()->create([
+        'global_id' => $building->globalid,
+        'objectid' => $building->objectid,
+        'type' => 'building_table',
+        'field_name' => 'owner_name',
         'old_value' => 'Snapshot Owner',
         'new_value' => 'Edited Owner',
         'edited_by' => $editor->id,
         'edit_assessment_id' => $edit->id,
         'source' => 'field_sync',
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     $response = $this
@@ -553,7 +568,7 @@ it('shows inline edit history cards to area managers without edit controls', fun
 
     expect($row['answer'])
         ->toContain('audit-existing-edit-card')
-        ->toContain('Snapshot Owner')
+        ->toContain('audit-original-value">-</span>')
         ->toContain('Edited Owner')
         ->toContain('Audit Editor')
         ->not->toContain('Synced Owner')

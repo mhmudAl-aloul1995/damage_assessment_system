@@ -431,6 +431,14 @@ class SyncArcGISLayers extends Command
                         );
                     }
 
+                    if ($table === 'housing_units') {
+                        $fieldReturnChanges += $fieldReturnAssessmentChangeService->recordHousingUnitChanges(
+                            $existing,
+                            $row,
+                            $tableColumns,
+                        );
+                    }
+
                     if ($hasArcgisHashColumn) {
                         $row['arcgis_hash'] = $newHash;
                     }

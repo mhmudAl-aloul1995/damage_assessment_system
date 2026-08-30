@@ -7,6 +7,7 @@ use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\BuildingSurveyReturnRequest;
 use App\Models\BuildingSurveyReturnRequestLog;
+use App\Models\EditAssessment;
 use App\Models\TeamLeaderFieldEngineer;
 use App\Models\User;
 use App\services\ArcgisService;
@@ -217,6 +218,8 @@ class BuildingSurveyReturnRequestController extends Controller
                 'area_manager_notes' => $validated['notes'] ?? null,
             ])->save();
 
+            $buildingSnapshot = $this->buildingSnapshot($returnRequest);
+
             BuildingSurveyArchiveObject::query()->create([
                 'building_objectid' => $returnRequest->building_objectid,
                 'building_globalid' => $returnRequest->building_globalid,
@@ -225,8 +228,24 @@ class BuildingSurveyReturnRequestController extends Controller
                 'archived_by' => auth()->id(),
                 'archived_at' => now(),
                 'notes' => $validated['notes'] ?? null,
-                'building_snapshot' => $returnRequest->building?->attributesToArray(),
+                'building_snapshot' => $buildingSnapshot,
             ]);
+
+            foreach ($this->housingUnitSnapshots($returnRequest) as $unitSnapshot) {
+                BuildingSurveyArchiveObject::query()->create([
+                    'building_objectid' => $returnRequest->building_objectid,
+                    'building_globalid' => $returnRequest->building_globalid,
+                    'housing_unit_objectid' => $unitSnapshot['objectid'] ?? null,
+                    'housing_unit_globalid' => $unitSnapshot['globalid'] ?? null,
+                    'source_type' => 'return_request',
+                    'return_request_id' => $returnRequest->id,
+                    'archived_by' => auth()->id(),
+                    'archived_at' => now(),
+                    'notes' => $validated['notes'] ?? null,
+                    'building_snapshot' => $buildingSnapshot,
+                    'housing_unit_snapshot' => $unitSnapshot,
+                ]);
+            }
 
             $this->log($returnRequest, 'approved', 'area_manager', $validated['notes'] ?? null);
             $this->log($returnRequest, 'completed', 'system', 'تمت أرشفة objectid بعد الموافقة النهائية وتحديث field_status على ArcGIS إلى Not_Completed.');
@@ -241,6 +260,68 @@ class BuildingSurveyReturnRequestController extends Controller
         }
 
         return back()->with('success', 'تمت الموافقة النهائية وأرشفة المبنى بنجاح.');
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function buildingSnapshot(BuildingSurveyReturnRequest $returnRequest): ?array
+    {
+        $building = DB::table('buildings')
+            ->where('objectid', $returnRequest->building_objectid)
+            ->first();
+
+        $snapshot = $building
+            ? (array) $building
+            : $returnRequest->building?->getAttributes();
+
+        if ($snapshot === null) {
+            return null;
+        }
+
+        return $this->applyLatestAuditEdits($snapshot, 'building_table');
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function housingUnitSnapshots(BuildingSurveyReturnRequest $returnRequest): array
+    {
+        if ($returnRequest->building_globalid === null || $returnRequest->building_globalid === '') {
+            return [];
+        }
+
+        return DB::table('housing_units')
+            ->where('parentglobalid', $returnRequest->building_globalid)
+            ->get()
+            ->map(fn (object $unit): array => $this->applyLatestAuditEdits((array) $unit, 'housing_table'))
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    private function applyLatestAuditEdits(array $snapshot, string $type): array
+    {
+        $globalId = (string) data_get($snapshot, 'globalid', '');
+
+        if ($globalId === '') {
+            return $snapshot;
+        }
+
+        EditAssessment::query()
+            ->where('global_id', $globalId)
+            ->where('type', $type)
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('field_name')
+            ->each(function (EditAssessment $edit) use (&$snapshot): void {
+                $snapshot[$edit->field_name] = $edit->field_value;
+            });
+
+        return $snapshot;
     }
 
     public function reject(Request $request, BuildingSurveyReturnRequest $returnRequest): RedirectResponse|JsonResponse
