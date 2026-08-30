@@ -3,6 +3,7 @@
 namespace App\Modules\DamageAssessment\Http\Controllers\FieldOperations;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditedBuilding;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\BuildingSurveyReturnRequest;
@@ -64,7 +65,7 @@ class BuildingSurveyReturnRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'building_objectid' => ['required', 'exists:buildings,objectid'],
+            'building_objectid' => ['required', 'exists:audited_buildings,objectid'],
             'reason' => ['nullable', 'string'],
         ]);
 
@@ -377,19 +378,19 @@ class BuildingSurveyReturnRequestController extends Controller
     }
 
     /**
-     * @return Collection<int, Building>
+     * @return Collection<int, AuditedBuilding>
      */
     private function buildingOptionsFor(User $user): Collection
     {
         $assignedTo = trim((string) $user->username_arcgis);
 
         if ($assignedTo === '') {
-            return Building::query()
+            return AuditedBuilding::query()
                 ->whereKey([])
                 ->get(['id', 'objectid', 'globalid', 'building_name']);
         }
 
-        return Building::query()
+        return AuditedBuilding::query()
             ->where('assignedto', $assignedTo)
             ->orderBy('objectid')
             ->get(['id', 'objectid', 'globalid', 'building_name']);

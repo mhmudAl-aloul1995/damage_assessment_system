@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AssessmentEditHistory;
+use App\Models\AuditedBuilding;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
 use App\Models\BuildingSurveyReturnRequest;
@@ -24,6 +25,12 @@ beforeEach(function () {
     DB::purge('mysql');
     Artisan::call('migrate:fresh', ['--database' => 'mysql', '--force' => true]);
     Cache::forget('arcgis_token');
+
+    if (Schema::hasTable('audited_buildings') && ! Schema::hasColumn('audited_buildings', 'assignedto')) {
+        Schema::table('audited_buildings', function ($table): void {
+            $table->text('assignedto')->nullable();
+        });
+    }
 
     foreach (['Team Leader', 'Field Engineer', 'Area Manager'] as $role) {
         Role::query()->firstOrCreate([
@@ -140,6 +147,13 @@ it('runs the building survey return workflow and archives the full building snap
         'user_id' => $areaManager->id,
     ]);
 
+    AuditedBuilding::query()->create([
+        'objectid' => $building->objectid,
+        'globalid' => $building->globalid,
+        'building_name' => $building->building_name,
+        'assignedto' => 'field.engineer',
+    ]);
+
     $this->actingAs($fieldEngineer)
         ->post(route('building-survey-return-requests.store'), [
             'building_objectid' => $building->objectid,
@@ -225,6 +239,13 @@ it('creates a building survey return request through ajax json', function () {
         'objectid' => 7301,
         'globalid' => 'ajax-return-building-7301',
         'building_name' => 'Ajax Return Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'objectid' => $building->objectid,
+        'globalid' => $building->globalid,
+        'building_name' => $building->building_name,
         'assignedto' => 'field.engineer',
     ]);
 
@@ -424,6 +445,27 @@ it('renders the create return request modal on the requests index for field engi
         'assignedto' => 'other.engineer',
     ]);
 
+    $rawOnlyAssignedBuilding = Building::query()->create([
+        'objectid' => 7403,
+        'globalid' => 'raw-only-return-building-7403',
+        'building_name' => 'Raw Only Return Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'objectid' => $assignedBuilding->objectid,
+        'globalid' => $assignedBuilding->globalid,
+        'building_name' => $assignedBuilding->building_name,
+        'assignedto' => 'field.engineer',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'objectid' => $unassignedBuilding->objectid,
+        'globalid' => $unassignedBuilding->globalid,
+        'building_name' => $unassignedBuilding->building_name,
+        'assignedto' => 'other.engineer',
+    ]);
+
     $this->actingAs($fieldEngineer)
         ->get(route('building-survey-return-requests.index'))
         ->assertOk()
@@ -432,7 +474,9 @@ it('renders the create return request modal on the requests index for field engi
         ->assertSee((string) $assignedBuilding->objectid, false)
         ->assertSee('Modal Return Building', false)
         ->assertDontSee((string) $unassignedBuilding->objectid, false)
-        ->assertDontSee('Other Engineer Return Building', false);
+        ->assertDontSee('Other Engineer Return Building', false)
+        ->assertDontSee((string) $rawOnlyAssignedBuilding->objectid, false)
+        ->assertDontSee('Raw Only Return Building', false);
 });
 
 it('prevents field engineers from creating return requests for buildings assigned to another arcgis user', function () {
@@ -454,10 +498,47 @@ it('prevents field engineers from creating return requests for buildings assigne
         'assignedto' => 'other.engineer',
     ]);
 
+    AuditedBuilding::query()->create([
+        'objectid' => $building->objectid,
+        'globalid' => $building->globalid,
+        'building_name' => $building->building_name,
+        'assignedto' => 'other.engineer',
+    ]);
+
     $this->actingAs($fieldEngineer)
         ->postJson(route('building-survey-return-requests.store'), [
             'building_objectid' => $building->objectid,
             'reason' => 'Wrong assignment',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('building_objectid');
+
+    expect(BuildingSurveyReturnRequest::query()->count())->toBe(0);
+});
+
+it('prevents field engineers from creating return requests for unaudited buildings', function () {
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $teamLeader = User::factory()->create();
+
+    $fieldEngineer->assignRole('Field Engineer');
+    $teamLeader->assignRole('Team Leader');
+
+    TeamLeaderFieldEngineer::query()->create([
+        'team_leader_id' => $teamLeader->id,
+        'field_engineer_id' => $fieldEngineer->id,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 7452,
+        'globalid' => 'unaudited-return-building-7452',
+        'building_name' => 'Unaudited Return Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->postJson(route('building-survey-return-requests.store'), [
+            'building_objectid' => $building->objectid,
+            'reason' => 'Not audited yet',
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('building_objectid');

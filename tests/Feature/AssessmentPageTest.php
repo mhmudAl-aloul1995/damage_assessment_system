@@ -576,6 +576,56 @@ it('shows inline edit history cards to area managers without edit controls', fun
         ->toBeNull();
 });
 
+it('shows the building researcher field as a dropdown of arcgis users', function () {
+    Role::findOrCreate('Database Officer', 'web');
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole('Database Officer');
+
+    User::factory()->create([
+        'name' => 'Researcher One',
+        'username_arcgis' => 'researcher.one',
+    ]);
+
+    User::factory()->create([
+        'name' => 'Researcher Two',
+        'username_arcgis' => 'researcher.two',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'assignedto',
+        'label' => 'اسم الباحث',
+        'hint' => 'Field researcher',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 5602,
+        'globalid' => 'researcher-dropdown-building',
+        'building_name' => 'Researcher Dropdown Building',
+        'assignedto' => 'researcher.one',
+    ]);
+
+    $response = $this
+        ->actingAs($viewer)
+        ->getJson('/damage-assessment/showBuildings?'.http_build_query([
+            'globalid' => $building->globalid,
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+        ]))
+        ->assertOk();
+
+    $row = $response->json('data.0');
+
+    expect($row['editAnswer'])
+        ->toContain('inline-edit-select')
+        ->toContain('data-field="assignedto"')
+        ->toContain('value="researcher.one" selected')
+        ->toContain('Researcher One (researcher.one)')
+        ->toContain('value="researcher.two"')
+        ->toContain('Researcher Two (researcher.two)');
+});
+
 it('uses the database objectid for the building summary even when an audit edit exists', function () {
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([

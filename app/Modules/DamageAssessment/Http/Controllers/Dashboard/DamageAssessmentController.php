@@ -1353,6 +1353,11 @@ class DamageAssessmentController extends Controller
             ->get(['list_name', 'name', 'label'])
             ->groupBy('list_name')
             ->map(fn (Collection $filters): Collection => $filters->pluck('label', 'name'));
+        $arcgisResearchers = User::query()
+            ->whereNotNull('username_arcgis')
+            ->where('username_arcgis', '!=', '')
+            ->orderBy('name')
+            ->get(['name', 'username_arcgis']);
         $assessmentRows = $this->withSummaryAssessmentRows(
             $this->assessmentRowsForDisplay($type, $fillable, $search),
             $type,
@@ -1608,7 +1613,7 @@ class DamageAssessmentController extends Controller
             </div>
         ';
             })
-            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type, $isAssessmentReadOnly, $identityFields) {
+            ->addColumn('editAnswer', function ($row) use ($record, $edits, $globalid, $type, $isAssessmentReadOnly, $identityFields, $arcgisResearchers) {
                 if ($isAssessmentReadOnly) {
                     return;
                 }
@@ -1620,6 +1625,10 @@ class DamageAssessmentController extends Controller
                 $editedValue = $lastEdit?->field_value;
                 $originalValue = $record[$row->name] ?? '';
                 $value = ($editedValue !== null && $editedValue !== '') ? $editedValue : $originalValue;
+
+                if ($type === 'building_table' && $row->name === 'assignedto') {
+                    return $this->researcherSelectHtml($arcgisResearchers, $value, $row->name, $globalid, $type);
+                }
 
                 $filters = Filter::where('list_name', $row->name)->get();
 
@@ -1669,6 +1678,42 @@ class DamageAssessmentController extends Controller
             })
             ->rawColumns(['answer', 'question', 'editAnswer', 'rowClass'])
             ->make(true);
+    }
+
+    private function researcherSelectHtml(Collection $researchers, mixed $value, string $field, ?string $globalid, string $type): string
+    {
+        $selectedValue = trim((string) $value);
+
+        $html = '<select
+                    class="form-select form-select-sm form-select-solid inline-edit-select"
+                    data-field="'.e($field).'"
+                    data-globalid="'.e($globalid).'"
+                    data-type="'.e($type).'"
+                    data-control="select2"
+                    data-close-on-select="true"
+                    data-placeholder="'.e(__('ui.damage_common.select_option')).'">';
+
+        $html .= '<option value=""></option>';
+
+        if ($selectedValue !== '' && ! $researchers->contains('username_arcgis', $selectedValue)) {
+            $html .= '<option value="'.e($selectedValue).'" selected>'.e($selectedValue).'</option>';
+        }
+
+        foreach ($researchers as $researcher) {
+            $username = trim((string) $researcher->username_arcgis);
+
+            if ($username === '') {
+                continue;
+            }
+
+            $label = trim((string) $researcher->name);
+            $label = $label !== '' ? "{$label} ({$username})" : $username;
+            $selected = $username === $selectedValue ? 'selected' : '';
+
+            $html .= '<option value="'.e($username).'" '.$selected.'>'.e($label).'</option>';
+        }
+
+        return $html.'</select>';
     }
 
     private function applyAssessmentRecordFallbacks(?Model $model, array $record): array
