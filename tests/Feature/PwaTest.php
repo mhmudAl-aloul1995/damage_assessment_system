@@ -53,3 +53,16 @@ test('offline sync queues marked forms and service worker replays queued request
         ->toContain('syncOfflineRequests()')
         ->toContain("credentials: 'same-origin'");
 });
+
+test('install script route returns not found when asset is missing', function () {
+    $scriptPath = public_path('pwa-install.js');
+    $backupPath = public_path('pwa-install.js.bak');
+
+    File::move($scriptPath, $backupPath);
+
+    try {
+        $this->get('/pwa-install.js')->assertNotFound();
+    } finally {
+        File::move($backupPath, $scriptPath);
+    }
+});

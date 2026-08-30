@@ -212,7 +212,11 @@ Route::get('/background-sync.js', function (): Response {
 })->name('pwa.background-sync');
 
 Route::get('/pwa-install.js', function (): Response {
-    return response((string) file_get_contents(public_path('pwa-install.js')), 200, [
+    $scriptPath = public_path('pwa-install.js');
+
+    abort_unless(is_file($scriptPath), 404);
+
+    return response((string) file_get_contents($scriptPath), 200, [
         'Content-Type' => 'application/javascript; charset=UTF-8',
         'Cache-Control' => 'no-cache, no-store, must-revalidate',
     ]);
