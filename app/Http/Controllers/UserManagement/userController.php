@@ -5,7 +5,7 @@ namespace App\Http\Controllers\UserManagement;
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeUserMail;
 use App\Models\User;
-use App\Services\ImageService;
+use App\services\ImageService;
 use App\Support\Phase\PhaseContext;
 use Hash;
 use Illuminate\Http\Request;
