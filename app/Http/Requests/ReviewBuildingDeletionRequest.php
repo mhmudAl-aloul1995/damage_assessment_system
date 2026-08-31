@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BuildingDeletionStatus;
+use App\Models\BuildingDeletionRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -11,17 +13,23 @@ class ReviewBuildingDeletionRequest extends FormRequest
     {
         $deletionRequest = $this->route('buildingDeletionRequest');
 
-        return $deletionRequest instanceof \App\Models\BuildingDeletionRequest
-            && ($this->user()?->can('reviewGis', $deletionRequest) ?? false);
+        if (! $deletionRequest instanceof BuildingDeletionRequest) {
+            return false;
+        }
+
+        return match ($deletionRequest->status) {
+            BuildingDeletionStatus::PendingTeamLeaderReview => $this->user()?->can('reviewTeamLeader', $deletionRequest) ?? false,
+            BuildingDeletionStatus::PendingAreaManagerReview => $this->user()?->can('reviewAreaManager', $deletionRequest) ?? false,
+            BuildingDeletionStatus::PendingGisReview => $this->user()?->can('reviewGis', $deletionRequest) ?? false,
+            default => false,
+        };
     }
 
     public function rules(): array
     {
         return [
             'decision' => ['required', Rule::in(['approve', 'reject', 'return'])],
-            'gis_notes' => ['required', 'string', 'min:5'],
-            'reviewed_all_records' => ['required_if:decision,approve', 'accepted'],
-            'understands_snapshot_gate' => ['required_if:decision,approve', 'accepted'],
+            'review_notes' => ['required', 'string', 'min:5'],
         ];
     }
 }

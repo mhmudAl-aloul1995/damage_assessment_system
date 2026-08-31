@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\BuildingDeletionSignatureAction;
 use App\Enums\BuildingDeletionStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +18,13 @@ class BuildingDeletionRequest extends Model
         'reason',
         'notes',
         'status',
+        'requires_field_engineer_approvals',
+        'team_leader_reviewed_by',
+        'team_leader_reviewed_at',
+        'team_leader_notes',
+        'area_manager_reviewed_by',
+        'area_manager_reviewed_at',
+        'area_manager_notes',
         'gis_reviewed_by',
         'gis_reviewed_at',
         'gis_notes',
@@ -38,6 +44,9 @@ class BuildingDeletionRequest extends Model
     {
         return [
             'status' => BuildingDeletionStatus::class,
+            'requires_field_engineer_approvals' => 'boolean',
+            'team_leader_reviewed_at' => 'datetime',
+            'area_manager_reviewed_at' => 'datetime',
             'gis_reviewed_at' => 'datetime',
             'snapshot_verified_at' => 'datetime',
             'execution_started_at' => 'datetime',
@@ -63,14 +72,19 @@ class BuildingDeletionRequest extends Model
         return $this->belongsTo(User::class, 'gis_reviewed_by');
     }
 
+    public function teamLeaderReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'team_leader_reviewed_by');
+    }
+
+    public function areaManagerReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'area_manager_reviewed_by');
+    }
+
     public function executor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'executed_by');
-    }
-
-    public function signatures(): HasMany
-    {
-        return $this->hasMany(BuildingDeletionSignature::class, 'request_id');
     }
 
     public function snapshots(): HasMany
@@ -86,10 +100,5 @@ class BuildingDeletionRequest extends Model
     public function auditLogs(): HasMany
     {
         return $this->hasMany(BuildingDeletionAuditLog::class, 'request_id');
-    }
-
-    public function hasSignature(BuildingDeletionSignatureAction $action): bool
-    {
-        return $this->signatures()->where('action', $action->value)->exists();
     }
 }

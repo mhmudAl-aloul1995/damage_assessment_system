@@ -42,21 +42,6 @@ return new class extends Migration
             $table->index('created_at');
         });
 
-        Schema::create('building_deletion_signatures', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('request_id')->constrained('building_deletion_requests')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
-            $table->string('role');
-            $table->string('action');
-            $table->string('signature_path');
-            $table->text('notes')->nullable();
-            $table->timestamp('signed_at');
-            $table->timestamps();
-
-            $table->index(['request_id', 'action']);
-            $table->unique(['request_id', 'user_id', 'action'], 'building_deletion_signature_unique_action');
-        });
-
         Schema::create('building_deletion_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('request_id')->constrained('building_deletion_requests')->cascadeOnDelete();

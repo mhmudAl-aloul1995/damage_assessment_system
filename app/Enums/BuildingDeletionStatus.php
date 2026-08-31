@@ -5,6 +5,8 @@ namespace App\Enums;
 enum BuildingDeletionStatus: string
 {
     case Draft = 'draft';
+    case PendingTeamLeaderReview = 'pending_team_leader_review';
+    case PendingAreaManagerReview = 'pending_area_manager_review';
     case PendingGisReview = 'pending_gis_review';
     case Returned = 'returned';
     case Rejected = 'rejected';

@@ -4,6 +4,12 @@
 @section('pageName', __('ui.building_deletions.title'))
 
 @section('content')
+    @php
+        $workflowSteps = $request->requires_field_engineer_approvals
+            ? ['request_submitted', 'team_leader_approved', 'area_manager_approved', 'gis_approved', 'snapshot_verified', 'gis_units_deleted', 'gis_building_deleted', 'local_archived', 'completed']
+            : ['request_submitted', 'gis_approved', 'snapshot_verified', 'gis_units_deleted', 'gis_building_deleted', 'local_archived', 'completed'];
+    @endphp
+
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -27,7 +33,7 @@
         </div>
         <div class="card-body">
             <div class="row g-5">
-                @foreach (['request_submitted', 'gis_approved', 'snapshot_verified', 'gis_units_deleted', 'gis_building_deleted', 'local_archived', 'completed'] as $step)
+                @foreach ($workflowSteps as $step)
                     <div class="col-md">
                         <div class="border rounded p-4 h-100 {{ $request->last_successful_step === $step ? 'bg-light-primary' : '' }}">
                             <div class="fw-bold">{{ __('ui.building_deletions.steps.'.$step) }}</div>
@@ -48,7 +54,12 @@
                         <dt class="col-sm-4">{{ __('ui.building_deletions.requested_by') }}</dt><dd class="col-sm-8">{{ $request->requester?->name }}</dd>
                         <dt class="col-sm-4">{{ __('ui.building_deletions.reason') }}</dt><dd class="col-sm-8">{{ $request->reason }}</dd>
                         <dt class="col-sm-4">{{ __('ui.building_deletions.notes') }}</dt><dd class="col-sm-8">{{ $request->notes ?? '-' }}</dd>
+                        <dt class="col-sm-4">{{ __('ui.building_deletions.team_leader') }}</dt><dd class="col-sm-8">{{ $request->teamLeaderReviewer?->name ?? '-' }}</dd>
+                        <dt class="col-sm-4">{{ __('ui.building_deletions.team_leader_notes') }}</dt><dd class="col-sm-8">{{ $request->team_leader_notes ?? '-' }}</dd>
+                        <dt class="col-sm-4">{{ __('ui.building_deletions.area_manager') }}</dt><dd class="col-sm-8">{{ $request->areaManagerReviewer?->name ?? '-' }}</dd>
+                        <dt class="col-sm-4">{{ __('ui.building_deletions.area_manager_notes') }}</dt><dd class="col-sm-8">{{ $request->area_manager_notes ?? '-' }}</dd>
                         <dt class="col-sm-4">{{ __('ui.building_deletions.gis_reviewer') }}</dt><dd class="col-sm-8">{{ $request->gisReviewer?->name ?? '-' }}</dd>
+                        <dt class="col-sm-4">{{ __('ui.building_deletions.gis_notes') }}</dt><dd class="col-sm-8">{{ $request->gis_notes ?? '-' }}</dd>
                         <dt class="col-sm-4">{{ __('ui.building_deletions.failed_step') }}</dt><dd class="col-sm-8">{{ $request->failed_step ? __('ui.building_deletions.steps.'.$request->failed_step) : '-' }}</dd>
                         <dt class="col-sm-4">{{ __('ui.building_deletions.failure_reason') }}</dt><dd class="col-sm-8">{{ $request->failure_reason ?? '-' }}</dd>
                     </dl>
@@ -89,29 +100,21 @@
                 </div>
             </div>
 
-            @if ($canReview && $request->status === \App\Enums\BuildingDeletionStatus::PendingGisReview)
+            @if ($canReview)
                 <div class="card card-flush">
-                    <div class="card-header"><h3 class="card-title">{{ __('ui.building_deletions.gis_decision') }}</h3></div>
+                    <div class="card-header"><h3 class="card-title">{{ __('ui.building_deletions.'.$reviewTitleKey) }}</h3></div>
                     <div class="card-body">
-                        <div class="alert alert-danger">{{ __('ui.building_deletions.gis_decision_warning') }}</div>
+                        <div class="alert alert-info">{{ __('ui.building_deletions.review_decision_warning') }}</div>
                         <form method="POST" action="{{ route('building-deletions.review', $request) }}" id="gisReviewForm">
                             @csrf
                             <div class="mb-5">
                                 <select name="decision" class="form-select form-select-solid" required>
-                                    <option value="approve">{{ __('ui.building_deletions.approve_sign') }}</option>
+                                    <option value="approve">{{ __('ui.building_deletions.approve') }}</option>
                                     <option value="return">{{ __('ui.building_deletions.return_revision') }}</option>
                                     <option value="reject">{{ __('ui.building_deletions.reject') }}</option>
                                 </select>
                             </div>
-                            <label class="form-check form-check-custom form-check-solid mb-4">
-                                <input class="form-check-input" type="checkbox" name="reviewed_all_records" value="1">
-                                <span class="form-check-label">{{ __('ui.building_deletions.reviewed_all_records') }}</span>
-                            </label>
-                            <label class="form-check form-check-custom form-check-solid mb-5">
-                                <input class="form-check-input" type="checkbox" name="understands_snapshot_gate" value="1">
-                                <span class="form-check-label">{{ __('ui.building_deletions.understands_snapshot_gate') }}</span>
-                            </label>
-                            <textarea name="gis_notes" class="form-control form-control-solid mb-5" rows="3" placeholder="{{ __('ui.building_deletions.gis_notes') }}" required></textarea>
+                            <textarea name="review_notes" class="form-control form-control-solid mb-5" rows="3" placeholder="{{ __('ui.building_deletions.review_notes') }}" required></textarea>
                             <button type="submit" class="btn btn-danger d-block">{{ __('ui.building_deletions.submit_decision') }}</button>
                         </form>
                     </div>

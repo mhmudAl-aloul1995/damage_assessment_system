@@ -2,7 +2,9 @@
 
 namespace App\Policies;
 
+use App\Enums\BuildingDeletionStatus;
 use App\Models\BuildingDeletionRequest;
+use App\Models\TeamLeaderFieldEngineer;
 use App\Models\User;
 
 class BuildingDeletionRequestPolicy
@@ -16,6 +18,8 @@ class BuildingDeletionRequestPolicy
     {
         return $user->can('damage-assessment.building-deletion.view')
             || $user->id === $buildingDeletionRequest->requested_by
+            || $this->reviewTeamLeader($user, $buildingDeletionRequest)
+            || $this->reviewAreaManager($user, $buildingDeletionRequest)
             || $user->can('damage-assessment.building-deletion.gis-review');
     }
 
@@ -27,7 +31,27 @@ class BuildingDeletionRequestPolicy
     public function update(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
     {
         return $user->id === $buildingDeletionRequest->requested_by
-            && $buildingDeletionRequest->status === \App\Enums\BuildingDeletionStatus::Returned;
+            && $buildingDeletionRequest->status === BuildingDeletionStatus::Returned;
+    }
+
+    public function reviewTeamLeader(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
+    {
+        if (! $user->hasAnyRole(['Team Leader', 'team Leader'])) {
+            return false;
+        }
+
+        return $buildingDeletionRequest->status === BuildingDeletionStatus::PendingTeamLeaderReview
+            && TeamLeaderFieldEngineer::query()
+                ->where('team_leader_id', $user->id)
+                ->where('field_engineer_id', $buildingDeletionRequest->requested_by)
+                ->exists();
+    }
+
+    public function reviewAreaManager(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
+    {
+        return $user->hasRole('Area Manager')
+            && $buildingDeletionRequest->status === BuildingDeletionStatus::PendingAreaManagerReview
+            && (int) $buildingDeletionRequest->area_manager_reviewed_by === (int) $user->id;
     }
 
     public function reviewGis(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool

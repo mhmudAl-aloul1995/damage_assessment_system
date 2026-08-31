@@ -5,6 +5,7 @@ use App\Models\Building;
 use App\Models\BuildingDeletionRequest;
 use App\Models\BuildingDeletionSnapshot;
 use App\Models\HousingUnit;
+use App\Models\TeamLeaderFieldEngineer;
 use App\Models\User;
 use App\services\BuildingDeletion\BuildingDeletionProcessor;
 use App\services\BuildingDeletion\BuildingDeletionSnapshotService;
@@ -100,11 +101,12 @@ it('loads the building deletion request form through ajax for the modal', functi
         ->assertDontSee('DRY RUN');
 });
 
-it('limits single-role field engineers to assigned base and audited buildings in the deletion form', function (): void {
+it('limits users with a field engineer role to assigned base and audited buildings in the deletion form', function (): void {
     ensureAuditedBuildingDeletionFormColumns();
 
     $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
     $fieldEngineer->assignRole(Role::findOrCreate('Field Engineer', 'web'));
+    $fieldEngineer->assignRole(Role::findOrCreate('Project Officer', 'web'));
 
     Building::query()->create([
         'objectid' => 104,
@@ -167,7 +169,133 @@ it('allows an ordinary authenticated user to submit a building deletion request'
         ->firstOrFail();
 
     expect($request->requested_by)->toBe($user->id)
-        ->and($request->status)->toBe(BuildingDeletionStatus::PendingGisReview);
+        ->and($request->status)->toBe(BuildingDeletionStatus::PendingGisReview)
+        ->and($request->requires_field_engineer_approvals)->toBeFalse();
+});
+
+it('sends requests from users with a field engineer role to team leader review first', function (): void {
+    $fieldEngineer = User::factory()->create([
+        'username_arcgis' => 'field.engineer',
+    ]);
+    $teamLeader = User::factory()->create();
+
+    $fieldEngineer->assignRole(Role::findOrCreate('Field Engineer', 'web'));
+    $fieldEngineer->assignRole(Role::findOrCreate('Project Officer', 'web'));
+    $teamLeader->assignRole(Role::findOrCreate('Team Leader', 'web'));
+
+    TeamLeaderFieldEngineer::query()->create([
+        'team_leader_id' => $teamLeader->id,
+        'field_engineer_id' => $fieldEngineer->id,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 110,
+        'globalid' => 'field-engineer-workflow-building',
+        'building_name' => 'Field Engineer Workflow Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->post(route('building-deletions.store'), [
+            'building_globalid' => 'field-engineer-workflow-building',
+            'reason' => 'Duplicate building confirmed by the field team.',
+            'notes' => 'Submitted by field engineer.',
+            'confirmation' => '1',
+        ])
+        ->assertRedirect();
+
+    $request = BuildingDeletionRequest::query()
+        ->where('building_globalid', 'field-engineer-workflow-building')
+        ->firstOrFail();
+
+    expect($request->status)->toBe(BuildingDeletionStatus::PendingTeamLeaderReview)
+        ->and($request->requires_field_engineer_approvals)->toBeTrue()
+        ->and($request->team_leader_reviewed_by)->toBe($teamLeader->id);
+});
+
+it('advances a field engineer deletion request through team leader and area manager before gis', function (): void {
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $teamLeader = User::factory()->create();
+    $areaManager = User::factory()->create(['region' => 'north']);
+
+    $fieldEngineer->assignRole(Role::findOrCreate('Field Engineer', 'web'));
+    $teamLeader->assignRole(Role::findOrCreate('Team Leader', 'web'));
+    $areaManager->assignRole(Role::findOrCreate('Area Manager', 'web'));
+
+    TeamLeaderFieldEngineer::query()->create([
+        'team_leader_id' => $teamLeader->id,
+        'field_engineer_id' => $fieldEngineer->id,
+    ]);
+
+    Building::query()->create([
+        'objectid' => 111,
+        'globalid' => 'field-engineer-approval-building',
+        'building_name' => 'Field Engineer Approval Building',
+        'assignedto' => 'field.engineer',
+        'governorate' => 'Gaza',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->post(route('building-deletions.store'), [
+            'building_globalid' => 'field-engineer-approval-building',
+            'reason' => 'Duplicate building confirmed by the field team.',
+            'confirmation' => '1',
+        ])
+        ->assertRedirect();
+
+    $request = BuildingDeletionRequest::query()
+        ->where('building_globalid', 'field-engineer-approval-building')
+        ->firstOrFail();
+
+    $this->actingAs($teamLeader)
+        ->post(route('building-deletions.review', $request), [
+            'decision' => 'approve',
+            'review_notes' => 'Team leader approval is recorded.',
+        ])
+        ->assertRedirect();
+
+    $request->refresh();
+
+    expect($request->status)->toBe(BuildingDeletionStatus::PendingAreaManagerReview)
+        ->and($request->team_leader_reviewed_by)->toBe($teamLeader->id)
+        ->and($request->team_leader_reviewed_at)->not->toBeNull()
+        ->and($request->area_manager_reviewed_by)->toBe($areaManager->id);
+
+    $this->actingAs($areaManager)
+        ->post(route('building-deletions.review', $request), [
+            'decision' => 'approve',
+            'review_notes' => 'Area manager approval is recorded.',
+        ])
+        ->assertRedirect();
+
+    $request->refresh();
+
+    expect($request->status)->toBe(BuildingDeletionStatus::PendingGisReview)
+        ->and($request->area_manager_reviewed_by)->toBe($areaManager->id)
+        ->and($request->area_manager_reviewed_at)->not->toBeNull();
+});
+
+it('starts snapshot processing only after gis approves the deletion request', function (): void {
+    config()->set('queue.default', 'database');
+
+    $requester = User::factory()->create();
+    $gisReviewer = User::factory()->create();
+    Permission::findOrCreate('damage-assessment.building-deletion.gis-review', 'web');
+    $gisReviewer->givePermissionTo('damage-assessment.building-deletion.gis-review');
+
+    $request = buildingDeletionRequest($requester, BuildingDeletionStatus::PendingGisReview);
+
+    $this->actingAs($gisReviewer)
+        ->post(route('building-deletions.review', $request), [
+            'decision' => 'approve',
+            'review_notes' => 'GIS approval is recorded.',
+        ])
+        ->assertRedirect();
+
+    expect($request->refresh()->status)->toBe(BuildingDeletionStatus::Approved)
+        ->and($request->gis_reviewed_by)->toBe($gisReviewer->id)
+        ->and($request->gis_notes)->toBe('GIS approval is recorded.')
+        ->and(DB::table('jobs')->where('queue', 'arcgis')->where('payload', 'like', '%ProcessBuildingDeletionRequest%')->exists())->toBeTrue();
 });
 
 it('submits a building deletion request through ajax for the modal', function (): void {
