@@ -111,7 +111,7 @@ return [
                 'title' => 'menu.damage_assessment.groups.field_operations',
                 'children' => [
                     [
-                        'title' => 'Building Deletion Management',
+                        'title' => 'menu.damage_assessment.building_deletion_management',
                         'url' => 'damage-assessment/building-deletions',
                         'pattern' => 'damage-assessment/building-deletions*',
                         'roles' => ['Database Officer', 'Project Officer', 'Auditing Supervisor', 'QC/QA Engineer'],

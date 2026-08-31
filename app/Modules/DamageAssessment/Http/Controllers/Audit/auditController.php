@@ -2962,7 +2962,7 @@ class auditController extends Controller
                 <a
                     class="menu-link px-3 text-danger"
                     href="'.e($buildingDeletionRequestUrl).'">
-                    طلب حذف رسمي للمبنى
+                    '.__('ui.building_deletions.audit_button').'
                 </a>
             </div>';
 

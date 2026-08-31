@@ -13,6 +13,7 @@ return [
         'buildings' => 'المباني',
         'housing_units' => 'الوحدات السكنية',
         'missing_citizen_identities' => 'أرقام هويات غير موجودة',
+        'building_deletion_management' => 'إدارة طلبات حذف المباني',
         'building_survey_return_requests' => 'طلبات إرجاع الاستبيان',
         'public_buildings' => 'المباني العامة',
         'road_facilities' => 'الطرق',

@@ -100,7 +100,7 @@ class BuildingDeletionController extends Controller
 
         return redirect()
             ->route('building-deletions.show', $deletionRequest)
-            ->with('success', 'تم إرسال طلب حذف المبنى لمراجعة GIS.');
+            ->with('success', __('ui.building_deletions.messages.submitted'));
     }
 
     public function show(BuildingDeletionRequest $buildingDeletionRequest): View
@@ -136,7 +136,7 @@ class BuildingDeletionController extends Controller
         BuildingDeletionAuditLogger $audit,
     ): RedirectResponse {
         if ($buildingDeletionRequest->status !== BuildingDeletionStatus::PendingGisReview) {
-            return back()->withErrors(['decision' => 'This request is not pending GIS review.']);
+            return back()->withErrors(['decision' => __('ui.building_deletions.messages.not_pending_gis_review')]);
         }
 
         $decision = $request->validated('decision');
@@ -183,7 +183,7 @@ class BuildingDeletionController extends Controller
 
         return redirect()
             ->route('building-deletions.show', $buildingDeletionRequest)
-            ->with('success', 'تم تسجيل قرار مراجعة GIS.');
+            ->with('success', __('ui.building_deletions.messages.reviewed'));
     }
 
     public function retry(BuildingDeletionRequest $buildingDeletionRequest): RedirectResponse
@@ -191,12 +191,12 @@ class BuildingDeletionController extends Controller
         $this->authorize('process', $buildingDeletionRequest);
 
         if ($buildingDeletionRequest->status !== BuildingDeletionStatus::Failed) {
-            return back()->withErrors(['retry' => 'Only failed requests can be retried.']);
+            return back()->withErrors(['retry' => __('ui.building_deletions.messages.only_failed_retry')]);
         }
 
         ProcessBuildingDeletionRequest::dispatch($buildingDeletionRequest->id)->onQueue('arcgis');
 
-        return back()->with('success', 'تم إرسال الطلب لإعادة المحاولة عبر Queue.');
+        return back()->with('success', __('ui.building_deletions.messages.retry_sent'));
     }
 
     public function rawSnapshot(BuildingDeletionRequest $buildingDeletionRequest): View

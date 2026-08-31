@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Raw Deletion Snapshot')
-@section('pageName', 'Building Deletion Management')
+@section('title', __('ui.building_deletions.raw_snapshot_title'))
+@section('pageName', __('ui.building_deletions.title'))
 
 @section('content')
     <div class="card card-flush">
         <div class="card-header pt-7">
             <div class="card-title">
-                <h2>Raw Snapshot #DEL-{{ str_pad((string) $request->id, 5, '0', STR_PAD_LEFT) }}</h2>
+                <h2>{{ __('ui.building_deletions.raw_snapshot_title') }} #DEL-{{ str_pad((string) $request->id, 5, '0', STR_PAD_LEFT) }}</h2>
             </div>
         </div>
         <div class="card-body">
@@ -23,7 +23,7 @@
                     'hash' => $snapshot->snapshot_hash,
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION) }}</pre>
             @else
-                <div class="alert alert-info">No snapshot exists yet.</div>
+                <div class="alert alert-info">{{ __('ui.building_deletions.no_snapshot') }}</div>
             @endif
         </div>
     </div>

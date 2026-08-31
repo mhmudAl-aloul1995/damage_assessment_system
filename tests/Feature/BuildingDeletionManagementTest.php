@@ -38,9 +38,30 @@ it('allows an ordinary authenticated user to open the building deletion request 
     ]);
 
     $this->actingAs($user)
+        ->withSession(['locale' => 'ar'])
         ->get(route('building-deletions.create', ['building_globalid' => 'building-open-form']))
         ->assertOk()
+        ->assertSee('طلب حذف مبنى جديد')
+        ->assertSee('سبب الحذف')
         ->assertSee('Open Form Building');
+});
+
+it('renders the building deletion request form in english locale', function (): void {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 103,
+        'globalid' => 'building-english-form',
+        'building_name' => 'English Form Building',
+    ]);
+
+    $this->actingAs($user)
+        ->withSession(['locale' => 'en'])
+        ->get(route('building-deletions.create', ['building_globalid' => 'building-english-form']))
+        ->assertOk()
+        ->assertSee('New Building Deletion Request')
+        ->assertSee('Reason')
+        ->assertSee('English Form Building');
 });
 
 it('allows an ordinary authenticated user to submit a building deletion request', function (): void {
@@ -70,6 +91,19 @@ it('allows an ordinary authenticated user to submit a building deletion request'
 
     expect($request->requested_by)->toBe($user->id)
         ->and($request->status)->toBe(BuildingDeletionStatus::PendingGisReview);
+});
+
+it('renders the building deletion request details in arabic locale', function (): void {
+    $user = User::factory()->create();
+    $request = buildingDeletionRequest($user, BuildingDeletionStatus::PendingGisReview);
+
+    $this->actingAs($user)
+        ->withSession(['locale' => 'ar'])
+        ->get(route('building-deletions.show', $request))
+        ->assertOk()
+        ->assertSee('طلب حذف مبنى')
+        ->assertSee('بانتظار مراجعة GIS')
+        ->assertSee('لم يتم إنشاء النسخة بعد.');
 });
 
 it('cannot process without applicant signature', function (): void {

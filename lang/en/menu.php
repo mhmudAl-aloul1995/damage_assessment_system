@@ -13,6 +13,7 @@ return [
         'buildings' => 'Buildings',
         'housing_units' => 'Housing Units',
         'missing_citizen_identities' => 'Missing Citizen IDs',
+        'building_deletion_management' => 'Building Deletion Management',
         'building_survey_return_requests' => 'Building Survey Return Requests',
         'public_buildings' => 'Public Buildings',
         'road_facilities' => 'Road Facilities',
