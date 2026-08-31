@@ -56,6 +56,8 @@ class EnsureArcgisPhaseFields extends Command
     private function phaseLayers(): array
     {
         $csoLayerUrl = (string) config('services.arcgis.cso_survey_layer_url', '');
+        $csoSurveyOrganizationsLayerUrl = (string) config('services.arcgis.cso_survey_organizations_layer_url', '');
+        $csoSurveyUnitsLayerUrl = (string) config('services.arcgis.cso_survey_units_layer_url', '');
 
         $layers = [
             'buildings' => (string) config('services.arcgis.buildings_url', ''),
@@ -68,8 +70,18 @@ class EnsureArcgisPhaseFields extends Command
 
         if (filled($csoLayerUrl)) {
             $layers['cso_surveys'] = $this->featureServerLayerUrl($csoLayerUrl, 0);
-            $layers['cso_survey_organizations'] = $this->featureServerLayerUrl($csoLayerUrl, 1);
-            $layers['cso_survey_units'] = $this->featureServerLayerUrl($csoLayerUrl, 2);
+        }
+
+        if (filled($csoSurveyOrganizationsLayerUrl) || filled($csoLayerUrl)) {
+            $layers['cso_survey_organizations'] = filled($csoSurveyOrganizationsLayerUrl)
+                ? $csoSurveyOrganizationsLayerUrl
+                : $this->featureServerLayerUrl($csoLayerUrl, 1);
+        }
+
+        if (filled($csoSurveyUnitsLayerUrl) || filled($csoLayerUrl)) {
+            $layers['cso_survey_units'] = filled($csoSurveyUnitsLayerUrl)
+                ? $csoSurveyUnitsLayerUrl
+                : $this->featureServerLayerUrl($csoLayerUrl, 2);
         }
 
         return $layers;

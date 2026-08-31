@@ -110,9 +110,12 @@ class CsoSurveyController extends Controller
         ]);
 
         $fileBaseName = 'cso_surveys_'.now()->format('Ymd_His');
-        $surveyColumns = $this->selectedExportColumns($request, 'cso_survey_columns', CsoSurveysExport::availableColumns());
-        $organizationColumns = $this->selectedExportColumns($request, 'cso_organization_columns', CsoSurveyOrganizationsExport::availableColumns());
-        $unitColumns = $this->selectedExportColumns($request, 'cso_unit_columns', CsoSurveyUnitsExport::availableColumns());
+        $pdfDefaultSurveyColumns = $format === 'pdf' ? array_keys(CsoSurveysExport::availableColumnGroups()['Summary']) : null;
+        $pdfDefaultOrganizationColumns = $format === 'pdf' ? array_keys(CsoSurveyOrganizationsExport::availableColumnGroups()['Summary']) : null;
+        $pdfDefaultUnitColumns = $format === 'pdf' ? array_keys(CsoSurveyUnitsExport::availableColumnGroups()['Summary']) : null;
+        $surveyColumns = $this->selectedExportColumns($request, 'cso_survey_columns', CsoSurveysExport::availableColumns(), $pdfDefaultSurveyColumns);
+        $organizationColumns = $this->selectedExportColumns($request, 'cso_organization_columns', CsoSurveyOrganizationsExport::availableColumns(), $pdfDefaultOrganizationColumns);
+        $unitColumns = $this->selectedExportColumns($request, 'cso_unit_columns', CsoSurveyUnitsExport::availableColumns(), $pdfDefaultUnitColumns);
 
         if ($format === 'pdf') {
             $flatExport = new CsoSurveysFlatExport($surveys, $surveyColumns, $organizationColumns, $unitColumns);
@@ -290,9 +293,13 @@ class CsoSurveyController extends Controller
      * @param  array<string, string>  $availableColumns
      * @return array<int, string>
      */
-    private function selectedExportColumns(Request $request, string $key, array $availableColumns): array
+    private function selectedExportColumns(Request $request, string $key, array $availableColumns, ?array $defaultColumns = null): array
     {
         $availableColumnKeys = array_keys($availableColumns);
+
+        if (! $request->has($key) && ! $request->has($key.'_mode') && $defaultColumns !== null) {
+            return array_values(array_intersect($defaultColumns, $availableColumnKeys));
+        }
 
         if ($request->input($key.'_mode') === 'except') {
             $excludedColumns = array_values(array_intersect(

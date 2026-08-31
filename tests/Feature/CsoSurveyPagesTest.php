@@ -237,4 +237,13 @@ it('shows cso export data page and exports selected survey organization and unit
 
     $pdfResponse->assertOk();
     $pdfResponse->assertHeader('content-disposition', 'attachment; filename=cso_surveys_20260831_101500.pdf');
+
+    $defaultPdfResponse = $this
+        ->actingAs($user)
+        ->get(route('cso-surveys.export', [
+            'format' => 'pdf',
+        ]));
+
+    $defaultPdfResponse->assertOk();
+    $defaultPdfResponse->assertHeader('content-disposition', 'attachment; filename=cso_surveys_20260831_101500.pdf');
 });

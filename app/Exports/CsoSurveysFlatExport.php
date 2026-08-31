@@ -115,7 +115,7 @@ class CsoSurveysFlatExport implements FromCollection, ShouldAutoSize, WithHeadin
                 'Child Global ID' => $row['type'] === 'survey' ? null : $record->globalid,
                 'Repeat Index' => $row['type'] === 'survey' ? null : $record->repeat_index,
                 'Field' => $availableColumns[$column] ?? $column,
-                'Value' => $this->valueFor($row['type'], $record, $survey, $column),
+                'Value' => $this->stringValue($this->valueFor($row['type'], $record, $survey, $column)),
             ])
             ->all();
     }
@@ -129,5 +129,41 @@ class CsoSurveysFlatExport implements FromCollection, ShouldAutoSize, WithHeadin
         };
 
         return $export->map($record)[0] ?? null;
+    }
+
+    private function stringValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i');
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
+
+        if (is_scalar($value)) {
+            $stringValue = trim((string) $value);
+
+            return $stringValue === '' ? null : $stringValue;
+        }
+
+        if (is_array($value)) {
+            $items = collect($value)->flatten()
+                ->map(fn (mixed $item): ?string => is_scalar($item) ? trim((string) $item) : null)
+                ->filter()
+                ->values();
+
+            if ($items->isNotEmpty()) {
+                return $items->implode(', ');
+            }
+        }
+
+        $encodedValue = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return $encodedValue === false ? null : $encodedValue;
     }
 }

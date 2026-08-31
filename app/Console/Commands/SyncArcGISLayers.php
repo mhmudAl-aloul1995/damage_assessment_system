@@ -81,12 +81,14 @@ class SyncArcGISLayers extends Command
             ],
         ];
 
-        $csoSurveyLayerUrl = config('services.arcgis.cso_survey_layer_url');
+        $csoSurveyLayerUrl = (string) config('services.arcgis.cso_survey_layer_url', '');
+        $csoSurveyOrganizationsLayerUrl = (string) config('services.arcgis.cso_survey_organizations_layer_url', '');
+        $csoSurveyUnitsLayerUrl = (string) config('services.arcgis.cso_survey_units_layer_url', '');
 
         if (filled($csoSurveyLayerUrl)) {
             $layers['cso_surveys'] = [
                 'table' => 'cso_surveys',
-                'url' => $this->featureServerLayerUrl((string) $csoSurveyLayerUrl, 0),
+                'url' => $this->featureServerLayerUrl($csoSurveyLayerUrl, 0),
                 'unique' => 'objectid',
                 'returnGeometry' => true,
                 'outSR' => 4326,
@@ -94,17 +96,27 @@ class SyncArcGISLayers extends Command
                     'organization_name' => 'organization_name_en',
                 ],
             ];
+        }
+
+        if (filled($csoSurveyOrganizationsLayerUrl) || filled($csoSurveyLayerUrl)) {
             $layers['cso_survey_organizations'] = [
                 'table' => 'cso_survey_organizations',
-                'url' => $this->featureServerLayerUrl((string) $csoSurveyLayerUrl, 1),
+                'url' => filled($csoSurveyOrganizationsLayerUrl)
+                    ? $csoSurveyOrganizationsLayerUrl
+                    : $this->featureServerLayerUrl($csoSurveyLayerUrl, 1),
                 'unique' => 'objectid',
                 'map' => [
                     'parentglobalid' => 'parentglobalid',
                 ],
             ];
+        }
+
+        if (filled($csoSurveyUnitsLayerUrl) || filled($csoSurveyLayerUrl)) {
             $layers['cso_survey_units'] = [
                 'table' => 'cso_survey_units',
-                'url' => $this->featureServerLayerUrl((string) $csoSurveyLayerUrl, 2),
+                'url' => filled($csoSurveyUnitsLayerUrl)
+                    ? $csoSurveyUnitsLayerUrl
+                    : $this->featureServerLayerUrl($csoSurveyLayerUrl, 2),
                 'unique' => 'objectid',
                 'map' => [
                     'parentglobalid' => 'parentglobalid',

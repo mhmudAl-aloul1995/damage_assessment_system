@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CsoSurveyUnit;
 use App\Models\PublicBuildingSurvey;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
@@ -11,7 +12,7 @@ it('uses the configured public building referer in sync arcgis layers command', 
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
 
-    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    Artisan::call('migrate:fresh', ['--database' => 'mysql', '--force' => true]);
 
     if (! Schema::connection('mysql')->hasColumn('public_building_surveys', 'arcgis_hash')) {
         Schema::connection('mysql')->table('public_building_surveys', function (Blueprint $table): void {
@@ -69,11 +70,73 @@ it('uses the configured public building referer in sync arcgis layers command', 
 
     expect($exitCode)->toBe(0);
 
-    $survey = PublicBuildingSurvey::query()->where('objectid', 8801)->first();
+    $survey = PublicBuildingSurvey::withoutGlobalScopes()->where('objectid', 8801)->first();
 
     expect($survey)->not->toBeNull();
     expect($survey->building_name)->toBe('Community Hall');
     expect($survey->building_damage_status)->toBe('fully_damaged');
     expect($survey->benef_type)->toBe(['all']);
     expect($survey->location)->toContain('rings');
+});
+
+it('uses the configured cso unit layer url when syncing cso survey units', function (): void {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+
+    Artisan::call('migrate:fresh', ['--database' => 'mysql', '--force' => true]);
+
+    config()->set('app.url', 'http://localhost:8000');
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.cso_survey_layer_url', 'https://example.com/wrong/FeatureServer');
+    config()->set('services.arcgis.cso_survey_units_layer_url', 'https://example.com/cso-units/FeatureServer/2');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/cso-units/FeatureServer/2/addToDefinition*' => Http::response(['success' => true]),
+        'https://example.com/cso-units/FeatureServer/2/calculate*' => Http::response(['success' => true]),
+        'https://example.com/cso-units/FeatureServer/2' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString'],
+                ['name' => 'parentglobalid', 'type' => 'esriFieldTypeString'],
+                ['name' => 'unit_name', 'type' => 'esriFieldTypeString'],
+            ],
+        ]),
+        'https://example.com/cso-units/FeatureServer/2/query*' => Http::sequence()
+            ->push([
+                'features' => [
+                    [
+                        'attributes' => [
+                            'objectid' => 9901,
+                            'globalid' => 'cso-unit-global-id',
+                            'parentglobalid' => 'cso-survey-parent-id',
+                            'unit_name' => 'Imported CSO Unit',
+                        ],
+                    ],
+                ],
+                'exceededTransferLimit' => false,
+            ])
+            ->push([
+                'features' => [],
+                'exceededTransferLimit' => false,
+            ]),
+        'https://example.com/wrong/FeatureServer/2*' => Http::response(['error' => ['message' => 'Wrong URL']], 500),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', [
+        'table' => 'cso_survey_units',
+        '--force' => true,
+    ]);
+
+    expect($exitCode)->toBe(0);
+
+    $unit = CsoSurveyUnit::query()->where('objectid', 9901)->first();
+
+    expect($unit)->not->toBeNull()
+        ->and($unit->globalid)->toBe('cso-unit-global-id')
+        ->and($unit->parentglobalid)->toBe('cso-survey-parent-id')
+        ->and($unit->unit_name)->toBe('Imported CSO Unit');
 });

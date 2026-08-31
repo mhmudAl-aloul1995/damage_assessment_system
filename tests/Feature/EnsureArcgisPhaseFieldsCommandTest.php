@@ -16,6 +16,8 @@ it('ensures phase number fields for configured arcgis layers', function (): void
     config()->set('services.arcgis.road_facility_survey_layer_url', 'https://example.com/arcgis/rest/services/Roads/FeatureServer');
     config()->set('services.arcgis.road_facility_survey_items_layer_url', 'https://example.com/arcgis/rest/services/Roads/FeatureServer/1');
     config()->set('services.arcgis.cso_survey_layer_url', 'https://example.com/arcgis/rest/services/Cso/FeatureServer');
+    config()->set('services.arcgis.cso_survey_organizations_layer_url', 'https://example.com/arcgis/rest/services/CsoChildren/FeatureServer/1');
+    config()->set('services.arcgis.cso_survey_units_layer_url', 'https://example.com/arcgis/rest/services/CsoChildren/FeatureServer/2');
 
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
@@ -33,5 +35,5 @@ it('ensures phase number fields for configured arcgis layers', function (): void
     expect(Artisan::call('arcgis:ensure-phase-fields'))->toBe(0);
 
     Http::assertSentCount(28);
-    Http::assertSent(fn ($request): bool => $request->url() === 'https://example.com/arcgis/admin/services/Cso.FeatureServer/2/addToDefinition');
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://example.com/arcgis/admin/services/CsoChildren.FeatureServer/2/addToDefinition');
 });
