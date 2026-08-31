@@ -91,6 +91,21 @@ it('uses the configured cso unit layer url when syncing cso survey units', funct
     config()->set('services.arcgis.cso_survey_layer_url', 'https://example.com/wrong/FeatureServer');
     config()->set('services.arcgis.cso_survey_units_layer_url', 'https://example.com/cso-units/FeatureServer/2');
 
+    DB::table('cso_surveys')->insert([
+        'objectid' => 7701,
+        'globalid' => 'cso-survey-parent-id',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('cso_survey_organizations')->insert([
+        'objectid' => 8801,
+        'globalid' => 'cso-organization-parent-id',
+        'parentglobalid' => 'cso-survey-parent-id',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'arcgis-token',
@@ -112,7 +127,7 @@ it('uses the configured cso unit layer url when syncing cso survey units', funct
                         'attributes' => [
                             'objectid' => 9901,
                             'globalid' => '{CSO-UNIT-GLOBAL-ID}',
-                            'parentglobalid' => '{CSO-SURVEY-PARENT-ID}',
+                            'parentglobalid' => '{CSO-ORGANIZATION-PARENT-ID}',
                             'unit_name' => 'Imported CSO Unit',
                         ],
                     ],

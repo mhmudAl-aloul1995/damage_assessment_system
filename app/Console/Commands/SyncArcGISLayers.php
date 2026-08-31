@@ -395,6 +395,7 @@ class SyncArcGISLayers extends Command
                     }
                     $row = $this->applyFallbackColumns($row, $arcgisMap, $syncColumns, $table);
                     $row = $this->applyBuildingAssessmentObstacleFallback($row, $syncColumns, $table);
+                    $row = $this->applyCsoUnitSurveyParentFallback($row, $table);
 
                     $row[$unique] = $objectId;
 
@@ -927,6 +928,27 @@ class SyncArcGISLayers extends Command
         }
 
         return strtolower(trim($globalId, '{}'));
+    }
+
+    private function applyCsoUnitSurveyParentFallback(array $row, string $table): array
+    {
+        if ($table !== 'cso_survey_units' || blank($row['parentglobalid'] ?? null)) {
+            return $row;
+        }
+
+        if (DB::table('cso_surveys')->where('globalid', $row['parentglobalid'])->exists()) {
+            return $row;
+        }
+
+        $surveyGlobalId = DB::table('cso_survey_organizations')
+            ->where('globalid', $row['parentglobalid'])
+            ->value('parentglobalid');
+
+        if (filled($surveyGlobalId)) {
+            $row['parentglobalid'] = $this->normalizeGlobalId($surveyGlobalId);
+        }
+
+        return $row;
     }
 
     private function isJsonColumn(string $table, string $column): bool
