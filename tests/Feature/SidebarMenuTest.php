@@ -94,7 +94,8 @@ it('groups report links into sidebar categories', function () {
     expect($exportsGroup['children'])
         ->pluck('url')
         ->toContain('damage-assessment/export-data')
-        ->toContain('damage-assessment/public-buildings/export-data');
+        ->toContain('damage-assessment/public-buildings/export-data')
+        ->toContain('damage-assessment/cso-surveys/export-data');
 });
 
 it('shows missing citizen identities sidebar link to auditing supervisor and project officer', function (string $roleName) {

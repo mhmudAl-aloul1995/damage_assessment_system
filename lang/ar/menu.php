@@ -59,6 +59,7 @@ return [
         'road_facilities' => 'تقرير الطرق',
         'export_data' => 'تصدير البيانات',
         'public_buildings_export_data' => 'تصدير المباني العامة',
+        'cso_surveys_export_data' => 'تصدير بيانات منظمات المجتمع المدني',
     ],
     'inf_audit' => [
         'title' => 'تدقيق البنية التحتية',
