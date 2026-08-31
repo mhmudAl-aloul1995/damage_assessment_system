@@ -226,6 +226,36 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('housing_status_notes');
 });
 
+test('dashboard primary building and housing cards show obstacles without duplicate assessment blocked rows', function () {
+    $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/dashboard/damageAssessment.blade.php');
+
+    $assessedBuildingCard = substr(
+        $view,
+        strpos($view, "__('ui.damage_dashboard.assessed_buildings')"),
+        strpos($view, "__('ui.damage_dashboard.buildings_not_assessed')") - strpos($view, "__('ui.damage_dashboard.assessed_buildings')")
+    );
+
+    $firstHousingTotal = strpos($view, "__('ui.damage_dashboard.total_housing_units')");
+    $secondHousingTotal = strpos($view, "__('ui.damage_dashboard.total_housing_units')", $firstHousingTotal + 1);
+    $housingCard = substr($view, $firstHousingTotal, $secondHousingTotal - $firstHousingTotal);
+
+    expect($assessedBuildingCard)
+        ->toContain("\$dashboardStatLinks['buildings']['assessment_blocked']")
+        ->toContain("\$buildingStats['assessment_obstacle'] ?? 0")
+        ->not->toContain("\$dashboardStatLinks['buildings']['unclassified']")
+        ->not->toContain("\$buildingStats['unclassified'] ?? 0");
+
+    expect($housingCard)
+        ->toContain("\$dashboardStatLinks['housing']['assessment_blocked']")
+        ->toContain("\$unitStats['security_unsafe'] ?? 0")
+        ->not->toContain("\$dashboardStatLinks['housing']['unclassified']")
+        ->not->toContain("\$unitStats['unclassified']");
+
+    $arabicUi = require dirname(__DIR__, 2).'/lang/ar/ui.php';
+
+    expect($arabicUi['damage_dashboard']['assessment_blocked'])->toBe('يوجد عائق');
+});
+
 test('assessment status actions are limited to the matching audit role', function () {
     $view = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php');
     $controller = file_get_contents(dirname(__DIR__, 2).'/app/Modules/DamageAssessment/Http/Controllers/Audit/auditController.php');

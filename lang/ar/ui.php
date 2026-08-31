@@ -451,7 +451,7 @@ return [
         'committee_review' => 'لجنة فنية',
         'no_damage' => 'لا يوجد ضرر',
         'unclassified' => 'غير مصنف',
-        'assessment_blocked' => 'تعيق التقييم',
+        'assessment_blocked' => 'يوجد عائق',
         'bodies_present' => 'وجود جثث',
         'uxo_present' => 'ذخائر غير منفجرة',
         'debris_blocking' => 'ركام يعيق الوصول',

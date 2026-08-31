@@ -594,9 +594,9 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
                 && (int) $unitStats['unclassified'] === 1;
         })
         ->assertSee(__('ui.damage_dashboard.no_damage'))
-        ->assertSee(__('ui.damage_dashboard.unclassified'))
+        ->assertSee(__('ui.damage_dashboard.assessment_blocked'))
         ->assertSee('unit_damage_status=no_damaged', false)
-        ->assertSee('unit_damage_status=__blank__', false);
+        ->assertDontSee('unit_damage_status=__blank__', false);
 });
 
 it('counts dashboard housing assessment blocked from yes security situation values', function () {
@@ -795,9 +795,10 @@ it('counts assessed buildings from completed building surveys', function () {
                 && (int) $buildingStats['debris'] === 1
                 && (int) $buildingStats['assessed_total'] === 8;
         })
-        ->assertSee(__('ui.damage_dashboard.unclassified'), false)
+        ->assertSee(__('ui.damage_dashboard.assessment_blocked'), false)
         ->assertSee('field_status=COMPLETED', false)
-        ->assertSee('building_damage_status=__blank__', false)
+        ->assertSee('assessment_obstacle=yes', false)
+        ->assertDontSee('building_damage_status=__blank__', false)
         ->assertDontSee('building_damage_status=no_damage', false);
 });
 

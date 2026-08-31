@@ -1057,25 +1057,10 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['buildings']['unclassified'] }}"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.unclassified') }}</a>
-								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['unclassified'] ?? 0 }}</div>
-							</div>
-						</div>
-
-						<div class="d-flex align-items-center mb-6">
-							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search"><span
-											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
-							</div>
-							<div class="d-flex align-items-center flex-wrap w-100">
-								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="{{ $dashboardStatLinks['buildings']['assessment_blocked'] }}"
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.assessment_blocked') }}</a>
 								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['assessment_obstacle'] }}
-								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $buildingStats['assessment_obstacle'] ?? 0 }}</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">
@@ -1516,25 +1501,10 @@
 							</div>
 							<div class="d-flex align-items-center flex-wrap w-100">
 								<div class="mb-1 pe-3 flex-grow-1">
-									<a href="{{ $dashboardStatLinks['housing']['unclassified'] }}"
-										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.unclassified') }}</a>
-								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $unitStats['unclassified'] }}</div>
-							</div>
-						</div>
-						<!-- Item 4 -->
-						<div class="d-flex align-items-center mb-6">
-							<div class="symbol symbol-25px w-25px me-5">
-								<span class="symbol-label bg-lighten"><i class="ki-duotone ki-shield-search"><span
-											class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
-							</div>
-							<div class="d-flex align-items-center flex-wrap w-100">
-								<div class="mb-1 pe-3 flex-grow-1">
 									<a href="{{ $dashboardStatLinks['housing']['assessment_blocked'] }}"
 										class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __('ui.damage_dashboard.assessment_blocked') }}</a>
 								</div>
-								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $unitStats['security_unsafe'] }}
-								</div>
+								<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">{{ $unitStats['security_unsafe'] ?? 0 }}</div>
 							</div>
 						</div>
 						<div class="d-flex align-items-center mb-6">

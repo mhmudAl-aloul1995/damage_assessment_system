@@ -451,7 +451,7 @@ return [
         'committee_review' => 'Committee Review',
         'no_damage' => 'No Damage',
         'unclassified' => 'Unclassified',
-        'assessment_blocked' => 'Assessment Blocked',
+        'assessment_blocked' => 'Obstacle Exists',
         'bodies_present' => 'Bodies Present',
         'uxo_present' => 'Unexploded Ordnance',
         'debris_blocking' => 'Debris Blocking Access',
