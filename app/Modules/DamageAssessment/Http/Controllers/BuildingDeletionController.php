@@ -14,9 +14,12 @@ use App\services\BuildingDeletion\BuildingDeletionAuditLogger;
 use App\services\BuildingDeletion\BuildingDeletionLayerDiscovery;
 use App\services\BuildingDeletion\BuildingDeletionSignatureService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BuildingDeletionController extends Controller
 {
@@ -46,14 +49,7 @@ class BuildingDeletionController extends Controller
         $this->authorize('create', BuildingDeletionRequest::class);
 
         $selectedBuildingGlobalId = (string) $request->query('building_globalid', '');
-        $buildings = Building::query()
-            ->select(['id', 'objectid', 'globalid', 'building_name', 'governorate', 'municipalitie', 'neighborhood'])
-            ->when($selectedBuildingGlobalId !== '', function ($query) use ($selectedBuildingGlobalId): void {
-                $query->orderByRaw('CASE WHEN globalid = ? THEN 0 ELSE 1 END', [$selectedBuildingGlobalId]);
-            })
-            ->orderBy('objectid')
-            ->limit(200)
-            ->get();
+        $buildings = $this->deletionCandidateBuildings($request, $selectedBuildingGlobalId);
 
         return view('damage-assessment::building-deletions.create', [
             'buildings' => $buildings,
@@ -70,13 +66,19 @@ class BuildingDeletionController extends Controller
     ): RedirectResponse {
         $building = Building::query()
             ->where('globalid', $request->validated('building_globalid'))
-            ->firstOrFail();
+            ->first();
+        $auditedBuilding = $building === null && Schema::hasTable('audited_buildings')
+            ? DB::table('audited_buildings')->where('globalid', $request->validated('building_globalid'))->first()
+            : null;
 
-        $deletionRequest = DB::transaction(function () use ($request, $building, $signatures, $audit): BuildingDeletionRequest {
+        abort_if($building === null && $auditedBuilding === null, 404);
+        abort_unless($this->canRequestDeletionForBuilding($request, $request->validated('building_globalid')), 403);
+
+        $deletionRequest = DB::transaction(function () use ($request, $building, $auditedBuilding, $signatures, $audit): BuildingDeletionRequest {
             $deletionRequest = BuildingDeletionRequest::query()->create([
-                'building_id' => $building->id,
-                'building_globalid' => $building->globalid,
-                'building_objectid' => $building->objectid,
+                'building_id' => $building?->id,
+                'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
+                'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
                 'requested_by' => $request->user()->id,
                 'reason' => $request->validated('reason'),
                 'notes' => $request->validated('notes'),
@@ -91,8 +93,8 @@ class BuildingDeletionController extends Controller
             );
 
             $audit->log($deletionRequest, 'request_submitted', 'pending_gis_review', 'Applicant submitted and signed the deletion request.', [
-                'building_globalid' => $building->globalid,
-                'building_objectid' => $building->objectid,
+                'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
+                'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
             ], $request->user()->id);
 
             return $deletionRequest;
@@ -209,5 +211,113 @@ class BuildingDeletionController extends Controller
             'request' => $buildingDeletionRequest,
             'snapshot' => $buildingDeletionRequest->latestSnapshot,
         ]);
+    }
+
+    /**
+     * @return Collection<int, object>
+     */
+    private function deletionCandidateBuildings(Request $request, string $selectedBuildingGlobalId): Collection
+    {
+        $user = $request->user();
+        $fieldEngineerUsername = strtolower(trim((string) $user?->username_arcgis));
+        $isOnlyFieldEngineer = $this->isOnlyFieldEngineer($user);
+        $queries = [];
+
+        if (Schema::hasTable('buildings')) {
+            $queries[] = $this->buildingCandidateQuery('buildings', 'base', $isOnlyFieldEngineer, $fieldEngineerUsername);
+        }
+
+        if (Schema::hasTable('audited_buildings')) {
+            $queries[] = $this->buildingCandidateQuery('audited_buildings', 'audited', $isOnlyFieldEngineer, $fieldEngineerUsername);
+        }
+
+        if ($queries === []) {
+            return collect();
+        }
+
+        $query = array_shift($queries);
+
+        foreach ($queries as $candidateQuery) {
+            $query->unionAll($candidateQuery);
+        }
+
+        return DB::query()
+            ->fromSub($query, 'building_candidates')
+            ->selectRaw('MAX(id) as id, MAX(objectid) as objectid, globalid, MAX(building_name) as building_name, MAX(governorate) as governorate, MAX(municipalitie) as municipalitie, MAX(neighborhood) as neighborhood, GROUP_CONCAT(source) as source')
+            ->whereNotNull('globalid')
+            ->where('globalid', '!=', '')
+            ->groupBy('globalid')
+            ->when($selectedBuildingGlobalId !== '', function (Builder $query) use ($selectedBuildingGlobalId): void {
+                $query->orderByRaw('CASE WHEN globalid = ? THEN 0 ELSE 1 END', [$selectedBuildingGlobalId]);
+            })
+            ->orderBy('objectid')
+            ->limit(200)
+            ->get();
+    }
+
+    private function buildingCandidateQuery(string $table, string $source, bool $isOnlyFieldEngineer, string $fieldEngineerUsername): Builder
+    {
+        $query = DB::table($table)
+            ->select([
+                $this->nullableColumn($table, 'id'),
+                $this->nullableColumn($table, 'objectid'),
+                $this->nullableColumn($table, 'globalid'),
+                $this->nullableColumn($table, 'building_name'),
+                $this->nullableColumn($table, 'governorate'),
+                $this->nullableColumn($table, 'municipalitie'),
+                $this->nullableColumn($table, 'neighborhood'),
+                DB::raw("'{$source}' as source"),
+            ]);
+
+        if ($isOnlyFieldEngineer) {
+            if (! Schema::hasColumn($table, 'assignedto')) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereRaw('LOWER(TRIM(assignedto)) = ?', [$fieldEngineerUsername]);
+            }
+        }
+
+        return $query;
+    }
+
+    private function nullableColumn(string $table, string $column): mixed
+    {
+        if (Schema::hasColumn($table, $column)) {
+            return $column;
+        }
+
+        return DB::raw('NULL as '.$column);
+    }
+
+    private function isOnlyFieldEngineer(?\App\Models\User $user): bool
+    {
+        $roleNames = $user?->getRoleNames() ?? collect();
+
+        return $roleNames->count() === 1
+            && $roleNames->contains(fn (string $role): bool => in_array($role, ['Field Engineer', 'field Engineer'], true));
+    }
+
+    private function canRequestDeletionForBuilding(Request $request, string $buildingGlobalId): bool
+    {
+        if (! $this->isOnlyFieldEngineer($request->user())) {
+            return true;
+        }
+
+        $fieldEngineerUsername = strtolower(trim((string) $request->user()?->username_arcgis));
+
+        foreach (['buildings', 'audited_buildings'] as $table) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'assignedto')) {
+                continue;
+            }
+
+            if (DB::table($table)
+                ->where('globalid', $buildingGlobalId)
+                ->whereRaw('LOWER(TRIM(assignedto)) = ?', [$fieldEngineerUsername])
+                ->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

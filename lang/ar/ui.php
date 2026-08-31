@@ -113,6 +113,7 @@ return [
         'view' => 'عرض',
         'deletion_request' => 'طلب الحذف',
         'building' => 'المبنى',
+        'select_building' => 'اختر المبنى',
         'data_sources' => 'مصادر البيانات',
         'configured' => 'مضبوط',
         'deletion_plan' => 'خطة الحذف',

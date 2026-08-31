@@ -113,6 +113,7 @@ return [
         'view' => 'View',
         'deletion_request' => 'Deletion Request',
         'building' => 'Building',
+        'select_building' => 'Select a building',
         'data_sources' => 'Data Sources',
         'configured' => 'Configured',
         'deletion_plan' => 'Deletion Plan',

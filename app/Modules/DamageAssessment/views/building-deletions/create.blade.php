@@ -29,7 +29,7 @@
 
                 <div class="mb-7">
                     <label class="required form-label fw-semibold">{{ __('ui.building_deletions.building') }}</label>
-                    <select name="building_globalid" class="form-select form-select-solid" data-control="select2" required>
+                    <select name="building_globalid" class="form-select form-select-solid" data-control="select2" data-placeholder="{{ __('ui.building_deletions.select_building') }}" required>
                         <option value=""></option>
                         @foreach ($buildings as $building)
                             <option value="{{ $building->globalid }}" @selected(old('building_globalid', $selectedBuildingGlobalId) === $building->globalid)>

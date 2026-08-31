@@ -11,11 +11,15 @@ use App\Models\User;
 use App\services\BuildingDeletion\BuildingDeletionProcessor;
 use App\services\BuildingDeletion\BuildingDeletionSnapshotService;
 use App\services\BuildingDeletion\BuildingDeletionSnapshotValidator;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
     Cache::flush();
@@ -62,6 +66,50 @@ it('renders the building deletion request form in english locale', function (): 
         ->assertSee('New Building Deletion Request')
         ->assertSee('Reason')
         ->assertSee('English Form Building');
+});
+
+it('limits single-role field engineers to assigned base and audited buildings in the deletion form', function (): void {
+    ensureAuditedBuildingDeletionFormColumns();
+
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $fieldEngineer->assignRole(Role::findOrCreate('Field Engineer', 'web'));
+
+    Building::query()->create([
+        'objectid' => 104,
+        'globalid' => 'assigned-base-building',
+        'building_name' => 'Assigned Base Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 105,
+        'globalid' => 'other-base-building',
+        'building_name' => 'Other Base Building',
+        'assignedto' => 'other.engineer',
+    ]);
+
+    DB::table('audited_buildings')->insert([
+        'objectid' => 106,
+        'globalid' => 'assigned-audited-building',
+        'building_name' => 'Assigned Audited Building',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    DB::table('audited_buildings')->insert([
+        'objectid' => 107,
+        'globalid' => 'other-audited-building',
+        'building_name' => 'Other Audited Building',
+        'assignedto' => 'other.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->withSession(['locale' => 'en'])
+        ->get(route('building-deletions.create'))
+        ->assertOk()
+        ->assertSee('Assigned Base Building')
+        ->assertSee('Assigned Audited Building')
+        ->assertDontSee('Other Base Building')
+        ->assertDontSee('Other Audited Building');
 });
 
 it('allows an ordinary authenticated user to submit a building deletion request', function (): void {
@@ -320,5 +368,16 @@ function fakeArcgis(bool $deleteSucceeds = true): void
             ],
             'geometry' => ['rings' => [[[35.1, 31.5], [35.2, 31.5], [35.2, 31.6], [35.1, 31.5]]]],
         ]]]);
+    });
+}
+
+function ensureAuditedBuildingDeletionFormColumns(): void
+{
+    Schema::table('audited_buildings', function (Blueprint $table): void {
+        foreach (['globalid', 'building_name', 'assignedto', 'municipalitie', 'governorate', 'neighborhood'] as $column) {
+            if (! Schema::hasColumn('audited_buildings', $column)) {
+                $table->text($column)->nullable();
+            }
+        }
     });
 }
