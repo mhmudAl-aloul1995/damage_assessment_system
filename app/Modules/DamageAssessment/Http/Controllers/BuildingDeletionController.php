@@ -24,8 +24,15 @@ class BuildingDeletionController extends Controller
     {
         $this->authorize('viewAny', BuildingDeletionRequest::class);
 
+        $canViewAllRequests = $request->user()?->can('damage-assessment.building-deletion.view')
+            || $request->user()?->can('damage-assessment.building-deletion.gis-review')
+            || $request->user()?->can('damage-assessment.building-deletion.process');
+
         $requests = BuildingDeletionRequest::query()
             ->with(['requester', 'gisReviewer', 'latestSnapshot'])
+            ->when(! $canViewAllRequests, function ($query) use ($request): void {
+                $query->where('requested_by', $request->user()->id);
+            })
             ->latest()
             ->paginate(25);
 

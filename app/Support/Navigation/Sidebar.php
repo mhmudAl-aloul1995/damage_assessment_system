@@ -143,6 +143,7 @@ class Sidebar
     private static function isCustomVisibleItem(array $item, User $user): bool
     {
         return match ($item['visible_when'] ?? null) {
+            'building_deletion_requests' => true,
             'restricted_lawyer_audit_assignments' => RestrictedLawyerAuditAccess::canViewAssignments($user),
             default => false,
         };

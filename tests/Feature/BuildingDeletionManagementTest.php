@@ -14,6 +14,7 @@ use App\services\BuildingDeletion\BuildingDeletionSnapshotValidator;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 
 beforeEach(function (): void {
@@ -25,6 +26,50 @@ beforeEach(function (): void {
     config()->set('services.arcgis.source_service', 'https://source.example.test/FeatureServer');
     config()->set('services.arcgis.target_service', 'https://target.example.test/FeatureServer');
     config()->set('services.arcgis.building_deletion_dry_run', true);
+});
+
+it('allows an ordinary authenticated user to open the building deletion request form', function (): void {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 101,
+        'globalid' => 'building-open-form',
+        'building_name' => 'Open Form Building',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('building-deletions.create', ['building_globalid' => 'building-open-form']))
+        ->assertOk()
+        ->assertSee('Open Form Building');
+});
+
+it('allows an ordinary authenticated user to submit a building deletion request', function (): void {
+    Storage::fake('local');
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 102,
+        'globalid' => 'building-open-submit',
+        'building_name' => 'Open Submit Building',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('building-deletions.store'), [
+            'building_globalid' => 'building-open-submit',
+            'reason' => 'Duplicate building confirmed by the field team.',
+            'notes' => 'Submitted by ordinary user.',
+            'signature' => 'data:image/png;base64,'.base64_encode('signature'),
+            'confirmation' => '1',
+        ])
+        ->assertRedirect();
+
+    $request = BuildingDeletionRequest::query()
+        ->where('building_globalid', 'building-open-submit')
+        ->firstOrFail();
+
+    expect($request->requested_by)->toBe($user->id)
+        ->and($request->status)->toBe(BuildingDeletionStatus::PendingGisReview);
 });
 
 it('cannot process without applicant signature', function (): void {

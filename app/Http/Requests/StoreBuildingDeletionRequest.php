@@ -9,7 +9,7 @@ class StoreBuildingDeletionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', \App\Models\BuildingDeletionRequest::class) ?? false;
+        return $this->user() !== null;
     }
 
     public function rules(): array

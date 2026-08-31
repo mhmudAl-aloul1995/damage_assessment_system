@@ -2958,15 +2958,13 @@ class auditController extends Controller
                     data-building-name="'.$buildingName.'">
                     تحويل الاستبيان إلى مكتمل
                 </button>';
-                    $deleteBuildingButton = auth()->user()?->can('damage-assessment.building-deletion.request')
-                        ? '<div class="menu-item px-3">
+                    $deleteBuildingButton = '<div class="menu-item px-3">
                 <a
                     class="menu-link px-3 text-danger"
                     href="'.e($buildingDeletionRequestUrl).'">
                     طلب حذف رسمي للمبنى
                 </a>
-            </div>'
-                        : '';
+            </div>';
 
                     return '
     <div class="d-flex justify-content-end audit-actions-wrapper">

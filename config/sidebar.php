@@ -115,6 +115,7 @@ return [
                         'url' => 'damage-assessment/building-deletions',
                         'pattern' => 'damage-assessment/building-deletions*',
                         'roles' => ['Database Officer', 'Project Officer', 'Auditing Supervisor', 'QC/QA Engineer'],
+                        'visible_when' => 'building_deletion_requests',
                     ],
                     [
                         'title' => 'menu.damage_assessment.building_survey_return_requests',

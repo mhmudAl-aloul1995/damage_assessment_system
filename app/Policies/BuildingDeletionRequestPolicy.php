@@ -9,9 +9,7 @@ class BuildingDeletionRequestPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('damage-assessment.building-deletion.view')
-            || $user->can('damage-assessment.building-deletion.request')
-            || $user->can('damage-assessment.building-deletion.gis-review');
+        return true;
     }
 
     public function view(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
@@ -23,7 +21,7 @@ class BuildingDeletionRequestPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('damage-assessment.building-deletion.request');
+        return true;
     }
 
     public function update(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
