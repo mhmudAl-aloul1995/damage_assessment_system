@@ -4,10 +4,6 @@
 @section('pageName', __('ui.building_deletions.title'))
 
 @section('content')
-    @if ($dryRun)
-        <div class="alert alert-warning">{{ __('ui.building_deletions.dry_run_show') }}</div>
-    @endif
-
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -93,18 +89,6 @@
                 </div>
             </div>
 
-            <div class="card card-flush mb-6">
-                <div class="card-header"><h3 class="card-title">{{ __('ui.building_deletions.approvals_signatures') }}</h3></div>
-                <div class="card-body">
-                    @foreach ($request->signatures as $signature)
-                        <div class="border-bottom py-3">
-                            <div class="fw-bold">{{ __('ui.building_deletions.signature_actions.'.$signature->action->value) }}</div>
-                            <div class="text-muted">{{ $signature->user?->name }} | {{ $signature->signed_at?->format('Y-m-d H:i') }}</div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
             @if ($canReview && $request->status === \App\Enums\BuildingDeletionStatus::PendingGisReview)
                 <div class="card card-flush">
                     <div class="card-header"><h3 class="card-title">{{ __('ui.building_deletions.gis_decision') }}</h3></div>
@@ -112,7 +96,6 @@
                         <div class="alert alert-danger">{{ __('ui.building_deletions.gis_decision_warning') }}</div>
                         <form method="POST" action="{{ route('building-deletions.review', $request) }}" id="gisReviewForm">
                             @csrf
-                            <input type="hidden" name="signature" id="gisSignatureInput">
                             <div class="mb-5">
                                 <select name="decision" class="form-select form-select-solid" required>
                                     <option value="approve">{{ __('ui.building_deletions.approve_sign') }}</option>
@@ -129,8 +112,6 @@
                                 <span class="form-check-label">{{ __('ui.building_deletions.understands_snapshot_gate') }}</span>
                             </label>
                             <textarea name="gis_notes" class="form-control form-control-solid mb-5" rows="3" placeholder="{{ __('ui.building_deletions.gis_notes') }}" required></textarea>
-                            <canvas id="gisSignaturePad" class="border rounded w-100 mb-3" height="160"></canvas>
-                            <button type="button" class="btn btn-sm btn-light mb-5" id="clearGisSignature">{{ __('ui.building_deletions.clear') }}</button>
                             <button type="submit" class="btn btn-danger d-block">{{ __('ui.building_deletions.submit_decision') }}</button>
                         </form>
                     </div>
@@ -145,34 +126,4 @@
             @endif
         </div>
     </div>
-@endsection
-
-@section('script')
-    <script>
-        const gisCanvas = document.getElementById('gisSignaturePad');
-        if (gisCanvas) {
-            const ctx = gisCanvas.getContext('2d');
-            let drawing = false;
-            gisCanvas.width = gisCanvas.offsetWidth;
-            gisCanvas.addEventListener('pointerdown', function (event) {
-                drawing = true;
-                ctx.beginPath();
-                ctx.moveTo(event.offsetX, event.offsetY);
-            });
-            gisCanvas.addEventListener('pointermove', function (event) {
-                if (!drawing) return;
-                ctx.lineWidth = 2;
-                ctx.lineCap = 'round';
-                ctx.lineTo(event.offsetX, event.offsetY);
-                ctx.stroke();
-            });
-            window.addEventListener('pointerup', function () { drawing = false; });
-            document.getElementById('clearGisSignature').addEventListener('click', function () {
-                ctx.clearRect(0, 0, gisCanvas.width, gisCanvas.height);
-            });
-            document.getElementById('gisReviewForm').addEventListener('submit', function () {
-                document.getElementById('gisSignatureInput').value = gisCanvas.toDataURL('image/png');
-            });
-        }
-    </script>
 @endsection

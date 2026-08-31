@@ -28,7 +28,6 @@ class StoreBuildingDeletionRequest extends FormRequest
             }],
             'reason' => ['required', 'string', 'min:10'],
             'notes' => ['nullable', 'string'],
-            'signature' => ['required', 'string'],
             'confirmation' => ['accepted'],
         ];
     }

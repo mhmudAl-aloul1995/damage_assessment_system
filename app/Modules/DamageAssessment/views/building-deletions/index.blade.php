@@ -11,7 +11,9 @@
             </div>
             <div class="card-toolbar">
                 @can('create', \App\Models\BuildingDeletionRequest::class)
-                    <a href="{{ route('building-deletions.create') }}" class="btn btn-primary">{{ __('ui.building_deletions.new_request') }}</a>
+                    <button type="button" class="btn btn-primary" data-building-deletion-open-modal data-url="{{ route('building-deletions.create') }}">
+                        {{ __('ui.building_deletions.new_request') }}
+                    </button>
                 @endcan
             </div>
         </div>
@@ -56,4 +58,140 @@
             {{ $requests->links() }}
         </div>
     </div>
+
+    <div class="modal fade" id="buildingDeletionRequestModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ __('ui.building_deletions.new_title') }}</h3>
+                    <button type="button" class="btn btn-icon btn-sm btn-active-light-primary" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="buildingDeletionRequestModalBody">
+                    <div class="text-muted">{{ __('ui.building_deletions.loading_form') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@section('script')
+    <script>
+        (function () {
+            const modalElement = document.getElementById('buildingDeletionRequestModal');
+            const modalBody = document.getElementById('buildingDeletionRequestModalBody');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const messages = {
+                loading: @json(__('ui.building_deletions.loading_form')),
+                loadFailed: @json(__('ui.building_deletions.load_form_failed')),
+                submitFailed: @json(__('ui.building_deletions.submit_failed')),
+            };
+
+            function initializeModalForm() {
+                const form = modalBody.querySelector('#buildingDeletionForm');
+
+                $(modalBody).find('[data-control="select2"]').select2({
+                    dir: @json(app()->getLocale() === 'ar' ? 'rtl' : 'ltr'),
+                    width: '100%',
+                    dropdownParent: $('#buildingDeletionRequestModal'),
+                });
+
+                if (!form) {
+                    return;
+                }
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+
+                    const submitButton = form.querySelector('[type="submit"]');
+                    const errorsBox = form.querySelector('.building-deletion-errors');
+
+                    if (errorsBox) {
+                        errorsBox.classList.add('d-none');
+                        errorsBox.innerHTML = '';
+                    }
+
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                    }
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    })
+                        .then(async function (response) {
+                            const data = await response.json().catch(function () {
+                                return {};
+                            });
+
+                            if (!response.ok) {
+                                throw data;
+                            }
+
+                            if (data.redirect_url) {
+                                window.location.href = data.redirect_url;
+                            }
+                        })
+                        .catch(function (error) {
+                            const errors = error.errors ? Object.values(error.errors).flat() : [error.message || messages.submitFailed];
+
+                            if (errorsBox) {
+                                errorsBox.innerHTML = errors.map(function (message) {
+                                    return `<div>${escapeHtml(message)}</div>`;
+                                }).join('');
+                                errorsBox.classList.remove('d-none');
+                            } else if (typeof toastr !== 'undefined') {
+                                toastr.error(errors.join('\n'));
+                            }
+                        })
+                        .finally(function () {
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                            }
+                        });
+                });
+            }
+
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            document.querySelectorAll('[data-building-deletion-open-modal]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    modalBody.innerHTML = `<div class="text-muted">${messages.loading}</div>`;
+                    modal.show();
+
+                    fetch(button.dataset.url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error(messages.loadFailed);
+                            }
+
+                            return response.text();
+                        })
+                        .then(function (html) {
+                            modalBody.innerHTML = html;
+                            initializeModalForm();
+                        })
+                        .catch(function () {
+                            modalBody.innerHTML = `<div class="alert alert-danger">${messages.loadFailed}</div>`;
+                        });
+                });
+            });
+        })();
+    </script>
 @endsection

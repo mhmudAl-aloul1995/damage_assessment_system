@@ -1,10 +1,8 @@
 <?php
 
-use App\Enums\BuildingDeletionSignatureAction;
 use App\Enums\BuildingDeletionStatus;
 use App\Models\Building;
 use App\Models\BuildingDeletionRequest;
-use App\Models\BuildingDeletionSignature;
 use App\Models\BuildingDeletionSnapshot;
 use App\Models\HousingUnit;
 use App\Models\User;
@@ -17,7 +15,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -30,6 +27,18 @@ beforeEach(function (): void {
     config()->set('services.arcgis.source_service', 'https://source.example.test/FeatureServer');
     config()->set('services.arcgis.target_service', 'https://target.example.test/FeatureServer');
     config()->set('services.arcgis.building_deletion_dry_run', true);
+});
+
+it('opens new building deletion requests from an ajax modal on the index page', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->withSession(['locale' => 'en'])
+        ->get(route('building-deletions.index'))
+        ->assertOk()
+        ->assertSee('data-building-deletion-open-modal', false)
+        ->assertSee('buildingDeletionRequestModal')
+        ->assertDontSee('href="'.route('building-deletions.create').'"', false);
 });
 
 it('allows an ordinary authenticated user to open the building deletion request form', function (): void {
@@ -47,6 +56,8 @@ it('allows an ordinary authenticated user to open the building deletion request 
         ->assertOk()
         ->assertSee('طلب حذف مبنى جديد')
         ->assertSee('سبب الحذف')
+        ->assertDontSee('مصادر البيانات')
+        ->assertDontSee('خطة الحذف')
         ->assertSee('Open Form Building');
 });
 
@@ -65,7 +76,28 @@ it('renders the building deletion request form in english locale', function (): 
         ->assertOk()
         ->assertSee('New Building Deletion Request')
         ->assertSee('Reason')
+        ->assertDontSee('Data Sources')
+        ->assertDontSee('Deletion Plan')
         ->assertSee('English Form Building');
+});
+
+it('loads the building deletion request form through ajax for the modal', function (): void {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 108,
+        'globalid' => 'building-modal-form',
+        'building_name' => 'Modal Form Building',
+    ]);
+
+    $this->actingAs($user)
+        ->withHeader('X-Requested-With', 'XMLHttpRequest')
+        ->get(route('building-deletions.create', ['building_globalid' => 'building-modal-form']))
+        ->assertOk()
+        ->assertSee('buildingDeletionForm')
+        ->assertSee('Modal Form Building')
+        ->assertDontSee('card card-flush')
+        ->assertDontSee('DRY RUN');
 });
 
 it('limits single-role field engineers to assigned base and audited buildings in the deletion form', function (): void {
@@ -113,8 +145,6 @@ it('limits single-role field engineers to assigned base and audited buildings in
 });
 
 it('allows an ordinary authenticated user to submit a building deletion request', function (): void {
-    Storage::fake('local');
-
     $user = User::factory()->create();
 
     Building::query()->create([
@@ -128,7 +158,6 @@ it('allows an ordinary authenticated user to submit a building deletion request'
             'building_globalid' => 'building-open-submit',
             'reason' => 'Duplicate building confirmed by the field team.',
             'notes' => 'Submitted by ordinary user.',
-            'signature' => 'data:image/png;base64,'.base64_encode('signature'),
             'confirmation' => '1',
         ])
         ->assertRedirect();
@@ -139,6 +168,31 @@ it('allows an ordinary authenticated user to submit a building deletion request'
 
     expect($request->requested_by)->toBe($user->id)
         ->and($request->status)->toBe(BuildingDeletionStatus::PendingGisReview);
+});
+
+it('submits a building deletion request through ajax for the modal', function (): void {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 109,
+        'globalid' => 'building-modal-submit',
+        'building_name' => 'Modal Submit Building',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('building-deletions.store'), [
+            'building_globalid' => 'building-modal-submit',
+            'reason' => 'Duplicate building confirmed by the field team.',
+            'notes' => 'Submitted through modal.',
+            'confirmation' => '1',
+        ])
+        ->assertCreated()
+        ->assertJsonStructure([
+            'message',
+            'redirect_url',
+        ]);
+
+    expect($response->json('redirect_url'))->toContain('/building-deletions/');
 });
 
 it('renders the building deletion request details in arabic locale', function (): void {
@@ -152,26 +206,6 @@ it('renders the building deletion request details in arabic locale', function ()
         ->assertSee('طلب حذف مبنى')
         ->assertSee('بانتظار مراجعة GIS')
         ->assertSee('لم يتم إنشاء النسخة بعد.');
-});
-
-it('cannot process without applicant signature', function (): void {
-    $user = User::factory()->create();
-    $request = buildingDeletionRequest($user, BuildingDeletionStatus::Approved);
-
-    BuildingDeletionSignature::query()->create([
-        'request_id' => $request->id,
-        'user_id' => $user->id,
-        'role' => 'GIS',
-        'action' => BuildingDeletionSignatureAction::GisApproved,
-        'signature_path' => 'fake.png',
-        'signed_at' => now(),
-    ]);
-
-    expect(fn () => app(BuildingDeletionProcessor::class)->process($request->id))
-        ->toThrow(RuntimeException::class, 'applicant signature');
-
-    expect($request->fresh()->status)->toBe(BuildingDeletionStatus::Failed)
-        ->and($request->fresh()->failure_reason)->toContain('applicant signature');
 });
 
 it('captures null empty zero and false values in the database snapshot', function (): void {
@@ -215,8 +249,6 @@ it('does not call deleteFeatures before creating a verified snapshot', function 
 
     $user = User::factory()->create();
     $request = buildingDeletionRequest($user, BuildingDeletionStatus::Approved);
-    sign($request, $user, BuildingDeletionSignatureAction::Requested);
-    sign($request, $user, BuildingDeletionSignatureAction::GisApproved);
 
     app(BuildingDeletionProcessor::class)->process($request->id);
 
@@ -232,8 +264,6 @@ it('marks the request failed when a GIS delete fails after snapshot verification
 
     $user = User::factory()->create();
     $request = buildingDeletionRequest($user, BuildingDeletionStatus::Approved);
-    sign($request, $user, BuildingDeletionSignatureAction::Requested);
-    sign($request, $user, BuildingDeletionSignatureAction::GisApproved);
 
     expect(fn () => app(BuildingDeletionProcessor::class)->process($request->id))
         ->toThrow(RuntimeException::class, 'GIS deletion failed');
@@ -301,18 +331,6 @@ function buildingDeletionRequest(User $user, BuildingDeletionStatus $status): Bu
         'status' => $status,
         'gis_reviewed_by' => $user->id,
         'gis_reviewed_at' => now(),
-    ]);
-}
-
-function sign(BuildingDeletionRequest $request, User $user, BuildingDeletionSignatureAction $action): void
-{
-    BuildingDeletionSignature::query()->create([
-        'request_id' => $request->id,
-        'user_id' => $user->id,
-        'role' => 'Test',
-        'action' => $action,
-        'signature_path' => 'fake.png',
-        'signed_at' => now(),
     ]);
 }
 

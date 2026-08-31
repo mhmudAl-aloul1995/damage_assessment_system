@@ -2,7 +2,6 @@
 
 namespace App\services\BuildingDeletion;
 
-use App\Enums\BuildingDeletionSignatureAction;
 use App\Enums\BuildingDeletionStatus;
 use App\Models\AssignedAssessmentUser;
 use App\Models\AuditedBuilding;
@@ -41,7 +40,6 @@ class BuildingDeletionProcessor
 
         try {
             $request = BuildingDeletionRequest::query()
-                ->with('signatures')
                 ->findOrFail($requestId);
 
             if ($request->status === BuildingDeletionStatus::Completed) {
@@ -116,13 +114,6 @@ class BuildingDeletionProcessor
             throw new RuntimeException('Building deletion request is not approved for processing.');
         }
 
-        if (! $request->hasSignature(BuildingDeletionSignatureAction::Requested)) {
-            throw new RuntimeException('Cannot process without applicant signature.');
-        }
-
-        if (! $request->hasSignature(BuildingDeletionSignatureAction::GisApproved)) {
-            throw new RuntimeException('Cannot process without GIS approval signature.');
-        }
     }
 
     /**

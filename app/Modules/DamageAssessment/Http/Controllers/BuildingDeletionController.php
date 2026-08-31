@@ -2,7 +2,6 @@
 
 namespace App\Modules\DamageAssessment\Http\Controllers;
 
-use App\Enums\BuildingDeletionSignatureAction;
 use App\Enums\BuildingDeletionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReviewBuildingDeletionRequest;
@@ -11,10 +10,9 @@ use App\Jobs\ProcessBuildingDeletionRequest;
 use App\Models\Building;
 use App\Models\BuildingDeletionRequest;
 use App\services\BuildingDeletion\BuildingDeletionAuditLogger;
-use App\services\BuildingDeletion\BuildingDeletionLayerDiscovery;
-use App\services\BuildingDeletion\BuildingDeletionSignatureService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -44,26 +42,29 @@ class BuildingDeletionController extends Controller
         ]);
     }
 
-    public function create(Request $request, BuildingDeletionLayerDiscovery $layers): View
+    public function create(Request $request): View
     {
         $this->authorize('create', BuildingDeletionRequest::class);
 
         $selectedBuildingGlobalId = (string) $request->query('building_globalid', '');
         $buildings = $this->deletionCandidateBuildings($request, $selectedBuildingGlobalId);
-
-        return view('damage-assessment::building-deletions.create', [
+        $viewData = [
             'buildings' => $buildings,
             'selectedBuildingGlobalId' => $selectedBuildingGlobalId,
-            'deletionPlan' => $layers->deletionPlan(),
-            'dryRun' => (bool) config('services.arcgis.building_deletion_dry_run', false),
-        ]);
+            'isModal' => $request->ajax(),
+        ];
+
+        if ($request->ajax()) {
+            return view('damage-assessment::building-deletions._form', $viewData);
+        }
+
+        return view('damage-assessment::building-deletions.create', $viewData);
     }
 
     public function store(
         StoreBuildingDeletionRequest $request,
-        BuildingDeletionSignatureService $signatures,
         BuildingDeletionAuditLogger $audit,
-    ): RedirectResponse {
+    ): RedirectResponse|JsonResponse {
         $building = Building::query()
             ->where('globalid', $request->validated('building_globalid'))
             ->first();
@@ -74,7 +75,7 @@ class BuildingDeletionController extends Controller
         abort_if($building === null && $auditedBuilding === null, 404);
         abort_unless($this->canRequestDeletionForBuilding($request, $request->validated('building_globalid')), 403);
 
-        $deletionRequest = DB::transaction(function () use ($request, $building, $auditedBuilding, $signatures, $audit): BuildingDeletionRequest {
+        $deletionRequest = DB::transaction(function () use ($request, $building, $auditedBuilding, $audit): BuildingDeletionRequest {
             $deletionRequest = BuildingDeletionRequest::query()->create([
                 'building_id' => $building?->id,
                 'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
@@ -85,13 +86,6 @@ class BuildingDeletionController extends Controller
                 'status' => BuildingDeletionStatus::PendingGisReview,
             ]);
 
-            $signatures->store(
-                $deletionRequest,
-                $request->user(),
-                BuildingDeletionSignatureAction::Requested,
-                $request->validated('signature'),
-            );
-
             $audit->log($deletionRequest, 'request_submitted', 'pending_gis_review', 'Applicant submitted and signed the deletion request.', [
                 'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
                 'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
@@ -99,6 +93,13 @@ class BuildingDeletionController extends Controller
 
             return $deletionRequest;
         });
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => __('ui.building_deletions.messages.submitted'),
+                'redirect_url' => route('building-deletions.show', $deletionRequest),
+            ], 201);
+        }
 
         return redirect()
             ->route('building-deletions.show', $deletionRequest)
@@ -112,7 +113,6 @@ class BuildingDeletionController extends Controller
         $buildingDeletionRequest->load([
             'requester',
             'gisReviewer',
-            'signatures.user',
             'latestSnapshot',
             'auditLogs.user',
         ]);
@@ -127,14 +127,12 @@ class BuildingDeletionController extends Controller
             'canReview' => request()->user()?->can('reviewGis', $buildingDeletionRequest) ?? false,
             'canProcess' => request()->user()?->can('process', $buildingDeletionRequest) ?? false,
             'canViewRawSnapshot' => request()->user()?->can('viewRawSnapshot', $buildingDeletionRequest) ?? false,
-            'dryRun' => (bool) config('services.arcgis.building_deletion_dry_run', false),
         ]);
     }
 
     public function review(
         ReviewBuildingDeletionRequest $request,
         BuildingDeletionRequest $buildingDeletionRequest,
-        BuildingDeletionSignatureService $signatures,
         BuildingDeletionAuditLogger $audit,
     ): RedirectResponse {
         if ($buildingDeletionRequest->status !== BuildingDeletionStatus::PendingGisReview) {
@@ -143,7 +141,7 @@ class BuildingDeletionController extends Controller
 
         $decision = $request->validated('decision');
 
-        DB::transaction(function () use ($request, $buildingDeletionRequest, $signatures, $audit, $decision): void {
+        DB::transaction(function () use ($request, $buildingDeletionRequest, $audit, $decision): void {
             if ($decision === 'approve') {
                 $buildingDeletionRequest->forceFill([
                     'status' => BuildingDeletionStatus::Approved,
@@ -152,22 +150,13 @@ class BuildingDeletionController extends Controller
                     'gis_notes' => $request->validated('gis_notes'),
                 ])->save();
 
-                $signatures->store(
-                    $buildingDeletionRequest,
-                    $request->user(),
-                    BuildingDeletionSignatureAction::GisApproved,
-                    $request->validated('signature'),
-                    $request->validated('gis_notes'),
-                );
-
-                $audit->log($buildingDeletionRequest, 'gis_approved', 'approved', 'GIS reviewer approved and signed the request.', null, $request->user()->id);
+                $audit->log($buildingDeletionRequest, 'gis_approved', 'approved', 'GIS reviewer approved the request.', null, $request->user()->id);
                 ProcessBuildingDeletionRequest::dispatch($buildingDeletionRequest->id)->afterCommit()->onQueue('arcgis');
 
                 return;
             }
 
             $status = $decision === 'reject' ? BuildingDeletionStatus::Rejected : BuildingDeletionStatus::Returned;
-            $action = $decision === 'reject' ? BuildingDeletionSignatureAction::GisRejected : BuildingDeletionSignatureAction::Returned;
 
             $buildingDeletionRequest->forceFill([
                 'status' => $status,
@@ -175,10 +164,6 @@ class BuildingDeletionController extends Controller
                 'gis_reviewed_at' => now(),
                 'gis_notes' => $request->validated('gis_notes'),
             ])->save();
-
-            if (filled($request->validated('signature'))) {
-                $signatures->store($buildingDeletionRequest, $request->user(), $action, $request->validated('signature'), $request->validated('gis_notes'));
-            }
 
             $audit->log($buildingDeletionRequest, 'gis_'.$decision, $status->value, 'GIS reviewer completed decision: '.$decision.'.', null, $request->user()->id);
         });

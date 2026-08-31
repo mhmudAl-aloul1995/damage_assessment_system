@@ -20,7 +20,6 @@ class ReviewBuildingDeletionRequest extends FormRequest
         return [
             'decision' => ['required', Rule::in(['approve', 'reject', 'return'])],
             'gis_notes' => ['required', 'string', 'min:5'],
-            'signature' => ['required_if:decision,approve', 'nullable', 'string'],
             'reviewed_all_records' => ['required_if:decision,approve', 'accepted'],
             'understands_snapshot_gate' => ['required_if:decision,approve', 'accepted'],
         ];
