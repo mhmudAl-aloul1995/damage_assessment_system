@@ -12,6 +12,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditFloorAreaMismatchEx
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditReviewerController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\AuditStatusHistoryController;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\LawyerAuditAssignmentController;
+use App\Modules\DamageAssessment\Http\Controllers\BuildingDeletionController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeArchiveController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeMemberController;
@@ -130,6 +131,16 @@ Route::middleware('auth')->group(function () {
     Route::prefix('committee-archive')->name('committee-archive.')->group(function () {
         Route::get('/', [CommitteeArchiveController::class, 'index'])->name('index');
         Route::get('/{archiveObject}', [CommitteeArchiveController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('building-deletions')->name('building-deletions.')->group(function () {
+        Route::get('/', [BuildingDeletionController::class, 'index'])->name('index');
+        Route::get('/create', [BuildingDeletionController::class, 'create'])->name('create');
+        Route::post('/', [BuildingDeletionController::class, 'store'])->name('store');
+        Route::get('/{buildingDeletionRequest}', [BuildingDeletionController::class, 'show'])->name('show');
+        Route::post('/{buildingDeletionRequest}/review', [BuildingDeletionController::class, 'review'])->name('review');
+        Route::post('/{buildingDeletionRequest}/retry', [BuildingDeletionController::class, 'retry'])->name('retry');
+        Route::get('/{buildingDeletionRequest}/raw-snapshot', [BuildingDeletionController::class, 'rawSnapshot'])->name('raw-snapshot');
     });
 
     Route::get('/create_building_data/{token}', [ArcGISController::class, 'create_building_data']);

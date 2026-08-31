@@ -121,6 +121,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'building-survey-return-requests.team-leader-approve',
             'building-survey-return-requests.area-manager-approve',
             'building-survey-return-requests.reject',
+            'damage-assessment.building-deletion.view',
+            'damage-assessment.building-deletion.request',
+            'damage-assessment.building-deletion.gis-review',
+            'damage-assessment.building-deletion.process',
+            'damage-assessment.building-deletion.view-raw-snapshot',
         ];
 
         foreach ($permissions as $permission) {
@@ -232,6 +237,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'committee-members.create',
             'committee-members.update',
             'committee-members.delete',
+            'damage-assessment.building-deletion.view',
+            'damage-assessment.building-deletion.request',
+            'damage-assessment.building-deletion.gis-review',
+            'damage-assessment.building-deletion.process',
+            'damage-assessment.building-deletion.view-raw-snapshot',
         ]);
         $teamLeader->givePermissionTo([
             'audit.view',
@@ -243,6 +253,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'committee-decisions.create',
             'committee-decisions.update',
             'committee-decisions.manage-content',
+            'damage-assessment.building-deletion.view',
+            'damage-assessment.building-deletion.gis-review',
         ]);
         $auditing->givePermissionTo([
             'audit.view',
@@ -251,6 +263,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'audit.view-history',
             'committee-decisions.view',
             'committee-decisions.sign',
+            'damage-assessment.building-deletion.view',
+            'damage-assessment.building-deletion.gis-review',
         ]);
         $fieldEngineer->givePermissionTo([
             'damage-assessments.view',
@@ -261,6 +275,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'building-survey-return-requests.create',
             'committee-decisions.view',
             'committee-decisions.sign',
+            'damage-assessment.building-deletion.view',
+            'damage-assessment.building-deletion.request',
         ]);
         $undpProjectManager->givePermissionTo([
             'reports.view',

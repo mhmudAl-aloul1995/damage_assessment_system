@@ -121,6 +121,8 @@ return [
             'ARCGIS_CSO_SURVEY_UNITS_LAYER_URL',
             'https://services2.arcgis.com/VoOot7GfoaREFqQk/arcgis/rest/services/service_63ae78a13d454e3ab93963f87ba00f91/FeatureServer/2'
         ),
+
+        'building_deletion_dry_run' => env('BUILDING_DELETION_DRY_RUN', true),
     ],
     'committee_decisions' => [
         'arcgis' => [
