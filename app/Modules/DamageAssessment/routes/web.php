@@ -162,6 +162,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/road-facilities/{roadFacility:globalid}', [RoadFacilityController::class, 'show'])->name('road-facilities.show');
     Route::get('/cso-surveys', [CsoSurveyController::class, 'index'])->name('cso-surveys.index');
     Route::get('/cso-surveys/data', [CsoSurveyController::class, 'data'])->name('cso-surveys.data');
+    Route::get('/cso-surveys/export-data', [CsoSurveyController::class, 'exportData'])->name('cso-surveys.export-data');
+    Route::get('/cso-surveys/export/{format}', [CsoSurveyController::class, 'export'])->name('cso-surveys.export');
     Route::get('/cso-surveys/{csoSurvey:globalid}', [CsoSurveyController::class, 'show'])->name('cso-surveys.show');
 
     Route::prefix('inf-audit')->name('inf-audit.')->group(function () {

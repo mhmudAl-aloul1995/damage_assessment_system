@@ -108,7 +108,10 @@
             <div class="card-title">
                 <h3 class="fw-bold m-0">CSO Surveys</h3>
             </div>
-            <button type="button" id="reset_filters" class="btn btn-light">Reset Filters</button>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <a href="{{ route('cso-surveys.export-data') }}" class="btn btn-primary">صفحة التصدير</a>
+                <button type="button" id="reset_filters" class="btn btn-light">Reset Filters</button>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
