@@ -69,13 +69,17 @@ class BuildingSurveyReturnRequestController extends Controller
             'reason' => ['nullable', 'string'],
         ]);
 
-        $building = Building::query()
+        $auditedBuilding = AuditedBuilding::query()
             ->where('objectid', $validated['building_objectid'])
             ->firstOrFail();
 
+        $building = Building::query()
+            ->where('objectid', $validated['building_objectid'])
+            ->first();
+
         $assignedTo = trim((string) auth()->user()->username_arcgis);
 
-        if ($assignedTo === '' || (string) $building->assignedto !== $assignedTo) {
+        if ($assignedTo === '' || strtolower(trim((string) $auditedBuilding->assignedto)) !== strtolower($assignedTo)) {
             throw ValidationException::withMessages([
                 'building_objectid' => 'لا يمكنك إنشاء طلب إرجاع لمبنى غير مخصص لك.',
             ]);
@@ -92,7 +96,7 @@ class BuildingSurveyReturnRequestController extends Controller
         }
 
         $openRequestExists = BuildingSurveyReturnRequest::query()
-            ->where('building_objectid', $building->objectid)
+            ->where('building_objectid', $auditedBuilding->objectid)
             ->whereNotIn('status', ['completed', 'rejected'])
             ->exists();
 
@@ -102,11 +106,11 @@ class BuildingSurveyReturnRequestController extends Controller
             ]);
         }
 
-        $returnRequest = DB::transaction(function () use ($building, $link, $validated): BuildingSurveyReturnRequest {
+        $returnRequest = DB::transaction(function () use ($auditedBuilding, $building, $link, $validated): BuildingSurveyReturnRequest {
             $returnRequest = BuildingSurveyReturnRequest::query()->create([
-                'building_id' => $building->id,
-                'building_objectid' => $building->objectid,
-                'building_globalid' => $building->globalid,
+                'building_id' => $building?->id,
+                'building_objectid' => $auditedBuilding->objectid,
+                'building_globalid' => $auditedBuilding->globalid,
                 'requested_by' => auth()->id(),
                 'team_leader_id' => $link->team_leader_id,
                 'current_step' => 'team_leader',

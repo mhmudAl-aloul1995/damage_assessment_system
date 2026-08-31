@@ -274,6 +274,48 @@ it('creates a building survey return request through ajax json', function () {
     ]);
 });
 
+it('checks return request building assignment from the audited buildings table', function () {
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $teamLeader = User::factory()->create();
+
+    $fieldEngineer->assignRole('Field Engineer');
+    $teamLeader->assignRole('Team Leader');
+
+    TeamLeaderFieldEngineer::query()->create([
+        'team_leader_id' => $teamLeader->id,
+        'field_engineer_id' => $fieldEngineer->id,
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 7302,
+        'globalid' => 'audited-assignment-return-building-7302',
+        'building_name' => 'Audited Assignment Return Building',
+        'assignedto' => 'old.assignment',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'objectid' => $building->objectid,
+        'globalid' => $building->globalid,
+        'building_name' => $building->building_name,
+        'assignedto' => 'field.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->postJson(route('building-survey-return-requests.store'), [
+            'building_objectid' => $building->objectid,
+            'reason' => 'Created from audited assignment',
+        ])
+        ->assertOk()
+        ->assertJsonPath('status', true);
+
+    $this->assertDatabaseHas('building_survey_return_requests', [
+        'building_objectid' => $building->objectid,
+        'requested_by' => $fieldEngineer->id,
+        'team_leader_id' => $teamLeader->id,
+        'reason' => 'Created from audited assignment',
+    ]);
+});
+
 it('rejects a building survey return request through ajax json', function () {
     $fieldEngineer = User::factory()->create();
     $teamLeader = User::factory()->create();
