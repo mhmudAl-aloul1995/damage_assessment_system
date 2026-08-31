@@ -27,6 +27,13 @@ class ArtisanCommandCatalog
     ];
 
     /**
+     * @var array<int, string>
+     */
+    private const ALLOWED_ROUTE_CONSOLE_COMMANDS = [
+        'phc:queue-work-arcgis',
+    ];
+
+    /**
      * @return Collection<int, array<string, mixed>>
      */
     public function commands(): Collection
@@ -124,10 +131,13 @@ class ArtisanCommandCatalog
     {
         $reflection = new ReflectionClass($command);
         $fileName = $reflection->getFileName();
+        $isAllowedRouteConsoleCommand = in_array($command->getName(), self::ALLOWED_ROUTE_CONSOLE_COMMANDS, true);
 
-        if (! is_string($fileName) || ! str_starts_with($this->normalizePath($fileName), $this->commandsPath())) {
+        if (! $isAllowedRouteConsoleCommand && (! is_string($fileName) || ! str_starts_with($this->normalizePath($fileName), $this->commandsPath()))) {
             return null;
         }
+
+        $catalogFileName = $isAllowedRouteConsoleCommand ? base_path('routes/console.php') : $fileName;
 
         $definition = $command->getDefinition();
         $arguments = collect($definition->getArguments())
@@ -155,8 +165,8 @@ class ArtisanCommandCatalog
             'name' => $command->getName(),
             'full_command' => 'php artisan '.$command->getName(),
             'description' => $command->getDescription() ?: __('ui.artisan_commands.no_description'),
-            'class' => $reflection->getShortName(),
-            'file' => $this->normalizePath($fileName),
+            'class' => $isAllowedRouteConsoleCommand ? 'routes/console.php' : $reflection->getShortName(),
+            'file' => $this->normalizePath($catalogFileName),
             'arguments' => $arguments,
             'options' => $options,
             'can_run' => ! $isBlocked,

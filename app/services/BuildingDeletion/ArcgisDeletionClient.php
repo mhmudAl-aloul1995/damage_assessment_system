@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\BuildingDeletion;
+namespace App\services\BuildingDeletion;
 
 use App\services\ArcgisService;
 use Illuminate\Support\Facades\Http;

@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\BuildingDeletion\BuildingDeletionProcessor;
+use App\services\BuildingDeletion\BuildingDeletionProcessor;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 

@@ -32,7 +32,7 @@
                     <select name="building_globalid" class="form-select form-select-solid" data-control="select2" required>
                         <option value=""></option>
                         @foreach ($buildings as $building)
-                            <option value="{{ $building->globalid }}" @selected(old('building_globalid') === $building->globalid)>
+                            <option value="{{ $building->globalid }}" @selected(old('building_globalid', $selectedBuildingGlobalId) === $building->globalid)>
                                 {{ $building->objectid }} - {{ $building->building_name ?? $building->globalid }} - {{ $building->municipalitie }}
                             </option>
                         @endforeach

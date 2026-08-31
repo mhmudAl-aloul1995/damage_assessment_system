@@ -10,9 +10,9 @@ use App\Http\Requests\StoreBuildingDeletionRequest;
 use App\Jobs\ProcessBuildingDeletionRequest;
 use App\Models\Building;
 use App\Models\BuildingDeletionRequest;
-use App\Services\BuildingDeletion\BuildingDeletionAuditLogger;
-use App\Services\BuildingDeletion\BuildingDeletionLayerDiscovery;
-use App\Services\BuildingDeletion\BuildingDeletionSignatureService;
+use App\services\BuildingDeletion\BuildingDeletionAuditLogger;
+use App\services\BuildingDeletion\BuildingDeletionLayerDiscovery;
+use App\services\BuildingDeletion\BuildingDeletionSignatureService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,14 +38,19 @@ class BuildingDeletionController extends Controller
     {
         $this->authorize('create', BuildingDeletionRequest::class);
 
+        $selectedBuildingGlobalId = (string) $request->query('building_globalid', '');
         $buildings = Building::query()
             ->select(['id', 'objectid', 'globalid', 'building_name', 'governorate', 'municipalitie', 'neighborhood'])
+            ->when($selectedBuildingGlobalId !== '', function ($query) use ($selectedBuildingGlobalId): void {
+                $query->orderByRaw('CASE WHEN globalid = ? THEN 0 ELSE 1 END', [$selectedBuildingGlobalId]);
+            })
             ->orderBy('objectid')
             ->limit(200)
             ->get();
 
         return view('damage-assessment::building-deletions.create', [
             'buildings' => $buildings,
+            'selectedBuildingGlobalId' => $selectedBuildingGlobalId,
             'deletionPlan' => $layers->deletionPlan(),
             'dryRun' => (bool) config('services.arcgis.building_deletion_dry_run', false),
         ]);

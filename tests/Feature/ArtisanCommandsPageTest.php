@@ -21,7 +21,9 @@ it('shows application console commands to database officers', function (): void 
         ->get(route('admin.artisan-commands.index'))
         ->assertOk()
         ->assertSee('php artisan sync:arcgis-layers')
+        ->assertSee('php artisan phc:queue-work-arcgis')
         ->assertSee('Sync ArcGIS layers')
+        ->assertSee('Process PHC ArcGIS and default queue jobs')
         ->assertSee('data-copy-command', false)
         ->assertSee('data-run-command', false)
         ->assertSee('artisan-command-preview', false);
@@ -97,6 +99,42 @@ it('starts eligible commands with selected arguments and options', function (): 
         ->toContain('housing_units')
         ->toContain('--chunk=250')
         ->toContain('--force')
+        ->toContain('-vvv');
+
+    Process::assertRan(function ($process): bool {
+        $command = is_array($process->command)
+            ? implode(' ', $process->command)
+            : $process->command;
+
+        return str_contains($command, 'run.')
+            && (str_contains($command, '.bat') || str_contains($command, '.sh'));
+    });
+});
+
+it('starts the phc arcgis queue worker command from the console page', function (): void {
+    $user = User::factory()->create();
+    $databaseOfficer = Role::findOrCreate('Database Officer', 'web');
+
+    $user->assignRole($databaseOfficer);
+
+    Process::fake([
+        '*' => Process::result(),
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('admin.artisan-commands.run'), [
+            'command' => 'phc:queue-work-arcgis',
+            'options' => [
+                'once' => '1',
+                'slot' => 'manual-ui',
+            ],
+        ])
+        ->assertAccepted();
+
+    expect($response->json('preview'))
+        ->toContain('phc:queue-work-arcgis')
+        ->toContain('--once')
+        ->toContain('--slot=manual-ui')
         ->toContain('-vvv');
 
     Process::assertRan(function ($process): bool {

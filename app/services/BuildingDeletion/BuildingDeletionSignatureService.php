@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\BuildingDeletion;
+namespace App\services\BuildingDeletion;
 
 use App\Enums\BuildingDeletionSignatureAction;
 use App\Models\BuildingDeletionRequest;
