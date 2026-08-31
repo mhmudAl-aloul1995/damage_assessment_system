@@ -163,6 +163,8 @@ class SyncArcGISLayers extends Command
         $skipped = 0;
         $deleted = 0;
         $fieldReturnChanges = 0;
+        $fetched = 0;
+        $missingUnique = 0;
         $force = (bool) $this->option('force');
         $arcgisObjectIds = [];
         $fieldReturnAssessmentChangeService = app(FieldReturnAssessmentChangeService::class);
@@ -213,6 +215,7 @@ class SyncArcGISLayers extends Command
             $this->newLine();
             $this->info("Syncing {$name}...");
             $this->line("Using referer: {$referer}");
+            $this->line("Using layer URL: {$url}");
 
             while (true) {
                 $this->line("Fetching {$name} offset: {$offset}");
@@ -253,6 +256,7 @@ class SyncArcGISLayers extends Command
                 }
 
                 $features = $data['features'] ?? [];
+                $fetched += is_countable($features) ? count($features) : 0;
 
                 if (empty($features)) {
                     break;
@@ -279,6 +283,8 @@ class SyncArcGISLayers extends Command
                     $objectId = $arcgisMap[strtolower($unique)] ?? null;
 
                     if (! $objectId) {
+                        $missingUnique++;
+
                         continue;
                     }
                     $arcgisObjectIds[] = $objectId;
@@ -496,10 +502,12 @@ class SyncArcGISLayers extends Command
                 'updated' => $updated,
                 'skipped' => $skipped,
                 'duration_seconds' => $speed,
-                'message' => "Inserted: {$inserted} | Updated: {$updated} | Skipped: {$skipped} | Deleted: {$deleted} | Field return changes: {$fieldReturnChanges} | Speed: {$speed}/s | Duration: {$duration}s",
+                'message' => "Fetched: {$fetched} | Missing {$unique}: {$missingUnique} | Inserted: {$inserted} | Updated: {$updated} | Skipped: {$skipped} | Deleted: {$deleted} | Field return changes: {$fieldReturnChanges} | Speed: {$speed}/s | Duration: {$duration}s",
             ]);
 
             $this->info("{$name} done.");
+            $this->info("Fetched : {$fetched}");
+            $this->info("Missing {$unique}: {$missingUnique}");
             $this->info("Inserted: {$inserted}");
             $this->info("Updated : {$updated}");
             $this->info("Skipped : {$skipped}");
@@ -886,6 +894,10 @@ class SyncArcGISLayers extends Command
 
         $column = strtolower($column);
 
+        if (str_starts_with($table, 'cso_') && in_array($column, ['globalid', 'parentglobalid'], true)) {
+            return $this->normalizeGlobalId($value);
+        }
+
         if ($this->isJsonColumn($table, $column)) {
             return $this->normalizeJsonValue($value);
         }
@@ -900,6 +912,21 @@ class SyncArcGISLayers extends Command
         }
 
         return $value;
+    }
+
+    private function normalizeGlobalId(mixed $value): mixed
+    {
+        if (! is_scalar($value)) {
+            return $value;
+        }
+
+        $globalId = trim((string) $value);
+
+        if ($globalId === '') {
+            return null;
+        }
+
+        return strtolower(trim($globalId, '{}'));
     }
 
     private function isJsonColumn(string $table, string $column): bool

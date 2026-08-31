@@ -10,7 +10,7 @@ use App\services\CsoSurveyImporter;
 test('it imports cso survey payload with searchable fields and raw payload', function (): void {
     $payload = [
         'objectid' => 7001,
-        'globalid' => 'cso-global-7001',
+        'globalid' => '{CSO-GLOBAL-7001}',
         'field_status' => 'Completed',
         'assignedto' => 'arcgis.engineer',
         'governorate' => 'Gaza',
@@ -24,7 +24,7 @@ test('it imports cso survey payload with searchable fields and raw payload', fun
         'CSO_Organizations' => [
             [
                 'objectid' => 8001,
-                'globalid' => 'cso-org-8001',
+                'globalid' => '{CSO-ORG-8001}',
                 'organization_name_en' => 'Civil Support Org',
                 'operational_status' => 'operational',
             ],
@@ -32,7 +32,7 @@ test('it imports cso survey payload with searchable fields and raw payload', fun
         'Unit_Information' => [
             [
                 'objectid' => 9001,
-                'globalid' => 'cso-unit-9001',
+                'globalid' => '{CSO-UNIT-9001}',
                 'unit_name' => 'First floor unit',
                 'unit_damage_status' => 'minor_damage',
             ],
@@ -47,7 +47,10 @@ test('it imports cso survey payload with searchable fields and raw payload', fun
         ->and($survey->raw_payload['weather'])->toBe('sunny')
         ->and($survey->organizations)->toHaveCount(1)
         ->and($survey->units)->toHaveCount(1)
+        ->and($survey->globalid)->toBe('cso-global-7001')
+        ->and($survey->organizations->first()?->globalid)->toBe('cso-org-8001')
         ->and($survey->organizations->first()?->parentglobalid)->toBe('cso-global-7001')
+        ->and($survey->units->first()?->globalid)->toBe('cso-unit-9001')
         ->and($survey->units->first()?->parentglobalid)->toBe('cso-global-7001');
 
     app(CsoSurveyImporter::class)->import([

@@ -127,6 +127,12 @@ class CsoSurveyImporter
                 continue;
             }
 
+            if (in_array($targetKey, ['globalid', 'parentglobalid'], true)) {
+                $mapped[$targetKey] = $this->normalizeGlobalId($value);
+
+                continue;
+            }
+
             $mapped[$targetKey] = in_array($targetKey, ['creationdate', 'editdate', 'damage_date'], true)
                 ? $this->normalizeDate($value)
                 : $value;
@@ -271,5 +277,20 @@ class CsoSurveyImporter
         }
 
         return $value;
+    }
+
+    private function normalizeGlobalId(mixed $value): mixed
+    {
+        if (! is_scalar($value)) {
+            return $value;
+        }
+
+        $globalId = trim((string) $value);
+
+        if ($globalId === '') {
+            return null;
+        }
+
+        return strtolower(trim($globalId, '{}'));
     }
 }

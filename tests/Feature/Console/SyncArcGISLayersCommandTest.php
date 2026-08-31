@@ -111,8 +111,8 @@ it('uses the configured cso unit layer url when syncing cso survey units', funct
                     [
                         'attributes' => [
                             'objectid' => 9901,
-                            'globalid' => 'cso-unit-global-id',
-                            'parentglobalid' => 'cso-survey-parent-id',
+                            'globalid' => '{CSO-UNIT-GLOBAL-ID}',
+                            'parentglobalid' => '{CSO-SURVEY-PARENT-ID}',
                             'unit_name' => 'Imported CSO Unit',
                         ],
                     ],
