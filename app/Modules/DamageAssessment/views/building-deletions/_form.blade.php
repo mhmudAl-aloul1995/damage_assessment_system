@@ -13,7 +13,7 @@
 
     <div class="mb-7">
         <label class="form-label fw-semibold">{{ __('ui.building_deletions.buildings') }}</label>
-        <select name="building_globalids[]" class="form-select form-select-solid" data-control="select2" data-placeholder="{{ __('ui.building_deletions.select_buildings') }}" multiple>
+        <select name="building_globalids[]" class="form-select form-select-solid" data-control="select2" data-building-search-url="{{ route('building-deletions.search-buildings') }}" data-placeholder="{{ __('ui.building_deletions.select_buildings') }}" multiple>
             @foreach ($buildings as $building)
                 <option value="{{ $building->globalid }}" @selected(in_array($building->globalid, old('building_globalids', array_filter([$selectedBuildingGlobalId])), true))>
                     {{ $building->objectid }} - {{ $building->building_name ?? $building->globalid }} - {{ $building->municipalitie }}

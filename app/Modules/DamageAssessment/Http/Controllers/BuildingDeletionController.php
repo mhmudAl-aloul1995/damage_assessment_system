@@ -90,6 +90,25 @@ class BuildingDeletionController extends Controller
         return view('damage-assessment::building-deletions.create', $viewData);
     }
 
+    public function searchBuildings(Request $request): JsonResponse
+    {
+        $this->authorize('create', BuildingDeletionRequest::class);
+
+        $buildings = $this->deletionCandidateBuildings($request, '', (string) $request->query('q', ''));
+
+        return response()->json([
+            'results' => $buildings->map(fn (object $building): array => [
+                'id' => $building->globalid,
+                'text' => trim(implode(' - ', array_filter([
+                    $building->objectid,
+                    $building->building_name ?: $building->globalid,
+                    $building->municipalitie,
+                    $building->neighborhood,
+                ]))),
+            ])->values(),
+        ]);
+    }
+
     public function store(
         StoreBuildingDeletionRequest $request,
         BuildingDeletionAuditLogger $audit,
@@ -254,7 +273,7 @@ class BuildingDeletionController extends Controller
     /**
      * @return Collection<int, object>
      */
-    private function deletionCandidateBuildings(Request $request, string $selectedBuildingGlobalId): Collection
+    private function deletionCandidateBuildings(Request $request, string $selectedBuildingGlobalId, string $search = ''): Collection
     {
         $user = $request->user();
         $fieldEngineerUsername = strtolower(trim((string) $user?->username_arcgis));
@@ -284,6 +303,22 @@ class BuildingDeletionController extends Controller
             ->selectRaw('MAX(id) as id, MAX(objectid) as objectid, globalid, MAX(building_name) as building_name, MAX(governorate) as governorate, MAX(municipalitie) as municipalitie, MAX(neighborhood) as neighborhood, GROUP_CONCAT(source) as source')
             ->whereNotNull('globalid')
             ->where('globalid', '!=', '')
+            ->when(trim($search) !== '', function (Builder $query) use ($search): void {
+                $normalizedSearch = trim($search);
+                $searchTerm = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $normalizedSearch).'%';
+
+                $query->where(function (Builder $query) use ($normalizedSearch, $searchTerm): void {
+                    if (ctype_digit($normalizedSearch)) {
+                        $query->orWhere('objectid', (int) $normalizedSearch);
+                    }
+
+                    $query
+                        ->orWhere('globalid', 'like', $searchTerm)
+                        ->orWhere('building_name', 'like', $searchTerm)
+                        ->orWhere('municipalitie', 'like', $searchTerm)
+                        ->orWhere('neighborhood', 'like', $searchTerm);
+                });
+            })
             ->groupBy('globalid')
             ->when($selectedBuildingGlobalId !== '', function (Builder $query) use ($selectedBuildingGlobalId): void {
                 $query->orderByRaw('CASE WHEN globalid = ? THEN 0 ELSE 1 END', [$selectedBuildingGlobalId]);

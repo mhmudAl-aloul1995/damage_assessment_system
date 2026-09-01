@@ -104,6 +104,60 @@ it('loads the building deletion request form through ajax for the modal', functi
         ->assertDontSee('DRY RUN');
 });
 
+it('searches building deletion candidates by object id beyond the initial options limit', function (): void {
+    $user = User::factory()->create();
+
+    foreach (range(1, 210) as $objectId) {
+        Building::query()->create([
+            'objectid' => $objectId,
+            'globalid' => 'search-filler-'.$objectId,
+            'building_name' => 'Search Filler '.$objectId,
+        ]);
+    }
+
+    Building::query()->create([
+        'objectid' => 999210,
+        'globalid' => 'search-target-building',
+        'building_name' => 'Search Target Building',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('building-deletions.search-buildings', ['q' => '999210']))
+        ->assertOk()
+        ->assertJsonFragment([
+            'id' => 'search-target-building',
+        ]);
+});
+
+it('limits field engineer building deletion ajax search to assigned buildings', function (): void {
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $fieldEngineer->assignRole(Role::findOrCreate('Field Engineer', 'web'));
+
+    Building::query()->create([
+        'objectid' => 999211,
+        'globalid' => 'assigned-search-target',
+        'building_name' => 'Assigned Search Target',
+        'assignedto' => 'field.engineer',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 999212,
+        'globalid' => 'other-search-target',
+        'building_name' => 'Other Search Target',
+        'assignedto' => 'other.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->getJson(route('building-deletions.search-buildings', ['q' => 'Search Target']))
+        ->assertOk()
+        ->assertJsonFragment([
+            'id' => 'assigned-search-target',
+        ])
+        ->assertJsonMissing([
+            'id' => 'other-search-target',
+        ]);
+});
+
 it('limits users with a field engineer role to assigned base and audited buildings in the deletion form', function (): void {
     ensureAuditedBuildingDeletionFormColumns();
 

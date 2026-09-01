@@ -103,6 +103,21 @@
                     dir: @json(app()->getLocale() === 'ar' ? 'rtl' : 'ltr'),
                     width: '100%',
                     dropdownParent: $('#buildingDeletionRequestModal'),
+                    minimumInputLength: 1,
+                    ajax: {
+                        url: function () {
+                            return this.dataset.buildingSearchUrl;
+                        },
+                        delay: 250,
+                        data: function (params) {
+                            return {
+                                q: params.term || '',
+                            };
+                        },
+                        processResults: function (data) {
+                            return data;
+                        },
+                    },
                 });
 
                 if (!form) {
