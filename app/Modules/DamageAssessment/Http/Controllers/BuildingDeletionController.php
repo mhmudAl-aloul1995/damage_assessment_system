@@ -94,53 +94,75 @@ class BuildingDeletionController extends Controller
         StoreBuildingDeletionRequest $request,
         BuildingDeletionAuditLogger $audit,
     ): RedirectResponse|JsonResponse {
-        $building = Building::query()
-            ->where('globalid', $request->validated('building_globalid'))
-            ->first();
-        $auditedBuilding = $building === null && Schema::hasTable('audited_buildings')
-            ? DB::table('audited_buildings')->where('globalid', $request->validated('building_globalid'))->first()
-            : null;
+        $buildingGlobalIds = $this->requestedBuildingGlobalIds($request);
+        $buildingRecords = $buildingGlobalIds->mapWithKeys(function (string $buildingGlobalId): array {
+            $record = $this->buildingRecordForGlobalId($buildingGlobalId);
 
-        abort_if($building === null && $auditedBuilding === null, 404);
-        abort_unless($this->canRequestDeletionForBuilding($request, $request->validated('building_globalid')), 403);
+            if ($record === null) {
+                throw ValidationException::withMessages([
+                    'building_globalids' => __('ui.building_deletions.messages.building_not_found', ['building' => $buildingGlobalId]),
+                ]);
+            }
 
-        $deletionRequest = DB::transaction(function () use ($request, $building, $auditedBuilding, $audit): BuildingDeletionRequest {
+            return [$buildingGlobalId => $record];
+        });
+
+        $unauthorizedBuilding = $buildingGlobalIds->first(fn (string $buildingGlobalId): bool => ! $this->canRequestDeletionForBuilding($request, $buildingGlobalId));
+
+        if ($unauthorizedBuilding !== null) {
+            throw ValidationException::withMessages([
+                'building_globalids' => __('ui.building_deletions.messages.unauthorized_building', ['building' => $unauthorizedBuilding]),
+            ]);
+        }
+
+        $deletionRequests = DB::transaction(function () use ($request, $buildingRecords, $audit): Collection {
             $requiresFieldEngineerApprovals = $this->requiresFieldEngineerApprovals($request->user());
             $teamLeaderId = $requiresFieldEngineerApprovals ? $this->teamLeaderIdForFieldEngineer($request->user()) : null;
             $initialStatus = $requiresFieldEngineerApprovals
                 ? BuildingDeletionStatus::PendingTeamLeaderReview
                 : BuildingDeletionStatus::PendingGisReview;
+            $deletionRequests = collect();
 
-            $deletionRequest = BuildingDeletionRequest::query()->create([
-                'building_id' => $building?->id,
-                'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
-                'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
-                'requested_by' => $request->user()->id,
-                'reason' => $request->validated('reason'),
-                'notes' => $request->validated('notes'),
-                'status' => $initialStatus,
-                'requires_field_engineer_approvals' => $requiresFieldEngineerApprovals,
-                'team_leader_reviewed_by' => $teamLeaderId,
-            ]);
+            foreach ($buildingRecords as $record) {
+                $building = $record['building'];
+                $auditedBuilding = $record['audited_building'];
 
-            $audit->log($deletionRequest, 'request_submitted', $initialStatus->value, 'Applicant submitted the deletion request.', [
-                'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
-                'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
-            ], $request->user()->id);
+                $deletionRequest = BuildingDeletionRequest::query()->create([
+                    'building_id' => $building?->id,
+                    'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
+                    'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
+                    'requested_by' => $request->user()->id,
+                    'reason' => $request->validated('reason'),
+                    'notes' => $request->validated('notes'),
+                    'status' => $initialStatus,
+                    'requires_field_engineer_approvals' => $requiresFieldEngineerApprovals,
+                    'team_leader_reviewed_by' => $teamLeaderId,
+                ]);
 
-            return $deletionRequest;
+                $audit->log($deletionRequest, 'request_submitted', $initialStatus->value, 'Applicant submitted the deletion request.', [
+                    'building_globalid' => $building?->globalid ?? $auditedBuilding->globalid,
+                    'building_objectid' => $building?->objectid ?? $auditedBuilding->objectid,
+                ], $request->user()->id);
+
+                $deletionRequests->push($deletionRequest);
+            }
+
+            return $deletionRequests;
         });
+        $redirectRoute = $deletionRequests->count() === 1
+            ? route('building-deletions.show', $deletionRequests->first())
+            : route('building-deletions.index');
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message' => __('ui.building_deletions.messages.submitted'),
-                'redirect_url' => route('building-deletions.show', $deletionRequest),
+                'message' => trans_choice('ui.building_deletions.messages.submitted_count', $deletionRequests->count(), ['count' => $deletionRequests->count()]),
+                'redirect_url' => $redirectRoute,
             ], 201);
         }
 
         return redirect()
-            ->route('building-deletions.show', $deletionRequest)
-            ->with('success', __('ui.building_deletions.messages.submitted'));
+            ->to($redirectRoute)
+            ->with('success', trans_choice('ui.building_deletions.messages.submitted_count', $deletionRequests->count(), ['count' => $deletionRequests->count()]));
     }
 
     public function show(BuildingDeletionRequest $buildingDeletionRequest): View
@@ -303,6 +325,117 @@ class BuildingDeletionController extends Controller
         }
 
         return DB::raw('NULL as '.$column);
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    private function requestedBuildingGlobalIds(StoreBuildingDeletionRequest $request): Collection
+    {
+        $selectedGlobalIds = collect((array) $request->validated('building_globalids', []))
+            ->push($request->validated('building_globalid'))
+            ->filter(fn (mixed $value): bool => filled($value))
+            ->map(fn (mixed $value): string => (string) $value);
+        $pastedObjectIds = $this->pastedObjectIds((string) $request->validated('building_objectids_text', ''));
+        $pastedGlobalIds = $this->globalIdsForObjectIds($pastedObjectIds);
+        $missingObjectIds = $pastedObjectIds->diff($pastedGlobalIds->keys());
+
+        if ($missingObjectIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'building_objectids_text' => __('ui.building_deletions.messages.objectids_not_found', [
+                    'objectids' => $missingObjectIds->implode(', '),
+                ]),
+            ]);
+        }
+
+        $buildingGlobalIds = $selectedGlobalIds
+            ->merge($pastedGlobalIds->values())
+            ->unique()
+            ->values();
+
+        if ($buildingGlobalIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'building_globalids' => __('ui.building_deletions.messages.select_at_least_one_building'),
+            ]);
+        }
+
+        return $buildingGlobalIds;
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function pastedObjectIds(string $objectIdsText): Collection
+    {
+        return collect(preg_split('/[\s,;]+/', $objectIdsText, -1, PREG_SPLIT_NO_EMPTY))
+            ->map(fn (string $value): string => trim($value))
+            ->filter(fn (string $value): bool => $value !== '')
+            ->map(function (string $value): int {
+                if (! ctype_digit($value)) {
+                    throw ValidationException::withMessages([
+                        'building_objectids_text' => __('ui.building_deletions.messages.invalid_objectids'),
+                    ]);
+                }
+
+                return (int) $value;
+            })
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, int>  $objectIds
+     * @return Collection<int, string>
+     */
+    private function globalIdsForObjectIds(Collection $objectIds): Collection
+    {
+        if ($objectIds->isEmpty()) {
+            return collect();
+        }
+
+        $globalIdsByObjectId = collect();
+
+        foreach (['buildings', 'audited_buildings'] as $table) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'objectid') || ! Schema::hasColumn($table, 'globalid')) {
+                continue;
+            }
+
+            DB::table($table)
+                ->whereIn('objectid', $objectIds->all())
+                ->whereNotNull('globalid')
+                ->where('globalid', '!=', '')
+                ->orderBy('objectid')
+                ->get(['objectid', 'globalid'])
+                ->each(function (object $building) use ($globalIdsByObjectId): void {
+                    if (! $globalIdsByObjectId->has((int) $building->objectid)) {
+                        $globalIdsByObjectId->put((int) $building->objectid, (string) $building->globalid);
+                    }
+                });
+        }
+
+        return $globalIdsByObjectId;
+    }
+
+    /**
+     * @return array{building: ?Building, audited_building: ?object}|null
+     */
+    private function buildingRecordForGlobalId(string $buildingGlobalId): ?array
+    {
+        $building = Building::query()
+            ->where('globalid', $buildingGlobalId)
+            ->first();
+        $auditedBuilding = Schema::hasTable('audited_buildings')
+            ? DB::table('audited_buildings')->where('globalid', $buildingGlobalId)->first()
+            : null;
+
+        if ($building === null && $auditedBuilding === null) {
+            return null;
+        }
+
+        return [
+            'building' => $building,
+            'audited_building' => $auditedBuilding,
+        ];
     }
 
     private function requiresFieldEngineerApprovals(?User $user): bool

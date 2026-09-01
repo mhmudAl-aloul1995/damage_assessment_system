@@ -12,15 +12,20 @@
     @endif
 
     <div class="mb-7">
-        <label class="required form-label fw-semibold">{{ __('ui.building_deletions.building') }}</label>
-        <select name="building_globalid" class="form-select form-select-solid" data-control="select2" data-placeholder="{{ __('ui.building_deletions.select_building') }}" required>
-            <option value=""></option>
+        <label class="form-label fw-semibold">{{ __('ui.building_deletions.buildings') }}</label>
+        <select name="building_globalids[]" class="form-select form-select-solid" data-control="select2" data-placeholder="{{ __('ui.building_deletions.select_buildings') }}" multiple>
             @foreach ($buildings as $building)
-                <option value="{{ $building->globalid }}" @selected(old('building_globalid', $selectedBuildingGlobalId) === $building->globalid)>
+                <option value="{{ $building->globalid }}" @selected(in_array($building->globalid, old('building_globalids', array_filter([$selectedBuildingGlobalId])), true))>
                     {{ $building->objectid }} - {{ $building->building_name ?? $building->globalid }} - {{ $building->municipalitie }}
                 </option>
             @endforeach
         </select>
+    </div>
+
+    <div class="mb-7">
+        <label class="form-label fw-semibold">{{ __('ui.building_deletions.paste_objectids') }}</label>
+        <textarea name="building_objectids_text" class="form-control form-control-solid" rows="4" placeholder="{{ __('ui.building_deletions.paste_objectids_placeholder') }}">{{ old('building_objectids_text') }}</textarea>
+        <div class="form-text">{{ __('ui.building_deletions.paste_objectids_help') }}</div>
     </div>
 
     <div class="mb-7">

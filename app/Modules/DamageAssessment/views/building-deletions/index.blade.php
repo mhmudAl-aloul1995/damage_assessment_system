@@ -37,7 +37,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($requests as $request)
+                        @forelse ($requests as $request)
                             <tr>
                                 <td>#DEL-{{ str_pad((string) $request->id, 5, '0', STR_PAD_LEFT) }}</td>
                                 <td>{{ $request->building_objectid ?? '-' }}</td>
@@ -50,7 +50,15 @@
                                     <a href="{{ route('building-deletions.show', $request) }}" class="btn btn-sm btn-light-primary">{{ __('ui.building_deletions.view') }}</a>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="8">
+                                    <div class="text-center text-muted py-10">
+                                        {{ __('ui.building_deletions.no_requests') }}
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

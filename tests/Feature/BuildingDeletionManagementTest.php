@@ -39,6 +39,7 @@ it('opens new building deletion requests from an ajax modal on the index page', 
         ->assertOk()
         ->assertSee('data-building-deletion-open-modal', false)
         ->assertSee('buildingDeletionRequestModal')
+        ->assertSee('No building deletion requests have been submitted yet.')
         ->assertDontSee('href="'.route('building-deletions.create').'"', false);
 });
 
@@ -57,6 +58,7 @@ it('allows an ordinary authenticated user to open the building deletion request 
         ->assertOk()
         ->assertSee('طلب حذف مبنى جديد')
         ->assertSee('سبب الحذف')
+        ->assertSee('لصق ObjectIDs')
         ->assertDontSee('مصادر البيانات')
         ->assertDontSee('خطة الحذف')
         ->assertSee('Open Form Building');
@@ -77,6 +79,7 @@ it('renders the building deletion request form in english locale', function (): 
         ->assertOk()
         ->assertSee('New Building Deletion Request')
         ->assertSee('Reason')
+        ->assertSee('Paste ObjectIDs')
         ->assertDontSee('Data Sources')
         ->assertDontSee('Deletion Plan')
         ->assertSee('English Form Building');
@@ -171,6 +174,65 @@ it('allows an ordinary authenticated user to submit a building deletion request'
     expect($request->requested_by)->toBe($user->id)
         ->and($request->status)->toBe(BuildingDeletionStatus::PendingGisReview)
         ->and($request->requires_field_engineer_approvals)->toBeFalse();
+});
+
+it('creates separate deletion requests from multiple selected buildings and pasted object ids', function (): void {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 120,
+        'globalid' => 'multi-selected-one',
+        'building_name' => 'Multi Selected One',
+    ]);
+    Building::query()->create([
+        'objectid' => 121,
+        'globalid' => 'multi-selected-two',
+        'building_name' => 'Multi Selected Two',
+    ]);
+    Building::query()->create([
+        'objectid' => 122,
+        'globalid' => 'multi-pasted-one',
+        'building_name' => 'Multi Pasted One',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('building-deletions.store'), [
+            'building_globalids' => ['multi-selected-one', 'multi-selected-two'],
+            'building_objectids_text' => "121\n122",
+            'reason' => 'Duplicate buildings confirmed by the field team.',
+            'notes' => 'Submitted as a batch request.',
+            'confirmation' => '1',
+        ])
+        ->assertRedirect(route('building-deletions.index'));
+
+    expect(BuildingDeletionRequest::query()->whereIn('building_globalid', [
+        'multi-selected-one',
+        'multi-selected-two',
+        'multi-pasted-one',
+    ])->count())->toBe(3)
+        ->and(BuildingDeletionRequest::query()->where('building_globalid', 'multi-selected-two')->count())->toBe(1);
+});
+
+it('rejects pasted object ids that are not assigned to a user with the field engineer role', function (): void {
+    $fieldEngineer = User::factory()->create(['username_arcgis' => 'field.engineer']);
+    $fieldEngineer->assignRole(Role::findOrCreate('Field Engineer', 'web'));
+
+    Building::query()->create([
+        'objectid' => 999123,
+        'globalid' => 'not-assigned-to-field-engineer',
+        'building_name' => 'Not Assigned To Field Engineer',
+        'assignedto' => 'other.engineer',
+    ]);
+
+    $this->actingAs($fieldEngineer)
+        ->postJson(route('building-deletions.store'), [
+            'building_objectids_text' => '999123',
+            'reason' => 'Duplicate building confirmed by the field team.',
+            'confirmation' => '1',
+        ])
+        ->assertJsonValidationErrors('building_globalids');
+
+    expect(BuildingDeletionRequest::query()->where('building_globalid', 'not-assigned-to-field-engineer')->exists())->toBeFalse();
 });
 
 it('sends requests from users with a field engineer role to team leader review first', function (): void {
