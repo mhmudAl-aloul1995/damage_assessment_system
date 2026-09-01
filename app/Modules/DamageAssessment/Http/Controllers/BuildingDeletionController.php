@@ -11,6 +11,7 @@ use App\Models\Building;
 use App\Models\BuildingDeletionRequest;
 use App\Models\TeamLeaderFieldEngineer;
 use App\Models\User;
+use App\Notifications\BuildingDeletionReviewRequested;
 use App\services\BuildingDeletion\BuildingDeletionAuditLogger;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Query\Builder;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 class BuildingDeletionController extends Controller
 {
@@ -32,7 +34,7 @@ class BuildingDeletionController extends Controller
         $this->authorize('viewAny', BuildingDeletionRequest::class);
 
         $canViewAllRequests = $request->user()?->can('damage-assessment.building-deletion.view')
-            || $request->user()?->can('damage-assessment.building-deletion.gis-review')
+            || $request->user()?->hasRole('Gis Officer')
             || $request->user()?->can('damage-assessment.building-deletion.process');
         $teamLeaderFieldEngineerIds = $request->user()?->hasRole('Team Leader')
             ? TeamLeaderFieldEngineer::query()
@@ -168,6 +170,9 @@ class BuildingDeletionController extends Controller
 
             return $deletionRequests;
         });
+
+        $deletionRequests->each(fn (BuildingDeletionRequest $deletionRequest): mixed => $this->notifyCurrentReviewers($deletionRequest));
+
         $redirectRoute = $deletionRequests->count() === 1
             ? route('building-deletions.show', $deletionRequests->first())
             : route('building-deletions.index');
@@ -542,6 +547,7 @@ class BuildingDeletionController extends Controller
             ])->save();
 
             $audit->log($buildingDeletionRequest, 'team_leader_approved', BuildingDeletionStatus::PendingAreaManagerReview->value, 'Team Leader approved the request.', null, $request->user()->id);
+            $this->notifyCurrentReviewers($buildingDeletionRequest);
 
             return false;
         }
@@ -579,6 +585,7 @@ class BuildingDeletionController extends Controller
             ])->save();
 
             $audit->log($buildingDeletionRequest, 'area_manager_approved', BuildingDeletionStatus::PendingGisReview->value, 'Area Manager approved the request.', null, $request->user()->id);
+            $this->notifyCurrentReviewers($buildingDeletionRequest);
 
             return false;
         }
@@ -656,6 +663,49 @@ class BuildingDeletionController extends Controller
         ]))->save();
 
         $audit->log($buildingDeletionRequest, $stage.'_'.$decision, $status->value, ucfirst(str_replace('_', ' ', $stage)).' completed decision: '.$decision.'.', null, $request->user()->id);
+        $this->notifyRequester($buildingDeletionRequest, $decision === 'reject' ? 'rejected' : 'returned');
+    }
+
+    private function notifyCurrentReviewers(BuildingDeletionRequest $buildingDeletionRequest): void
+    {
+        match ($buildingDeletionRequest->status) {
+            BuildingDeletionStatus::PendingTeamLeaderReview => $this->notifyUserById($buildingDeletionRequest->team_leader_reviewed_by, $buildingDeletionRequest, 'team_leader'),
+            BuildingDeletionStatus::PendingAreaManagerReview => $this->notifyUserById($buildingDeletionRequest->area_manager_reviewed_by, $buildingDeletionRequest, 'area_manager'),
+            BuildingDeletionStatus::PendingGisReview => $this->notifyGisReviewers($buildingDeletionRequest),
+            default => null,
+        };
+    }
+
+    private function notifyUserById(?int $userId, BuildingDeletionRequest $buildingDeletionRequest, string $stage): void
+    {
+        if (! $userId) {
+            return;
+        }
+
+        User::query()
+            ->whereKey($userId)
+            ->first()
+            ?->notify(new BuildingDeletionReviewRequested($buildingDeletionRequest, $stage));
+    }
+
+    private function notifyGisReviewers(BuildingDeletionRequest $buildingDeletionRequest): void
+    {
+        if (! Role::query()
+            ->where('name', 'Gis Officer')
+            ->where('guard_name', 'web')
+            ->exists()) {
+            return;
+        }
+
+        User::role('Gis Officer')
+            ->get()
+            ->each(fn (User $user): mixed => $user->notify(new BuildingDeletionReviewRequested($buildingDeletionRequest, 'gis')));
+    }
+
+    private function notifyRequester(BuildingDeletionRequest $buildingDeletionRequest, string $event): void
+    {
+        $buildingDeletionRequest->requester
+            ?->notify(new BuildingDeletionReviewRequested($buildingDeletionRequest, 'requester', $event));
     }
 
     private function areaManagerForBuilding(BuildingDeletionRequest $buildingDeletionRequest): ?User

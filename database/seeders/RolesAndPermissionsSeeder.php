@@ -171,6 +171,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'name' => 'Team Leader',
             'guard_name' => 'web',
         ]);
+        $gisOfficer = Role::firstOrCreate([
+            'name' => 'Gis Officer',
+            'guard_name' => 'web',
+        ]);
         $infEngineer = Role::firstOrCreate([
             'name' => 'Inf - QC/QA Engineer',
             'guard_name' => 'web',
@@ -312,6 +316,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'committee-members.update',
             'committee-members.delete',
             'committee-decisions.manage-content',
+        ]);
+        $gisOfficer->givePermissionTo([
+            'damage-assessment.building-deletion.view',
+            'damage-assessment.building-deletion.request',
+            'damage-assessment.building-deletion.gis-review',
+            'damage-assessment.building-deletion.process',
+            'damage-assessment.building-deletion.view-raw-snapshot',
         ]);
         $infEngineer->givePermissionTo([
             'inf-audit.public-buildings.view',

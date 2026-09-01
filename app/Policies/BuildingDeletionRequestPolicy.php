@@ -20,7 +20,7 @@ class BuildingDeletionRequestPolicy
             || $user->id === $buildingDeletionRequest->requested_by
             || $this->reviewTeamLeader($user, $buildingDeletionRequest)
             || $this->reviewAreaManager($user, $buildingDeletionRequest)
-            || $user->can('damage-assessment.building-deletion.gis-review');
+            || $this->reviewGis($user, $buildingDeletionRequest);
     }
 
     public function create(User $user): bool
@@ -56,7 +56,7 @@ class BuildingDeletionRequestPolicy
 
     public function reviewGis(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
     {
-        return $user->can('damage-assessment.building-deletion.gis-review');
+        return $user->hasRole('Gis Officer');
     }
 
     public function process(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
