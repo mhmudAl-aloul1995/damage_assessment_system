@@ -74,6 +74,8 @@
                             $timelineTitleKey = 'ui.building_deletions.timeline_titles.'.$log->step.'.'.$log->status;
                             $timelineTitle = __($timelineTitleKey);
                             $hasContextualTimelineTitle = $timelineTitle !== $timelineTitleKey;
+                            $timelineMessageKey = 'ui.building_deletions.timeline_messages.'.$log->step.'.'.$log->status;
+                            $timelineMessage = __($timelineMessageKey);
                         @endphp
                         <div class="border-bottom py-3">
                             <div class="fw-bold">
@@ -83,7 +85,7 @@
                                 @endunless
                             </div>
                             <div class="text-muted">{{ $log->created_at?->format('Y-m-d H:i:s') }} | {{ $log->user?->name ?? __('ui.building_deletions.system') }}</div>
-                            <div>{{ $log->message }}</div>
+                            <div>{{ $timelineMessage === $timelineMessageKey ? $log->message : $timelineMessage }}</div>
                         </div>
                     @endforeach
                 </div>

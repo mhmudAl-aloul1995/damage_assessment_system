@@ -194,8 +194,8 @@ return [
             'audited_housing_units' => 'الوحدات المدققة',
             'base_buildings' => 'المباني الأصلية',
             'audited_buildings' => 'المباني المدققة',
-            'gis_units_deleted' => 'وحدات GIS',
-            'gis_building_deleted' => 'مباني GIS',
+            'gis_units_deleted' => 'حذف وحدات GIS',
+            'gis_building_deleted' => 'حذف مبنى GIS',
             'local_archiving' => 'الأرشفة المحلية',
             'local_archived' => 'الأرشفة المحلية',
             'final_verification' => 'التحقق النهائي',
@@ -203,6 +203,28 @@ return [
             'failed' => 'فشل',
         ],
         'timeline_titles' => [
+            'request_submitted' => [
+                'pending_team_leader_review' => 'إنشاء الطلب بانتظار قائد الفريق',
+                'pending_gis_review' => 'إنشاء الطلب بانتظار مراجعة GIS',
+            ],
+            'team_leader_approved' => [
+                'pending_area_manager_review' => 'اعتماد قائد الفريق',
+            ],
+            'area_manager_approved' => [
+                'pending_gis_review' => 'اعتماد قائد المنطقة',
+            ],
+            'gis_approved' => [
+                'approved' => 'مراجعة GIS معتمدة',
+            ],
+            'snapshot_creating' => [
+                'snapshot_creating' => 'جاري إنشاء نسخة آمنة قبل الحذف',
+            ],
+            'snapshot_verified' => [
+                'snapshot_verified' => 'تم التحقق من النسخة الآمنة',
+            ],
+            'processing' => [
+                'processing' => 'بدء تنفيذ الحذف',
+            ],
             'base_housing_units' => [
                 'gis_units_deleting' => 'جاري حذف الوحدات من الطبقة الأصلية',
             ],
@@ -232,6 +254,78 @@ return [
             ],
             'completed' => [
                 'success' => 'اكتمل حذف المبنى بنجاح',
+            ],
+        ],
+        'timeline_messages' => [
+            'request_submitted' => [
+                'pending_team_leader_review' => 'تم إرسال الطلب إلى قائد الفريق للمراجعة.',
+                'pending_gis_review' => 'تم إرسال الطلب إلى مراجع GIS للمراجعة.',
+            ],
+            'team_leader_approved' => [
+                'pending_area_manager_review' => 'وافق قائد الفريق وتم تحويل الطلب إلى قائد المنطقة.',
+            ],
+            'team_leader_reject' => [
+                'rejected' => 'رفض قائد الفريق طلب الحذف.',
+            ],
+            'team_leader_return' => [
+                'returned' => 'أرجع قائد الفريق الطلب للتعديل.',
+            ],
+            'area_manager_approved' => [
+                'pending_gis_review' => 'وافق قائد المنطقة وتم تحويل الطلب إلى مراجع GIS.',
+            ],
+            'area_manager_reject' => [
+                'rejected' => 'رفض قائد المنطقة طلب الحذف.',
+            ],
+            'area_manager_return' => [
+                'returned' => 'أرجع قائد المنطقة الطلب للتعديل.',
+            ],
+            'gis_approved' => [
+                'approved' => 'وافق مراجع GIS على الطلب.',
+            ],
+            'gis_reject' => [
+                'rejected' => 'رفض مراجع GIS طلب الحذف.',
+            ],
+            'gis_return' => [
+                'returned' => 'أرجع مراجع GIS الطلب للتعديل.',
+            ],
+            'snapshot_creating' => [
+                'snapshot_creating' => 'يتم إنشاء نسخة تحقق تحتوي بيانات المبنى والوحدات قبل الحذف.',
+            ],
+            'snapshot_verified' => [
+                'snapshot_verified' => 'تم إنشاء النسخة والتحقق من بصمتها بنجاح.',
+            ],
+            'processing' => [
+                'processing' => 'بدأ النظام تنفيذ عملية الحذف بعد اعتماد GIS.',
+            ],
+            'base_housing_units' => [
+                'gis_units_deleting' => 'يتم حذف الوحدات المرتبطة من طبقة الوحدات الأصلية.',
+            ],
+            'audited_housing_units' => [
+                'gis_units_deleting' => 'يتم حذف الوحدات المرتبطة من طبقة الوحدات المدققة.',
+            ],
+            'base_buildings' => [
+                'gis_building_deleting' => 'يتم حذف المبنى من طبقة المباني الأصلية.',
+            ],
+            'audited_buildings' => [
+                'gis_building_deleting' => 'يتم حذف المبنى من طبقة المباني المدققة.',
+            ],
+            'gis_units_deleted' => [
+                'gis_units_deleted' => 'تمت معالجة حذف الوحدات من طبقات GIS.',
+            ],
+            'gis_building_deleted' => [
+                'gis_building_deleted' => 'تمت معالجة حذف المبنى من طبقات GIS.',
+            ],
+            'local_archiving' => [
+                'local_archiving' => 'يتم أرشفة السجلات المحلية ثم حذفها من قاعدة البيانات المحلية.',
+            ],
+            'local_archived' => [
+                'local_archived' => 'تمت أرشفة السجلات المحلية وحذفها.',
+            ],
+            'final_verification' => [
+                'verifying' => 'يتم التحقق النهائي من اختفاء السجلات محلياً ومن GIS.',
+            ],
+            'completed' => [
+                'success' => 'اكتمل سير عمل حذف المبنى بنجاح.',
             ],
         ],
         'status_labels' => [
