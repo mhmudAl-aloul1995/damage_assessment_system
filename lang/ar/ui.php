@@ -150,7 +150,7 @@ return [
         'team_leader_decision' => 'قرار قائد الفريق',
         'area_manager_decision' => 'قرار قائد المنطقة',
         'gis_decision' => 'قرار GIS',
-        'review_decision_warning' => 'يتم تسجيل قرار الموافقة فقط.',
+        'review_decision_warning' => 'سيسجل النظام قرار المراجعة فقط. يبدأ الحذف فقط بعد اعتماد GIS ونجاح النسخة.',
         'approve' => 'اعتماد',
         'return_revision' => 'إرجاع للتعديل',
         'reject' => 'رفض',

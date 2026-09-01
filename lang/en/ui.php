@@ -150,7 +150,7 @@ return [
         'team_leader_decision' => 'Team Leader Decision',
         'area_manager_decision' => 'Area Manager Decision',
         'gis_decision' => 'GIS Decision',
-        'review_decision_warning' => 'This records the approval decision only.',
+        'review_decision_warning' => 'The system records the review decision only. Deletion starts only after GIS approval and a successful snapshot.',
         'approve' => 'Approve',
         'return_revision' => 'Return for Revision',
         'reject' => 'Reject',
