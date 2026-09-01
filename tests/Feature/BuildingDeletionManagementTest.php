@@ -511,6 +511,11 @@ it('submits a building deletion request through ajax for the modal', function ()
 it('renders the building deletion request details in arabic locale', function (): void {
     $user = User::factory()->create();
     $request = buildingDeletionRequest($user, BuildingDeletionStatus::PendingGisReview);
+    $request->auditLogs()->create([
+        'step' => 'audited_buildings',
+        'status' => 'gis_building_deleting',
+        'message' => 'Deleting Audited/Target Buildings.',
+    ]);
 
     $this->actingAs($user)
         ->withSession(['locale' => 'ar'])
@@ -518,6 +523,7 @@ it('renders the building deletion request details in arabic locale', function ()
         ->assertOk()
         ->assertSee('طلب حذف مبنى')
         ->assertSee('بانتظار مراجعة GIS')
+        ->assertSee('جاري حذف المبنى من الطبقة المدققة')
         ->assertSee('لم يتم إنشاء النسخة بعد.');
 });
 

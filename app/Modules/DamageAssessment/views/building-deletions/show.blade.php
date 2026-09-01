@@ -70,8 +70,15 @@
                 <div class="card-header"><h3 class="card-title">{{ __('ui.building_deletions.execution_timeline') }}</h3></div>
                 <div class="card-body">
                     @foreach ($request->auditLogs->sortByDesc('created_at') as $log)
+                        @php
+                            $timelineTitleKey = 'ui.building_deletions.timeline_titles.'.$log->step.'.'.$log->status;
+                            $timelineTitle = __($timelineTitleKey);
+                        @endphp
                         <div class="border-bottom py-3">
-                            <div class="fw-bold">{{ __('ui.building_deletions.steps.'.$log->step) }} <span class="badge badge-light">{{ __('ui.building_deletions.status_labels.'.$log->status) }}</span></div>
+                            <div class="fw-bold">
+                                {{ $timelineTitle === $timelineTitleKey ? __('ui.building_deletions.steps.'.$log->step) : $timelineTitle }}
+                                <span class="badge badge-light">{{ __('ui.building_deletions.status_labels.'.$log->status) }}</span>
+                            </div>
                             <div class="text-muted">{{ $log->created_at?->format('Y-m-d H:i:s') }} | {{ $log->user?->name ?? __('ui.building_deletions.system') }}</div>
                             <div>{{ $log->message }}</div>
                         </div>

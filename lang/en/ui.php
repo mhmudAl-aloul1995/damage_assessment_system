@@ -202,6 +202,38 @@ return [
             'completed' => 'Completed',
             'failed' => 'Failed',
         ],
+        'timeline_titles' => [
+            'base_housing_units' => [
+                'gis_units_deleting' => 'Deleting units from the base layer',
+            ],
+            'audited_housing_units' => [
+                'gis_units_deleting' => 'Deleting units from the audited layer',
+            ],
+            'base_buildings' => [
+                'gis_building_deleting' => 'Deleting the building from the base layer',
+            ],
+            'audited_buildings' => [
+                'gis_building_deleting' => 'Deleting the building from the audited layer',
+            ],
+            'gis_units_deleted' => [
+                'gis_units_deleted' => 'GIS units were deleted',
+            ],
+            'gis_building_deleted' => [
+                'gis_building_deleted' => 'The GIS building was deleted',
+            ],
+            'local_archiving' => [
+                'local_archiving' => 'Archiving and deleting local records',
+            ],
+            'local_archived' => [
+                'local_archived' => 'Local records were archived and deleted',
+            ],
+            'final_verification' => [
+                'verifying' => 'Running final verification after deletion',
+            ],
+            'completed' => [
+                'success' => 'Building deletion completed successfully',
+            ],
+        ],
         'status_labels' => [
             'draft' => 'Draft',
             'pending_team_leader_review' => 'Pending Team Leader Review',

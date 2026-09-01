@@ -202,6 +202,38 @@ return [
             'completed' => 'مكتمل',
             'failed' => 'فشل',
         ],
+        'timeline_titles' => [
+            'base_housing_units' => [
+                'gis_units_deleting' => 'جاري حذف الوحدات من الطبقة الأصلية',
+            ],
+            'audited_housing_units' => [
+                'gis_units_deleting' => 'جاري حذف الوحدات من الطبقة المدققة',
+            ],
+            'base_buildings' => [
+                'gis_building_deleting' => 'جاري حذف المبنى من الطبقة الأصلية',
+            ],
+            'audited_buildings' => [
+                'gis_building_deleting' => 'جاري حذف المبنى من الطبقة المدققة',
+            ],
+            'gis_units_deleted' => [
+                'gis_units_deleted' => 'تم حذف وحدات GIS المرتبطة',
+            ],
+            'gis_building_deleted' => [
+                'gis_building_deleted' => 'تم حذف مبنى GIS المرتبط',
+            ],
+            'local_archiving' => [
+                'local_archiving' => 'جاري أرشفة وحذف السجلات المحلية',
+            ],
+            'local_archived' => [
+                'local_archived' => 'تمت أرشفة وحذف السجلات المحلية',
+            ],
+            'final_verification' => [
+                'verifying' => 'جاري التحقق النهائي بعد الحذف',
+            ],
+            'completed' => [
+                'success' => 'اكتمل حذف المبنى بنجاح',
+            ],
+        ],
         'status_labels' => [
             'draft' => 'مسودة',
             'pending_team_leader_review' => 'بانتظار موافقة قائد الفريق',
