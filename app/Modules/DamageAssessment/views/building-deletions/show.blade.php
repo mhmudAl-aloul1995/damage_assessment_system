@@ -73,11 +73,14 @@
                         @php
                             $timelineTitleKey = 'ui.building_deletions.timeline_titles.'.$log->step.'.'.$log->status;
                             $timelineTitle = __($timelineTitleKey);
+                            $hasContextualTimelineTitle = $timelineTitle !== $timelineTitleKey;
                         @endphp
                         <div class="border-bottom py-3">
                             <div class="fw-bold">
-                                {{ $timelineTitle === $timelineTitleKey ? __('ui.building_deletions.steps.'.$log->step) : $timelineTitle }}
-                                <span class="badge badge-light">{{ __('ui.building_deletions.status_labels.'.$log->status) }}</span>
+                                {{ $hasContextualTimelineTitle ? $timelineTitle : __('ui.building_deletions.steps.'.$log->step) }}
+                                @unless ($hasContextualTimelineTitle)
+                                    <span class="badge badge-light">{{ __('ui.building_deletions.status_labels.'.$log->status) }}</span>
+                                @endunless
                             </div>
                             <div class="text-muted">{{ $log->created_at?->format('Y-m-d H:i:s') }} | {{ $log->user?->name ?? __('ui.building_deletions.system') }}</div>
                             <div>{{ $log->message }}</div>

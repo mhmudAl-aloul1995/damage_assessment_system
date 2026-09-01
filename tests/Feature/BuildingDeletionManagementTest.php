@@ -524,6 +524,7 @@ it('renders the building deletion request details in arabic locale', function ()
         ->assertSee('طلب حذف مبنى')
         ->assertSee('بانتظار مراجعة GIS')
         ->assertSee('جاري حذف المبنى من الطبقة المدققة')
+        ->assertDontSee('جاري حذف مبنى GIS')
         ->assertSee('لم يتم إنشاء النسخة بعد.');
 });
 
