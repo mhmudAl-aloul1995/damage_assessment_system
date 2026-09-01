@@ -217,7 +217,7 @@ return [
                 'approved' => 'مراجعة GIS معتمدة',
             ],
             'snapshot_creating' => [
-                'snapshot_creating' => 'جاري إنشاء نسخة آمنة قبل الحذف',
+                'snapshot_creating' => 'بدء إنشاء نسخة آمنة قبل الحذف',
             ],
             'snapshot_verified' => [
                 'snapshot_verified' => 'تم التحقق من النسخة الآمنة',
@@ -226,16 +226,16 @@ return [
                 'processing' => 'بدء تنفيذ الحذف',
             ],
             'base_housing_units' => [
-                'gis_units_deleting' => 'جاري حذف الوحدات من الطبقة الأصلية',
+                'gis_units_deleting' => 'بدء حذف الوحدات من الطبقة الأصلية',
             ],
             'audited_housing_units' => [
-                'gis_units_deleting' => 'جاري حذف الوحدات من الطبقة المدققة',
+                'gis_units_deleting' => 'بدء حذف الوحدات من الطبقة المدققة',
             ],
             'base_buildings' => [
-                'gis_building_deleting' => 'جاري حذف المبنى من الطبقة الأصلية',
+                'gis_building_deleting' => 'بدء حذف المبنى من الطبقة الأصلية',
             ],
             'audited_buildings' => [
-                'gis_building_deleting' => 'جاري حذف المبنى من الطبقة المدققة',
+                'gis_building_deleting' => 'بدء حذف المبنى من الطبقة المدققة',
             ],
             'gis_units_deleted' => [
                 'gis_units_deleted' => 'تم حذف وحدات GIS المرتبطة',
@@ -244,13 +244,13 @@ return [
                 'gis_building_deleted' => 'تم حذف مبنى GIS المرتبط',
             ],
             'local_archiving' => [
-                'local_archiving' => 'جاري أرشفة وحذف السجلات المحلية',
+                'local_archiving' => 'بدء أرشفة وحذف السجلات المحلية',
             ],
             'local_archived' => [
                 'local_archived' => 'تمت أرشفة وحذف السجلات المحلية',
             ],
             'final_verification' => [
-                'verifying' => 'جاري التحقق النهائي بعد الحذف',
+                'verifying' => 'بدء التحقق النهائي بعد الحذف',
             ],
             'completed' => [
                 'success' => 'اكتمل حذف المبنى بنجاح',
@@ -289,7 +289,7 @@ return [
                 'returned' => 'أرجع مراجع GIS الطلب للتعديل.',
             ],
             'snapshot_creating' => [
-                'snapshot_creating' => 'يتم إنشاء نسخة تحقق تحتوي بيانات المبنى والوحدات قبل الحذف.',
+                'snapshot_creating' => 'بدأ النظام إنشاء نسخة تحقق تحتوي بيانات المبنى والوحدات قبل الحذف.',
             ],
             'snapshot_verified' => [
                 'snapshot_verified' => 'تم إنشاء النسخة والتحقق من بصمتها بنجاح.',
@@ -298,16 +298,16 @@ return [
                 'processing' => 'بدأ النظام تنفيذ عملية الحذف بعد اعتماد GIS.',
             ],
             'base_housing_units' => [
-                'gis_units_deleting' => 'يتم حذف الوحدات المرتبطة من طبقة الوحدات الأصلية.',
+                'gis_units_deleting' => 'بدأ النظام حذف الوحدات المرتبطة من طبقة الوحدات الأصلية.',
             ],
             'audited_housing_units' => [
-                'gis_units_deleting' => 'يتم حذف الوحدات المرتبطة من طبقة الوحدات المدققة.',
+                'gis_units_deleting' => 'بدأ النظام حذف الوحدات المرتبطة من طبقة الوحدات المدققة.',
             ],
             'base_buildings' => [
-                'gis_building_deleting' => 'يتم حذف المبنى من طبقة المباني الأصلية.',
+                'gis_building_deleting' => 'بدأ النظام حذف المبنى من طبقة المباني الأصلية.',
             ],
             'audited_buildings' => [
-                'gis_building_deleting' => 'يتم حذف المبنى من طبقة المباني المدققة.',
+                'gis_building_deleting' => 'بدأ النظام حذف المبنى من طبقة المباني المدققة.',
             ],
             'gis_units_deleted' => [
                 'gis_units_deleted' => 'تمت معالجة حذف الوحدات من طبقات GIS.',
@@ -316,13 +316,13 @@ return [
                 'gis_building_deleted' => 'تمت معالجة حذف المبنى من طبقات GIS.',
             ],
             'local_archiving' => [
-                'local_archiving' => 'يتم أرشفة السجلات المحلية ثم حذفها من قاعدة البيانات المحلية.',
+                'local_archiving' => 'بدأ النظام أرشفة السجلات المحلية ثم حذفها من قاعدة البيانات المحلية.',
             ],
             'local_archived' => [
                 'local_archived' => 'تمت أرشفة السجلات المحلية وحذفها.',
             ],
             'final_verification' => [
-                'verifying' => 'يتم التحقق النهائي من اختفاء السجلات محلياً ومن GIS.',
+                'verifying' => 'بدأ النظام التحقق النهائي من اختفاء السجلات محلياً ومن GIS.',
             ],
             'completed' => [
                 'success' => 'اكتمل سير عمل حذف المبنى بنجاح.',

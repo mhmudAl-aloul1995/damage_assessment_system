@@ -217,7 +217,7 @@ return [
                 'approved' => 'GIS review approved',
             ],
             'snapshot_creating' => [
-                'snapshot_creating' => 'Creating a safe pre-deletion snapshot',
+                'snapshot_creating' => 'Started creating a safe pre-deletion snapshot',
             ],
             'snapshot_verified' => [
                 'snapshot_verified' => 'Safe snapshot verified',
@@ -226,16 +226,16 @@ return [
                 'processing' => 'Deletion processing started',
             ],
             'base_housing_units' => [
-                'gis_units_deleting' => 'Deleting units from the base layer',
+                'gis_units_deleting' => 'Started deleting units from the base layer',
             ],
             'audited_housing_units' => [
-                'gis_units_deleting' => 'Deleting units from the audited layer',
+                'gis_units_deleting' => 'Started deleting units from the audited layer',
             ],
             'base_buildings' => [
-                'gis_building_deleting' => 'Deleting the building from the base layer',
+                'gis_building_deleting' => 'Started deleting the building from the base layer',
             ],
             'audited_buildings' => [
-                'gis_building_deleting' => 'Deleting the building from the audited layer',
+                'gis_building_deleting' => 'Started deleting the building from the audited layer',
             ],
             'gis_units_deleted' => [
                 'gis_units_deleted' => 'GIS units were deleted',
@@ -244,13 +244,13 @@ return [
                 'gis_building_deleted' => 'The GIS building was deleted',
             ],
             'local_archiving' => [
-                'local_archiving' => 'Archiving and deleting local records',
+                'local_archiving' => 'Started archiving and deleting local records',
             ],
             'local_archived' => [
                 'local_archived' => 'Local records were archived and deleted',
             ],
             'final_verification' => [
-                'verifying' => 'Running final verification after deletion',
+                'verifying' => 'Started final verification after deletion',
             ],
             'completed' => [
                 'success' => 'Building deletion completed successfully',
@@ -289,7 +289,7 @@ return [
                 'returned' => 'The GIS reviewer returned the request for revision.',
             ],
             'snapshot_creating' => [
-                'snapshot_creating' => 'The system is creating a verified snapshot of the building and units before deletion.',
+                'snapshot_creating' => 'The system started creating a verified snapshot of the building and units before deletion.',
             ],
             'snapshot_verified' => [
                 'snapshot_verified' => 'The snapshot was created and its hash was verified.',
@@ -298,16 +298,16 @@ return [
                 'processing' => 'The system started deletion after GIS approval.',
             ],
             'base_housing_units' => [
-                'gis_units_deleting' => 'Deleting related units from the base housing units layer.',
+                'gis_units_deleting' => 'The system started deleting related units from the base housing units layer.',
             ],
             'audited_housing_units' => [
-                'gis_units_deleting' => 'Deleting related units from the audited housing units layer.',
+                'gis_units_deleting' => 'The system started deleting related units from the audited housing units layer.',
             ],
             'base_buildings' => [
-                'gis_building_deleting' => 'Deleting the building from the base buildings layer.',
+                'gis_building_deleting' => 'The system started deleting the building from the base buildings layer.',
             ],
             'audited_buildings' => [
-                'gis_building_deleting' => 'Deleting the building from the audited buildings layer.',
+                'gis_building_deleting' => 'The system started deleting the building from the audited buildings layer.',
             ],
             'gis_units_deleted' => [
                 'gis_units_deleted' => 'GIS housing unit deletion was processed.',
@@ -316,13 +316,13 @@ return [
                 'gis_building_deleted' => 'GIS building deletion was processed.',
             ],
             'local_archiving' => [
-                'local_archiving' => 'Local records are being archived and then removed from the local database.',
+                'local_archiving' => 'The system started archiving local records and then removing them from the local database.',
             ],
             'local_archived' => [
                 'local_archived' => 'Local records were archived and removed.',
             ],
             'final_verification' => [
-                'verifying' => 'The system is running final local and GIS verification.',
+                'verifying' => 'The system started final local and GIS verification.',
             ],
             'completed' => [
                 'success' => 'The building deletion workflow completed successfully.',
