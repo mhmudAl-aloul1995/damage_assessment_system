@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @php
 	$isFieldEngineerAudit = $isFieldEngineerAudit ?? false;
+	$hideAuditManagementActions = $hideAuditManagementActions ?? false;
+	$canManageAuditReviewers = $canManageAuditReviewers ?? false;
+	$canUseAuditManagementActions = $canManageAuditReviewers
+		|| (! auth()->user()->hasRole('Area Manager') && ! $hideAuditManagementActions);
 	$housingAssessmentStartId = $assessments->firstWhere('name', 'housing_unit_group')?->id;
 	$buildingAssessmentEndId = $assessments->firstWhere('name', 'housing_unit')?->id
 		?? $housingAssessmentStartId;
@@ -606,11 +610,11 @@
 							{{ __('ui.audit.refresh') }} <i class="ki-duotone ki-arrows-circle fs-3"></i>
 						</button>
 
-						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
+						@if($canUseAuditManagementActions)
 							<button id="btn_final_approve" class="btn btn-warning btn-sm">
 								{{ __('ui.audit.approve_final') }} <i class="ki-duotone ki-check-circle"></i>
 							</button>
-						@endunless
+						@endif
 
 						@if(! $isFieldEngineerAudit)
 							<div class="dropdown">
@@ -654,7 +658,7 @@
 							</div>
 						@endif
 
-						@if(($canManageAuditReviewers ?? false) || (! auth()->user()->hasRole('Area Manager') && ! $hideAuditManagementActions))
+						@if($canUseAuditManagementActions)
 							<div class="dropdown">
 								<button type="button" class="btn btn-light-primary btn-sm dropdown-toggle"
 									data-bs-toggle="dropdown" aria-expanded="false">
@@ -669,7 +673,7 @@
 											<i class="ki-duotone ki-profile-user"></i>
 										</button>
 									@endif
-									@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
+									@if($canUseAuditManagementActions)
 										<button id="btn_assign_to_lawyer" class="dropdown-item">
 											<span>{{ __('ui.audit.assign_to_lawyer') }}</span>
 											<i class="ki-duotone ki-plus"></i>
@@ -678,12 +682,12 @@
 											<span>{{ __('ui.audit.assign_to_engineer') }}</span>
 											<i class="ki-duotone ki-plus"></i>
 										</button>
-									@endunless
+									@endif
 								</div>
 							</div>
 						@endif
 
-						@unless(auth()->user()->hasRole('Area Manager') || $hideAuditManagementActions)
+						@if($canUseAuditManagementActions)
 							<button type="button" class="btn btn-light-primary btn-sm" data-bs-toggle="modal"
 								data-bs-target="#bulkInlineEditModal">
 								تعديل جماعي <i class="ki-duotone ki-notepad-edit"></i>
@@ -708,7 +712,7 @@
 									</button>
 								</div>
 							</div>
-						@endunless
+						@endif
 
 						@if(! $isFieldEngineerAudit)
 							<div class="dropdown">
@@ -718,7 +722,7 @@
 								</button>
 								<div class="dropdown-menu dropdown-menu-end audit-toolbar-menu">
 									<div class="dropdown-header">أدوات العرض</div>
-									@if(! $hideAuditManagementActions)
+									@if($canUseAuditManagementActions)
 										<button type="button" id="toggle_select_column" class="dropdown-item"
 											data-select-visible="false">
 											<span>إظهار التحديد</span>

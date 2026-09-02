@@ -1346,6 +1346,7 @@ it('filters audit buildings by field status and completes field status on arcgis
 it('hides audit management action buttons for temporary excepted reviewers only', function () {
     $reviewerRole = Role::findOrCreate('Audit Reviewer', 'web');
     $auditingSupervisorRole = Role::findOrCreate('Auditing Supervisor', 'web');
+    $areaManagerRole = Role::findOrCreate('Area Manager', 'web');
     Role::findOrCreate('QC/QA Engineer', 'web');
     Role::findOrCreate('Legal Auditor', 'web');
 
@@ -1362,7 +1363,7 @@ it('hides audit management action buttons for temporary excepted reviewers only'
     $auditingSupervisor = User::factory()->create([
         'name' => 'ياسمين ماهر مصطفى ابومدللة',
     ]);
-    $auditingSupervisor->assignRole($auditingSupervisorRole);
+    $auditingSupervisor->assignRole($auditingSupervisorRole, $areaManagerRole);
 
     $hiddenActionIds = [
         'id="btn_final_approve"',
