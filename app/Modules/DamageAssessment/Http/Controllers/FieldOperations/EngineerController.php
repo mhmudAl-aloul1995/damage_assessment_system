@@ -8,6 +8,7 @@ use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\Filter;
 use App\Models\HousingUnit;
+use App\Modules\DamageAssessment\Services\ArchivedBuildingAssessmentService;
 use App\services\ArcgisService;
 use App\Support\BrowsershotConfiguration;
 use Illuminate\Database\Eloquent\Model;
@@ -114,7 +115,16 @@ class EngineerController extends Controller
 
     public function showAssessment(string $globalid)
     {
-        $building = Building::query()->where('globalid', $globalid)->firstOrFail();
+        $building = Building::query()->where('globalid', $globalid)->first();
+
+        if (! $building) {
+            $archivedAssessment = app(ArchivedBuildingAssessmentService::class)->find($globalid, 'base');
+
+            abort_if($archivedAssessment === null, 404);
+
+            return View::make('damage-assessment::audit.archived-assessment', $archivedAssessment);
+        }
+
         $HousingUnit = HousingUnit::query()->where('parentglobalid', $globalid)->get();
         $assessments = Assessment::all();
         $buildingTitle = $this->resolveBuildingTitle($building);

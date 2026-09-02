@@ -21,6 +21,7 @@ use App\Models\HousingStatus;
 use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
+use App\Modules\DamageAssessment\Services\ArchivedBuildingAssessmentService;
 use App\Modules\DamageAssessment\Services\Audit\AuditExportService;
 use App\Modules\DamageAssessment\Services\Audit\AuditTableService;
 use App\services\ArcgisAttachmentBackupService;
@@ -5257,6 +5258,15 @@ COALESCE(
         $housingGlobalid = $request->housingGlobalid;
 
         $building = Building::where('globalid', $request->buildingGlobalid)->first();
+
+        if (! $building) {
+            $archivedAssessment = app(ArchivedBuildingAssessmentService::class)->find($buildingGlobalid, 'audited');
+
+            abort_if($archivedAssessment === null, 404);
+
+            return View::make('damage-assessment::audit.archived-assessment', $archivedAssessment);
+        }
+
         $user = Auth::user();
         $canEditAssessment = $this->canEditAssessmentForBuilding($user, $building);
         $isRestrictedLawyerAuditUser = RestrictedLawyerAuditAccess::isRestrictedLawyer($user);

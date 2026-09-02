@@ -534,6 +534,40 @@ it('renders the building deletion request details in arabic locale', function ()
         ->assertSee('لم يتم إنشاء النسخة بعد.');
 });
 
+it('renders an archived audited building assessment from the deletion snapshot', function (): void {
+    $user = User::factory()->create();
+
+    createArchivedDeletionSnapshot($user);
+
+    $this->actingAs($user)
+        ->withSession(['locale' => 'ar'])
+        ->get('damage-assessment/showAssessmentAudit/archived-building-one')
+        ->assertOk()
+        ->assertSee('بيانات المبنى المؤرشفة')
+        ->assertSee('هذا المبنى مؤرشف')
+        ->assertSee('نسخة المبنى المدقق')
+        ->assertSee('Archived Audited Building')
+        ->assertSee('Audited Owner')
+        ->assertSee('فتح طلب الحذف');
+});
+
+it('renders an archived base building assessment from the deletion snapshot', function (): void {
+    $user = User::factory()->create();
+
+    createArchivedDeletionSnapshot($user);
+
+    $this->actingAs($user)
+        ->withSession(['locale' => 'en'])
+        ->get(route('assessment.show', 'archived-building-one'))
+        ->assertOk()
+        ->assertSee('Archived Building Data')
+        ->assertSee('This building is archived')
+        ->assertSee('Base building copy')
+        ->assertSee('Archived Base Building')
+        ->assertSee('Base Owner')
+        ->assertSee('Open Deletion Request');
+});
+
 it('captures null empty zero and false values in the database snapshot', function (): void {
     fakeArcgis();
 
@@ -657,6 +691,81 @@ function buildingDeletionRequest(User $user, BuildingDeletionStatus $status): Bu
         'status' => $status,
         'gis_reviewed_by' => $user->id,
         'gis_reviewed_at' => now(),
+    ]);
+}
+
+function createArchivedDeletionSnapshot(User $user): BuildingDeletionSnapshot
+{
+    $request = BuildingDeletionRequest::query()->create([
+        'building_globalid' => 'archived-building-one',
+        'building_objectid' => 900,
+        'requested_by' => $user->id,
+        'reason' => 'Archived building test.',
+        'status' => BuildingDeletionStatus::Completed,
+        'gis_reviewed_by' => $user->id,
+        'gis_reviewed_at' => now(),
+    ]);
+
+    return BuildingDeletionSnapshot::query()->create([
+        'request_id' => $request->id,
+        'building_globalid' => 'archived-building-one',
+        'building_objectid' => 900,
+        'snapshot_version' => '1.0',
+        'base_data' => [
+            'building' => [
+                'database' => [
+                    'objectid' => 900,
+                    'globalid' => 'archived-building-one',
+                    'building_name' => 'Archived Base Building',
+                    'floor_nos' => 4,
+                    'assignedto' => 'Base Engineer',
+                ],
+                'gis' => ['found' => false],
+            ],
+            'housing_units' => [
+                [
+                    'database' => [
+                        'objectid' => 901,
+                        'globalid' => 'archived-base-unit',
+                        'parentglobalid' => 'archived-building-one',
+                        'housing_unit_number' => 'B-1',
+                        'unit_owner' => 'Base Owner',
+                    ],
+                    'gis' => ['found' => false],
+                ],
+            ],
+        ],
+        'audited_data' => [
+            'building' => [
+                'database' => [
+                    'objectid' => 900,
+                    'globalid' => 'archived-building-one',
+                    'building_name' => 'Archived Audited Building',
+                    'floor_nos' => 5,
+                    'assignedto' => 'Audited Engineer',
+                ],
+                'gis' => ['found' => false],
+            ],
+            'housing_units' => [
+                [
+                    'database' => [
+                        'objectid' => 902,
+                        'globalid' => 'archived-audited-unit',
+                        'parentglobalid' => 'archived-building-one',
+                        'housing_unit_number' => 'A-1',
+                        'unit_owner' => 'Audited Owner',
+                    ],
+                    'gis' => ['found' => false],
+                ],
+            ],
+        ],
+        'related_data' => [],
+        'attachments_data' => [],
+        'metadata' => [],
+        'schema_data' => [],
+        'snapshot_hash' => str_repeat('a', 64),
+        'created_by' => $user->id,
+        'verified_at' => now(),
     ]);
 }
 
