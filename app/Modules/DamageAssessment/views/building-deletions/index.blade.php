@@ -40,6 +40,13 @@
                 <h2>{{ __('ui.building_deletions.title') }}</h2>
             </div>
             <div class="card-toolbar">
+                @if (auth()->user()?->hasAnyRole(['Gis Officer', 'Database Officer']))
+                    <button type="submit" form="buildingDeletionBulkApproveForm" class="btn btn-light-success me-2" data-building-deletion-bulk-approve disabled>
+                        <i class="ki-duotone ki-check-square fs-3 me-1"></i>
+                        {{ __('ui.building_deletions.bulk_approve_selected') }}
+                        <span class="badge badge-success ms-2" data-building-deletion-selected-count>0</span>
+                    </button>
+                @endif
                 @can('create', \App\Models\BuildingDeletionRequest::class)
                     <button type="button" class="btn btn-primary" data-building-deletion-open-modal data-url="{{ route('building-deletions.create') }}">
                         {{ __('ui.building_deletions.new_request') }}
@@ -52,46 +59,61 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
-            <div class="table-responsive">
-                <table class="table table-row-dashed align-middle">
-                    <thead>
-                        <tr class="fw-bold text-muted">
-                            <th>{{ __('ui.building_deletions.request') }}</th>
-                            <th>{{ __('ui.building_deletions.object_id') }}</th>
-                            <th>{{ __('ui.building_deletions.global_id') }}</th>
-                            <th>{{ __('ui.building_deletions.requested_by') }}</th>
-                            <th>{{ __('ui.building_deletions.status') }}</th>
-                            <th>{{ __('ui.building_deletions.snapshot_hash') }}</th>
-                            <th>{{ __('ui.building_deletions.created') }}</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($requests as $request)
-                            <tr>
-                                <td>#DEL-{{ str_pad((string) $request->id, 5, '0', STR_PAD_LEFT) }}</td>
-                                <td>{{ $request->building_objectid ?? '-' }}</td>
-                                <td class="text-break">{{ $request->building_globalid }}</td>
-                                <td>{{ $request->requester?->name ?? '-' }}</td>
-                                <td><span class="badge badge-light-primary">{{ __('ui.building_deletions.status_labels.'.$request->status->value) }}</span></td>
-                                <td class="text-break">{{ $request->latestSnapshot?->snapshot_hash ?? '-' }}</td>
-                                <td>{{ $request->created_at?->format('Y-m-d H:i') }}</td>
-                                <td>
-                                    <a href="{{ route('building-deletions.show', $request) }}" class="btn btn-sm btn-light-primary">{{ __('ui.building_deletions.view') }}</a>
-                                </td>
+            <form id="buildingDeletionBulkApproveForm" method="POST" action="{{ route('building-deletions.bulk-approve') }}">
+                @csrf
+                <div class="table-responsive">
+                    <table class="table table-row-dashed align-middle">
+                        <thead>
+                            <tr class="fw-bold text-muted">
+                                <th class="w-40px">
+                                    @if (auth()->user()?->hasAnyRole(['Gis Officer', 'Database Officer']))
+                                        <input type="checkbox" class="form-check-input" data-building-deletion-select-all aria-label="{{ __('ui.building_deletions.select_all_pending') }}">
+                                    @endif
+                                </th>
+                                <th>{{ __('ui.building_deletions.request') }}</th>
+                                <th>{{ __('ui.building_deletions.object_id') }}</th>
+                                <th>{{ __('ui.building_deletions.global_id') }}</th>
+                                <th>{{ __('ui.building_deletions.requested_by') }}</th>
+                                <th>{{ __('ui.building_deletions.status') }}</th>
+                                <th>{{ __('ui.building_deletions.snapshot_hash') }}</th>
+                                <th>{{ __('ui.building_deletions.created') }}</th>
+                                <th></th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8">
-                                    <div class="text-center text-muted py-10">
-                                        {{ __('ui.building_deletions.no_requests') }}
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            @forelse ($requests as $request)
+                                <tr>
+                                    <td>
+                                        @if (auth()->user()?->hasAnyRole(['Gis Officer', 'Database Officer']) && $request->status === \App\Enums\BuildingDeletionStatus::PendingGisReview)
+                                            <input type="checkbox" name="request_ids[]" value="{{ $request->id }}" class="form-check-input" data-building-deletion-row-checkbox aria-label="{{ __('ui.building_deletions.select_request', ['request' => '#DEL-'.str_pad((string) $request->id, 5, '0', STR_PAD_LEFT)]) }}">
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>#DEL-{{ str_pad((string) $request->id, 5, '0', STR_PAD_LEFT) }}</td>
+                                    <td>{{ $request->building_objectid ?? '-' }}</td>
+                                    <td class="text-break">{{ $request->building_globalid }}</td>
+                                    <td>{{ $request->requester?->name ?? '-' }}</td>
+                                    <td><span class="badge badge-light-primary">{{ __('ui.building_deletions.status_labels.'.$request->status->value) }}</span></td>
+                                    <td class="text-break">{{ $request->latestSnapshot?->snapshot_hash ?? '-' }}</td>
+                                    <td>{{ $request->created_at?->format('Y-m-d H:i') }}</td>
+                                    <td>
+                                        <a href="{{ route('building-deletions.show', $request) }}" class="btn btn-sm btn-light-primary">{{ __('ui.building_deletions.view') }}</a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9">
+                                        <div class="text-center text-muted py-10">
+                                            {{ __('ui.building_deletions.no_requests') }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </form>
 
             <div class="building-deletions-pagination">
                 {{ $requests->links('pagination::bootstrap-5') }}
@@ -119,6 +141,11 @@
 @section('script')
     <script>
         (function () {
+            const bulkApproveForm = document.getElementById('buildingDeletionBulkApproveForm');
+            const bulkApproveButton = document.querySelector('[data-building-deletion-bulk-approve]');
+            const selectedCountBadge = document.querySelector('[data-building-deletion-selected-count]');
+            const selectAll = document.querySelector('[data-building-deletion-select-all]');
+            const rowCheckboxes = Array.from(document.querySelectorAll('[data-building-deletion-row-checkbox]'));
             const modalElement = document.getElementById('buildingDeletionRequestModal');
             const modalBody = document.getElementById('buildingDeletionRequestModalBody');
             const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -126,7 +153,49 @@
                 loading: @json(__('ui.building_deletions.loading_form')),
                 loadFailed: @json(__('ui.building_deletions.load_form_failed')),
                 submitFailed: @json(__('ui.building_deletions.submit_failed')),
+                bulkApproveConfirm: @json(__('ui.building_deletions.bulk_approve_confirm')),
             };
+
+            function syncBulkApproveState() {
+                const selectedCount = rowCheckboxes.filter((checkbox) => checkbox.checked).length;
+
+                if (bulkApproveButton) {
+                    bulkApproveButton.disabled = selectedCount === 0;
+                }
+
+                if (selectedCountBadge) {
+                    selectedCountBadge.textContent = selectedCount;
+                }
+
+                if (selectAll) {
+                    selectAll.checked = selectedCount > 0 && selectedCount === rowCheckboxes.length;
+                    selectAll.indeterminate = selectedCount > 0 && selectedCount < rowCheckboxes.length;
+                }
+            }
+
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    rowCheckboxes.forEach((checkbox) => {
+                        checkbox.checked = selectAll.checked;
+                    });
+
+                    syncBulkApproveState();
+                });
+            }
+
+            rowCheckboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', syncBulkApproveState);
+            });
+
+            if (bulkApproveForm) {
+                bulkApproveForm.addEventListener('submit', function (event) {
+                    if (!confirm(messages.bulkApproveConfirm)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            syncBulkApproveState();
 
             function initializeModalForm() {
                 const form = modalBody.querySelector('#buildingDeletionForm');

@@ -4,6 +4,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers;
 
 use App\Enums\BuildingDeletionStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkApproveBuildingDeletionRequestsRequest;
 use App\Http\Requests\ReviewBuildingDeletionRequest;
 use App\Http\Requests\StoreBuildingDeletionRequest;
 use App\Jobs\ProcessBuildingDeletionRequest;
@@ -188,6 +189,51 @@ class BuildingDeletionController extends Controller
         return redirect()
             ->to($redirectRoute)
             ->with('success', trans_choice('ui.building_deletions.messages.submitted_count', $deletionRequests->count(), ['count' => $deletionRequests->count()]));
+    }
+
+    public function bulkApprove(
+        BulkApproveBuildingDeletionRequestsRequest $request,
+        BuildingDeletionAuditLogger $audit,
+    ): RedirectResponse {
+        $selectedIds = collect($request->validated('request_ids'))->map(fn (mixed $id): int => (int) $id);
+        $approvedCount = 0;
+        $skippedCount = 0;
+
+        DB::transaction(function () use ($request, $audit, $selectedIds, &$approvedCount, &$skippedCount): void {
+            BuildingDeletionRequest::query()
+                ->whereIn('id', $selectedIds->all())
+                ->lockForUpdate()
+                ->get()
+                ->each(function (BuildingDeletionRequest $buildingDeletionRequest) use ($request, $audit, &$approvedCount, &$skippedCount): void {
+                    if ($buildingDeletionRequest->status !== BuildingDeletionStatus::PendingGisReview) {
+                        $skippedCount++;
+
+                        return;
+                    }
+
+                    $buildingDeletionRequest->forceFill([
+                        'status' => BuildingDeletionStatus::Approved,
+                        'gis_reviewed_by' => $request->user()->id,
+                        'gis_reviewed_at' => now(),
+                        'gis_notes' => __('ui.building_deletions.bulk_approve_note'),
+                    ])->save();
+
+                    $audit->log($buildingDeletionRequest, 'gis_approved', BuildingDeletionStatus::Approved->value, 'GIS reviewer approved the request.', null, $request->user()->id);
+                    Queue::pushOn('arcgis', new ProcessBuildingDeletionRequest($buildingDeletionRequest->id));
+
+                    $approvedCount++;
+                });
+        });
+
+        $missingCount = $selectedIds->count() - $approvedCount - $skippedCount;
+        $skippedCount += max(0, $missingCount);
+
+        return redirect()
+            ->route('building-deletions.index')
+            ->with('success', __('ui.building_deletions.messages.bulk_approved', [
+                'approved' => $approvedCount,
+                'skipped' => $skippedCount,
+            ]));
     }
 
     public function show(BuildingDeletionRequest $buildingDeletionRequest): View

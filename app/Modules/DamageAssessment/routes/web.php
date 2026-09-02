@@ -138,6 +138,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/create', [BuildingDeletionController::class, 'create'])->name('create');
         Route::get('/search-buildings', [BuildingDeletionController::class, 'searchBuildings'])->name('search-buildings');
         Route::post('/', [BuildingDeletionController::class, 'store'])->name('store');
+        Route::post('/bulk-approve', [BuildingDeletionController::class, 'bulkApprove'])->name('bulk-approve');
         Route::get('/{buildingDeletionRequest}', [BuildingDeletionController::class, 'show'])->name('show');
         Route::post('/{buildingDeletionRequest}/review', [BuildingDeletionController::class, 'review'])->name('review');
         Route::post('/{buildingDeletionRequest}/retry', [BuildingDeletionController::class, 'retry'])->name('retry');

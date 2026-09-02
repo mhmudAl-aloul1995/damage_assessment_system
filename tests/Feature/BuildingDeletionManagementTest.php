@@ -525,6 +525,57 @@ it('allows database officers to see all building deletion requests without gis a
         ->assertForbidden();
 });
 
+it('shows bulk approval controls to database officers and gis officers only', function (): void {
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+    $gisOfficer = User::factory()->create();
+    $gisOfficer->assignRole(Role::findOrCreate('Gis Officer', 'web'));
+    $ordinaryUser = User::factory()->create();
+
+    $this->actingAs($databaseOfficer)
+        ->get(route('building-deletions.index'))
+        ->assertOk()
+        ->assertSee('form="buildingDeletionBulkApproveForm"', false);
+
+    $this->actingAs($gisOfficer)
+        ->get(route('building-deletions.index'))
+        ->assertOk()
+        ->assertSee('form="buildingDeletionBulkApproveForm"', false);
+
+    $this->actingAs($ordinaryUser)
+        ->get(route('building-deletions.index'))
+        ->assertOk()
+        ->assertDontSee('form="buildingDeletionBulkApproveForm"', false);
+});
+
+it('bulk approves selected gis review deletion requests for database officers', function (): void {
+    config()->set('queue.default', 'database');
+
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+    $requester = User::factory()->create();
+
+    $pendingRequest = buildingDeletionRequest($requester, BuildingDeletionStatus::PendingGisReview);
+    $teamLeaderRequest = buildingDeletionRequestForBuilding(
+        $requester,
+        BuildingDeletionStatus::PendingTeamLeaderReview,
+        101,
+        'bulk-team-leader-building',
+    );
+
+    $this->actingAs($databaseOfficer)
+        ->post(route('building-deletions.bulk-approve'), [
+            'request_ids' => [$pendingRequest->id, $teamLeaderRequest->id],
+        ])
+        ->assertRedirect(route('building-deletions.index'));
+
+    expect($pendingRequest->refresh()->status)->toBe(BuildingDeletionStatus::Approved)
+        ->and($pendingRequest->gis_reviewed_by)->toBe($databaseOfficer->id)
+        ->and($pendingRequest->gis_notes)->toBe('Bulk approval from the building deletion management screen.')
+        ->and($teamLeaderRequest->refresh()->status)->toBe(BuildingDeletionStatus::PendingTeamLeaderReview)
+        ->and(DB::table('jobs')->where('queue', 'arcgis')->where('payload', 'like', '%ProcessBuildingDeletionRequest%')->count())->toBe(1);
+});
+
 it('submits a building deletion request through ajax for the modal', function (): void {
     $user = User::factory()->create();
 
@@ -707,9 +758,14 @@ it('blocks users without raw snapshot permission from viewing raw snapshot json'
 
 function buildingDeletionRequest(User $user, BuildingDeletionStatus $status): BuildingDeletionRequest
 {
+    return buildingDeletionRequestForBuilding($user, $status, 100, 'building-one');
+}
+
+function buildingDeletionRequestForBuilding(User $user, BuildingDeletionStatus $status, int $objectId, string $globalId): BuildingDeletionRequest
+{
     $building = Building::query()->create([
-        'objectid' => 100,
-        'globalid' => 'building-one',
+        'objectid' => $objectId,
+        'globalid' => $globalId,
         'building_name' => 'Deletion Candidate',
         'owner_mobile' => null,
         'owner_name' => '',
@@ -717,8 +773,8 @@ function buildingDeletionRequest(User $user, BuildingDeletionStatus $status): Bu
     ]);
 
     HousingUnit::query()->create([
-        'objectid' => 200,
-        'globalid' => 'unit-one',
+        'objectid' => $objectId + 100,
+        'globalid' => $globalId.'-unit-one',
         'parentglobalid' => $building->globalid,
         'housing_unit_number' => '0',
         'occupied' => '0',
