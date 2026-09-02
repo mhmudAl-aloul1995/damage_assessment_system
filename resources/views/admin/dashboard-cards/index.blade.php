@@ -285,7 +285,7 @@
                             <div class="card-title">
                                 <div>
                                     <h3 class="fw-bold mb-1">بنود {{ __($selectedCard->title) }}</h3>
-                                    <div class="text-gray-600 fs-7">الترتيب، مصدر الرقم، الشرط، والرابط الخاص بكل بند.</div>
+                                    <div class="text-gray-600 fs-7">كل بند يعرض إحصائية عددية من مصدر العدّ المختار، مع شرط ورابط اختياري.</div>
                                 </div>
                             </div>
                             <div class="card-toolbar">
@@ -318,7 +318,7 @@
                                                 <span class="code-pill">{{ $item->key }}</span>
                                             </div>
                                             <div class="hide-mobile">
-                                                <div class="muted-label mb-1">مصدر الرقم</div>
+                                                <div class="muted-label mb-1">مصدر العدّ</div>
                                                 <span class="code-pill">{{ $item->source_bucket }}.{{ $item->stat_key }}</span>
                                             </div>
                                             <div class="hide-mobile">
@@ -356,7 +356,7 @@
                                                     </div>
 
                                                     <div class="col-md-4">
-                                                        <label class="form-label">مصدر القيمة</label>
+                                                        <label class="form-label">مصدر العدّ</label>
                                                         <select name="source_bucket" class="form-select" required>
                                                             @foreach ($sourceBuckets as $sourceBucket)
                                                                 <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $item->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
@@ -364,7 +364,7 @@
                                                         </select>
                                                     </div>
                                                     <div class="col-md-4">
-                                                        <label class="form-label">stat_key</label>
+                                                        <label class="form-label">مفتاح الإحصائية</label>
                                                         <input type="text" name="stat_key" class="form-control" value="{{ old('stat_key', $item->stat_key) }}" required>
                                                     </div>
                                                     <div class="col-md-4">

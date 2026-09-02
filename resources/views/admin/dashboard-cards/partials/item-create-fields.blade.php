@@ -1,4 +1,6 @@
 <input type="hidden" name="calculation_type" value="stat_key">
+<input type="hidden" name="value_suffix" value="">
+<input type="hidden" name="decimal_places" value="0">
 
 <div class="col-md-2">
     <label class="form-label">الترتيب</label>
@@ -14,7 +16,7 @@
 </div>
 
 <div class="col-md-4">
-    <label class="form-label">مصدر القيمة</label>
+    <label class="form-label">مصدر العدّ</label>
     <select name="source_bucket" class="form-select ltr-input" required>
         @foreach ($sourceBuckets as $sourceBucket)
             <option value="{{ $sourceBucket }}">{{ $sourceBucket }}</option>
@@ -22,7 +24,7 @@
     </select>
 </div>
 <div class="col-md-4">
-    <label class="form-label">stat_key</label>
+    <label class="form-label">مفتاح الإحصائية</label>
     <input type="text" name="stat_key" class="form-control ltr-input" required>
 </div>
 <div class="col-md-4">
@@ -55,14 +57,6 @@
 <div class="col-md-3">
     <label class="form-label">قيمة الشرط</label>
     <input type="text" name="filter_value" class="form-control ltr-input" placeholder="value">
-</div>
-<div class="col-md-2">
-    <label class="form-label">لاحقة</label>
-    <input type="text" name="value_suffix" class="form-control">
-</div>
-<div class="col-md-2">
-    <label class="form-label">كسور</label>
-    <input type="number" name="decimal_places" class="form-control" min="0" max="6" value="0">
 </div>
 <div class="col-md-2">
     <input type="hidden" name="is_active" value="0">

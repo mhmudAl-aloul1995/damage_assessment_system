@@ -39,7 +39,7 @@ class StoreDashboardCardItemRequest extends FormRequest
             'icon' => ['required', 'string', 'max:100'],
             'link_group' => ['nullable', 'string', 'max:100'],
             'link_key' => ['nullable', 'string', 'max:100'],
-            'calculation_type' => ['required', 'string', 'max:50'],
+            'calculation_type' => ['required', 'string', Rule::in(['stat_key'])],
             'source_model' => ['nullable', 'string', 'max:255'],
             'filter_field' => ['nullable', 'string', 'max:100'],
             'filter_operator' => ['nullable', 'string', 'max:20'],
