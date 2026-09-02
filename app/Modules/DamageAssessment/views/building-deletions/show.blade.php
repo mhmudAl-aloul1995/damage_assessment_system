@@ -8,6 +8,8 @@
         $workflowSteps = $request->requires_field_engineer_approvals
             ? ['request_submitted', 'team_leader_approved', 'area_manager_approved', 'gis_approved', 'snapshot_verified', 'gis_units_deleted', 'gis_building_deleted', 'local_archived', 'completed']
             : ['request_submitted', 'gis_approved', 'snapshot_verified', 'gis_units_deleted', 'gis_building_deleted', 'local_archived', 'completed'];
+        $auditedBuildingUrl = url('damage-assessment/showAssessmentAudit/'.rawurlencode((string) $request->building_globalid));
+        $baseBuildingUrl = route('assessment.show', $request->building_globalid);
     @endphp
 
     @if (session('success'))
@@ -27,7 +29,22 @@
                 <h2>#DEL-{{ str_pad((string) $request->id, 5, '0', STR_PAD_LEFT) }}</h2>
                 <div class="text-muted">{{ $building?->building_name ?? __('ui.building_deletions.archived_building') }} | {{ $request->building_objectid }} | {{ $request->building_globalid }}</div>
             </div>
-            <div class="card-toolbar">
+            <div class="card-toolbar gap-2 flex-wrap">
+                <a href="{{ $auditedBuildingUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-light-primary">
+                    <i class="ki-duotone ki-eye fs-4 me-1"></i>
+                    {{ __('ui.building_deletions.view_audited_building') }}
+                </a>
+                @if ($building)
+                    <a href="{{ $baseBuildingUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-light-info">
+                        <i class="ki-duotone ki-eye fs-4 me-1"></i>
+                        {{ __('ui.building_deletions.view_base_building') }}
+                    </a>
+                @else
+                    <button type="button" class="btn btn-sm btn-light-secondary" disabled title="{{ __('ui.building_deletions.base_building_unavailable') }}">
+                        <i class="ki-duotone ki-eye-slash fs-4 me-1"></i>
+                        {{ __('ui.building_deletions.view_base_building') }}
+                    </button>
+                @endif
                 <span class="badge badge-light-primary fs-6">{{ __('ui.building_deletions.status_labels.'.$request->status->value) }}</span>
             </div>
         </div>
