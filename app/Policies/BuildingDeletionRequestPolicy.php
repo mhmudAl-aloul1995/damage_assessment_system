@@ -17,6 +17,7 @@ class BuildingDeletionRequestPolicy
     public function view(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
     {
         return $user->can('damage-assessment.building-deletion.view')
+            || $user->hasRole('Database Officer')
             || $user->id === $buildingDeletionRequest->requested_by
             || $this->reviewTeamLeader($user, $buildingDeletionRequest)
             || $this->reviewAreaManager($user, $buildingDeletionRequest)

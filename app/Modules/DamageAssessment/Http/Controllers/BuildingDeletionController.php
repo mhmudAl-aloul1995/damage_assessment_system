@@ -34,6 +34,7 @@ class BuildingDeletionController extends Controller
         $this->authorize('viewAny', BuildingDeletionRequest::class);
 
         $canViewAllRequests = $request->user()?->can('damage-assessment.building-deletion.view')
+            || $request->user()?->hasRole('Database Officer')
             || $request->user()?->hasRole('Gis Officer')
             || $request->user()?->can('damage-assessment.building-deletion.process');
         $teamLeaderFieldEngineerIds = $request->user()?->hasRole('Team Leader')

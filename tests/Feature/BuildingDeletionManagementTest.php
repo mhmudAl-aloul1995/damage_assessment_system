@@ -483,6 +483,46 @@ it('prevents database officers without the gis officer role from approving gis r
     expect($request->refresh()->status)->toBe(BuildingDeletionStatus::PendingGisReview);
 });
 
+it('allows database officers to see all building deletion requests without gis approval access', function (): void {
+    $firstRequester = User::factory()->create(['name' => 'First Requester']);
+    $secondRequester = User::factory()->create(['name' => 'Second Requester']);
+    $databaseOfficer = User::factory()->create();
+    $databaseOfficer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+
+    $firstRequest = buildingDeletionRequest($firstRequester, BuildingDeletionStatus::PendingGisReview);
+    $secondBuilding = Building::query()->create([
+        'objectid' => 101,
+        'globalid' => 'database-officer-visible-building',
+        'building_name' => 'Database Officer Visible Building',
+    ]);
+    $secondRequest = BuildingDeletionRequest::query()->create([
+        'building_id' => $secondBuilding->id,
+        'building_globalid' => $secondBuilding->globalid,
+        'building_objectid' => $secondBuilding->objectid,
+        'requested_by' => $secondRequester->id,
+        'reason' => 'Second requester deletion.',
+        'status' => BuildingDeletionStatus::PendingGisReview,
+    ]);
+
+    $this->actingAs($databaseOfficer)
+        ->get(route('building-deletions.index'))
+        ->assertOk()
+        ->assertSee('First Requester')
+        ->assertSee('Second Requester');
+
+    $this->actingAs($databaseOfficer)
+        ->get(route('building-deletions.show', $firstRequest))
+        ->assertOk()
+        ->assertSee('First Requester');
+
+    $this->actingAs($databaseOfficer)
+        ->post(route('building-deletions.review', $secondRequest), [
+            'decision' => 'approve',
+            'review_notes' => 'Database officer can view, not approve.',
+        ])
+        ->assertForbidden();
+});
+
 it('submits a building deletion request through ajax for the modal', function (): void {
     $user = User::factory()->create();
 
