@@ -53,4 +53,28 @@ it('lets database officers manage dashboard card items', function (): void {
         ->assertRedirect(route('admin.dashboard-cards.index', ['card' => $card->id]));
 
     expect($card->items()->where('key', 'new_dynamic_item')->exists())->toBeTrue();
+
+    $item = $card->items()->where('key', 'new_dynamic_item')->firstOrFail();
+
+    $this->actingAs($user)
+        ->put(route('admin.dashboard-cards.items.update', [$card, $item]), [
+            'key' => 'new_dynamic_item',
+            'title' => 'بند ديناميكي محدث',
+            'source_bucket' => 'buildingStats',
+            'stat_key' => 'completed',
+            'icon' => 'ki-check-circle',
+            'link_group' => 'buildings',
+            'link_key' => 'completed',
+            'calculation_type' => 'stat_key',
+            'filter_field' => 'field_status',
+            'filter_operator' => '=',
+            'filter_value' => 'COMPLETED',
+            'decimal_places' => 0,
+            'sort_order' => 100,
+            'is_active' => '1',
+        ])
+        ->assertRedirect(route('admin.dashboard-cards.index', ['card' => $card->id]));
+
+    expect($item->refresh()->title)->toBe('بند ديناميكي محدث')
+        ->and($item->sort_order)->toBe(100);
 });

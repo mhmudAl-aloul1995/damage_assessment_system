@@ -3,113 +3,359 @@
 @section('pageName', 'إدارة بطاقات لوحة التحكم')
 
 @section('content')
-    <div class="card card-flush mb-7">
-        <div class="card-header pt-7">
-            <div class="card-title">
-                <h3 class="fw-bold mb-0">إضافة بطاقة</h3>
-            </div>
-        </div>
-        <div class="card-body">
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
+    <style>
+        .dashboard-card-admin {
+            --admin-border: #e7edf5;
+            --admin-muted: #7e8aa2;
+            --admin-soft: #f6f9fc;
+        }
 
-            @if ($errors->any())
-                <div class="alert alert-danger">
-                    {{ $errors->first() }}
-                </div>
-            @endif
+        .dashboard-card-admin .toolbar-panel,
+        .dashboard-card-admin .work-panel {
+            border: 1px solid var(--admin-border);
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(33, 52, 84, .06);
+        }
 
-            <form method="POST" action="{{ route('admin.dashboard-cards.store') }}" class="row g-4 align-items-end">
-                @csrf
-                @include('admin.dashboard-cards.partials.card-fields', ['card' => null])
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">إضافة</button>
-                </div>
-            </form>
-        </div>
-    </div>
+        .dashboard-card-admin .card-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
 
-    <div class="row g-6">
-        @foreach ($cards as $card)
-            <div class="col-12">
-                <div class="card card-flush">
-                    <div class="card-header pt-7">
-                        <div class="card-title d-flex align-items-center gap-3">
-                            <span class="badge" style="background-color: {{ $card->color }};">&nbsp;</span>
-                            <h3 class="fw-bold mb-0">{{ __($card->title) }}</h3>
-                            @unless ($card->is_active)
-                                <span class="badge badge-light-warning">مخفية</span>
-                            @endunless
-                        </div>
-                        <div class="card-toolbar">
-                            <form method="POST" action="{{ route('admin.dashboard-cards.destroy', $card) }}"
-                                onsubmit="return confirm('حذف البطاقة سيحذف كل بنودها. هل أنت متأكد؟')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-light-danger">حذف البطاقة</button>
-                            </form>
-                        </div>
+        .dashboard-card-admin .picker-card {
+            display: block;
+            min-height: 112px;
+            border: 1px solid var(--admin-border);
+            border-radius: 12px;
+            padding: 14px;
+            color: inherit;
+            background: #fff;
+            transition: .18s ease;
+        }
+
+        .dashboard-card-admin .picker-card:hover,
+        .dashboard-card-admin .picker-card.is-active {
+            border-color: var(--card-color);
+            box-shadow: 0 12px 24px rgba(33, 52, 84, .08);
+            transform: translateY(-1px);
+        }
+
+        .dashboard-card-admin .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--card-color);
+            flex: 0 0 12px;
+        }
+
+        .dashboard-card-admin .muted-label {
+            color: var(--admin-muted);
+            font-size: 12px;
+        }
+
+        .dashboard-card-admin .item-row {
+            border: 1px solid var(--admin-border);
+            border-radius: 12px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .dashboard-card-admin .item-summary {
+            display: grid;
+            grid-template-columns: 42px minmax(190px, 1fr) minmax(150px, .7fr) minmax(130px, .6fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--admin-soft);
+        }
+
+        .dashboard-card-admin .item-details {
+            padding: 16px;
+        }
+
+        .dashboard-card-admin .code-pill {
+            display: inline-flex;
+            max-width: 100%;
+            padding: 5px 8px;
+            border-radius: 8px;
+            background: #eef3f8;
+            color: #526174;
+            font-size: 12px;
+            direction: ltr;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-card-admin .soft-box {
+            border: 1px dashed var(--admin-border);
+            border-radius: 12px;
+            background: #fbfdff;
+            padding: 18px;
+        }
+
+        @media (max-width: 991.98px) {
+            .dashboard-card-admin .item-summary {
+                grid-template-columns: 36px 1fr auto;
+            }
+
+            .dashboard-card-admin .item-summary .hide-mobile {
+                display: none;
+            }
+        }
+    </style>
+
+    <div class="dashboard-card-admin">
+        <div class="card card-flush toolbar-panel mb-7">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-4 mb-6">
+                    <div>
+                        <div class="muted-label mb-2">لوحة التحكم</div>
+                        <h2 class="fw-bold mb-2">إدارة البطاقات والبنود</h2>
+                        <div class="text-gray-600">اختر بطاقة للتعديل، ثم رتّب البنود والشروط والروابط من مكان واحد.</div>
                     </div>
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#create_dashboard_card">
+                        <i class="ki-duotone ki-plus fs-2"></i>
+                        بطاقة جديدة
+                    </button>
+                </div>
 
-                    <div class="card-body">
-                        <form method="POST" action="{{ route('admin.dashboard-cards.update', $card) }}" class="row g-4 align-items-end mb-8">
+                @if (session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+
+                @if ($errors->any())
+                    <div class="alert alert-danger">{{ $errors->first() }}</div>
+                @endif
+
+                <div class="collapse mb-7" id="create_dashboard_card">
+                    <div class="soft-box">
+                        <form method="POST" action="{{ route('admin.dashboard-cards.store') }}" class="row g-4 align-items-end">
                             @csrf
-                            @method('PUT')
-                            @include('admin.dashboard-cards.partials.card-fields', ['card' => $card])
+                            @include('admin.dashboard-cards.partials.card-fields', ['card' => null])
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-light-primary w-100">حفظ البطاقة</button>
-                            </div>
-                        </form>
-
-                        <div class="table-responsive mb-7">
-                            <table class="table align-middle table-row-dashed">
-                                <thead>
-                                    <tr class="text-gray-500 fw-bold fs-7">
-                                        <th>الترتيب</th>
-                                        <th>العنوان</th>
-                                        <th>المفتاح</th>
-                                        <th>مصدر القيمة</th>
-                                        <th>الشرط</th>
-                                        <th>الرابط</th>
-                                        <th>الحالة</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($card->items as $item)
-                                        <tr>
-                                            <form method="POST" action="{{ route('admin.dashboard-cards.items.update', [$card, $item]) }}">
-                                                @csrf
-                                                @method('PUT')
-                                                @include('admin.dashboard-cards.partials.item-fields', ['item' => $item])
-                                                <td class="text-end">
-                                                    <button type="submit" class="btn btn-sm btn-light-primary mb-2">حفظ</button>
-                                            </form>
-                                                    <form method="POST" action="{{ route('admin.dashboard-cards.items.destroy', [$card, $item]) }}"
-                                                        onsubmit="return confirm('هل تريد حذف هذا البند؟')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-light-danger">حذف</button>
-                                                    </form>
-                                                </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <form method="POST" action="{{ route('admin.dashboard-cards.items.store', $card) }}" class="row g-3 align-items-end">
-                            @csrf
-                            <div class="col-12 fw-bold">إضافة بند جديد</div>
-                            @include('admin.dashboard-cards.partials.item-create-fields')
-                            <div class="col-md-1">
                                 <button type="submit" class="btn btn-primary w-100">إضافة</button>
                             </div>
                         </form>
                     </div>
                 </div>
+
+                <div class="card-picker">
+                    @foreach ($cards as $card)
+                        <a href="{{ route('admin.dashboard-cards.index', ['card' => $card->id]) }}"
+                            class="picker-card text-decoration-none {{ $selectedCard?->is($card) ? 'is-active' : '' }}"
+                            style="--card-color: {{ $card->color }};">
+                            <div class="d-flex align-items-center gap-2 mb-4">
+                                <span class="color-dot"></span>
+                                <span class="fw-bold text-gray-900">{{ __($card->title) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-end">
+                                <div>
+                                    <div class="muted-label">عدد البنود</div>
+                                    <div class="fs-2 fw-bold text-gray-900">{{ $card->items->count() }}</div>
+                                </div>
+                                @unless ($card->is_active)
+                                    <span class="badge badge-light-warning">مخفية</span>
+                                @else
+                                    <span class="badge badge-light-success">مفعلة</span>
+                                @endunless
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
             </div>
-        @endforeach
+        </div>
+
+        @if ($selectedCard)
+            <div class="row g-7">
+                <div class="col-xl-4">
+                    <div class="card card-flush work-panel">
+                        <div class="card-header pt-7">
+                            <div class="card-title d-flex align-items-center gap-3">
+                                <span class="color-dot" style="--card-color: {{ $selectedCard->color }};"></span>
+                                <h3 class="fw-bold mb-0">إعدادات البطاقة</h3>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ route('admin.dashboard-cards.update', $selectedCard) }}" class="row g-4 align-items-end">
+                                @csrf
+                                @method('PUT')
+                                @include('admin.dashboard-cards.partials.card-fields', ['card' => $selectedCard])
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary w-100">حفظ إعدادات البطاقة</button>
+                                </div>
+                            </form>
+
+                            <div class="separator my-7"></div>
+
+                            <form method="POST" action="{{ route('admin.dashboard-cards.destroy', $selectedCard) }}"
+                                onsubmit="return confirm('حذف البطاقة سيحذف كل بنودها. هل أنت متأكد؟')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-light-danger w-100">حذف البطاقة</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-8">
+                    <div class="card card-flush work-panel">
+                        <div class="card-header pt-7">
+                            <div class="card-title">
+                                <div>
+                                    <h3 class="fw-bold mb-1">بنود {{ __($selectedCard->title) }}</h3>
+                                    <div class="text-gray-600 fs-7">الترتيب، مصدر الرقم، الشرط، والرابط الخاص بكل بند.</div>
+                                </div>
+                            </div>
+                            <div class="card-toolbar">
+                                <button class="btn btn-light-primary" type="button" data-bs-toggle="collapse" data-bs-target="#create_dashboard_card_item">
+                                    <i class="ki-duotone ki-plus fs-2"></i>
+                                    بند جديد
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="collapse mb-6" id="create_dashboard_card_item">
+                                <div class="soft-box">
+                                    <form method="POST" action="{{ route('admin.dashboard-cards.items.store', $selectedCard) }}" class="row g-3 align-items-end">
+                                        @csrf
+                                        @include('admin.dashboard-cards.partials.item-create-fields')
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-primary w-100">إضافة البند</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column gap-4">
+                                @forelse ($selectedCard->items as $item)
+                                    <div class="item-row">
+                                        <div class="item-summary">
+                                            <div class="fw-bold text-gray-700 text-center">#{{ $item->sort_order }}</div>
+                                            <div>
+                                                <div class="fw-bold text-gray-900 mb-1">{{ __($item->title) }}</div>
+                                                <span class="code-pill">{{ $item->key }}</span>
+                                            </div>
+                                            <div class="hide-mobile">
+                                                <div class="muted-label mb-1">مصدر الرقم</div>
+                                                <span class="code-pill">{{ $item->source_bucket }}.{{ $item->stat_key }}</span>
+                                            </div>
+                                            <div class="hide-mobile">
+                                                <div class="muted-label mb-1">الحالة</div>
+                                                @if ($item->is_active)
+                                                    <span class="badge badge-light-success">مفعل</span>
+                                                @else
+                                                    <span class="badge badge-light-warning">مخفي</span>
+                                                @endif
+                                            </div>
+                                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#dashboard_item_{{ $item->id }}">
+                                                تعديل
+                                            </button>
+                                        </div>
+
+                                        <div class="collapse" id="dashboard_item_{{ $item->id }}">
+                                            <div class="item-details">
+                                                <form method="POST" action="{{ route('admin.dashboard-cards.items.update', [$selectedCard, $item]) }}" class="row g-4 align-items-end">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <input type="hidden" name="calculation_type" value="{{ $item->calculation_type }}">
+                                                    <input type="hidden" name="source_model" value="{{ $item->source_model }}">
+
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">الترتيب</label>
+                                                        <input type="number" name="sort_order" class="form-control" min="0" value="{{ old('sort_order', $item->sort_order) }}">
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">العنوان</label>
+                                                        <input type="text" name="title" class="form-control" value="{{ old('title', $item->title) }}" required>
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">المفتاح</label>
+                                                        <input type="text" name="key" class="form-control" value="{{ old('key', $item->key) }}" required>
+                                                    </div>
+
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">مصدر القيمة</label>
+                                                        <select name="source_bucket" class="form-select" required>
+                                                            @foreach ($sourceBuckets as $sourceBucket)
+                                                                <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $item->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">stat_key</label>
+                                                        <input type="text" name="stat_key" class="form-control" value="{{ old('stat_key', $item->stat_key) }}" required>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">الأيقونة</label>
+                                                        <input type="text" name="icon" class="form-control" value="{{ old('icon', $item->icon) }}" required>
+                                                    </div>
+
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">حقل الشرط</label>
+                                                        <input type="text" name="filter_field" class="form-control" value="{{ old('filter_field', $item->filter_field) }}" placeholder="field">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">عامل الشرط</label>
+                                                        <select name="filter_operator" class="form-select">
+                                                            <option value="">بدون</option>
+                                                            @foreach ($operators as $operator)
+                                                                <option value="{{ $operator }}" @selected(old('filter_operator', $item->filter_operator) === $operator)>{{ $operator }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">قيمة الشرط</label>
+                                                        <input type="text" name="filter_value" class="form-control" value="{{ old('filter_value', $item->filter_value) }}" placeholder="value">
+                                                    </div>
+
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">مجموعة الرابط</label>
+                                                        <input type="text" name="link_group" class="form-control" value="{{ old('link_group', $item->link_group) }}" placeholder="group">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">مفتاح الرابط</label>
+                                                        <input type="text" name="link_key" class="form-control" value="{{ old('link_key', $item->link_key) }}" placeholder="key">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">لاحقة</label>
+                                                        <input type="text" name="value_suffix" class="form-control" value="{{ old('value_suffix', $item->value_suffix) }}">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label">كسور</label>
+                                                        <input type="number" name="decimal_places" class="form-control" min="0" max="6" value="{{ old('decimal_places', $item->decimal_places) }}">
+                                                    </div>
+
+                                                    <div class="col-md-4">
+                                                        <input type="hidden" name="is_active" value="0">
+                                                        <label class="form-check form-switch form-check-custom form-check-solid mt-8">
+                                                            <input class="form-check-input" type="checkbox" name="is_active" value="1" @checked(old('is_active', $item->is_active))>
+                                                            <span class="form-check-label">مفعل</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <button type="submit" class="btn btn-primary w-100">حفظ البند</button>
+                                                    </div>
+                                                </form>
+
+                                                <form method="POST" action="{{ route('admin.dashboard-cards.items.destroy', [$selectedCard, $item]) }}"
+                                                    class="mt-3" onsubmit="return confirm('هل تريد حذف هذا البند؟')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-light-danger">حذف البند</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="alert alert-info mb-0">لا توجد بنود لهذه البطاقة بعد.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="alert alert-info">لا توجد بطاقات بعد. أضف البطاقة الأولى للبدء.</div>
+        @endif
     </div>
 @endsection

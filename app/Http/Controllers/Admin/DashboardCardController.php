@@ -11,6 +11,7 @@ use App\Http\Requests\Admin\UpdateDashboardCardItemRequest;
 use App\Http\Requests\Admin\UpdateDashboardCardRequest;
 use App\Models\DashboardCard;
 use App\Models\DashboardCardItem;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -18,12 +19,16 @@ class DashboardCardController extends Controller
 {
     public function index(): View
     {
+        $cards = DashboardCard::query()
+            ->with('items')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+        $selectedCard = $cards->firstWhere('id', (int) request('card')) ?? $cards->first();
+
         return view('admin.dashboard-cards.index', [
-            'cards' => DashboardCard::query()
-                ->with('items')
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get(),
+            'cards' => $cards,
+            'selectedCard' => $selectedCard,
             'sourceBuckets' => $this->sourceBuckets(),
             'statKeys' => $this->statKeys(),
             'operators' => $this->operators(),
@@ -145,7 +150,7 @@ class DashboardCardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function cardData(StoreDashboardCardRequest $request): array
+    private function cardData(FormRequest $request): array
     {
         return [
             ...$request->safe()->except('is_active'),
@@ -157,7 +162,7 @@ class DashboardCardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function itemData(StoreDashboardCardItemRequest $request): array
+    private function itemData(FormRequest $request): array
     {
         return [
             ...$request->safe()->except(['is_active', 'decimal_places', 'sort_order']),
