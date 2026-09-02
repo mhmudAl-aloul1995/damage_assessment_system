@@ -12,6 +12,7 @@ use App\Models\Building;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
+use App\Models\DashboardCard;
 use App\Models\EditAssessment;
 use App\Models\Filter;
 use App\Models\HousingUnit;
@@ -221,6 +222,7 @@ class DamageAssessmentController extends Controller
         $governorates = $this->dashboardGovernorates();
         $neighborhoods = $this->dashboardNeighborhoods();
         $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedNeighborhood');
+        $dashboardCards = $this->dashboardCards();
 
         return View::make(
             'damage-assessment::dashboard.damageAssessment',
@@ -236,6 +238,7 @@ class DamageAssessmentController extends Controller
                 'governorates',
                 'neighborhoods',
                 'dashboardFilters',
+                'dashboardCards',
             )
         );
     }
@@ -1138,6 +1141,20 @@ class DamageAssessmentController extends Controller
         return $targetModelClass::query()->exists()
             ? $targetModelClass::query()
             : $fallbackModelClass::query();
+    }
+
+    private function dashboardCards(): Collection
+    {
+        if (! Schema::hasTable('dashboard_cards')) {
+            return collect();
+        }
+
+        return DashboardCard::query()
+            ->with(['items' => fn ($query) => $query->where('is_active', true)])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
     }
 
     private function dashboardCoreStatsCacheKey(Request $request): string

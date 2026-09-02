@@ -963,6 +963,9 @@
 		</div>
 	</div>
 
+	@include('damage-assessment::dashboard.partials.summary-cards')
+
+	@if (false)
 	<div class="row g-5 g-xl-8 damage-dashboard-stats">
 		<!--begin::Col-->
 		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col mb-5">
@@ -2240,6 +2243,7 @@
 			</div>
 		</div>
 	</div>
+	@endif
 
 
 	<!-- Summary Table Row -->

@@ -444,6 +444,7 @@ return [
         'active_patterns' => [
             'user*',
             'admin/team-leader-field-engineers*',
+            'admin/dashboard-cards*',
             'admin/local-database-import*',
             'admin/artisan-commands*',
             'login-logs*',
@@ -478,6 +479,12 @@ return [
                 'title' => 'menu.user_management.team_leader_field_engineers',
                 'url' => 'admin/team-leader-field-engineers',
                 'pattern' => 'admin/team-leader-field-engineers*',
+                'roles' => ['Database Officer'],
+            ],
+            [
+                'title' => 'إدارة بطاقات لوحة التحكم',
+                'url' => 'admin/dashboard-cards',
+                'pattern' => 'admin/dashboard-cards*',
                 'roles' => ['Database Officer'],
             ],
             [

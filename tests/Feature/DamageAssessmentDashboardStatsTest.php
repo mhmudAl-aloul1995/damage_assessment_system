@@ -10,6 +10,7 @@ use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\services\ArcgisService;
 use Carbon\Carbon;
+use Database\Seeders\DashboardCardSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ beforeEach(function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    $this->seed(DashboardCardSeeder::class);
 });
 
 afterEach(function () {

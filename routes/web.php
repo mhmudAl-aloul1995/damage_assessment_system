@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\ArcgisLayerSyncController;
 use App\Http\Controllers\Admin\ArtisanCommandController;
+use App\Http\Controllers\Admin\DashboardCardController;
 use App\Http\Controllers\Admin\LocalDatabaseImportController;
 use App\Http\Controllers\Admin\TeamLeaderFieldEngineerController;
 use App\Http\Controllers\LocaleController;
@@ -253,6 +254,19 @@ Route::middleware('auth')->group(function () {
     Route::post('/system-logs/sync-arcgis-layers', [ArcgisLayerSyncController::class, 'store'])
         ->middleware('role:Database Officer')
         ->name('system.logs.sync-arcgis-layers');
+
+    Route::prefix('admin/dashboard-cards')
+        ->middleware('role:Database Officer')
+        ->name('admin.dashboard-cards.')
+        ->group(function () {
+            Route::post('/{dashboardCard}/items', [DashboardCardController::class, 'storeItem'])->name('items.store');
+            Route::put('/{dashboardCard}/items/{dashboardCardItem}', [DashboardCardController::class, 'updateItem'])->name('items.update');
+            Route::delete('/{dashboardCard}/items/{dashboardCardItem}', [DashboardCardController::class, 'destroyItem'])->name('items.destroy');
+        });
+
+    Route::resource('admin/dashboard-cards', DashboardCardController::class)
+        ->middleware('role:Database Officer')
+        ->names('admin.dashboard-cards');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

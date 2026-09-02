@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             PublicBuildingFilterSeeder::class,
             CsoSurveyFilterSeeder::class,
             RolesAndPermissionsSeeder::class,
+            DashboardCardSeeder::class,
             BuildingSeeder::class,
             HousingSeeder::class,
         ]);
