@@ -357,7 +357,7 @@
 
                                                     <div class="col-md-4">
                                                         <label class="form-label">مصدر العدّ</label>
-                                                        <select name="source_bucket" class="form-select" required>
+                                                        <select name="source_bucket" class="form-select ltr-input js-source-bucket" required>
                                                             @foreach ($sourceBuckets as $sourceBucket)
                                                                 <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $item->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
                                                             @endforeach
@@ -374,7 +374,14 @@
 
                                                     <div class="col-md-4">
                                                         <label class="form-label">حقل الشرط</label>
-                                                        <input type="text" name="filter_field" class="form-control" value="{{ old('filter_field', $item->filter_field) }}" placeholder="field">
+                                                        <select name="filter_field" class="form-select ltr-input js-filter-field" data-selected="{{ old('filter_field', $item->filter_field) }}">
+                                                            <option value="">بدون شرط</option>
+                                                            @foreach ($filterFields as $sourceBucket => $fields)
+                                                                @foreach ($fields as $field)
+                                                                    <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}" @selected(old('filter_field', $item->filter_field) === $field)>{{ $field }}</option>
+                                                                @endforeach
+                                                            @endforeach
+                                                        </select>
                                                     </div>
                                                     <div class="col-md-3">
                                                         <label class="form-label">عامل الشرط</label>
@@ -440,4 +447,46 @@
             <div class="alert alert-info">لا توجد بطاقات بعد. أضف البطاقة الأولى للبدء.</div>
         @endif
     </div>
+
+    <script>
+        document.querySelectorAll('.dashboard-card-admin form').forEach((form) => {
+            const sourceBucket = form.querySelector('.js-source-bucket');
+            const filterField = form.querySelector('.js-filter-field');
+
+            if (!sourceBucket || !filterField) {
+                return;
+            }
+
+            const syncFilterFields = () => {
+                const selectedSource = sourceBucket.value;
+                const selectedField = filterField.dataset.selected || filterField.value;
+                let selectedFieldStillAvailable = false;
+
+                filterField.querySelectorAll('option').forEach((option) => {
+                    if (!option.dataset.sourceBucket) {
+                        option.hidden = false;
+                        option.disabled = false;
+                        return;
+                    }
+
+                    const isSameSource = option.dataset.sourceBucket === selectedSource;
+                    option.hidden = !isSameSource;
+                    option.disabled = !isSameSource;
+
+                    if (isSameSource && option.value === selectedField) {
+                        selectedFieldStillAvailable = true;
+                    }
+                });
+
+                filterField.value = selectedFieldStillAvailable ? selectedField : '';
+                filterField.dataset.selected = filterField.value;
+            };
+
+            sourceBucket.addEventListener('change', syncFilterFields);
+            filterField.addEventListener('change', () => {
+                filterField.dataset.selected = filterField.value;
+            });
+            syncFilterFields();
+        });
+    </script>
 @endsection

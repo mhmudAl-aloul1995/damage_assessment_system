@@ -31,7 +31,8 @@ it('lets database officers manage dashboard card items', function (): void {
         ->assertOk()
         ->assertSee('إدارة بطاقات لوحة التحكم')
         ->assertSee('Buildings')
-        ->assertSee('ui.damage_dashboard.fully_damaged');
+        ->assertSee('ui.damage_dashboard.fully_damaged')
+        ->assertSee('field_status');
 
     $this->actingAs($user)
         ->post(route('admin.dashboard-cards.items.store', $card), [

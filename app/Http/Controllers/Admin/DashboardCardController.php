@@ -13,6 +13,7 @@ use App\Models\DashboardCard;
 use App\Models\DashboardCardItem;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class DashboardCardController extends Controller
@@ -31,6 +32,7 @@ class DashboardCardController extends Controller
             'selectedCard' => $selectedCard,
             'sourceBuckets' => $this->sourceBuckets(),
             'statKeys' => $this->statKeys(),
+            'filterFields' => $this->filterFields(),
             'operators' => $this->operators(),
         ]);
     }
@@ -136,6 +138,37 @@ class DashboardCardController extends Controller
             'publicBuildingStats' => ['total_surveys', 'damaged_buildings', 'total_units', 'municipalities', 'neighborhoods', 'assigned_staff', 'occupied_buildings', 'bodies_present', 'uxo_present'],
             'roadFacilityStats' => ['total_surveys', 'damaged_roads', 'undamaged_roads', 'completed_road_length_km', 'total_items', 'municipalities', 'neighborhoods', 'potholes_locations', 'obstacle_locations', 'buried_bodies_locations', 'uxo_locations'],
             'csoSurveyStats' => ['total_surveys', 'completed', 'damaged_buildings', 'total_organizations', 'total_units', 'without_units', 'without_organization', 'municipalities', 'neighborhoods', 'assessment_blocked'],
+        ];
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    private function filterFields(): array
+    {
+        return collect($this->sourceTables())
+            ->mapWithKeys(fn (string $table, string $sourceBucket): array => [
+                $sourceBucket => Schema::hasTable($table)
+                    ? collect(Schema::getColumnListing($table))
+                        ->reject(fn (string $column): bool => in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at'], true))
+                        ->values()
+                        ->all()
+                    : [],
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function sourceTables(): array
+    {
+        return [
+            'buildingStats' => 'buildings',
+            'unitStats' => 'housing_units',
+            'publicBuildingStats' => 'public_building_surveys',
+            'roadFacilityStats' => 'road_facility_surveys',
+            'csoSurveyStats' => 'cso_surveys',
         ];
     }
 

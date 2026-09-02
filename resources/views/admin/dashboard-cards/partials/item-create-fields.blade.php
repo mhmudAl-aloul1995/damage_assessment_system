@@ -17,7 +17,7 @@
 
 <div class="col-md-4">
     <label class="form-label">مصدر العدّ</label>
-    <select name="source_bucket" class="form-select ltr-input" required>
+    <select name="source_bucket" class="form-select ltr-input js-source-bucket" required>
         @foreach ($sourceBuckets as $sourceBucket)
             <option value="{{ $sourceBucket }}">{{ $sourceBucket }}</option>
         @endforeach
@@ -42,7 +42,14 @@
 </div>
 <div class="col-md-4">
     <label class="form-label">حقل الشرط</label>
-    <input type="text" name="filter_field" class="form-control ltr-input" placeholder="field">
+    <select name="filter_field" class="form-select ltr-input js-filter-field">
+        <option value="">بدون شرط</option>
+        @foreach ($filterFields as $sourceBucket => $fields)
+            @foreach ($fields as $field)
+                <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}">{{ $field }}</option>
+            @endforeach
+        @endforeach
+    </select>
 </div>
 
 <div class="col-md-3">
