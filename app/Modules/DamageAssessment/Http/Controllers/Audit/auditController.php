@@ -5406,6 +5406,10 @@ COALESCE(
             return false;
         }
 
+        if ($user->hasAnyRole(['Auditing Supervisor', 'Database Officer'])) {
+            return false;
+        }
+
         return $user->hasRole('Audit Reviewer')
             || in_array(trim($user->name), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES, true)
             || in_array(trim((string) $user->id_no), self::TEMPORARY_HIDDEN_AUDIT_ACTION_USER_ID_NUMBERS, true);

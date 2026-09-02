@@ -1343,41 +1343,33 @@ it('filters audit buildings by field status and completes field status on arcgis
     });
 });
 
-it('hides audit management action buttons for temporary excepted users only', function () {
-    $role = Role::query()->create([
-        'name' => 'Database Officer',
-        'guard_name' => 'web',
-    ]);
-    Role::query()->create([
-        'name' => 'QC/QA Engineer',
-        'guard_name' => 'web',
-    ]);
-    Role::query()->create([
-        'name' => 'Legal Auditor',
-        'guard_name' => 'web',
-    ]);
+it('hides audit management action buttons for temporary excepted reviewers only', function () {
+    $reviewerRole = Role::findOrCreate('Audit Reviewer', 'web');
+    $auditingSupervisorRole = Role::findOrCreate('Auditing Supervisor', 'web');
+    Role::findOrCreate('QC/QA Engineer', 'web');
+    Role::findOrCreate('Legal Auditor', 'web');
 
     $exceptedUser = User::factory()->create([
         'name' => 'ياسمين ماهر مصطفى ابومدللة',
     ]);
-    $exceptedUser->assignRole($role);
+    $exceptedUser->assignRole($reviewerRole);
 
     $identityExceptedUser = User::factory()->create([
         'id_no' => '800409062',
     ]);
-    $identityExceptedUser->assignRole($role);
+    $identityExceptedUser->assignRole($reviewerRole);
 
-    $regularUser = User::factory()->create([
-        'name' => 'Regular Database Officer',
+    $auditingSupervisor = User::factory()->create([
+        'name' => 'ياسمين ماهر مصطفى ابومدللة',
     ]);
-    $regularUser->assignRole($role);
+    $auditingSupervisor->assignRole($auditingSupervisorRole);
 
     $hiddenActionIds = [
         'id="btn_final_approve"',
-        'id="btn_undp_final_approve"',
         'id="btn_assign_to_lawyer"',
         'id="btn_assign_to_engineer"',
         'id="btn_import_final_approve"',
+        'id="toggle_select_column"',
     ];
 
     $response = $this->actingAs($exceptedUser)
@@ -1396,11 +1388,22 @@ it('hides audit management action buttons for temporary excepted users only', fu
         $response->assertDontSee($buttonId, false);
     }
 
-    $response = $this->actingAs($regularUser)
+    $response = $this->actingAs($auditingSupervisor)
         ->get(route('audit.index'))
         ->assertOk();
 
-    foreach ($hiddenActionIds as $buttonId) {
+    foreach ([
+        'id="btn_final_approve"',
+        'التقارير والتصفية',
+        'التعيينات',
+        'id="btn_assign_to_lawyer"',
+        'id="btn_assign_to_engineer"',
+        'تعديل جماعي',
+        'اعتمادات إضافية',
+        'id="btn_import_final_approve"',
+        'العرض والسجلات',
+        'id="toggle_select_column"',
+    ] as $buttonId) {
         $response->assertSee($buttonId, false);
     }
 });
