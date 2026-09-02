@@ -11,6 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('dashboard_cards')) {
+            Schema::create('dashboard_cards', function (Blueprint $table) {
+                $table->id();
+                $table->string('key')->unique();
+                $table->string('title');
+                $table->string('subtitle')->nullable();
+                $table->string('source_bucket');
+                $table->string('total_stat_key');
+                $table->string('icon')->default('ki-category');
+                $table->string('color', 20)->default('#315f72');
+                $table->unsignedSmallInteger('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->json('options')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        Schema::dropIfExists('dashboard_card_items');
+
         Schema::create('dashboard_card_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('dashboard_card_id')->constrained()->cascadeOnDelete();

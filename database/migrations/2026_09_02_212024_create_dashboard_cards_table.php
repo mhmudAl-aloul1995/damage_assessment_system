@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('dashboard_cards')) {
+            return;
+        }
+
         Schema::create('dashboard_cards', function (Blueprint $table) {
             $table->id();
             $table->string('key')->unique();
