@@ -31,6 +31,7 @@ it('renders and exports the building productivity report with totals and charts'
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-10 10:00:00',
         'editdate' => '2026-04-10 10:00:00',
+        'submission_date' => '2026-04-10 10:00:00',
     ]);
 
     Building::query()->create([
@@ -42,6 +43,7 @@ it('renders and exports the building productivity report with totals and charts'
         'field_status' => 'pending',
         'creationdate' => '2026-04-11 10:00:00',
         'editdate' => '2026-04-11 10:00:00',
+        'submission_date' => '2026-04-11 10:00:00',
     ]);
 
     Building::query()->create([
@@ -53,6 +55,7 @@ it('renders and exports the building productivity report with totals and charts'
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-12 10:00:00',
         'editdate' => '2026-04-12 10:00:00',
+        'submission_date' => '2026-04-12 10:00:00',
     ]);
 
     Building::query()->create([
@@ -62,8 +65,9 @@ it('renders and exports the building productivity report with totals and charts'
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Zeitoun',
         'field_status' => 'COMPLETED',
-        'creationdate' => '2026-03-01 10:00:00',
-        'editdate' => '2026-03-01 10:00:00',
+        'creationdate' => '2026-04-15 10:00:00',
+        'editdate' => '2026-04-15 10:00:00',
+        'submission_date' => '2026-03-01 10:00:00',
     ]);
 
     $response = $this->actingAs($user)->get(route('reports.building-productivity.index', [

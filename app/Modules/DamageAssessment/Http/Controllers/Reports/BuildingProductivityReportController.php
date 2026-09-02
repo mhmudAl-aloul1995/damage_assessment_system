@@ -19,7 +19,7 @@ class BuildingProductivityReportController extends Controller
     /**
      * Change this constant if the report date should use another buildings column.
      */
-    private const DATE_FIELD = 'editdate';
+    private const DATE_FIELD = 'submission_date';
 
     /**
      * Values treated as completed in buildings.field_status.
