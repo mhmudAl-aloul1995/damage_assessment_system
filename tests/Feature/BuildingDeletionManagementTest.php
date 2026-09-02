@@ -41,6 +41,8 @@ it('opens new building deletion requests from an ajax modal on the index page', 
         ->assertOk()
         ->assertSee('data-building-deletion-open-modal', false)
         ->assertSee('buildingDeletionRequestModal')
+        ->assertSee('building-deletions-pagination')
+        ->assertSee('pagination', false)
         ->assertSee('No building deletion requests have been submitted yet.')
         ->assertDontSee('href="'.route('building-deletions.create').'"', false);
 });

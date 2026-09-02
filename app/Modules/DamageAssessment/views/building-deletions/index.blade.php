@@ -4,6 +4,36 @@
 @section('pageName', __('ui.building_deletions.title'))
 
 @section('content')
+    <style>
+        .building-deletions-pagination {
+            overflow-x: auto;
+            padding-top: .75rem;
+        }
+
+        .building-deletions-pagination .pagination {
+            align-items: center;
+            flex-wrap: wrap;
+            gap: .25rem;
+            justify-content: flex-end;
+            margin-bottom: 0;
+        }
+
+        .building-deletions-pagination .page-link {
+            align-items: center;
+            display: inline-flex;
+            justify-content: center;
+            min-height: 2.25rem;
+            min-width: 2.25rem;
+        }
+
+        .building-deletions-pagination svg {
+            height: 1rem;
+            max-height: 1rem;
+            max-width: 1rem;
+            width: 1rem;
+        }
+    </style>
+
     <div class="card card-flush">
         <div class="card-header pt-7">
             <div class="card-title">
@@ -63,7 +93,9 @@
                 </table>
             </div>
 
-            {{ $requests->links() }}
+            <div class="building-deletions-pagination">
+                {{ $requests->links('pagination::bootstrap-5') }}
+            </div>
         </div>
     </div>
 
