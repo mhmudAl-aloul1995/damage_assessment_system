@@ -2,6 +2,7 @@
 
 namespace App\services;
 
+use App\Jobs\SyncAssessmentAssignmentToSourceArcgis;
 use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\AssessmentEditHistory;
 use App\Models\Building;
@@ -88,6 +89,7 @@ class AssessmentEditService
             ]);
 
             $this->syncAuditedCacheRow($type, $record, $fieldName, $newValue);
+            $this->syncSourceAssignmentRow($record, $fieldName, $newValue);
 
             return [
                 'changed' => true,
@@ -100,6 +102,12 @@ class AssessmentEditService
 
         if ($result['changed'] && $this->shouldSyncInlineAuditEditToArcgis()) {
             SyncAuditEditToArcgis::dispatch($type, $globalId, $fieldName, $newValue)
+                ->afterCommit()
+                ->onQueue('arcgis');
+        }
+
+        if ($result['changed'] && $this->shouldSyncSourceAssignmentToArcgis($fieldName)) {
+            SyncAssessmentAssignmentToSourceArcgis::dispatch($type, $globalId, $newValue)
                 ->afterCommit()
                 ->onQueue('arcgis');
         }
@@ -188,6 +196,17 @@ class AssessmentEditService
         DB::table($table)->insert($row);
     }
 
+    private function syncSourceAssignmentRow(Model $record, string $fieldName, mixed $newValue): void
+    {
+        if ($fieldName !== 'assignedto') {
+            return;
+        }
+
+        $record->forceFill([
+            'assignedto' => $newValue,
+        ])->saveQuietly();
+    }
+
     private function returnRequestId(string $type, Model $record): ?int
     {
         $building = null;
@@ -226,6 +245,23 @@ class AssessmentEditService
     private function shouldSyncInlineAuditEditToArcgis(): bool
     {
         foreach (['username', 'password', 'referer', 'target_service', 'source_service'] as $key) {
+            $value = config('services.arcgis.'.$key);
+
+            if (! is_string($value) || trim($value) === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function shouldSyncSourceAssignmentToArcgis(string $fieldName): bool
+    {
+        if ($fieldName !== 'assignedto') {
+            return false;
+        }
+
+        foreach (['username', 'password', 'referer', 'source_service'] as $key) {
             $value = config('services.arcgis.'.$key);
 
             if (! is_string($value) || trim($value) === '') {

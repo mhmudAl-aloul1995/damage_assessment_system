@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SyncAssessmentAssignmentToSourceArcgis;
 use App\Jobs\SyncAuditEditToArcgis;
 use App\Models\Assessment;
 use App\Models\AssessmentEditHistory;
@@ -17,6 +18,7 @@ use App\Models\HousingStatusHistory;
 use App\Models\HousingUnit;
 use App\Models\User;
 use App\Modules\DamageAssessment\Http\Controllers\Audit\auditController;
+use App\services\ArcgisAuditedUploadService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -153,6 +155,17 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     Queue::fake();
     Cache::put('damage_dashboard.stats_version', 7);
 
+    $arcgisConfig = [
+        'username',
+        'password',
+        'referer',
+        'target_service',
+        'source_service',
+    ];
+    $originalArcgisConfig = collect($arcgisConfig)
+        ->mapWithKeys(fn (string $key): array => [$key => config('services.arcgis.'.$key)])
+        ->all();
+
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
     config()->set('services.arcgis.referer', 'http://localhost');
@@ -227,6 +240,142 @@ it('returns inline edit metadata and field history when saving an audit edit', f
     });
 
     expect(Cache::get('damage_dashboard.stats_version'))->toBe(8);
+
+    foreach ($originalArcgisConfig as $key => $value) {
+        config()->set('services.arcgis.'.$key, $value);
+    }
+});
+
+it('updates local source rows and queues source arcgis sync when changing the researcher name', function () {
+    Queue::fake();
+
+    $arcgisConfig = [
+        'username',
+        'password',
+        'referer',
+        'target_service',
+        'source_service',
+    ];
+    $originalArcgisConfig = collect($arcgisConfig)
+        ->mapWithKeys(fn (string $key): array => [$key => config('services.arcgis.'.$key)])
+        ->all();
+
+    try {
+        config()->set('services.arcgis.username', 'tester');
+        config()->set('services.arcgis.password', 'secret');
+        config()->set('services.arcgis.referer', 'http://localhost');
+        config()->set('services.arcgis.target_service', 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer');
+        config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+
+        $user = User::factory()->create();
+
+        $building = Building::query()->create([
+            'objectid' => 5603,
+            'globalid' => 'building-inline-assignedto-sync',
+            'assignedto' => 'old.researcher',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('assessment.inline.update'), [
+                'type' => 'building_table',
+                'globalid' => $building->globalid,
+                'field' => 'assignedto',
+                'value' => 'new.researcher',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', true);
+
+        expect($building->refresh()->assignedto)->toBe('new.researcher');
+
+        $this->assertDatabaseHas('edit_assessments', [
+            'global_id' => $building->globalid,
+            'type' => 'building_table',
+            'field_name' => 'assignedto',
+            'field_value' => 'new.researcher',
+            'user_id' => $user->id,
+        ]);
+
+        Queue::assertPushed(SyncAuditEditToArcgis::class, function (SyncAuditEditToArcgis $job) use ($building): bool {
+            return $job->type === 'building_table'
+                && $job->globalId === $building->globalid
+                && $job->fieldName === 'assignedto'
+                && $job->fieldValue === 'new.researcher';
+        });
+
+        Queue::assertPushed(SyncAssessmentAssignmentToSourceArcgis::class, function (SyncAssessmentAssignmentToSourceArcgis $job) use ($building): bool {
+            return $job->type === 'building_table'
+                && $job->globalId === $building->globalid
+                && $job->fieldValue === 'new.researcher';
+        });
+    } finally {
+        foreach ($originalArcgisConfig as $key => $value) {
+            config()->set('services.arcgis.'.$key, $value);
+        }
+    }
+});
+
+it('syncs researcher name changes to the source arcgis layer', function () {
+    $arcgisConfig = [
+        'username',
+        'password',
+        'referer',
+        'source_service',
+        'source_buildings_layer',
+    ];
+    $originalArcgisConfig = collect($arcgisConfig)
+        ->mapWithKeys(fn (string $key): array => [$key => config('services.arcgis.'.$key)])
+        ->all();
+
+    try {
+        config()->set('services.arcgis.username', 'tester');
+        config()->set('services.arcgis.password', 'secret');
+        config()->set('services.arcgis.referer', 'http://localhost');
+        config()->set('services.arcgis.source_service', 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer');
+        config()->set('services.arcgis.source_buildings_layer', 10);
+
+        $building = Building::query()->create([
+            'objectid' => 5604,
+            'globalid' => 'building-source-assignedto-sync',
+            'assignedto' => 'old.researcher',
+        ]);
+
+        Http::fake([
+            'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+                'token' => 'fake-token',
+            ]),
+            'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10?*' => Http::response([
+                'objectIdField' => 'OBJECTID',
+                'fields' => [
+                    ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                    ['name' => 'assignedto', 'type' => 'esriFieldTypeString', 'length' => 20],
+                ],
+            ]),
+            'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/updateFeatures' => Http::response([
+                'updateResults' => [
+                    ['objectId' => $building->objectid, 'success' => true],
+                ],
+            ]),
+        ]);
+
+        app(ArcgisAuditedUploadService::class)
+            ->syncSourceAssessmentAssignment('building_table', $building->globalid, 'new.researcher.long-value');
+
+        Http::assertSent(function (Request $request) use ($building): bool {
+            if ($request->url() !== 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/updateFeatures') {
+                return false;
+            }
+
+            $features = json_decode((string) $request['features'], true);
+
+            return str_contains($request->url(), '/SOURCE/FeatureServer/10/updateFeatures')
+                && data_get($features, '0.attributes.OBJECTID') === $building->objectid
+                && data_get($features, '0.attributes.assignedto') === 'new.researcher.long-';
+        });
+    } finally {
+        foreach ($originalArcgisConfig as $key => $value) {
+            config()->set('services.arcgis.'.$key, $value);
+        }
+    }
 });
 
 it('stores bulk inline edits by pasted object ids for buildings and housing units', function () {

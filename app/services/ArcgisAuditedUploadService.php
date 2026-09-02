@@ -33,6 +33,11 @@ class ArcgisAuditedUploadService
     private array $targetLayerMetadata = [];
 
     /**
+     * @var array<string, array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}>
+     */
+    private array $sourceLayerMetadata = [];
+
+    /**
      * @var array<string, string>
      */
     private array $targetBuildingGlobalIdsBySourceGlobalId = [];
@@ -886,6 +891,33 @@ class ArcgisAuditedUploadService
         $this->uploadUnitAuditEdits($globalId, $fields, $summary, false, false, CarbonImmutable::now());
     }
 
+    public function syncSourceAssessmentAssignment(string $type, string $globalId, mixed $fieldValue): void
+    {
+        if (! in_array($type, ['building_table', 'housing_table'], true)) {
+            throw new RuntimeException("Unsupported source assignment edit type {$type}.");
+        }
+
+        $record = $type === 'building_table'
+            ? Building::query()->where('globalid', $globalId)->first()
+            : HousingUnit::query()->where('globalid', $globalId)->first();
+
+        if (! $record instanceof Model) {
+            throw new RuntimeException("Source assessment record not found for globalid {$globalId}.");
+        }
+
+        $sourceObjectId = $record->getAttribute('objectid');
+
+        if (! is_numeric($sourceObjectId)) {
+            throw new RuntimeException("Source assessment record {$globalId} is missing an objectid.");
+        }
+
+        $layerId = $type === 'building_table'
+            ? $this->layerId('source_buildings_layer')
+            : $this->layerId('source_units_layer');
+
+        $this->updateSourceFeatureField($layerId, (int) $sourceObjectId, 'assignedto', $fieldValue);
+    }
+
     /**
      * @param  array<int, int|string>  $buildingObjectIds
      * @param  array<int, int|string>  $unitObjectIds
@@ -1314,6 +1346,54 @@ class ArcgisAuditedUploadService
         });
     }
 
+    private function updateSourceFeatureField(
+        int|string $layerId,
+        int $sourceObjectId,
+        string $fieldName,
+        mixed $fieldValue,
+    ): void {
+        $this->withTokenRetry(function (string $token) use ($layerId, $sourceObjectId, $fieldName, $fieldValue): void {
+            $metadata = $this->sourceLayerMetadata($layerId, $token);
+            $fields = $metadata['fields'];
+            $objectIdField = $metadata['object_id_field'];
+            $sourceFieldName = $fields[strtolower($fieldName)] ?? null;
+
+            if ($objectIdField === null) {
+                throw new RuntimeException('ArcGIS source layer is missing an object id field.');
+            }
+
+            if ($sourceFieldName === null) {
+                throw new RuntimeException("ArcGIS source layer is missing {$fieldName} field.");
+            }
+
+            $attributes = $this->prepareTargetAttributes(
+                [
+                    $objectIdField => $sourceObjectId,
+                    $sourceFieldName => $fieldValue,
+                ],
+                $metadata['definitions'],
+            );
+
+            $response = $this->http()->post($this->sourceLayerUrl($layerId).'/updateFeatures', [
+                'f' => 'json',
+                'token' => $token,
+                'features' => json_encode([
+                    [
+                        'attributes' => $attributes,
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+            $data = $response->json();
+
+            if (! $response->successful() || ! data_get($data, 'updateResults.0.success')) {
+                throw new RuntimeException('ArcGIS source updateFeatures failed: '.$response->body());
+            }
+
+            echo "Source feature updated. OBJECTID: {$sourceObjectId}\n";
+        });
+    }
+
     /**
      * @return array{object_id: int, object_id_field: string}|null
      */
@@ -1467,6 +1547,39 @@ class ArcgisAuditedUploadService
             throw new RuntimeException('ArcGIS target layer metadata failed: '.$response->body());
         }
 
+        return $this->targetLayerMetadata[$cacheKey] = $this->layerMetadataFromResponse($response);
+    }
+
+    /**
+     * @return array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
+     */
+    private function sourceLayerMetadata(int|string $layerId, string $token): array
+    {
+        $cacheKey = (string) $layerId;
+
+        if (array_key_exists($cacheKey, $this->sourceLayerMetadata)) {
+            return $this->sourceLayerMetadata[$cacheKey];
+        }
+
+        $response = $this->http()->get($this->sourceLayerUrl($layerId), [
+            'f' => 'json',
+            'token' => $token,
+        ]);
+
+        $this->throwIfArcgisError($response, 'ArcGIS source layer metadata failed');
+
+        if (! $response->successful()) {
+            throw new RuntimeException('ArcGIS source layer metadata failed: '.$response->body());
+        }
+
+        return $this->sourceLayerMetadata[$cacheKey] = $this->layerMetadataFromResponse($response);
+    }
+
+    /**
+     * @return array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
+     */
+    private function layerMetadataFromResponse(Response $response): array
+    {
         $metadataFields = $response->json('fields') ?? [];
         $objectIdField = $response->json('objectIdField');
 
@@ -1513,7 +1626,7 @@ class ArcgisAuditedUploadService
             ])
             ->toArray();
 
-        return $this->targetLayerMetadata[$cacheKey] = [
+        return [
             'object_id_field' => is_string($objectIdField) && $objectIdField !== '' ? $objectIdField : null,
             'fields' => $fields,
             'definitions' => $definitions,
