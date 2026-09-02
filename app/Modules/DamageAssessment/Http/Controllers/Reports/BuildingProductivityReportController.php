@@ -6,7 +6,7 @@ namespace App\Modules\DamageAssessment\Http\Controllers\Reports;
 
 use App\Exports\BuildingProductivityExport;
 use App\Http\Controllers\Controller;
-use App\Models\Building;
+use App\Models\AuditedBuilding;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -159,7 +159,7 @@ class BuildingProductivityReportController extends Controller
             ->values()
             ->all();
 
-        $query = Building::query()
+        $query = AuditedBuilding::query()
             ->selectRaw("COALESCE(NULLIF(TRIM(governorate), ''), NULLIF(TRIM(municipalitie), ''), 'Not Available') as gov")
             ->selectRaw("COALESCE(NULLIF(TRIM(neighborhood), ''), 'Not Available') as name")
             ->selectRaw(
@@ -209,7 +209,7 @@ class BuildingProductivityReportController extends Controller
             ->values()
             ->all();
 
-        $query = Building::query()
+        $query = AuditedBuilding::query()
             ->selectRaw("COALESCE(NULLIF(TRIM(municipalitie), ''), 'Not Available') as municipality_name")
             ->selectRaw("COALESCE(NULLIF(TRIM(neighborhood), ''), 'Not Available') as neighborhood_name")
             ->selectRaw(
@@ -271,14 +271,14 @@ class BuildingProductivityReportController extends Controller
     private function filterOptions(): array
     {
         return [
-            'governorates' => Building::query()
+            'governorates' => AuditedBuilding::query()
                 ->selectRaw("DISTINCT COALESCE(NULLIF(TRIM(governorate), ''), NULLIF(TRIM(municipalitie), '')) as gov")
                 ->whereRaw("COALESCE(NULLIF(TRIM(governorate), ''), NULLIF(TRIM(municipalitie), '')) IS NOT NULL")
                 ->orderBy('gov')
                 ->pluck('gov')
                 ->filter()
                 ->values(),
-            'neighborhoods' => Building::query()
+            'neighborhoods' => AuditedBuilding::query()
                 ->distinct()
                 ->whereNotNull('neighborhood')
                 ->where('neighborhood', '!=', '')

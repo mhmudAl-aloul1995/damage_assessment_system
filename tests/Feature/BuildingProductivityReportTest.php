@@ -1,9 +1,11 @@
 <?php
 
-use App\Models\Building;
+use App\Models\AuditedBuilding;
 use App\Models\User;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -11,7 +13,19 @@ beforeEach(function () {
     config()->set('database.default', 'mysql');
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+    ensureAuditedBuildingProductivityColumns();
 });
+
+function ensureAuditedBuildingProductivityColumns(): void
+{
+    Schema::table('audited_buildings', function (Blueprint $table): void {
+        foreach (['municipalitie', 'creationdate'] as $columnName) {
+            if (! Schema::hasColumn('audited_buildings', $columnName)) {
+                $table->text($columnName)->nullable();
+            }
+        }
+    });
+}
 
 it('renders and exports the building productivity report with totals and charts', function () {
     $role = Role::query()->create([
@@ -22,7 +36,7 @@ it('renders and exports the building productivity report with totals and charts'
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 9101,
         'globalid' => 'building-productivity-1',
         'governorate' => 'Gaza',
@@ -34,7 +48,7 @@ it('renders and exports the building productivity report with totals and charts'
         'submission_date' => '2026-04-10 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 9102,
         'globalid' => 'building-productivity-2',
         'governorate' => 'Gaza',
@@ -46,7 +60,7 @@ it('renders and exports the building productivity report with totals and charts'
         'submission_date' => '2026-04-11 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 9103,
         'globalid' => 'building-productivity-3',
         'governorate' => 'North Gaza',
@@ -58,7 +72,7 @@ it('renders and exports the building productivity report with totals and charts'
         'submission_date' => '2026-04-12 10:00:00',
     ]);
 
-    Building::query()->create([
+    AuditedBuilding::query()->create([
         'objectid' => 9104,
         'globalid' => 'building-productivity-outside-range',
         'governorate' => 'Gaza',
