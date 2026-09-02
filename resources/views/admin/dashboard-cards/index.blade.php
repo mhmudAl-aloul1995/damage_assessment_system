@@ -93,6 +93,28 @@
             padding: 18px;
         }
 
+        .dashboard-card-admin .settings-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .dashboard-card-admin .settings-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .dashboard-card-admin .ltr-input,
+        .dashboard-card-admin .code-pill {
+            direction: ltr;
+            text-align: left;
+        }
+
+        .dashboard-card-admin .color-control {
+            height: 44px;
+            min-width: 100%;
+        }
+
         @media (max-width: 991.98px) {
             .dashboard-card-admin .item-summary {
                 grid-template-columns: 36px 1fr auto;
@@ -100,6 +122,10 @@
 
             .dashboard-card-admin .item-summary .hide-mobile {
                 display: none;
+            }
+
+            .dashboard-card-admin .settings-pair {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -176,11 +202,67 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ route('admin.dashboard-cards.update', $selectedCard) }}" class="row g-4 align-items-end">
+                            <form method="POST" action="{{ route('admin.dashboard-cards.update', $selectedCard) }}" class="settings-form">
                                 @csrf
                                 @method('PUT')
-                                @include('admin.dashboard-cards.partials.card-fields', ['card' => $selectedCard])
-                                <div class="col-12">
+
+                                <div>
+                                    <label class="form-label">العنوان</label>
+                                    <input type="text" name="title" class="form-control" value="{{ old('title', $selectedCard->title) }}" required>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">النص الفرعي</label>
+                                    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle', $selectedCard->subtitle) }}">
+                                </div>
+
+                                <div class="settings-pair">
+                                    <div>
+                                        <label class="form-label">المفتاح</label>
+                                        <input type="text" name="key" class="form-control ltr-input" value="{{ old('key', $selectedCard->key) }}" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">مصدر البيانات</label>
+                                        <select name="source_bucket" class="form-select ltr-input" required>
+                                            @foreach ($sourceBuckets as $sourceBucket)
+                                                <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $selectedCard->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="settings-pair">
+                                    <div>
+                                        <label class="form-label">مفتاح الإجمالي</label>
+                                        <input type="text" name="total_stat_key" class="form-control ltr-input" value="{{ old('total_stat_key', $selectedCard->total_stat_key) }}" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">الأيقونة</label>
+                                        <input type="text" name="icon" class="form-control ltr-input" value="{{ old('icon', $selectedCard->icon) }}" required>
+                                    </div>
+                                </div>
+
+                                <div class="settings-pair">
+                                    <div>
+                                        <label class="form-label">اللون</label>
+                                        <input type="color" name="color" class="form-control form-control-color color-control" value="{{ old('color', $selectedCard->color) }}" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">الترتيب</label>
+                                        <input type="number" name="sort_order" class="form-control" min="0" value="{{ old('sort_order', $selectedCard->sort_order) }}">
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center rounded bg-light px-4 py-3">
+                                    <span class="fw-semibold text-gray-700">حالة البطاقة</span>
+                                    <label class="form-check form-switch form-check-custom form-check-solid mb-0">
+                                        <input type="hidden" name="is_active" value="0">
+                                        <input class="form-check-input" type="checkbox" name="is_active" value="1" @checked(old('is_active', $selectedCard->is_active))>
+                                        <span class="form-check-label">مفعلة</span>
+                                    </label>
+                                </div>
+
+                                <div>
                                     <button type="submit" class="btn btn-primary w-100">حفظ إعدادات البطاقة</button>
                                 </div>
                             </form>
