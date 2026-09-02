@@ -301,8 +301,8 @@
                                     <form method="POST" action="{{ route('admin.dashboard-cards.items.store', $selectedCard) }}" class="row g-3 align-items-end">
                                         @csrf
                                         @include('admin.dashboard-cards.partials.item-create-fields')
-                                        <div class="col-md-2">
-                                            <button type="submit" class="btn btn-primary w-100">إضافة البند</button>
+                                        <div class="col-12 d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-primary px-10">إضافة البند</button>
                                         </div>
                                     </form>
                                 </div>
