@@ -15,7 +15,9 @@ it('seeds the default dashboard cards and items', function (): void {
 
     expect(DashboardCard::query()->count())->toBe(5)
         ->and(DashboardCard::query()->where('key', 'buildings')->first()?->items)->toHaveCount(8)
-        ->and(DashboardCard::query()->where('key', 'housing')->first()?->items)->toHaveCount(9);
+        ->and(DashboardCard::query()->where('key', 'buildings')->first()?->items()->first()?->sort_order)->toBe(1)
+        ->and(DashboardCard::query()->where('key', 'housing')->first()?->items)->toHaveCount(9)
+        ->and(DashboardCard::query()->where('key', 'housing')->first()?->items()->first()?->sort_order)->toBe(1);
 });
 
 it('lets database officers manage dashboard card items', function (): void {
@@ -94,10 +96,10 @@ it('keeps item sort order independent for each dashboard card', function (): voi
     $this->actingAs($user)
         ->get(route('admin.dashboard-cards.index', ['card' => $buildingCard->id]))
         ->assertOk()
-        ->assertSee('value="90"', false);
+        ->assertSee('value="9"', false);
 
     $this->actingAs($user)
         ->get(route('admin.dashboard-cards.index', ['card' => $housingCard->id]))
         ->assertOk()
-        ->assertSee('value="100"', false);
+        ->assertSee('value="10"', false);
 });

@@ -4,7 +4,7 @@
 
 <div class="col-md-2">
     <label class="form-label">الترتيب</label>
-    <input type="number" name="sort_order" class="form-control" min="0" value="{{ $nextItemSortOrder ?? 10 }}">
+    <input type="number" name="sort_order" class="form-control" min="0" value="{{ $nextItemSortOrder ?? 1 }}">
 </div>
 <div class="col-md-10">
     <label class="form-label">العنوان</label>

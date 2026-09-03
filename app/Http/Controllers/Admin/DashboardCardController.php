@@ -30,7 +30,7 @@ class DashboardCardController extends Controller
         return view('admin.dashboard-cards.index', [
             'cards' => $cards,
             'selectedCard' => $selectedCard,
-            'nextItemSortOrder' => $selectedCard ? $this->nextItemSortOrder($selectedCard) : 10,
+            'nextItemSortOrder' => $selectedCard ? $this->nextItemSortOrder($selectedCard) : 1,
             'sourceBuckets' => $this->sourceBuckets(),
             'statKeys' => $this->statKeys(),
             'filterFields' => $this->filterFields(),
@@ -231,6 +231,6 @@ class DashboardCardController extends Controller
     {
         $lastSortOrder = (int) $dashboardCard->items()->max('sort_order');
 
-        return $lastSortOrder + 10;
+        return $lastSortOrder + 1;
     }
 }
