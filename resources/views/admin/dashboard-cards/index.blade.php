@@ -322,7 +322,11 @@
                                             <div class="fw-bold text-gray-700 text-center">#{{ $item->sort_order }}</div>
                                             <div>
                                                 <div class="fw-bold text-gray-900 mb-1">{{ __($item->title) }}</div>
-                                                <span class="code-pill">{{ $item->key }}</span>
+                                                @if ($item->calculation_type === 'count_condition')
+                                                    <span class="badge badge-light-primary">عدّ حسب الشرط</span>
+                                                @else
+                                                    <span class="badge badge-light-info">إحصائية جاهزة</span>
+                                                @endif
                                             </div>
                                             <div class="hide-mobile">
                                                 <div class="muted-label mb-1">مصدر العدّ</div>
