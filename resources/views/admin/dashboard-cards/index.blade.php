@@ -632,7 +632,10 @@
             const syncForm = () => {
                 const isCountByCondition = calculationType?.value === 'count_condition';
 
-                statKeyGroup?.classList.toggle('d-none', isCountByCondition);
+                if (statKeyGroup) {
+                    statKeyGroup.classList.toggle('d-none', isCountByCondition);
+                    statKeyGroup.style.display = isCountByCondition ? 'none' : '';
+                }
 
                 if (statKey) {
                     statKey.required = !isCountByCondition;
@@ -642,7 +645,7 @@
 
                     if (select2Ready && statKeySelect.hasClass('select2-hidden-accessible')) {
                         statKeySelect.select2('close');
-                        statKeySelect.next('.select2-container').toggleClass('d-none', isCountByCondition);
+                        statKeySelect.next('.select2-container').toggleClass('d-none', isCountByCondition).toggle(!isCountByCondition);
                     }
                 }
 
@@ -719,9 +722,18 @@
             };
 
             calculationType?.addEventListener('change', syncForm);
+            $(calculationType).on('change select2:select', syncForm);
             sourceBucket.addEventListener('change', syncForm);
+            $(sourceBucket).on('change select2:select', syncForm);
             [statKey, filterField].forEach((select) => {
                 select?.addEventListener('change', () => {
+                    select.dataset.selected = select.value;
+                    if (select === filterField && filterValue) {
+                        filterValue.dataset.selected = '';
+                        syncFilterValues();
+                    }
+                });
+                $(select).on('change select2:select', () => {
                     select.dataset.selected = select.value;
                     if (select === filterField && filterValue) {
                         filterValue.dataset.selected = '';
