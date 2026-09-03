@@ -563,25 +563,45 @@
             return wrapper;
         };
 
-        const initializeDashboardSelect2 = () => {
+        const dashboardSelect2Options = (select) => ({
+            dir: dashboardCardsDirection,
+            width: '100%',
+            minimumResultsForSearch: $(select).data('hide-search') ? Infinity : 0,
+            templateResult: renderIconSelect2Option,
+            templateSelection: renderIconSelect2Option,
+        });
+
+        const initializeDashboardSelect2Element = (select) => {
             if (!window.jQuery || !$.fn.select2) {
                 return;
             }
 
+            const selectElement = $(select);
+
+            if (selectElement.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+
+            selectElement.select2(dashboardSelect2Options(select));
+        };
+
+        const refreshDashboardSelect2Element = (select) => {
+            if (!window.jQuery || !$.fn.select2 || !select) {
+                return;
+            }
+
+            const selectElement = $(select);
+
+            if (selectElement.hasClass('select2-hidden-accessible')) {
+                selectElement.select2('destroy');
+            }
+
+            initializeDashboardSelect2Element(select);
+        };
+
+        const initializeDashboardSelect2 = () => {
             $('.dashboard-card-admin .js-dashboard-select2').each(function() {
-                const select = $(this);
-
-                if (select.hasClass('select2-hidden-accessible')) {
-                    return;
-                }
-
-                select.select2({
-                    dir: dashboardCardsDirection,
-                    width: '100%',
-                    minimumResultsForSearch: select.data('hide-search') ? Infinity : 0,
-                    templateResult: renderIconSelect2Option,
-                    templateSelection: renderIconSelect2Option,
-                });
+                initializeDashboardSelect2Element(this);
             });
         };
 
@@ -626,7 +646,7 @@
                 }
 
                 select.dataset.selected = select.value;
-                $(select).trigger('change.select2');
+                refreshDashboardSelect2Element(select);
             };
 
             const syncForm = () => {
