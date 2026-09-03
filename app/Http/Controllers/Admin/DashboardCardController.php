@@ -30,6 +30,7 @@ class DashboardCardController extends Controller
         return view('admin.dashboard-cards.index', [
             'cards' => $cards,
             'selectedCard' => $selectedCard,
+            'nextItemSortOrder' => $selectedCard ? $this->nextItemSortOrder($selectedCard) : 10,
             'sourceBuckets' => $this->sourceBuckets(),
             'statKeys' => $this->statKeys(),
             'filterFields' => $this->filterFields(),
@@ -83,6 +84,9 @@ class DashboardCardController extends Controller
     {
         $data = $this->itemData($request);
         $data['key'] = ($data['key'] ?? null) ?: $this->uniqueItemKey($dashboardCard, (string) $data['stat_key']);
+        $data['sort_order'] = $request->filled('sort_order')
+            ? (int) $data['sort_order']
+            : $this->nextItemSortOrder($dashboardCard);
 
         $dashboardCard->items()->create($data);
 
@@ -221,5 +225,12 @@ class DashboardCardController extends Controller
         }
 
         return $candidate;
+    }
+
+    private function nextItemSortOrder(DashboardCard $dashboardCard): int
+    {
+        $lastSortOrder = (int) $dashboardCard->items()->max('sort_order');
+
+        return $lastSortOrder + 10;
     }
 }

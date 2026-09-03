@@ -81,3 +81,23 @@ it('lets database officers manage dashboard card items', function (): void {
     expect($item->refresh()->title)->toBe('بند ديناميكي محدث')
         ->and($item->sort_order)->toBe(100);
 });
+
+it('keeps item sort order independent for each dashboard card', function (): void {
+    $this->seed(DashboardCardSeeder::class);
+
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Database Officer', 'web'));
+
+    $buildingCard = DashboardCard::query()->where('key', 'buildings')->firstOrFail();
+    $housingCard = DashboardCard::query()->where('key', 'housing')->firstOrFail();
+
+    $this->actingAs($user)
+        ->get(route('admin.dashboard-cards.index', ['card' => $buildingCard->id]))
+        ->assertOk()
+        ->assertSee('value="90"', false);
+
+    $this->actingAs($user)
+        ->get(route('admin.dashboard-cards.index', ['card' => $housingCard->id]))
+        ->assertOk()
+        ->assertSee('value="100"', false);
+});
