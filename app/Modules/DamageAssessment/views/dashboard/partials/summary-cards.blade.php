@@ -1,5 +1,6 @@
 @php
 	$dashboardStatsBuckets = compact('buildingStats', 'unitStats', 'publicBuildingStats', 'roadFacilityStats', 'csoSurveyStats');
+	$dashboardCardItemValues ??= [];
 
 	$formatDashboardValue = function ($value, int $decimalPlaces = 0, ?string $suffix = null): string {
 		if (is_numeric($value)) {
@@ -65,7 +66,9 @@
 						@foreach ($dashboardCard->items as $dashboardCardItem)
 							@php
 								$itemStatsBucket = $dashboardStatsBuckets[$dashboardCardItem->source_bucket] ?? [];
-								$itemValue = $itemStatsBucket[$dashboardCardItem->stat_key] ?? 0;
+								$itemValue = $dashboardCardItem->calculation_type === 'count_condition'
+									? ($dashboardCardItemValues[$dashboardCardItem->id] ?? 0)
+									: ($itemStatsBucket[$dashboardCardItem->stat_key] ?? 0);
 								$itemLink = $dashboardCardItem->link_group && $dashboardCardItem->link_key
 									? data_get($dashboardStatLinks, $dashboardCardItem->link_group . '.' . $dashboardCardItem->link_key)
 									: null;

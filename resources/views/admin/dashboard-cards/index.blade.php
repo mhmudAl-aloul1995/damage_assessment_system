@@ -326,7 +326,13 @@
                                             </div>
                                             <div class="hide-mobile">
                                                 <div class="muted-label mb-1">مصدر العدّ</div>
-                                                <span class="code-pill">{{ $item->source_bucket }}.{{ $item->stat_key }}</span>
+                                                <span class="code-pill">
+                                                    @if ($item->calculation_type === 'count_condition')
+                                                        {{ $item->filter_field }} {{ $item->filter_operator }} {{ $item->filter_value }}
+                                                    @else
+                                                        {{ $item->source_bucket }}.{{ $item->stat_key }}
+                                                    @endif
+                                                </span>
                                             </div>
                                             <div class="hide-mobile">
                                                 <div class="muted-label mb-1">الحالة</div>
@@ -346,7 +352,6 @@
                                                 <form method="POST" action="{{ route('admin.dashboard-cards.items.update', [$selectedCard, $item]) }}" class="row g-4 align-items-end">
                                                     @csrf
                                                     @method('PUT')
-                                                    <input type="hidden" name="calculation_type" value="{{ $item->calculation_type }}">
                                                     <input type="hidden" name="source_model" value="{{ $item->source_model }}">
 
                                                     <div class="col-md-8">
@@ -359,6 +364,13 @@
                                                     </div>
 
                                                     <div class="col-md-4">
+                                                        <label class="form-label">طريقة العدّ</label>
+                                                        <select name="calculation_type" class="form-select js-calculation-type" required>
+                                                            <option value="stat_key" @selected(old('calculation_type', $item->calculation_type) === 'stat_key')>إحصائية جاهزة</option>
+                                                            <option value="count_condition" @selected(old('calculation_type', $item->calculation_type) === 'count_condition')>عدّ حسب الشرط</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
                                                         <label class="form-label">مصدر العدّ</label>
                                                         <select name="source_bucket" class="form-select ltr-input js-source-bucket" required>
                                                             @foreach ($sourceBuckets as $sourceBucket)
@@ -366,7 +378,7 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="col-md-4">
+                                                    <div class="col-md-4 js-stat-key-group">
                                                         <label class="form-label">مفتاح الإحصائية</label>
                                                         <select name="stat_key" class="form-select ltr-input js-stat-key" data-selected="{{ old('stat_key', $item->stat_key) }}" required>
                                                             @foreach ($statKeys as $sourceBucket => $keys)
@@ -482,6 +494,8 @@
             const filterField = form.querySelector('.js-filter-field');
             const filterValue = form.querySelector('.js-filter-value');
             const statKey = form.querySelector('.js-stat-key');
+            const statKeyGroup = form.querySelector('.js-stat-key-group');
+            const calculationType = form.querySelector('.js-calculation-type');
 
             if (!sourceBucket) {
                 return;
@@ -523,6 +537,14 @@
             };
 
             const syncForm = () => {
+                const isCountByCondition = calculationType?.value === 'count_condition';
+
+                statKeyGroup?.classList.toggle('d-none', isCountByCondition);
+
+                if (statKey) {
+                    statKey.required = !isCountByCondition;
+                }
+
                 syncSourceOptions(statKey);
                 syncSourceOptions(filterField);
                 syncFilterValues();
@@ -584,6 +606,7 @@
                 }
             };
 
+            calculationType?.addEventListener('change', syncForm);
             sourceBucket.addEventListener('change', syncForm);
             [statKey, filterField].forEach((select) => {
                 select?.addEventListener('change', () => {

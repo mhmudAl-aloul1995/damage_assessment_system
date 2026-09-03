@@ -86,6 +86,7 @@ class DashboardCardController extends Controller
     public function storeItem(StoreDashboardCardItemRequest $request, DashboardCard $dashboardCard): RedirectResponse
     {
         $data = $this->itemData($request);
+        $data['stat_key'] = ($data['stat_key'] ?? null) ?: (($data['filter_field'] ?? null) ?: 'count');
         $data['key'] = ($data['key'] ?? null) ?: $this->uniqueItemKey($dashboardCard, (string) $data['stat_key']);
         $data['sort_order'] = $request->filled('sort_order')
             ? (int) $data['sort_order']
@@ -230,13 +231,17 @@ class DashboardCardController extends Controller
      */
     private function itemData(FormRequest $request): array
     {
-        return [
+        $data = [
             ...$request->safe()->except(['is_active', 'decimal_places', 'sort_order']),
             'icon' => $request->input('icon') ?: 'ki-dot',
             'decimal_places' => (int) $request->input('decimal_places', 0),
             'sort_order' => (int) $request->input('sort_order', 0),
             'is_active' => $request->boolean('is_active'),
         ];
+
+        $data['stat_key'] = ($data['stat_key'] ?? null) ?: (($data['filter_field'] ?? null) ?: 'count');
+
+        return $data;
     }
 
     private function uniqueItemKey(DashboardCard $dashboardCard, string $baseKey): string

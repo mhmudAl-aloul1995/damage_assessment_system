@@ -4,6 +4,8 @@ use App\Models\Building;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
+use App\Models\DashboardCard;
+use App\Models\DashboardCardItem;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
@@ -976,6 +978,50 @@ it('returns latest dashboard stats as json', function () {
         ->assertJsonPath('unitStats.total_units', 1)
         ->assertJsonPath('unitStats.damaged_total', 0)
         ->assertJsonPath('unitStats.committee_review', 1);
+});
+
+it('renders dashboard card items counted by their configured condition', function () {
+    $user = User::factory()->create();
+    $roadCard = DashboardCard::query()->where('key', 'road_facilities')->firstOrFail();
+
+    DashboardCardItem::query()->create([
+        'dashboard_card_id' => $roadCard->id,
+        'key' => 'minor_road_damage',
+        'title' => 'أضرار طفيفة',
+        'source_bucket' => 'roadFacilityStats',
+        'stat_key' => 'road_damage_level',
+        'icon' => 'ki-route',
+        'calculation_type' => 'count_condition',
+        'filter_field' => 'road_damage_level',
+        'filter_operator' => '=',
+        'filter_value' => 'minor',
+        'sort_order' => 10,
+        'is_active' => true,
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8101,
+        'str_name' => 'Minor Road A',
+        'road_damage_level' => 'minor',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8102,
+        'str_name' => 'Minor Road B',
+        'road_damage_level' => 'minor',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8103,
+        'str_name' => 'Severe Road',
+        'road_damage_level' => 'severe',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('أضرار طفيفة')
+        ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[DashboardCardItem::query()->where('key', 'minor_road_damage')->value('id')] === 2);
 });
 
 it('falls back to base survey tables when audited cache tables are missing', function () {

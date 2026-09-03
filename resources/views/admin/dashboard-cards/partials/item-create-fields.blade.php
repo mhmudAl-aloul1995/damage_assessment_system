@@ -1,4 +1,3 @@
-<input type="hidden" name="calculation_type" value="stat_key">
 <input type="hidden" name="value_suffix" value="">
 <input type="hidden" name="decimal_places" value="0">
 
@@ -11,7 +10,14 @@
     <input type="text" name="title" class="form-control" required>
 </div>
 
-<div class="col-md-6">
+<div class="col-md-4">
+    <label class="form-label">طريقة العدّ</label>
+    <select name="calculation_type" class="form-select js-calculation-type" required>
+        <option value="stat_key">إحصائية جاهزة</option>
+        <option value="count_condition">عدّ حسب الشرط</option>
+    </select>
+</div>
+<div class="col-md-4">
     <label class="form-label">مصدر العدّ</label>
     <select name="source_bucket" class="form-select ltr-input js-source-bucket" required>
         @foreach ($sourceBuckets as $sourceBucket)
@@ -19,7 +25,7 @@
         @endforeach
     </select>
 </div>
-<div class="col-md-6">
+<div class="col-md-4 js-stat-key-group">
     <label class="form-label">مفتاح الإحصائية</label>
     <select name="stat_key" class="form-select ltr-input js-stat-key" required>
         @foreach ($statKeys as $sourceBucket => $keys)

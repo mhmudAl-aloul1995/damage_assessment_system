@@ -223,6 +223,7 @@ class DamageAssessmentController extends Controller
         $neighborhoods = $this->dashboardNeighborhoods();
         $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedNeighborhood');
         $dashboardCards = $this->dashboardCards();
+        $dashboardCardItemValues = $this->dashboardCardItemValues($dashboardCards, $request);
 
         return View::make(
             'damage-assessment::dashboard.damageAssessment',
@@ -239,6 +240,7 @@ class DamageAssessmentController extends Controller
                 'neighborhoods',
                 'dashboardFilters',
                 'dashboardCards',
+                'dashboardCardItemValues',
             )
         );
     }
@@ -1161,6 +1163,68 @@ class DamageAssessmentController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
+    }
+
+    private function dashboardCardItemValues(Collection $dashboardCards, Request $request): array
+    {
+        return $dashboardCards
+            ->flatMap(fn (DashboardCard $dashboardCard): Collection => $dashboardCard->items)
+            ->filter(fn (mixed $item): bool => $item->calculation_type === 'count_condition')
+            ->mapWithKeys(fn (mixed $item): array => [
+                $item->id => $this->dashboardCardItemConditionCount($item, $request),
+            ])
+            ->all();
+    }
+
+    private function dashboardCardItemConditionCount(mixed $item, Request $request): int
+    {
+        $query = $this->dashboardSourceBucketQuery($item->source_bucket, $request);
+
+        if ($query === null) {
+            return 0;
+        }
+
+        $table = $query->getModel()->getTable();
+
+        if (! $item->filter_field || ! Schema::hasColumn($table, $item->filter_field)) {
+            return 0;
+        }
+
+        $this->applyDashboardCardItemCondition($query, $item->filter_field, $item->filter_operator, $item->filter_value);
+
+        return $query->count();
+    }
+
+    private function dashboardSourceBucketQuery(string $sourceBucket, Request $request): ?Builder
+    {
+        return match ($sourceBucket) {
+            'buildingStats' => tap($this->dashboardTargetBackedQuery(AuditedBuilding::class, Building::class), function (Builder $query) use ($request): void {
+                app(PhaseContext::class)->applyToEloquent($query);
+                $this->applyDashboardMapFilters($query, $request, '', 'submission_date');
+            }),
+            'unitStats' => tap($this->dashboardTargetBackedQuery(AuditedHousingUnit::class, HousingUnit::class), function (Builder $query) use ($request): void {
+                $this->applyDashboardHousingFilters($query, $request);
+            }),
+            'publicBuildingStats' => $this->dashboardPublicBuildingQuery($request),
+            'roadFacilityStats' => $this->dashboardRoadFacilityQuery($request),
+            'csoSurveyStats' => $this->dashboardCsoSurveyQuery($request),
+            default => null,
+        };
+    }
+
+    private function applyDashboardCardItemCondition(Builder $query, string $field, ?string $operator, mixed $value): void
+    {
+        match ($operator) {
+            '!=' => $query->where($field, '!=', $value),
+            '>' => $query->where($field, '>', $value),
+            '>=' => $query->where($field, '>=', $value),
+            '<' => $query->where($field, '<', $value),
+            '<=' => $query->where($field, '<=', $value),
+            'like' => $query->where($field, 'like', '%'.$value.'%'),
+            'blank' => $query->where(fn (Builder $query): Builder => $query->whereNull($field)->orWhere($field, '')),
+            'not_blank' => $query->whereNotNull($field)->where($field, '!=', ''),
+            default => $query->where($field, $value),
+        };
     }
 
     private function dashboardCoreStatsCacheKey(Request $request): string
