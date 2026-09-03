@@ -21,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -174,9 +175,12 @@ class CsoSurveyController extends Controller
             $values = $this->requestValues($request, $field);
 
             if ($values !== []) {
-                $query->whereIn($field, $values);
+                $this->applyNullableValueFilter($query, $field, $values);
             }
         }
+
+        $this->applyChildFilters($query, 'organizations', CsoSurveyOrganization::class, $request->input('organization_filters', []));
+        $this->applyChildFilters($query, 'units', CsoSurveyUnit::class, $request->input('unit_filters', []));
 
         if ($request->filled('from_date')) {
             $query->whereDate('creationdate', '>=', $request->date('from_date')->toDateString());
@@ -276,7 +280,7 @@ class CsoSurveyController extends Controller
 
     private function requestValues(Request $request, string $key): array
     {
-        $value = $request->input($key);
+        $value = $request->input($key, $request->input($key.'.*'));
 
         if ($value === null) {
             return [];
@@ -292,6 +296,57 @@ class CsoSurveyController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<int, string>  $values
+     */
+    private function applyNullableValueFilter(Builder $query, string $field, array $values): void
+    {
+        $values = collect($values);
+        $includesBlank = $values->contains('__blank__') || $values->contains('__NULL__');
+        $explicitValues = $values
+            ->reject(fn (string $value): bool => in_array($value, ['__blank__', '__NULL__'], true))
+            ->values()
+            ->all();
+
+        $query->where(function (Builder $query) use ($field, $includesBlank, $explicitValues): void {
+            if ($explicitValues !== []) {
+                $query->whereIn($field, $explicitValues);
+            }
+
+            if ($includesBlank) {
+                $method = $explicitValues === [] ? 'where' : 'orWhere';
+                $query->{$method}(fn (Builder $query): Builder => $query->whereNull($field)->orWhere($field, ''));
+            }
+        });
+    }
+
+    private function applyChildFilters(Builder $query, string $relation, string $modelClass, mixed $filters): void
+    {
+        if (! is_array($filters) || $filters === []) {
+            return;
+        }
+
+        $table = (new $modelClass)->getTable();
+
+        foreach ($filters as $field => $values) {
+            $field = (string) $field;
+
+            if (! Schema::hasColumn($table, $field)) {
+                continue;
+            }
+
+            $values = $this->normalizeValues($values);
+
+            if ($values === []) {
+                continue;
+            }
+
+            $query->whereHas($relation, function (Builder $query) use ($field, $values): void {
+                $this->applyNullableValueFilter($query, $field, $values);
+            });
+        }
     }
 
     private function statusBadge(?string $status, string $color): string

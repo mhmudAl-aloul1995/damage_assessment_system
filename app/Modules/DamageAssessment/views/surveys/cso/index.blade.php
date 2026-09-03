@@ -160,20 +160,60 @@
 
             const queryParams = new URLSearchParams(window.location.search);
 
+            const queryValues = function (key) {
+                const values = [
+                    ...queryParams.getAll(key),
+                    ...queryParams.getAll(key + '[]'),
+                ];
+
+                queryParams.forEach(function (value, paramKey) {
+                    if (paramKey.startsWith(key + '[')) {
+                        values.push(value);
+                    }
+                });
+
+                return [...new Set(values.filter(Boolean))];
+            };
+
+            const selectedOrQueryValues = function (selector, key) {
+                const selectedValues = $(selector).val() || [];
+
+                return selectedValues.length ? selectedValues : queryValues(key);
+            };
+
+            const nestedQueryValues = function (prefix) {
+                const values = {};
+
+                queryParams.forEach(function (value, key) {
+                    const matches = key.match(new RegExp('^' + prefix + '\\[([^\\]]+)\\]'));
+
+                    if (!matches) {
+                        return;
+                    }
+
+                    values[matches[1]] = values[matches[1]] || [];
+                    values[matches[1]].push(value);
+                });
+
+                return values;
+            };
+
             const currentFilters = function () {
                 return {
-                    municipalitie: $('#filter_municipalitie').val() || queryParams.get('municipalitie'),
-                    neighborhood: $('#filter_neighborhood').val() || queryParams.get('neighborhood'),
-                    assignedto: $('#filter_assignedto').val() || queryParams.get('assignedto'),
-                    field_status: $('#filter_field_status').val() || queryParams.get('field_status'),
-                    building_damage_status: $('#filter_building_damage_status').val() || queryParams.get('building_damage_status'),
-                    operational_status: $('#filter_operational_status').val() || queryParams.get('operational_status'),
+                    municipalitie: selectedOrQueryValues('#filter_municipalitie', 'municipalitie'),
+                    neighborhood: selectedOrQueryValues('#filter_neighborhood', 'neighborhood'),
+                    assignedto: selectedOrQueryValues('#filter_assignedto', 'assignedto'),
+                    field_status: selectedOrQueryValues('#filter_field_status', 'field_status'),
+                    building_damage_status: selectedOrQueryValues('#filter_building_damage_status', 'building_damage_status'),
+                    operational_status: selectedOrQueryValues('#filter_operational_status', 'operational_status'),
                     from_date: $('#filter_from_date').val() || queryParams.get('from_date'),
                     to_date: $('#filter_to_date').val() || queryParams.get('to_date'),
                     q: $('#filter_search').val() || queryParams.get('q'),
                     damaged_only: queryParams.get('damaged_only'),
                     with_organizations: queryParams.get('with_organizations'),
                     with_units: queryParams.get('with_units'),
+                    organization_filters: nestedQueryValues('organization_filters'),
+                    unit_filters: nestedQueryValues('unit_filters'),
                 };
             };
 
@@ -197,6 +237,8 @@
                         d.damaged_only = filters.damaged_only;
                         d.with_organizations = filters.with_organizations;
                         d.with_units = filters.with_units;
+                        d.organization_filters = filters.organization_filters;
+                        d.unit_filters = filters.unit_filters;
                     },
                     error: function (xhr) {
                         toastr.error(xhr.responseJSON?.message || 'Could not load CSO surveys data');

@@ -1129,6 +1129,9 @@ it('renders dashboard card items counted by multiple selected condition values i
         ->get(route('damageAssessment.index'))
         ->assertOk()
         ->assertSee('أضرار مختارة')
+        ->assertSee('filters%5Broad_damage_level%5D[]=minor', false)
+        ->assertSee('filters%5Broad_damage_level%5D[]=moderate', false)
+        ->assertSee('filters%5Broad_damage_level%5D[]=__blank__', false)
         ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 3);
 });
 
@@ -1187,6 +1190,7 @@ it('renders dashboard card items counted from cso child table sources', function
         ->get(route('damageAssessment.index'))
         ->assertOk()
         ->assertSee('منظمات عاملة')
+        ->assertSee('organization_filters%5Boperational_status%5D[]=operational', false)
         ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 1);
 });
 

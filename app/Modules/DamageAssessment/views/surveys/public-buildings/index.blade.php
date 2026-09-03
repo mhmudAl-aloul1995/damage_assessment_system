@@ -184,8 +184,11 @@
                 const filters = dynamicFilters();
 
                 queryParams.forEach(function (value, key) {
-                    if (key.startsWith('filters[') && key.endsWith(']')) {
-                        filters[key.slice(8, -1)] = value;
+                    const matches = key.match(/^filters\[([^\]]+)\]/);
+
+                    if (matches) {
+                        filters[matches[1]] = filters[matches[1]] || [];
+                        filters[matches[1]].push(value);
                     }
                 });
 

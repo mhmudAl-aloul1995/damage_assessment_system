@@ -9,6 +9,95 @@
 
 		return trim((string) $value . ($suffix ? ' ' . $suffix : ''));
 	};
+
+	$dashboardConditionQuery = function (array $params): string {
+		$pairs = [];
+
+		foreach ($params as $key => $values) {
+			$values = is_array($values) ? $values : [$values];
+
+			foreach ($values as $value) {
+				if ($value === null || $value === '') {
+					continue;
+				}
+
+				$pairs[] = rawurlencode((string) $key) . '[]=' . rawurlencode((string) $value);
+			}
+		}
+
+		return implode('&', $pairs);
+	};
+
+	$dashboardConditionLink = function ($item) use ($dashboardConditionQuery): ?string {
+		if ($item->calculation_type !== 'count_condition') {
+			return null;
+		}
+
+		$baseUrl = match ($item->source_bucket) {
+			'buildingStats' => url('damage-assessment/building'),
+			'unitStats' => url('damage-assessment/housing'),
+			'publicBuildingStats' => route('public-buildings.index'),
+			'roadFacilityStats' => route('road-facilities.index'),
+			'csoSurveyStats', 'csoOrganizationStats', 'csoUnitStats' => route('cso-surveys.index'),
+			default => null,
+		};
+
+		if ($baseUrl === null) {
+			return null;
+		}
+
+		$conditions = collect(data_get($item->options, 'conditions', []))
+			->filter(fn ($condition) => is_array($condition) && ! empty($condition['field']))
+			->values();
+
+		if ($conditions->isEmpty() && $item->filter_field) {
+			$conditions = collect([[
+				'field' => $item->filter_field,
+				'operator' => $item->filter_operator ?: '=',
+				'value' => $item->filter_value,
+			]]);
+		}
+
+		$params = [];
+
+		foreach ($conditions as $condition) {
+			$operator = $condition['operator'] ?? '=';
+
+			if (! in_array($operator, ['=', 'blank'], true)) {
+				continue;
+			}
+
+			$field = (string) ($condition['field'] ?? '');
+			$values = $condition['value'] ?? [];
+			$values = is_array($values) ? $values : [$values];
+			$values = collect($values)
+				->map(fn ($value) => $value === '__NULL__' ? '__blank__' : $value)
+				->filter(fn ($value) => $value !== null && $value !== '')
+				->values()
+				->all();
+
+			if ($operator === 'blank') {
+				$values = ['__blank__'];
+			}
+
+			if ($field === '' || $values === []) {
+				continue;
+			}
+
+			$queryKey = match ($item->source_bucket) {
+				'publicBuildingStats', 'roadFacilityStats' => 'filters[' . $field . ']',
+				'csoOrganizationStats' => 'organization_filters[' . $field . ']',
+				'csoUnitStats' => 'unit_filters[' . $field . ']',
+				default => $field,
+			};
+
+			$params[$queryKey] = array_values(array_unique(array_merge($params[$queryKey] ?? [], $values)));
+		}
+
+		$query = $dashboardConditionQuery($params);
+
+		return $query !== '' ? $baseUrl . '?' . $query : null;
+	};
 @endphp
 
 <div class="row g-5 g-xl-8 damage-dashboard-stats">
@@ -69,9 +158,10 @@
 								$itemValue = $dashboardCardItem->calculation_type === 'count_condition'
 									? ($dashboardCardItemValues[$dashboardCardItem->id] ?? 0)
 									: ($itemStatsBucket[$dashboardCardItem->stat_key] ?? 0);
-								$itemLink = $dashboardCardItem->link_group && $dashboardCardItem->link_key
+								$itemLink = $dashboardConditionLink($dashboardCardItem)
+									?: ($dashboardCardItem->link_group && $dashboardCardItem->link_key
 									? data_get($dashboardStatLinks, $dashboardCardItem->link_group . '.' . $dashboardCardItem->link_key)
-									: null;
+									: null);
 							@endphp
 
 							<div class="d-flex align-items-center mb-6">

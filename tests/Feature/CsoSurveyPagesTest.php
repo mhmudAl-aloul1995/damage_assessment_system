@@ -125,6 +125,72 @@ test('it shows cso survey listing and details like other survey pages', function
         ->assertSee('لا يوجد جواب');
 });
 
+it('filters cso surveys by child organization fields from dashboard links', function (): void {
+    $user = User::factory()->create();
+
+    $matchingSurvey = CsoSurvey::query()->create([
+        'objectid' => 7311,
+        'globalid' => 'cso-survey-with-operational-org',
+        'organization_name' => 'Matching CSO',
+        'building_name' => 'Matching Building',
+    ]);
+
+    $filteredSurvey = CsoSurvey::query()->create([
+        'objectid' => 7312,
+        'globalid' => 'cso-survey-with-partial-org',
+        'organization_name' => 'Filtered CSO',
+        'building_name' => 'Filtered Building',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 8311,
+        'globalid' => 'cso-operational-org',
+        'parentglobalid' => $matchingSurvey->globalid,
+        'operational_status' => 'operational',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 8312,
+        'globalid' => 'cso-partial-org',
+        'parentglobalid' => $filteredSurvey->globalid,
+        'operational_status' => 'partially_operational',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('cso-surveys.data', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 10,
+            'organization_filters' => [
+                'operational_status' => ['operational'],
+            ],
+            'columns' => [
+                ['data' => 'objectid', 'name' => 'objectid', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'organization_name', 'name' => 'organization_name', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'building_name', 'name' => 'building_name', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'municipalitie', 'name' => 'municipalitie', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'neighborhood', 'name' => 'neighborhood', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'field_status', 'name' => 'field_status', 'searchable' => 'false', 'orderable' => 'false'],
+                ['data' => 'building_damage_status', 'name' => 'building_damage_status', 'searchable' => 'false', 'orderable' => 'false'],
+                ['data' => 'creationdate', 'name' => 'creationdate', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'organizations_count', 'name' => 'organizations_count', 'searchable' => 'false', 'orderable' => 'true'],
+                ['data' => 'units_count', 'name' => 'units_count', 'searchable' => 'false', 'orderable' => 'true'],
+                ['data' => 'assignedto', 'name' => 'assignedto', 'searchable' => 'false', 'orderable' => 'false'],
+                ['data' => 'actions', 'name' => 'actions', 'searchable' => 'false', 'orderable' => 'false'],
+            ],
+            'order' => [
+                ['column' => 0, 'dir' => 'desc'],
+            ],
+            'search' => [
+                'value' => '',
+                'regex' => 'false',
+            ],
+        ]))
+        ->assertOk()
+        ->assertSee('Matching CSO')
+        ->assertDontSee('Filtered CSO');
+});
+
 it('shows cso export data page and exports selected survey organization and unit columns', function (): void {
     Carbon::setTestNow('2026-08-31 10:15:00');
 
