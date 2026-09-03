@@ -12,7 +12,10 @@ use App\Http\Requests\Admin\UpdateDashboardCardRequest;
 use App\Models\DashboardCard;
 use App\Models\DashboardCardItem;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -118,6 +121,29 @@ class DashboardCardController extends Controller
         return redirect()
             ->route('admin.dashboard-cards.index', ['card' => $dashboardCard->id])
             ->with('success', 'تم حذف البند بنجاح.');
+    }
+
+    public function filterValues(Request $request): JsonResponse
+    {
+        $sourceBucket = (string) $request->string('source_bucket');
+        $field = (string) $request->string('field');
+        $table = $this->sourceTables()[$sourceBucket] ?? null;
+
+        if ($table === null || $field === '' || ! Schema::hasTable($table) || ! Schema::hasColumn($table, $field)) {
+            return response()->json(['values' => []]);
+        }
+
+        $values = DB::table($table)
+            ->whereNotNull($field)
+            ->where($field, '<>', '')
+            ->distinct()
+            ->orderBy($field)
+            ->limit(200)
+            ->pluck($field)
+            ->map(fn (mixed $value): string => (string) $value)
+            ->values();
+
+        return response()->json(['values' => $values]);
     }
 
     /**

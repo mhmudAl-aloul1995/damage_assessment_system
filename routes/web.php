@@ -259,6 +259,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:Database Officer')
         ->name('admin.dashboard-cards.')
         ->group(function () {
+            Route::get('/filter-values', [DashboardCardController::class, 'filterValues'])->name('filter-values');
             Route::post('/{dashboardCard}/items', [DashboardCardController::class, 'storeItem'])->name('items.store');
             Route::put('/{dashboardCard}/items/{dashboardCardItem}', [DashboardCardController::class, 'updateItem'])->name('items.update');
             Route::delete('/{dashboardCard}/items/{dashboardCardItem}', [DashboardCardController::class, 'destroyItem'])->name('items.destroy');

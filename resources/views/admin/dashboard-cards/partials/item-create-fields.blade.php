@@ -53,7 +53,9 @@
 </div>
 <div class="col-md-5">
     <label class="form-label">قيمة الشرط</label>
-    <input type="text" name="filter_value" class="form-control ltr-input" placeholder="value">
+    <select name="filter_value" class="form-select ltr-input js-filter-value">
+        <option value="">اختر حقل الشرط أولاً</option>
+    </select>
 </div>
 <div class="col-md-12">
     <input type="hidden" name="is_active" value="0">

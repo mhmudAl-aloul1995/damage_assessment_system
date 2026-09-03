@@ -398,7 +398,9 @@
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">قيمة الشرط</label>
-                                                        <input type="text" name="filter_value" class="form-control" value="{{ old('filter_value', $item->filter_value) }}" placeholder="value">
+                                                        <select name="filter_value" class="form-select ltr-input js-filter-value" data-selected="{{ old('filter_value', $item->filter_value) }}">
+                                                            <option value="{{ old('filter_value', $item->filter_value) }}">{{ old('filter_value', $item->filter_value) ?: 'اختر حقل الشرط أولاً' }}</option>
+                                                        </select>
                                                     </div>
 
                                                     <div class="col-md-4">
@@ -473,9 +475,12 @@
     </div>
 
     <script>
+        const filterValuesUrl = @json(route('admin.dashboard-cards.filter-values'));
+
         document.querySelectorAll('.dashboard-card-admin form').forEach((form) => {
             const sourceBucket = form.querySelector('.js-source-bucket');
             const filterField = form.querySelector('.js-filter-field');
+            const filterValue = form.querySelector('.js-filter-value');
             const statKey = form.querySelector('.js-stat-key');
 
             if (!sourceBucket) {
@@ -520,13 +525,77 @@
             const syncForm = () => {
                 syncSourceOptions(statKey);
                 syncSourceOptions(filterField);
+                syncFilterValues();
+            };
+
+            const syncFilterValues = async () => {
+                if (!filterField || !filterValue || !filterField.value) {
+                    if (filterValue) {
+                        filterValue.innerHTML = '<option value="">بدون قيمة</option>';
+                        filterValue.value = '';
+                        filterValue.dataset.selected = '';
+                    }
+
+                    return;
+                }
+
+                const selectedValue = filterValue.dataset.selected || filterValue.value;
+                const url = new URL(filterValuesUrl, window.location.origin);
+                url.searchParams.set('source_bucket', sourceBucket.value);
+                url.searchParams.set('field', filterField.value);
+
+                filterValue.disabled = true;
+                filterValue.innerHTML = '<option value="">جاري التحميل...</option>';
+
+                try {
+                    const response = await fetch(url.toString(), {
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                    });
+                    const payload = await response.json();
+                    const values = Array.isArray(payload.values) ? payload.values : [];
+
+                    filterValue.innerHTML = '<option value="">بدون قيمة</option>';
+                    values.forEach((value) => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = value;
+                        filterValue.appendChild(option);
+                    });
+
+                    if (selectedValue && !values.includes(selectedValue)) {
+                        const option = document.createElement('option');
+                        option.value = selectedValue;
+                        option.textContent = selectedValue;
+                        filterValue.appendChild(option);
+                    }
+
+                    filterValue.value = selectedValue && Array.from(filterValue.options).some((option) => option.value === selectedValue)
+                        ? selectedValue
+                        : '';
+                    filterValue.dataset.selected = filterValue.value;
+                } catch (error) {
+                    filterValue.innerHTML = '<option value="">تعذر تحميل القيم</option>';
+                    filterValue.value = '';
+                    filterValue.dataset.selected = '';
+                } finally {
+                    filterValue.disabled = false;
+                }
             };
 
             sourceBucket.addEventListener('change', syncForm);
             [statKey, filterField].forEach((select) => {
                 select?.addEventListener('change', () => {
                     select.dataset.selected = select.value;
+                    if (select === filterField && filterValue) {
+                        filterValue.dataset.selected = '';
+                        syncFilterValues();
+                    }
                 });
+            });
+            filterValue?.addEventListener('change', () => {
+                filterValue.dataset.selected = filterValue.value;
             });
             syncForm();
         });

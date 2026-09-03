@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Building;
 use App\Models\DashboardCard;
 use App\Models\User;
 use Database\Seeders\DashboardCardSeeder;
@@ -102,4 +103,35 @@ it('keeps item sort order independent for each dashboard card', function (): voi
         ->get(route('admin.dashboard-cards.index', ['card' => $housingCard->id]))
         ->assertOk()
         ->assertSee('value="10"', false);
+});
+
+it('returns distinct filter values for the selected table field', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Database Officer', 'web'));
+
+    Building::query()->create([
+        'objectid' => 9001,
+        'globalid' => 'dashboard-filter-value-one',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 9002,
+        'globalid' => 'dashboard-filter-value-two',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 9003,
+        'globalid' => 'dashboard-filter-value-three',
+        'field_status' => 'Not_Completed',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('admin.dashboard-cards.filter-values', [
+            'source_bucket' => 'buildingStats',
+            'field' => 'field_status',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('values', ['COMPLETED', 'Not_Completed']);
 });
