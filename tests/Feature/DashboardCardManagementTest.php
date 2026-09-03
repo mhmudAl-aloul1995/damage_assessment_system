@@ -36,6 +36,7 @@ it('lets database officers manage dashboard card items', function (): void {
         ->assertSee('المباني')
         ->assertSee('ضرر كلي')
         ->assertDontSee('ui.damage_dashboard.fully_damaged')
+        ->assertSee('data-control="select2"', false)
         ->assertSee('js-icon-select')
         ->assertSee('ضرر - ki-shield-cross')
         ->assertSee('field_status');

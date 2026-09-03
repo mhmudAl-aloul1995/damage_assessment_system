@@ -9,7 +9,7 @@
 </td>
 <td>
     <div class="d-flex gap-2">
-        <select name="source_bucket" class="form-select form-select-sm" required>
+        <select name="source_bucket" class="form-select form-select-sm js-dashboard-select2" data-control="select2" required>
             @foreach ($sourceBuckets as $sourceBucket)
                 <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $item->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
             @endforeach
@@ -22,7 +22,7 @@
 <td>
     <div class="d-flex gap-2">
         <input type="text" name="filter_field" class="form-control form-control-sm" value="{{ old('filter_field', $item->filter_field) }}" placeholder="field">
-        <select name="filter_operator" class="form-select form-select-sm">
+        <select name="filter_operator" class="form-select form-select-sm js-dashboard-select2" data-control="select2" data-hide-search="true">
             <option value="">-</option>
             @foreach ($operators as $operator)
                 <option value="{{ $operator }}" @selected(old('filter_operator', $item->filter_operator) === $operator)>{{ $operator }}</option>

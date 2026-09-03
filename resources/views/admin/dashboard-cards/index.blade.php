@@ -134,6 +134,29 @@
             color: #3e97ff;
         }
 
+        .dashboard-card-admin .icon-preview-box-sm {
+            width: 30px;
+            height: 30px;
+        }
+
+        .dashboard-card-admin .icon-select2-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .dashboard-card-admin .icon-select2-text {
+            direction: ltr;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .dashboard-card-admin .select2-container {
+            width: 100% !important;
+        }
+
         .dashboard-card-admin .advanced-toggle {
             border: 0;
             background: transparent;
@@ -249,7 +272,7 @@
                                     </div>
                                     <div>
                                         <label class="form-label">مصدر البيانات</label>
-                                        <select name="source_bucket" class="form-select ltr-input" required>
+                                        <select name="source_bucket" class="form-select ltr-input js-dashboard-select2" data-control="select2" required>
                                             @foreach ($sourceBuckets as $sourceBucket)
                                                 <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $selectedCard->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
                                             @endforeach
@@ -391,14 +414,14 @@
 
                                                     <div class="col-md-4">
                                                         <label class="form-label">طريقة العدّ</label>
-                                                        <select name="calculation_type" class="form-select js-calculation-type" required>
+                                                        <select name="calculation_type" class="form-select js-dashboard-select2 js-calculation-type" data-control="select2" data-hide-search="true" required>
                                                             <option value="stat_key" @selected(old('calculation_type', $item->calculation_type) === 'stat_key')>إحصائية جاهزة</option>
                                                             <option value="count_condition" @selected(old('calculation_type', $item->calculation_type) === 'count_condition')>عدّ حسب الشرط</option>
                                                         </select>
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">مصدر العدّ</label>
-                                                        <select name="source_bucket" class="form-select ltr-input js-source-bucket" required>
+                                                        <select name="source_bucket" class="form-select ltr-input js-dashboard-select2 js-source-bucket" data-control="select2" required>
                                                             @foreach ($sourceBuckets as $sourceBucket)
                                                                 <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $item->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
                                                             @endforeach
@@ -406,7 +429,7 @@
                                                     </div>
                                                     <div class="col-md-4 js-stat-key-group">
                                                         <label class="form-label">مفتاح الإحصائية</label>
-                                                        <select name="stat_key" class="form-select ltr-input js-stat-key" data-selected="{{ old('stat_key', $item->stat_key) }}" required>
+                                                        <select name="stat_key" class="form-select ltr-input js-dashboard-select2 js-stat-key" data-control="select2" data-selected="{{ old('stat_key', $item->stat_key) }}" required>
                                                             @foreach ($statKeys as $sourceBucket => $keys)
                                                                 @foreach ($keys as $key)
                                                                     <option value="{{ $key }}" data-source-bucket="{{ $sourceBucket }}" @selected(old('stat_key', $item->stat_key) === $key)>{{ $key }}</option>
@@ -416,7 +439,7 @@
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">حقل الشرط</label>
-                                                        <select name="filter_field" class="form-select ltr-input js-filter-field" data-selected="{{ old('filter_field', $item->filter_field) }}">
+                                                        <select name="filter_field" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2" data-selected="{{ old('filter_field', $item->filter_field) }}">
                                                             <option value="">بدون شرط</option>
                                                             @foreach ($filterFields as $sourceBucket => $fields)
                                                                 @foreach ($fields as $field)
@@ -427,7 +450,7 @@
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">عامل الشرط</label>
-                                                        <select name="filter_operator" class="form-select">
+                                                        <select name="filter_operator" class="form-select js-dashboard-select2" data-control="select2" data-hide-search="true">
                                                             <option value="">بدون</option>
                                                             @foreach ($operators as $operator)
                                                                 <option value="{{ $operator }}" @selected(old('filter_operator', $item->filter_operator) === $operator)>{{ $operator }}</option>
@@ -436,7 +459,7 @@
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">قيمة الشرط</label>
-                                                        <select name="filter_value" class="form-select ltr-input js-filter-value" data-selected="{{ old('filter_value', $item->filter_value) }}">
+                                                        <select name="filter_value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" data-selected="{{ old('filter_value', $item->filter_value) }}">
                                                             <option value="{{ old('filter_value', $item->filter_value) }}">{{ old('filter_value', $item->filter_value) ?: 'اختر حقل الشرط أولاً' }}</option>
                                                         </select>
                                                     </div>
@@ -515,8 +538,52 @@
         @endif
     </div>
 
+@endsection
+
+@section('script')
     <script>
         const filterValuesUrl = @json(route('admin.dashboard-cards.filter-values'));
+        const dashboardCardsDirection = @json(app()->getLocale() === 'ar' ? 'rtl' : 'ltr');
+        const iconPathMarkup = '<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span>';
+
+        const renderIconSelect2Option = (option) => {
+            if (!option.id || !option.element?.closest('.js-icon-select')) {
+                return option.text;
+            }
+
+            const wrapper = $('<span class="icon-select2-option"></span>');
+            const preview = $('<span class="icon-preview-box icon-preview-box-sm"></span>');
+            const icon = $('<i class="ki-duotone fs-3"></i>').addClass(option.id).html(iconPathMarkup);
+            const text = $('<span class="icon-select2-text"></span>').text(option.text);
+
+            preview.append(icon);
+            wrapper.append(preview, text);
+
+            return wrapper;
+        };
+
+        const initializeDashboardSelect2 = () => {
+            if (!window.jQuery || !$.fn.select2) {
+                return;
+            }
+
+            $('.dashboard-card-admin .js-dashboard-select2').each(function() {
+                const select = $(this);
+
+                if (select.hasClass('select2-hidden-accessible')) {
+                    return;
+                }
+
+                select.select2({
+                    dir: dashboardCardsDirection,
+                    width: '100%',
+                    minimumResultsForSearch: select.data('hide-search') ? Infinity : 0,
+                    templateResult: renderIconSelect2Option,
+                    templateSelection: renderIconSelect2Option,
+                    dropdownParent: select.closest('.dashboard-card-admin'),
+                });
+            });
+        };
 
         document.querySelectorAll('.dashboard-card-admin form').forEach((form) => {
             const sourceBucket = form.querySelector('.js-source-bucket');
@@ -563,6 +630,7 @@
                 }
 
                 select.dataset.selected = select.value;
+                $(select).trigger('change.select2');
             };
 
             const syncForm = () => {
@@ -626,10 +694,12 @@
                         ? selectedValue
                         : '';
                     filterValue.dataset.selected = filterValue.value;
+                    $(filterValue).trigger('change.select2');
                 } catch (error) {
                     filterValue.innerHTML = '<option value="">تعذر تحميل القيم</option>';
                     filterValue.value = '';
                     filterValue.dataset.selected = '';
+                    $(filterValue).trigger('change.select2');
                 } finally {
                     filterValue.disabled = false;
                 }
@@ -651,6 +721,8 @@
             });
             syncForm();
         });
+
+        initializeDashboardSelect2();
 
         document.querySelectorAll('.js-icon-picker').forEach((picker) => {
             const select = picker.querySelector('.js-icon-select');

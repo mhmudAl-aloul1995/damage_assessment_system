@@ -12,7 +12,7 @@
 </div>
 <div class="col-md-2">
     <label class="form-label">مصدر البيانات</label>
-    <select name="source_bucket" class="form-select" required>
+    <select name="source_bucket" class="form-select js-dashboard-select2" data-control="select2" data-placeholder="اختر مصدر البيانات" required>
         @foreach ($sourceBuckets as $sourceBucket)
             <option value="{{ $sourceBucket }}" @selected(old('source_bucket', $card?->source_bucket) === $sourceBucket)>{{ $sourceBucket }}</option>
         @endforeach

@@ -12,14 +12,14 @@
 
 <div class="col-md-4">
     <label class="form-label">طريقة العدّ</label>
-    <select name="calculation_type" class="form-select js-calculation-type" required>
+    <select name="calculation_type" class="form-select js-dashboard-select2 js-calculation-type" data-control="select2" data-hide-search="true" required>
         <option value="stat_key">إحصائية جاهزة</option>
         <option value="count_condition">عدّ حسب الشرط</option>
     </select>
 </div>
 <div class="col-md-4">
     <label class="form-label">مصدر العدّ</label>
-    <select name="source_bucket" class="form-select ltr-input js-source-bucket" required>
+    <select name="source_bucket" class="form-select ltr-input js-dashboard-select2 js-source-bucket" data-control="select2" required>
         @foreach ($sourceBuckets as $sourceBucket)
             <option value="{{ $sourceBucket }}">{{ $sourceBucket }}</option>
         @endforeach
@@ -27,7 +27,7 @@
 </div>
 <div class="col-md-4 js-stat-key-group">
     <label class="form-label">مفتاح الإحصائية</label>
-    <select name="stat_key" class="form-select ltr-input js-stat-key" required>
+    <select name="stat_key" class="form-select ltr-input js-dashboard-select2 js-stat-key" data-control="select2" required>
         @foreach ($statKeys as $sourceBucket => $keys)
             @foreach ($keys as $key)
                 <option value="{{ $key }}" data-source-bucket="{{ $sourceBucket }}">{{ $key }}</option>
@@ -38,7 +38,7 @@
 
 <div class="col-md-4">
     <label class="form-label">حقل الشرط اختياري</label>
-    <select name="filter_field" class="form-select ltr-input js-filter-field">
+    <select name="filter_field" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2">
         <option value="">بدون شرط</option>
         @foreach ($filterFields as $sourceBucket => $fields)
             @foreach ($fields as $field)
@@ -50,7 +50,7 @@
 
 <div class="col-md-3">
     <label class="form-label">عامل الشرط</label>
-    <select name="filter_operator" class="form-select ltr-input">
+    <select name="filter_operator" class="form-select ltr-input js-dashboard-select2" data-control="select2" data-hide-search="true">
         <option value="">بدون</option>
         @foreach ($operators as $operator)
             <option value="{{ $operator }}">{{ $operator }}</option>
@@ -59,7 +59,7 @@
 </div>
 <div class="col-md-5">
     <label class="form-label">قيمة الشرط</label>
-    <select name="filter_value" class="form-select ltr-input js-filter-value">
+    <select name="filter_value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
         <option value="">اختر حقل الشرط أولاً</option>
     </select>
 </div>

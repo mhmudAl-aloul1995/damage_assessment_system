@@ -12,9 +12,9 @@
             <span class="path5"></span>
         </i>
     </span>
-    <select name="{{ $name }}" class="form-select ltr-input js-icon-select" required>
+    <select name="{{ $name }}" class="form-select ltr-input js-dashboard-select2 js-icon-select" data-control="select2" data-placeholder="اختر الأيقونة" required>
         @foreach ($icons as $iconClass => $iconLabel)
-            <option value="{{ $iconClass }}" @selected($selectedIcon === $iconClass)>{{ $iconLabel }} - {{ $iconClass }}</option>
+            <option value="{{ $iconClass }}" data-icon-label="{{ $iconLabel }}" @selected($selectedIcon === $iconClass)>{{ $iconLabel }} - {{ $iconClass }}</option>
         @endforeach
 
         @if ($selectedIcon && ! array_key_exists($selectedIcon, $icons))
