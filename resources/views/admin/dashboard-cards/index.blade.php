@@ -683,7 +683,7 @@
                         filterValue.innerHTML = '<option value="">اختر حقل الشرط أولاً</option>';
                         filterValue.value = '';
                         filterValue.dataset.selected = '';
-                        $(filterValue).trigger('change.select2');
+                        refreshDashboardSelect2Element(filterValue);
                     }
 
                     return;
@@ -730,12 +730,12 @@
                         ? selectedValue
                         : '';
                     filterValue.dataset.selected = filterValue.value;
-                    $(filterValue).trigger('change.select2');
+                    refreshDashboardSelect2Element(filterValue);
                 } catch (error) {
                     filterValue.innerHTML = '<option value="">تعذر تحميل القيم</option>';
                     filterValue.value = '';
                     filterValue.dataset.selected = '';
-                    $(filterValue).trigger('change.select2');
+                    refreshDashboardSelect2Element(filterValue);
                 } finally {
                     filterValue.disabled = false;
                 }
