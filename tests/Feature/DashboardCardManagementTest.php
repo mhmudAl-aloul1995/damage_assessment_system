@@ -30,8 +30,9 @@ it('lets database officers manage dashboard card items', function (): void {
         ->get(route('admin.dashboard-cards.index'))
         ->assertOk()
         ->assertSee('إدارة بطاقات لوحة التحكم')
-        ->assertSee('Buildings')
-        ->assertSee('ui.damage_dashboard.fully_damaged')
+        ->assertSee('المباني')
+        ->assertSee('ضرر كلي')
+        ->assertDontSee('ui.damage_dashboard.fully_damaged')
         ->assertSee('field_status');
 
     $this->actingAs($user)

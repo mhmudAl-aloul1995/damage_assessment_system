@@ -2,7 +2,7 @@
     <input type="number" name="sort_order" class="form-control form-control-sm" min="0" value="{{ old('sort_order', $item->sort_order) }}">
 </td>
 <td>
-    <input type="text" name="title" class="form-control form-control-sm" value="{{ old('title', $item->title) }}" required>
+    <input type="text" name="title" class="form-control form-control-sm" value="{{ old('title', __($item->title)) }}" required>
 </td>
 <td>
     <input type="text" name="key" class="form-control form-control-sm" value="{{ old('key', $item->key) }}" required>
