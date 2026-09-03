@@ -28,6 +28,19 @@ it('lets database officers manage dashboard card items', function (): void {
     $user->assignRole(Role::findOrCreate('Database Officer', 'web'));
 
     $card = DashboardCard::query()->where('key', 'buildings')->firstOrFail();
+    $card->items()->create([
+        'key' => 'count_by_damage_status',
+        'title' => 'عد حسب الضرر',
+        'source_bucket' => 'buildingStats',
+        'stat_key' => 'building_damage_status',
+        'icon' => 'ki-shield-cross',
+        'calculation_type' => 'count_condition',
+        'filter_field' => 'building_damage_status',
+        'filter_operator' => '=',
+        'filter_value' => 'fully_damaged',
+        'sort_order' => 90,
+        'is_active' => true,
+    ]);
 
     $this->actingAs($user)
         ->get(route('admin.dashboard-cards.index'))
@@ -38,6 +51,7 @@ it('lets database officers manage dashboard card items', function (): void {
         ->assertDontSee('ui.damage_dashboard.fully_damaged')
         ->assertSee('data-control="select2"', false)
         ->assertSee('js-icon-select')
+        ->assertSee('js-stat-key-group d-none', false)
         ->assertSee('ضرر - ki-shield-cross')
         ->assertSee('field_status');
 

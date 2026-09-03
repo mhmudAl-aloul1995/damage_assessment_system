@@ -427,7 +427,7 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="col-md-4 js-stat-key-group">
+                                                    <div class="col-md-4 js-stat-key-group {{ old('calculation_type', $item->calculation_type) === 'count_condition' ? 'd-none' : '' }}">
                                                         <label class="form-label">مفتاح الإحصائية</label>
                                                         <select name="stat_key" class="form-select ltr-input js-dashboard-select2 js-stat-key" data-control="select2" data-selected="{{ old('stat_key', $item->stat_key) }}" required>
                                                             @foreach ($statKeys as $sourceBucket => $keys)
