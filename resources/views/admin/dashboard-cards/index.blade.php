@@ -580,7 +580,6 @@
                     minimumResultsForSearch: select.data('hide-search') ? Infinity : 0,
                     templateResult: renderIconSelect2Option,
                     templateSelection: renderIconSelect2Option,
-                    dropdownParent: select.closest('.dashboard-card-admin'),
                 });
             });
         };
