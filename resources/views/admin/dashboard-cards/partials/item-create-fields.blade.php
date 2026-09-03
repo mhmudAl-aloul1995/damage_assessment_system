@@ -69,7 +69,8 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">قيمة الشرط</label>
-                <select name="conditions[0][value]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
+                <select name="conditions[0][value][]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" multiple>
+                    <option value="__NULL__">فارغ</option>
                     <option value="">اختر حقل الشرط أولاً</option>
                 </select>
             </div>

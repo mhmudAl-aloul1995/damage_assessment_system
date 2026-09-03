@@ -387,6 +387,20 @@
                                                 'value' => $item->filter_value,
                                             ]]);
                                         }
+
+                                        $itemConditions = $itemConditions
+                                            ->map(function ($condition) {
+                                                $values = $condition['value'] ?? [];
+                                                $values = is_array($values) ? $values : [$values];
+
+                                                return [
+                                                    ...$condition,
+                                                    'value' => collect($values)
+                                                        ->filter(fn ($value) => $value !== null && $value !== '')
+                                                        ->values()
+                                                        ->all(),
+                                                ];
+                                            });
                                     @endphp
                                     <div class="item-row">
                                         <div class="item-summary">
@@ -403,7 +417,7 @@
                                                 <div class="muted-label mb-1">مصدر العدّ</div>
                                                 <span class="code-pill">
                                                     @if ($item->calculation_type === 'count_condition')
-                                                        {{ $itemConditions->map(fn ($condition) => trim(($condition['field'] ?? '') . ' ' . ($condition['operator'] ?? '=') . ' ' . ($condition['value'] ?? '')))->implode(' + ') ?: 'بدون شروط' }}
+                                                        {{ $itemConditions->map(fn ($condition) => trim(($condition['field'] ?? '') . ' ' . ($condition['operator'] ?? '=') . ' ' . collect($condition['value'] ?? [])->map(fn ($value) => $value === '__NULL__' ? 'فارغ' : $value)->implode(', ')))->implode(' + ') ?: 'بدون شروط' }}
                                                     @else
                                                         {{ $item->source_bucket }}.{{ $item->stat_key }}
                                                     @endif
@@ -496,8 +510,12 @@
                                                                     </div>
                                                                     <div class="col-md-4">
                                                                         <label class="form-label">قيمة الشرط</label>
-                                                                        <select name="conditions[{{ $conditionIndex }}][value]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" data-selected="{{ $condition['value'] ?? '' }}">
-                                                                            <option value="{{ $condition['value'] ?? '' }}">{{ ($condition['value'] ?? '') ?: 'اختر حقل الشرط أولاً' }}</option>
+                                                                        <select name="conditions[{{ $conditionIndex }}][value][]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" data-selected-values='@json($condition['value'] ?? [])' multiple>
+                                                                            <option value="__NULL__" @selected(in_array('__NULL__', $condition['value'] ?? [], true))>فارغ</option>
+                                                                            @foreach ($condition['value'] ?? [] as $conditionValue)
+                                                                                @continue($conditionValue === '__NULL__')
+                                                                                <option value="{{ $conditionValue }}" selected>{{ $conditionValue }}</option>
+                                                                            @endforeach
                                                                         </select>
                                                                     </div>
                                                                     <div class="col-md-1">
@@ -529,7 +547,8 @@
                                                                     </div>
                                                                     <div class="col-md-4">
                                                                         <label class="form-label">قيمة الشرط</label>
-                                                                        <select name="conditions[0][value]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
+                                                                        <select name="conditions[0][value][]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" multiple>
+                                                                            <option value="__NULL__">فارغ</option>
                                                                             <option value="">اختر حقل الشرط أولاً</option>
                                                                         </select>
                                                                     </div>
@@ -643,7 +662,8 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">قيمة الشرط</label>
-                <select data-name="value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
+                <select data-name="value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" multiple>
+                    <option value="__NULL__">فارغ</option>
                     <option value="">اختر حقل الشرط أولاً</option>
                 </select>
             </div>
@@ -764,6 +784,22 @@
 
             const conditionRows = () => Array.from(form.querySelectorAll('.js-condition-row'));
 
+            const selectedFilterValues = (filterValue) => {
+                if (!filterValue) {
+                    return [];
+                }
+
+                if (filterValue.dataset.selectedValues) {
+                    try {
+                        return JSON.parse(filterValue.dataset.selectedValues);
+                    } catch (error) {
+                        return [];
+                    }
+                }
+
+                return $(filterValue).val() || [];
+            };
+
             const updateRemoveButtons = () => {
                 const rows = conditionRows();
 
@@ -810,16 +846,16 @@
             const syncFilterValues = async (filterField, filterValue) => {
                 if (!filterField || !filterValue || !filterField.value) {
                     if (filterValue) {
-                        filterValue.innerHTML = '<option value="">اختر حقل الشرط أولاً</option>';
-                        filterValue.value = '';
-                        filterValue.dataset.selected = '';
+                        filterValue.innerHTML = '<option value="__NULL__">فارغ</option><option value="">اختر حقل الشرط أولاً</option>';
+                        filterValue.dataset.selectedValues = '[]';
+                        $(filterValue).val([]);
                         refreshDashboardSelect2Element(filterValue);
                     }
 
                     return;
                 }
 
-                const selectedValue = filterValue.dataset.selected || filterValue.value;
+                const selectedValues = selectedFilterValues(filterValue);
                 const url = new URL(filterValuesUrl, window.location.origin);
                 url.searchParams.set('source_bucket', sourceBucket.value);
                 url.searchParams.set('field', filterField.value);
@@ -837,9 +873,16 @@
                     const values = Array.isArray(payload.values) ? payload.values : [];
 
                     filterValue.innerHTML = '';
+                    const nullOption = document.createElement('option');
+                    nullOption.value = '__NULL__';
+                    nullOption.textContent = 'فارغ';
+                    filterValue.appendChild(nullOption);
 
                     if (values.length === 0) {
-                        filterValue.innerHTML = '<option value="">لا توجد قيم محفوظة لهذا الحقل</option>';
+                        const emptyOption = document.createElement('option');
+                        emptyOption.value = '';
+                        emptyOption.textContent = 'لا توجد قيم محفوظة لهذا الحقل';
+                        filterValue.appendChild(emptyOption);
                     } else {
                         values.forEach((value) => {
                             const option = document.createElement('option');
@@ -849,22 +892,24 @@
                         });
                     }
 
-                    if (selectedValue && !values.includes(selectedValue)) {
+                    selectedValues
+                        .filter((selectedValue) => selectedValue && !values.includes(selectedValue) && selectedValue !== '__NULL__')
+                        .forEach((selectedValue) => {
                         const option = document.createElement('option');
                         option.value = selectedValue;
                         option.textContent = selectedValue;
                         filterValue.appendChild(option);
-                    }
+                    });
 
-                    filterValue.value = selectedValue && Array.from(filterValue.options).some((option) => option.value === selectedValue)
-                        ? selectedValue
-                        : '';
-                    filterValue.dataset.selected = filterValue.value;
+                    const availableValues = Array.from(filterValue.options).map((option) => option.value);
+                    const nextSelectedValues = selectedValues.filter((selectedValue) => availableValues.includes(selectedValue));
+                    $(filterValue).val(nextSelectedValues);
+                    filterValue.dataset.selectedValues = JSON.stringify(nextSelectedValues);
                     refreshDashboardSelect2Element(filterValue);
                 } catch (error) {
-                    filterValue.innerHTML = '<option value="">تعذر تحميل القيم</option>';
-                    filterValue.value = '';
-                    filterValue.dataset.selected = '';
+                    filterValue.innerHTML = '<option value="__NULL__">فارغ</option><option value="">تعذر تحميل القيم</option>';
+                    filterValue.dataset.selectedValues = '[]';
+                    $(filterValue).val([]);
                     refreshDashboardSelect2Element(filterValue);
                 } finally {
                     filterValue.disabled = false;
@@ -873,7 +918,9 @@
 
             const prepareConditionRow = (row, index) => {
                 row.querySelectorAll('[data-name]').forEach((input) => {
-                    input.name = `conditions[${index}][${input.dataset.name}]`;
+                    input.name = input.multiple
+                        ? `conditions[${index}][${input.dataset.name}][]`
+                        : `conditions[${index}][${input.dataset.name}]`;
                 });
             };
 
@@ -944,7 +991,7 @@
                 }
 
                 if (filterValue) {
-                    filterValue.dataset.selected = filterValue.value;
+                    filterValue.dataset.selectedValues = JSON.stringify($(filterValue).val() || []);
                 }
             });
 
@@ -961,7 +1008,7 @@
             });
 
             $(form).on('select2:select select2:clear', '.js-filter-value', function() {
-                this.dataset.selected = this.value;
+                this.dataset.selectedValues = JSON.stringify($(this).val() || []);
             });
             syncForm();
 

@@ -1077,6 +1077,61 @@ it('renders dashboard card items counted by multiple configured conditions', fun
         ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 1);
 });
 
+it('renders dashboard card items counted by multiple selected condition values including blank', function () {
+    $user = User::factory()->create();
+    $roadCard = DashboardCard::query()->where('key', 'road_facilities')->firstOrFail();
+
+    $item = DashboardCardItem::query()->create([
+        'dashboard_card_id' => $roadCard->id,
+        'key' => 'selected_road_damage_values',
+        'title' => 'أضرار مختارة',
+        'source_bucket' => 'roadFacilityStats',
+        'stat_key' => 'road_damage_level',
+        'icon' => 'ki-route',
+        'calculation_type' => 'count_condition',
+        'filter_field' => 'road_damage_level',
+        'filter_operator' => '=',
+        'filter_value' => 'minor',
+        'sort_order' => 12,
+        'is_active' => true,
+        'options' => [
+            'conditions' => [
+                ['field' => 'road_damage_level', 'operator' => '=', 'value' => ['minor', 'moderate', '__NULL__']],
+            ],
+        ],
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8131,
+        'str_name' => 'Minor Road',
+        'road_damage_level' => 'minor',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8132,
+        'str_name' => 'Moderate Road',
+        'road_damage_level' => 'moderate',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8133,
+        'str_name' => 'Blank Road',
+        'road_damage_level' => null,
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8134,
+        'str_name' => 'Severe Road',
+        'road_damage_level' => 'severe',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('أضرار مختارة')
+        ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 3);
+});
+
 it('renders dashboard card items counted from cso child table sources', function () {
     $user = User::factory()->create();
     $csoCard = DashboardCard::query()->where('key', 'cso_surveys')->firstOrFail();

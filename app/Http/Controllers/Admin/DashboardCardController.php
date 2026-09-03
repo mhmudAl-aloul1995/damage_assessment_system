@@ -276,7 +276,7 @@ class DashboardCardController extends Controller
             'is_active' => $request->boolean('is_active'),
             'filter_field' => $primaryCondition['field'] ?? null,
             'filter_operator' => $primaryCondition['operator'] ?? null,
-            'filter_value' => $primaryCondition['value'] ?? null,
+            'filter_value' => $this->legacyConditionValue($primaryCondition['value'] ?? null),
             'options' => [
                 'conditions' => $conditions,
             ],
@@ -288,7 +288,7 @@ class DashboardCardController extends Controller
     }
 
     /**
-     * @return array<int, array{field: string, operator: string, value: ?string}>
+     * @return array<int, array{field: string, operator: string, value: array<int, string>|null}>
      */
     private function itemConditions(FormRequest $request): array
     {
@@ -299,7 +299,7 @@ class DashboardCardController extends Controller
                 return [
                     'field' => trim((string) ($condition['field'] ?? '')),
                     'operator' => trim((string) ($condition['operator'] ?? '=')),
-                    'value' => trim((string) ($condition['value'] ?? '')),
+                    'value' => $this->conditionValues($condition['value'] ?? null),
                 ];
             })
             ->filter(fn (array $condition): bool => $condition['field'] !== '')
@@ -334,8 +334,38 @@ class DashboardCardController extends Controller
             'operator' => $operator !== '' ? $operator : '=',
             'value' => in_array($operator, ['blank', 'not_blank'], true)
                 ? null
-                : trim((string) $request->input('filter_value', '')),
+                : $this->conditionValues($request->input('filter_value')),
         ]];
+    }
+
+    /**
+     * @return array<int, string>|null
+     */
+    private function conditionValues(mixed $value): ?array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        if (! is_array($value)) {
+            $value = [$value];
+        }
+
+        return collect($value)
+            ->map(fn (mixed $item): string => trim((string) $item))
+            ->filter(fn (string $item): bool => $item !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function legacyConditionValue(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            return $value[0] ?? null;
+        }
+
+        return $value === null ? null : (string) $value;
     }
 
     private function uniqueItemKey(DashboardCard $dashboardCard, string $baseKey): string

@@ -1258,6 +1258,19 @@ class DamageAssessmentController extends Controller
                 ];
             })
             ->filter(fn (array $condition): bool => $condition['field'] !== '')
+            ->filter(function (array $condition): bool {
+                if (in_array($condition['operator'], ['blank', 'not_blank'], true)) {
+                    return true;
+                }
+
+                $values = is_array($condition['value'])
+                    ? $condition['value']
+                    : [$condition['value']];
+
+                return collect($values)
+                    ->filter(fn (mixed $value): bool => $value !== null && trim((string) $value) !== '')
+                    ->isNotEmpty();
+            })
             ->values()
             ->all();
 
@@ -1297,6 +1310,46 @@ class DamageAssessmentController extends Controller
 
     private function applyDashboardCardItemCondition(Builder $query, string $field, ?string $operator, mixed $value): void
     {
+        if (is_array($value)) {
+            $values = collect($value)
+                ->map(fn (mixed $item): string => trim((string) $item))
+                ->filter(fn (string $item): bool => $item !== '')
+                ->unique()
+                ->values();
+            $includesBlank = $values->contains('__NULL__');
+            $nonBlankValues = $values
+                ->reject(fn (string $item): bool => $item === '__NULL__')
+                ->values()
+                ->all();
+
+            if ($values->isEmpty()) {
+                return;
+            }
+
+            if ($operator === '!=' && $nonBlankValues !== []) {
+                $query->whereNotIn($field, $nonBlankValues);
+
+                if (! $includesBlank) {
+                    $query->whereNotNull($field)->where($field, '!=', '');
+                }
+
+                return;
+            }
+
+            $query->where(function (Builder $query) use ($field, $includesBlank, $nonBlankValues): void {
+                if ($nonBlankValues !== []) {
+                    $query->whereIn($field, $nonBlankValues);
+                }
+
+                if ($includesBlank) {
+                    $method = $nonBlankValues === [] ? 'where' : 'orWhere';
+                    $query->{$method}(fn (Builder $query): Builder => $query->whereNull($field)->orWhere($field, ''));
+                }
+            });
+
+            return;
+        }
+
         match ($operator) {
             '!=' => $query->where($field, '!=', $value),
             '>' => $query->where($field, '>', $value),

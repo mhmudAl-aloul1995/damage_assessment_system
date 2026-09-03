@@ -67,8 +67,8 @@ it('lets database officers manage dashboard card items', function (): void {
             'link_key' => 'completed',
             'calculation_type' => 'stat_key',
             'conditions' => [
-                ['field' => 'field_status', 'operator' => '=', 'value' => 'COMPLETED'],
-                ['field' => 'building_damage_status', 'operator' => '=', 'value' => 'fully_damaged'],
+                ['field' => 'field_status', 'operator' => '=', 'value' => ['COMPLETED', '__NULL__']],
+                ['field' => 'building_damage_status', 'operator' => '=', 'value' => ['fully_damaged']],
             ],
             'decimal_places' => 0,
             'sort_order' => 99,
@@ -84,7 +84,8 @@ it('lets database officers manage dashboard card items', function (): void {
         ->and($item->icon)->toBe('ki-dot')
         ->and($item->filter_field)->toBe('field_status')
         ->and($item->filter_value)->toBe('COMPLETED')
-        ->and($item->options['conditions'])->toHaveCount(2);
+        ->and($item->options['conditions'])->toHaveCount(2)
+        ->and($item->options['conditions'][0]['value'])->toBe(['COMPLETED', '__NULL__']);
 
     $this->actingAs($user)
         ->put(route('admin.dashboard-cards.items.update', [$card, $item]), [
