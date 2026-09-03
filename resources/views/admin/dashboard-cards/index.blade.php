@@ -115,6 +115,25 @@
             min-width: 100%;
         }
 
+        .dashboard-card-admin .icon-picker {
+            display: grid;
+            grid-template-columns: 44px minmax(0, 1fr);
+            gap: 8px;
+            align-items: center;
+        }
+
+        .dashboard-card-admin .icon-preview-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border: 1px solid var(--admin-border);
+            border-radius: 8px;
+            background: var(--admin-soft);
+            color: #3e97ff;
+        }
+
         .dashboard-card-admin .advanced-toggle {
             border: 0;
             background: transparent;
@@ -245,7 +264,10 @@
                                     </div>
                                     <div>
                                         <label class="form-label">الأيقونة</label>
-                                        <input type="text" name="icon" class="form-control ltr-input" value="{{ old('icon', $selectedCard->icon) }}" required>
+                                        @include('admin.dashboard-cards.partials.icon-select', [
+                                            'name' => 'icon',
+                                            'selectedIcon' => $selectedCard->icon,
+                                        ])
                                     </div>
                                 </div>
 
@@ -445,7 +467,10 @@
                                                                 </div>
                                                                 <div class="col-md-4">
                                                                     <label class="form-label">الأيقونة</label>
-                                                                    <input type="text" name="icon" class="form-control ltr-input" value="{{ old('icon', $item->icon) }}" required>
+                                                                    @include('admin.dashboard-cards.partials.icon-select', [
+                                                                        'name' => 'icon',
+                                                                        'selectedIcon' => $item->icon,
+                                                                    ])
                                                                 </div>
                                                                 <div class="col-md-4">
                                                                     <label class="form-label">مجموعة الرابط</label>
@@ -625,6 +650,22 @@
                 filterValue.dataset.selected = filterValue.value;
             });
             syncForm();
+        });
+
+        document.querySelectorAll('.js-icon-picker').forEach((picker) => {
+            const select = picker.querySelector('.js-icon-select');
+            const preview = picker.querySelector('.js-icon-preview');
+
+            if (!select || !preview) {
+                return;
+            }
+
+            const syncIconPreview = () => {
+                preview.className = `ki-duotone js-icon-preview ${select.value} fs-2`;
+            };
+
+            select.addEventListener('change', syncIconPreview);
+            syncIconPreview();
         });
     </script>
 @endsection

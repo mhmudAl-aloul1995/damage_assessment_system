@@ -38,6 +38,7 @@ class DashboardCardController extends Controller
             'statKeys' => $this->statKeys(),
             'filterFields' => $this->filterFields(),
             'operators' => $this->operators(),
+            'icons' => $this->icons(),
         ]);
     }
 
@@ -212,6 +213,34 @@ class DashboardCardController extends Controller
     private function operators(): array
     {
         return ['=', '!=', '>', '>=', '<', '<=', 'like', 'blank', 'not_blank'];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function icons(): array
+    {
+        return [
+            'ki-home-2' => 'مبنى',
+            'ki-home' => 'وحدة سكنية',
+            'ki-people' => 'أشخاص',
+            'ki-office-bag' => 'مؤسسة',
+            'ki-route' => 'طريق',
+            'ki-shield-cross' => 'ضرر',
+            'ki-rescue' => 'دعم',
+            'ki-questionnaire-tablet' => 'لجنة',
+            'ki-check-circle' => 'مكتمل',
+            'ki-cross-circle' => 'غير مكتمل',
+            'ki-flash-circle' => 'خطر',
+            'ki-bucket' => 'حفرة',
+            'ki-element-11' => 'عناصر',
+            'ki-map' => 'خريطة',
+            'ki-geolocation' => 'موقع',
+            'ki-profile-user' => 'مستخدم',
+            'ki-question' => 'سؤال',
+            'ki-category' => 'تصنيف',
+            'ki-dot' => 'نقطة',
+        ];
     }
 
     /**

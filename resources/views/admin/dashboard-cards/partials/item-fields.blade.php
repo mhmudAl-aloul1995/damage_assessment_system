@@ -37,7 +37,10 @@
         <input type="text" name="link_key" class="form-control form-control-sm" value="{{ old('link_key', $item->link_key) }}" placeholder="key">
     </div>
     <div class="d-flex gap-2 mt-2">
-        <input type="text" name="icon" class="form-control form-control-sm" value="{{ old('icon', $item->icon) }}" required>
+        @include('admin.dashboard-cards.partials.icon-select', [
+            'name' => 'icon',
+            'selectedIcon' => $item->icon,
+        ])
         <input type="text" name="value_suffix" class="form-control form-control-sm" value="{{ old('value_suffix', $item->value_suffix) }}" placeholder="لاحقة">
         <input type="number" name="decimal_places" class="form-control form-control-sm" min="0" max="6" value="{{ old('decimal_places', $item->decimal_places) }}">
     </div>

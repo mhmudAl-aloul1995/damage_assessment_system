@@ -63,6 +63,13 @@
         <option value="">اختر حقل الشرط أولاً</option>
     </select>
 </div>
+<div class="col-md-4">
+    <label class="form-label">الأيقونة</label>
+    @include('admin.dashboard-cards.partials.icon-select', [
+        'name' => 'icon',
+        'selectedIcon' => 'ki-dot',
+    ])
+</div>
 <div class="col-md-12">
     <input type="hidden" name="is_active" value="0">
     <label class="form-check form-switch form-check-custom form-check-solid">

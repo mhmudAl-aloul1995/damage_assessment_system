@@ -22,9 +22,12 @@
     <label class="form-label">مفتاح الإجمالي</label>
     <input type="text" name="total_stat_key" class="form-control" value="{{ old('total_stat_key', $card?->total_stat_key) }}" required>
 </div>
-<div class="col-md-1">
+<div class="col-md-2">
     <label class="form-label">الأيقونة</label>
-    <input type="text" name="icon" class="form-control" value="{{ old('icon', $card?->icon ?? 'ki-category') }}" required>
+    @include('admin.dashboard-cards.partials.icon-select', [
+        'name' => 'icon',
+        'selectedIcon' => $card?->icon ?? 'ki-category',
+    ])
 </div>
 <div class="col-md-1">
     <label class="form-label">اللون</label>
