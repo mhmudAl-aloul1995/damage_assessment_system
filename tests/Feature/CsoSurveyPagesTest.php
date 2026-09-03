@@ -67,7 +67,10 @@ test('it shows cso survey listing and details like other survey pages', function
         ->assertSee('CSO Surveys')
         ->assertSee('Total Surveys')
         ->assertSee('Survey Status')
-        ->assertSee('id="filter_field_status"', false);
+        ->assertSee('id="filter_field_status"', false)
+        ->assertSee('<option value="1">ضرر كلي</option>', false)
+        ->assertSee('<option value="2">ضرر جزئي</option>', false)
+        ->assertSee('<option value="3">لجنة فنية</option>', false);
 
     $dataResponse = $this->actingAs($user)->get(route('cso-surveys.data', [
         'draw' => 1,
@@ -105,6 +108,10 @@ test('it shows cso survey listing and details like other survey pages', function
         ->assertSee('CSO Main Building')
         ->assertSee('COMPLETED')
         ->assertDontSee('Filtered Out Organization');
+
+    expect($dataResponse->json('data.0.building_damage_status'))
+        ->toContain('ضرر جزئي')
+        ->not->toContain('partial_damage');
 
     $showResponse = $this->actingAs($user)->get(route('cso-surveys.show', $survey));
 

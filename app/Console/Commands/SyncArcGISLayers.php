@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\SystemOperationLog;
 use App\services\ArcgisService;
 use App\services\FieldReturnAssessmentChangeService;
+use App\Support\CsoSurveyDamageStatusNormalizer;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -894,6 +895,10 @@ class SyncArcGISLayers extends Command
         }
 
         $column = strtolower($column);
+
+        if ($table === 'cso_surveys' && $column === 'building_damage_status') {
+            return CsoSurveyDamageStatusNormalizer::normalize($value);
+        }
 
         if (str_starts_with($table, 'cso_') && in_array($column, ['globalid', 'parentglobalid'], true)) {
             return $this->normalizeGlobalId($value);

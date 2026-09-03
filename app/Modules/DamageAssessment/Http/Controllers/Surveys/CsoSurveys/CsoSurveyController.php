@@ -63,7 +63,7 @@ class CsoSurveyController extends Controller
             'neighborhoods' => CsoSurvey::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
             'researchers' => CsoSurvey::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'surveyStatuses' => CsoSurvey::query()->distinct()->orderBy('field_status')->pluck('field_status')->filter()->values(),
-            'damageStatuses' => CsoSurvey::query()->distinct()->orderBy('building_damage_status')->pluck('building_damage_status')->filter()->values(),
+            'damageStatuses' => $this->damageStatusOptions(),
             'operationalStatuses' => CsoSurvey::query()->distinct()->orderBy('operational_status')->pluck('operational_status')->filter()->values(),
             'min_creationdate' => optional(CsoSurvey::query()->whereNotNull('creationdate')->min('creationdate'))?->format('Y-m-d'),
             'max_creationdate' => optional(CsoSurvey::query()->whereNotNull('creationdate')->max('creationdate'))?->format('Y-m-d'),
@@ -90,7 +90,7 @@ class CsoSurveyController extends Controller
             ->addColumn('actions', fn (CsoSurvey $survey): string => '<a href="'.route('cso-surveys.show', $survey).'" class="btn btn-light btn-sm">View</a>')
             ->editColumn('creationdate', fn (CsoSurvey $survey): string => $survey->creationdate?->format('Y-m-d H:i') ?? '-')
             ->editColumn('field_status', fn (CsoSurvey $survey): string => $this->statusBadge($survey->field_status, 'primary'))
-            ->editColumn('building_damage_status', fn (CsoSurvey $survey): string => '<span class="badge badge-light-danger">'.e($survey->building_damage_status ?? '-').'</span>')
+            ->editColumn('building_damage_status', fn (CsoSurvey $survey): string => '<span class="badge badge-light-danger">'.e($this->damageStatusLabel($survey->building_damage_status)).'</span>')
             ->addColumn('assignedto', fn (CsoSurvey $survey): string => $survey->assignedto ?? '-')
             ->rawColumns(['actions', 'field_status', 'building_damage_status'])
             ->toJson();
@@ -260,7 +260,9 @@ class CsoSurveyController extends Controller
             ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
             ->map(function (array $field) use ($record): array {
                 $value = CsoSurveyLayout::value($record, $field['name']);
-                $answer = CsoSurveyLayout::displayValue($value, $field);
+                $answer = ($field['name'] ?? null) === 'building_damage_status'
+                    ? $this->damageStatusLabel(is_scalar($value) ? (string) $value : null)
+                    : CsoSurveyLayout::displayValue($value, $field);
 
                 return [
                     'question' => $field['label'] ?: $field['name'],
@@ -295,6 +297,63 @@ class CsoSurveyController extends Controller
     private function statusBadge(?string $status, string $color): string
     {
         return '<span class="badge badge-light-'.$color.'">'.e($status ?: '-').'</span>';
+    }
+
+    /**
+     * @return Collection<int, array{value: string, label: string}>
+     */
+    private function damageStatusOptions(): Collection
+    {
+        $knownStatuses = collect($this->damageStatusLabels())
+            ->map(fn (string $label, string $value): array => [
+                'value' => $value,
+                'label' => $label,
+            ])
+            ->values();
+
+        $storedStatuses = CsoSurvey::query()
+            ->distinct()
+            ->orderBy('building_damage_status')
+            ->pluck('building_damage_status')
+            ->filter()
+            ->map(fn (mixed $status): string => trim((string) $status))
+            ->filter(fn (string $status): bool => $status !== '')
+            ->reject(fn (string $status): bool => array_key_exists($status, $this->damageStatusLabels()))
+            ->map(fn (string $status): array => [
+                'value' => $status,
+                'label' => $this->damageStatusLabel($status),
+            ])
+            ->values();
+
+        return $knownStatuses->merge($storedStatuses);
+    }
+
+    private function damageStatusLabel(?string $status): string
+    {
+        $status = trim((string) $status);
+
+        if ($status === '') {
+            return '-';
+        }
+
+        return $this->damageStatusLabels()[$status] ?? match (strtolower($status)) {
+            'total', 'totally', 'total_damage', 'totally_damaged', 'totally damaged', 'fully_damaged', 'fully damaged' => 'ضرر كلي',
+            'partial', 'partial_damage', 'partially_damaged', 'partially damaged' => 'ضرر جزئي',
+            'committee_review', 'technical_committee', 'technical committee' => 'لجنة فنية',
+            default => $status,
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function damageStatusLabels(): array
+    {
+        return [
+            '1' => 'ضرر كلي',
+            '2' => 'ضرر جزئي',
+            '3' => 'لجنة فنية',
+        ];
     }
 
     /**

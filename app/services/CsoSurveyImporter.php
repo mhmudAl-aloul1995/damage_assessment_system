@@ -7,6 +7,7 @@ namespace App\services;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
+use App\Support\CsoSurveyDamageStatusNormalizer;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -129,6 +130,12 @@ class CsoSurveyImporter
 
             if (in_array($targetKey, ['globalid', 'parentglobalid'], true)) {
                 $mapped[$targetKey] = $this->normalizeGlobalId($value);
+
+                continue;
+            }
+
+            if ($targetKey === 'building_damage_status') {
+                $mapped[$targetKey] = CsoSurveyDamageStatusNormalizer::normalize($value);
 
                 continue;
             }

@@ -155,3 +155,63 @@ it('uses the configured cso unit layer url when syncing cso survey units', funct
         ->and($unit->parentglobalid)->toBe('cso-survey-parent-id')
         ->and($unit->unit_name)->toBe('Imported CSO Unit');
 });
+
+it('normalizes cso survey building damage status values from arcgis', function (): void {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+
+    Artisan::call('migrate:fresh', ['--database' => 'mysql', '--force' => true]);
+
+    config()->set('app.url', 'http://localhost:8000');
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.cso_survey_layer_url', 'https://example.com/cso-surveys/FeatureServer');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/cso-surveys/FeatureServer/0/addToDefinition*' => Http::response(['success' => true]),
+        'https://example.com/cso-surveys/FeatureServer/0/calculate*' => Http::response(['success' => true]),
+        'https://example.com/cso-surveys/FeatureServer/0' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString'],
+                ['name' => 'building_damage_status', 'type' => 'esriFieldTypeString'],
+            ],
+        ]),
+        'https://example.com/cso-surveys/FeatureServer/0/query*' => Http::sequence()
+            ->push([
+                'features' => [
+                    [
+                        'attributes' => [
+                            'objectid' => 7702,
+                            'globalid' => '{CSO-SURVEY-TOTAL-GLOBAL-ID}',
+                            'building_damage_status' => 'total',
+                        ],
+                    ],
+                    [
+                        'attributes' => [
+                            'objectid' => 7703,
+                            'globalid' => '{CSO-SURVEY-PARTIAL-GLOBAL-ID}',
+                            'building_damage_status' => 'partial',
+                        ],
+                    ],
+                ],
+                'exceededTransferLimit' => false,
+            ])
+            ->push([
+                'features' => [],
+                'exceededTransferLimit' => false,
+            ]),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', [
+        'table' => 'cso_surveys',
+        '--force' => true,
+    ]);
+
+    expect($exitCode)->toBe(0)
+        ->and(DB::table('cso_surveys')->where('objectid', 7702)->value('building_damage_status'))->toBe('1')
+        ->and(DB::table('cso_surveys')->where('objectid', 7703)->value('building_damage_status'))->toBe('2');
+});

@@ -18,7 +18,7 @@ test('it imports cso survey payload with searchable fields and raw payload', fun
         'neighborhood' => 'Al-Rimal',
         'building_name' => 'CSO Main Building',
         'organization_name_en' => 'Civil Support Org',
-        'building_damage_status' => 'partial_damage',
+        'building_damage_status' => 'partial',
         'operational_status' => 'partially_operational',
         'weather' => 'sunny',
         'CSO_Organizations' => [
@@ -44,6 +44,7 @@ test('it imports cso survey payload with searchable fields and raw payload', fun
     expect($survey)->toBeInstanceOf(CsoSurvey::class)
         ->and($survey->objectid)->toBe(7001)
         ->and($survey->organization_name)->toBe('Civil Support Org')
+        ->and($survey->building_damage_status)->toBe('2')
         ->and($survey->raw_payload['weather'])->toBe('sunny')
         ->and($survey->organizations)->toHaveCount(1)
         ->and($survey->units)->toHaveCount(1)

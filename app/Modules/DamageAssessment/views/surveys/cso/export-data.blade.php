@@ -220,7 +220,7 @@
                             <label class="form-label fw-bold" for="export_filter_building_damage_status">Damage Status</label>
                             <select id="export_filter_building_damage_status" name="building_damage_status[]" class="form-select form-select-solid cso-export-select2" data-placeholder="Select damage status" multiple>
                                 @foreach ($filterOptions['damageStatuses'] as $status)
-                                    <option value="{{ $status }}">{{ $status }}</option>
+                                    <option value="{{ $status['value'] }}">{{ $status['label'] }}</option>
                                 @endforeach
                             </select>
                         </div>
