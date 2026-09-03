@@ -545,6 +545,7 @@
         const filterValuesUrl = @json(route('admin.dashboard-cards.filter-values'));
         const dashboardCardsDirection = @json(app()->getLocale() === 'ar' ? 'rtl' : 'ltr');
         const iconPathMarkup = '<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span>';
+        const sourceOptionsCache = new WeakMap();
 
         const renderIconSelect2Option = (option) => {
             if (!option.id || !option.element?.closest('.js-icon-select')) {
@@ -601,30 +602,25 @@
                     return;
                 }
 
+                if (!sourceOptionsCache.has(select)) {
+                    sourceOptionsCache.set(select, Array.from(select.options).map((option) => option.cloneNode(true)));
+                }
+
                 const selectedSource = sourceBucket.value;
                 const selectedValue = select.dataset.selected || select.value;
-                let selectedValueStillAvailable = false;
+                const availableOptions = sourceOptionsCache.get(select)
+                    .filter((option) => !option.dataset.sourceBucket || option.dataset.sourceBucket === selectedSource)
+                    .map((option) => option.cloneNode(true));
 
-                select.querySelectorAll('option').forEach((option) => {
-                    if (!option.dataset.sourceBucket) {
-                        option.hidden = false;
-                        option.disabled = false;
-                        return;
-                    }
+                select.replaceChildren(...availableOptions);
 
-                    const isSameSource = option.dataset.sourceBucket === selectedSource;
-                    option.hidden = !isSameSource;
-                    option.disabled = !isSameSource;
-
-                    if (isSameSource && option.value === selectedValue) {
-                        selectedValueStillAvailable = true;
-                    }
-                });
+                const selectedValueStillAvailable = Array.from(select.options)
+                    .some((option) => option.value === selectedValue);
 
                 if (selectedValueStillAvailable) {
                     select.value = selectedValue;
                 } else {
-                    const firstAvailableOption = Array.from(select.options).find((option) => !option.disabled && option.value !== '');
+                    const firstAvailableOption = Array.from(select.options).find((option) => option.value !== '');
                     select.value = select.required && firstAvailableOption ? firstAvailableOption.value : '';
                 }
 
