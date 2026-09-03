@@ -217,6 +217,43 @@ class DamageAssessmentController extends Controller
             'assessment_blocked' => $this->dashboardCsoAssessmentBlockedQuery($request)
                 ->count(),
         ];
+        $csoOrganizationStats = [
+            'total_organizations' => $this->dashboardCsoOrganizationQuery($request)
+                ->count(),
+
+            'unique_surveys' => $this->dashboardCsoOrganizationQuery($request)
+                ->whereNotNull('parentglobalid')
+                ->where('parentglobalid', '!=', '')
+                ->distinct()
+                ->count('parentglobalid'),
+
+            'operational' => $this->dashboardCsoOrganizationQuery($request)
+                ->where('operational_status', 'operational')
+                ->count(),
+
+            'partially_operational' => $this->dashboardCsoOrganizationQuery($request)
+                ->where('operational_status', 'partially_operational')
+                ->count(),
+
+            'not_operational' => $this->dashboardCsoOrganizationQuery($request)
+                ->where('operational_status', 'not_operational')
+                ->count(),
+        ];
+        $csoUnitStats = [
+            'total_units' => $this->dashboardCsoUnitQuery($request)
+                ->count(),
+
+            'unique_surveys' => $this->dashboardCsoUnitQuery($request)
+                ->whereNotNull('parentglobalid')
+                ->where('parentglobalid', '!=', '')
+                ->distinct()
+                ->count('parentglobalid'),
+
+            'damaged_units' => $this->dashboardCsoUnitQuery($request)
+                ->whereNotNull('unit_damage_status')
+                ->where('unit_damage_status', '!=', '')
+                ->count(),
+        ];
         $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
         $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
         $governorates = $this->dashboardGovernorates();
@@ -234,6 +271,8 @@ class DamageAssessmentController extends Controller
                 'publicBuildingStats',
                 'roadFacilityStats',
                 'csoSurveyStats',
+                'csoOrganizationStats',
+                'csoUnitStats',
                 'publicBuildingLayerUrl',
                 'roadFacilityLayerUrl',
                 'governorates',
@@ -1250,6 +1289,8 @@ class DamageAssessmentController extends Controller
             'publicBuildingStats' => $this->dashboardPublicBuildingQuery($request),
             'roadFacilityStats' => $this->dashboardRoadFacilityQuery($request),
             'csoSurveyStats' => $this->dashboardCsoSurveyQuery($request),
+            'csoOrganizationStats' => $this->dashboardCsoOrganizationQuery($request),
+            'csoUnitStats' => $this->dashboardCsoUnitQuery($request),
             default => null,
         };
     }
@@ -2395,6 +2436,18 @@ class DamageAssessmentController extends Controller
         $this->applyDashboardMapFilters($query, $request, '', 'creationdate');
 
         return $query;
+    }
+
+    private function dashboardCsoOrganizationQuery(Request $request): Builder
+    {
+        return CsoSurveyOrganization::query()
+            ->whereIn('parentglobalid', $this->dashboardCsoSurveyQuery($request)->select('globalid'));
+    }
+
+    private function dashboardCsoUnitQuery(Request $request): Builder
+    {
+        return CsoSurveyUnit::query()
+            ->whereIn('parentglobalid', $this->dashboardCsoSurveyQuery($request)->select('globalid'));
     }
 
     private function dashboardCsoAssessmentBlockedQuery(Request $request): Builder

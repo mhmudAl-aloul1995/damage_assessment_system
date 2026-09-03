@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Building;
+use App\Models\CsoSurveyOrganization;
 use App\Models\DashboardCard;
 use App\Models\User;
 use Database\Seeders\DashboardCardSeeder;
@@ -53,7 +54,9 @@ it('lets database officers manage dashboard card items', function (): void {
         ->assertSee('js-icon-select')
         ->assertSee('js-stat-key-group d-none', false)
         ->assertSee('ضرر - ki-shield-cross')
-        ->assertSee('field_status');
+        ->assertSee('field_status')
+        ->assertSee('csoOrganizationStats')
+        ->assertSee('csoUnitStats');
 
     $this->actingAs($user)
         ->post(route('admin.dashboard-cards.items.store', $card), [
@@ -155,4 +158,38 @@ it('returns distinct filter values for the selected table field', function (): v
         ]))
         ->assertOk()
         ->assertJsonPath('values', ['COMPLETED', 'Not_Completed']);
+});
+
+it('returns distinct filter values for cso child tables', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Database Officer', 'web'));
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 9101,
+        'globalid' => 'dashboard-cso-org-value-one',
+        'parentglobalid' => 'dashboard-cso-survey-one',
+        'operational_status' => 'operational',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 9102,
+        'globalid' => 'dashboard-cso-org-value-two',
+        'parentglobalid' => 'dashboard-cso-survey-two',
+        'operational_status' => 'operational',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 9103,
+        'globalid' => 'dashboard-cso-org-value-three',
+        'parentglobalid' => 'dashboard-cso-survey-three',
+        'operational_status' => 'partially_operational',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('admin.dashboard-cards.filter-values', [
+            'source_bucket' => 'csoOrganizationStats',
+            'field' => 'operational_status',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('values', ['operational', 'partially_operational']);
 });

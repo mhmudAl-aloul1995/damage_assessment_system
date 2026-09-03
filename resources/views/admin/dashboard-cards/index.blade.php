@@ -875,10 +875,6 @@
                 row.querySelectorAll('[data-name]').forEach((input) => {
                     input.name = `conditions[${index}][${input.dataset.name}]`;
                 });
-
-                row.querySelectorAll('.js-dashboard-select2').forEach((select) => {
-                    initializeDashboardSelect2Element(select);
-                });
             };
 
             const addConditionRow = () => {
@@ -893,6 +889,9 @@
 
                 prepareConditionRow(row, index);
                 conditionList.appendChild(row);
+                row.querySelectorAll('.js-dashboard-select2').forEach((select) => {
+                    initializeDashboardSelect2Element(select);
+                });
                 syncForm();
             };
 

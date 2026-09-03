@@ -1077,6 +1077,64 @@ it('renders dashboard card items counted by multiple configured conditions', fun
         ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 1);
 });
 
+it('renders dashboard card items counted from cso child table sources', function () {
+    $user = User::factory()->create();
+    $csoCard = DashboardCard::query()->where('key', 'cso_surveys')->firstOrFail();
+
+    $item = DashboardCardItem::query()->create([
+        'dashboard_card_id' => $csoCard->id,
+        'key' => 'operational_cso_organizations',
+        'title' => 'منظمات عاملة',
+        'source_bucket' => 'csoOrganizationStats',
+        'stat_key' => 'operational',
+        'icon' => 'ki-office-bag',
+        'calculation_type' => 'count_condition',
+        'filter_field' => 'operational_status',
+        'filter_operator' => '=',
+        'filter_value' => 'operational',
+        'sort_order' => 12,
+        'is_active' => true,
+        'options' => [
+            'conditions' => [
+                ['field' => 'operational_status', 'operator' => '=', 'value' => 'operational'],
+            ],
+        ],
+    ]);
+
+    CsoSurvey::query()->create([
+        'objectid' => 8121,
+        'globalid' => 'dashboard-cso-survey-child-source',
+        'municipalitie' => 'Gaza',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 9121,
+        'globalid' => 'dashboard-cso-org-operational',
+        'parentglobalid' => 'dashboard-cso-survey-child-source',
+        'operational_status' => 'operational',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 9122,
+        'globalid' => 'dashboard-cso-org-partial',
+        'parentglobalid' => 'dashboard-cso-survey-child-source',
+        'operational_status' => 'partially_operational',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 9123,
+        'globalid' => 'dashboard-cso-org-orphan',
+        'parentglobalid' => 'unmatched-survey',
+        'operational_status' => 'operational',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('منظمات عاملة')
+        ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 1);
+});
+
 it('falls back to base survey tables when audited cache tables are missing', function () {
     Schema::dropIfExists('audited_housing_units');
     Schema::dropIfExists('audited_buildings');

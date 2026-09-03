@@ -159,6 +159,8 @@ class DashboardCardController extends Controller
             'publicBuildingStats',
             'roadFacilityStats',
             'csoSurveyStats',
+            'csoOrganizationStats',
+            'csoUnitStats',
         ];
     }
 
@@ -173,6 +175,8 @@ class DashboardCardController extends Controller
             'publicBuildingStats' => ['total_surveys', 'damaged_buildings', 'total_units', 'municipalities', 'neighborhoods', 'assigned_staff', 'occupied_buildings', 'bodies_present', 'uxo_present'],
             'roadFacilityStats' => ['total_surveys', 'damaged_roads', 'undamaged_roads', 'completed_road_length_km', 'total_items', 'municipalities', 'neighborhoods', 'potholes_locations', 'obstacle_locations', 'buried_bodies_locations', 'uxo_locations'],
             'csoSurveyStats' => ['total_surveys', 'completed', 'damaged_buildings', 'total_organizations', 'total_units', 'without_units', 'without_organization', 'municipalities', 'neighborhoods', 'assessment_blocked'],
+            'csoOrganizationStats' => ['total_organizations', 'unique_surveys', 'operational', 'partially_operational', 'not_operational'],
+            'csoUnitStats' => ['total_units', 'unique_surveys', 'damaged_units'],
         ];
     }
 
@@ -204,6 +208,8 @@ class DashboardCardController extends Controller
             'publicBuildingStats' => 'public_building_surveys',
             'roadFacilityStats' => 'road_facility_surveys',
             'csoSurveyStats' => 'cso_surveys',
+            'csoOrganizationStats' => 'cso_survey_organizations',
+            'csoUnitStats' => 'cso_survey_units',
         ];
     }
 

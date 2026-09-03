@@ -1,5 +1,5 @@
 @php
-	$dashboardStatsBuckets = compact('buildingStats', 'unitStats', 'publicBuildingStats', 'roadFacilityStats', 'csoSurveyStats');
+	$dashboardStatsBuckets = compact('buildingStats', 'unitStats', 'publicBuildingStats', 'roadFacilityStats', 'csoSurveyStats', 'csoOrganizationStats', 'csoUnitStats');
 	$dashboardCardItemValues ??= [];
 
 	$formatDashboardValue = function ($value, int $decimalPlaces = 0, ?string $suffix = null): string {
