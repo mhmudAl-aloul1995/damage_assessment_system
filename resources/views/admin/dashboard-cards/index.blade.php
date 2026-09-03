@@ -115,6 +115,13 @@
             min-width: 100%;
         }
 
+        .dashboard-card-admin .advanced-toggle {
+            border: 0;
+            background: transparent;
+            color: #3e97ff;
+            padding: 0;
+        }
+
         @media (max-width: 991.98px) {
             .dashboard-card-admin .item-summary {
                 grid-template-columns: 36px 1fr auto;
@@ -342,17 +349,13 @@
                                                     <input type="hidden" name="calculation_type" value="{{ $item->calculation_type }}">
                                                     <input type="hidden" name="source_model" value="{{ $item->source_model }}">
 
-                                                    <div class="col-md-2">
-                                                        <label class="form-label">الترتيب</label>
-                                                        <input type="number" name="sort_order" class="form-control" min="0" value="{{ old('sort_order', $item->sort_order) }}">
-                                                    </div>
-                                                    <div class="col-md-5">
+                                                    <div class="col-md-8">
                                                         <label class="form-label">العنوان</label>
                                                         <input type="text" name="title" class="form-control" value="{{ old('title', $item->title) }}" required>
                                                     </div>
-                                                    <div class="col-md-5">
-                                                        <label class="form-label">المفتاح</label>
-                                                        <input type="text" name="key" class="form-control" value="{{ old('key', $item->key) }}" required>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">الترتيب</label>
+                                                        <input type="number" name="sort_order" class="form-control" min="0" value="{{ old('sort_order', $item->sort_order) }}">
                                                     </div>
 
                                                     <div class="col-md-4">
@@ -365,13 +368,14 @@
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">مفتاح الإحصائية</label>
-                                                        <input type="text" name="stat_key" class="form-control" value="{{ old('stat_key', $item->stat_key) }}" required>
+                                                        <select name="stat_key" class="form-select ltr-input js-stat-key" data-selected="{{ old('stat_key', $item->stat_key) }}" required>
+                                                            @foreach ($statKeys as $sourceBucket => $keys)
+                                                                @foreach ($keys as $key)
+                                                                    <option value="{{ $key }}" data-source-bucket="{{ $sourceBucket }}" @selected(old('stat_key', $item->stat_key) === $key)>{{ $key }}</option>
+                                                                @endforeach
+                                                            @endforeach
+                                                        </select>
                                                     </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">الأيقونة</label>
-                                                        <input type="text" name="icon" class="form-control" value="{{ old('icon', $item->icon) }}" required>
-                                                    </div>
-
                                                     <div class="col-md-4">
                                                         <label class="form-label">حقل الشرط</label>
                                                         <select name="filter_field" class="form-select ltr-input js-filter-field" data-selected="{{ old('filter_field', $item->filter_field) }}">
@@ -383,7 +387,7 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="col-md-3">
+                                                    <div class="col-md-4">
                                                         <label class="form-label">عامل الشرط</label>
                                                         <select name="filter_operator" class="form-select">
                                                             <option value="">بدون</option>
@@ -392,26 +396,9 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="col-md-5">
+                                                    <div class="col-md-4">
                                                         <label class="form-label">قيمة الشرط</label>
                                                         <input type="text" name="filter_value" class="form-control" value="{{ old('filter_value', $item->filter_value) }}" placeholder="value">
-                                                    </div>
-
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">مجموعة الرابط</label>
-                                                        <input type="text" name="link_group" class="form-control" value="{{ old('link_group', $item->link_group) }}" placeholder="group">
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">مفتاح الرابط</label>
-                                                        <input type="text" name="link_key" class="form-control" value="{{ old('link_key', $item->link_key) }}" placeholder="key">
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <label class="form-label">لاحقة</label>
-                                                        <input type="text" name="value_suffix" class="form-control" value="{{ old('value_suffix', $item->value_suffix) }}">
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <label class="form-label">كسور</label>
-                                                        <input type="number" name="decimal_places" class="form-control" min="0" max="6" value="{{ old('decimal_places', $item->decimal_places) }}">
                                                     </div>
 
                                                     <div class="col-md-4">
@@ -423,6 +410,43 @@
                                                     </div>
                                                     <div class="col-md-4">
                                                         <button type="submit" class="btn btn-primary w-100">حفظ البند</button>
+                                                    </div>
+
+                                                    <div class="col-12">
+                                                        <button class="advanced-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#dashboard_item_advanced_{{ $item->id }}">
+                                                            إعدادات متقدمة
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="collapse col-12" id="dashboard_item_advanced_{{ $item->id }}">
+                                                        <div class="soft-box">
+                                                            <div class="row g-4">
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label">المفتاح الداخلي</label>
+                                                                    <input type="text" name="key" class="form-control ltr-input" value="{{ old('key', $item->key) }}" required>
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label">الأيقونة</label>
+                                                                    <input type="text" name="icon" class="form-control ltr-input" value="{{ old('icon', $item->icon) }}" required>
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label">مجموعة الرابط</label>
+                                                                    <input type="text" name="link_group" class="form-control ltr-input" value="{{ old('link_group', $item->link_group) }}" placeholder="group">
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label">مفتاح الرابط</label>
+                                                                    <input type="text" name="link_key" class="form-control ltr-input" value="{{ old('link_key', $item->link_key) }}" placeholder="key">
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label">لاحقة</label>
+                                                                    <input type="text" name="value_suffix" class="form-control" value="{{ old('value_suffix', $item->value_suffix) }}">
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label">كسور</label>
+                                                                    <input type="number" name="decimal_places" class="form-control" min="0" max="6" value="{{ old('decimal_places', $item->decimal_places) }}">
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </form>
 
@@ -452,17 +476,22 @@
         document.querySelectorAll('.dashboard-card-admin form').forEach((form) => {
             const sourceBucket = form.querySelector('.js-source-bucket');
             const filterField = form.querySelector('.js-filter-field');
+            const statKey = form.querySelector('.js-stat-key');
 
-            if (!sourceBucket || !filterField) {
+            if (!sourceBucket) {
                 return;
             }
 
-            const syncFilterFields = () => {
-                const selectedSource = sourceBucket.value;
-                const selectedField = filterField.dataset.selected || filterField.value;
-                let selectedFieldStillAvailable = false;
+            const syncSourceOptions = (select) => {
+                if (!select) {
+                    return;
+                }
 
-                filterField.querySelectorAll('option').forEach((option) => {
+                const selectedSource = sourceBucket.value;
+                const selectedValue = select.dataset.selected || select.value;
+                let selectedValueStillAvailable = false;
+
+                select.querySelectorAll('option').forEach((option) => {
                     if (!option.dataset.sourceBucket) {
                         option.hidden = false;
                         option.disabled = false;
@@ -473,20 +502,33 @@
                     option.hidden = !isSameSource;
                     option.disabled = !isSameSource;
 
-                    if (isSameSource && option.value === selectedField) {
-                        selectedFieldStillAvailable = true;
+                    if (isSameSource && option.value === selectedValue) {
+                        selectedValueStillAvailable = true;
                     }
                 });
 
-                filterField.value = selectedFieldStillAvailable ? selectedField : '';
-                filterField.dataset.selected = filterField.value;
+                if (selectedValueStillAvailable) {
+                    select.value = selectedValue;
+                } else {
+                    const firstAvailableOption = Array.from(select.options).find((option) => !option.disabled && option.value !== '');
+                    select.value = select.required && firstAvailableOption ? firstAvailableOption.value : '';
+                }
+
+                select.dataset.selected = select.value;
             };
 
-            sourceBucket.addEventListener('change', syncFilterFields);
-            filterField.addEventListener('change', () => {
-                filterField.dataset.selected = filterField.value;
+            const syncForm = () => {
+                syncSourceOptions(statKey);
+                syncSourceOptions(filterField);
+            };
+
+            sourceBucket.addEventListener('change', syncForm);
+            [statKey, filterField].forEach((select) => {
+                select?.addEventListener('change', () => {
+                    select.dataset.selected = select.value;
+                });
             });
-            syncFilterFields();
+            syncForm();
         });
     </script>
 @endsection

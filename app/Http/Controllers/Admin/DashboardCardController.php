@@ -81,7 +81,10 @@ class DashboardCardController extends Controller
 
     public function storeItem(StoreDashboardCardItemRequest $request, DashboardCard $dashboardCard): RedirectResponse
     {
-        $dashboardCard->items()->create($this->itemData($request));
+        $data = $this->itemData($request);
+        $data['key'] = ($data['key'] ?? null) ?: $this->uniqueItemKey($dashboardCard, (string) $data['stat_key']);
+
+        $dashboardCard->items()->create($data);
 
         return redirect()
             ->route('admin.dashboard-cards.index', ['card' => $dashboardCard->id])
@@ -199,9 +202,24 @@ class DashboardCardController extends Controller
     {
         return [
             ...$request->safe()->except(['is_active', 'decimal_places', 'sort_order']),
+            'icon' => $request->input('icon') ?: 'ki-dot',
             'decimal_places' => (int) $request->input('decimal_places', 0),
             'sort_order' => (int) $request->input('sort_order', 0),
             'is_active' => $request->boolean('is_active'),
         ];
+    }
+
+    private function uniqueItemKey(DashboardCard $dashboardCard, string $baseKey): string
+    {
+        $key = $baseKey !== '' ? $baseKey : 'item';
+        $candidate = $key;
+        $counter = 2;
+
+        while ($dashboardCard->items()->where('key', $candidate)->exists()) {
+            $candidate = $key.'_'.$counter;
+            $counter++;
+        }
+
+        return $candidate;
     }
 }

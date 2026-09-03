@@ -16,7 +16,7 @@ class UpdateDashboardCardItemRequest extends StoreDashboardCardItemRequest
         return [
             ...parent::rules(),
             'key' => [
-                'required',
+                'nullable',
                 'string',
                 'max:100',
                 Rule::unique('dashboard_card_items', 'key')

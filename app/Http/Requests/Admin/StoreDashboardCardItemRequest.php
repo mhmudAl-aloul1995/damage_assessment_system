@@ -28,7 +28,7 @@ class StoreDashboardCardItemRequest extends FormRequest
 
         return [
             'key' => [
-                'required',
+                'nullable',
                 'string',
                 'max:100',
                 Rule::unique('dashboard_card_items', 'key')->where('dashboard_card_id', $dashboardCard?->id),
@@ -36,7 +36,7 @@ class StoreDashboardCardItemRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'source_bucket' => ['required', 'string', 'max:100'],
             'stat_key' => ['required', 'string', 'max:100'],
-            'icon' => ['required', 'string', 'max:100'],
+            'icon' => ['nullable', 'string', 'max:100'],
             'link_group' => ['nullable', 'string', 'max:100'],
             'link_key' => ['nullable', 'string', 'max:100'],
             'calculation_type' => ['required', 'string', Rule::in(['stat_key'])],
@@ -54,7 +54,6 @@ class StoreDashboardCardItemRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'key.required' => 'مفتاح البند مطلوب.',
             'key.unique' => 'مفتاح البند مستخدم مسبقاً داخل هذه البطاقة.',
             'title.required' => 'اسم البند مطلوب.',
         ];

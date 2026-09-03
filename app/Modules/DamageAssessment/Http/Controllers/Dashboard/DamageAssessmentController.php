@@ -1138,6 +1138,12 @@ class DamageAssessmentController extends Controller
      */
     private function dashboardTargetBackedQuery(string $targetModelClass, string $fallbackModelClass): Builder
     {
+        $targetModel = new $targetModelClass;
+
+        if (! Schema::hasTable($targetModel->getTable())) {
+            return $fallbackModelClass::query();
+        }
+
         return $targetModelClass::query()->exists()
             ? $targetModelClass::query()
             : $fallbackModelClass::query();

@@ -36,11 +36,9 @@ it('lets database officers manage dashboard card items', function (): void {
 
     $this->actingAs($user)
         ->post(route('admin.dashboard-cards.items.store', $card), [
-            'key' => 'new_dynamic_item',
             'title' => 'بند ديناميكي',
             'source_bucket' => 'buildingStats',
             'stat_key' => 'completed',
-            'icon' => 'ki-check-circle',
             'link_group' => 'buildings',
             'link_key' => 'completed',
             'calculation_type' => 'stat_key',
@@ -53,17 +51,20 @@ it('lets database officers manage dashboard card items', function (): void {
         ])
         ->assertRedirect(route('admin.dashboard-cards.index', ['card' => $card->id]));
 
-    expect($card->items()->where('key', 'new_dynamic_item')->exists())->toBeTrue();
+    expect($card->items()->where('title', 'بند ديناميكي')->exists())->toBeTrue();
 
-    $item = $card->items()->where('key', 'new_dynamic_item')->firstOrFail();
+    $item = $card->items()->where('title', 'بند ديناميكي')->firstOrFail();
+
+    expect($item->key)->toBe('completed_2')
+        ->and($item->icon)->toBe('ki-dot');
 
     $this->actingAs($user)
         ->put(route('admin.dashboard-cards.items.update', [$card, $item]), [
-            'key' => 'new_dynamic_item',
+            'key' => $item->key,
             'title' => 'بند ديناميكي محدث',
             'source_bucket' => 'buildingStats',
             'stat_key' => 'completed',
-            'icon' => 'ki-check-circle',
+            'icon' => $item->icon,
             'link_group' => 'buildings',
             'link_key' => 'completed',
             'calculation_type' => 'stat_key',

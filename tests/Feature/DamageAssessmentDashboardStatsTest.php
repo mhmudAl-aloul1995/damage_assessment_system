@@ -14,6 +14,7 @@ use Database\Seeders\DashboardCardSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -975,6 +976,27 @@ it('returns latest dashboard stats as json', function () {
         ->assertJsonPath('unitStats.total_units', 1)
         ->assertJsonPath('unitStats.damaged_total', 0)
         ->assertJsonPath('unitStats.committee_review', 1);
+});
+
+it('falls back to base survey tables when audited cache tables are missing', function () {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::dropIfExists('audited_buildings');
+
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 711,
+        'globalid' => 'missing-audited-cache-building',
+        'building_name' => 'Missing Audited Cache Building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.latest-stats'))
+        ->assertOk()
+        ->assertJsonPath('buildingStats.completed', 1)
+        ->assertJsonPath('buildingStats.fully_damaged', 1);
 });
 
 it('renders the live hud dashboard from database statistics', function () {
