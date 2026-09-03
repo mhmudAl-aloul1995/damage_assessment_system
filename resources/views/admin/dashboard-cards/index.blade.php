@@ -645,9 +645,10 @@
             const syncFilterValues = async () => {
                 if (!filterField || !filterValue || !filterField.value) {
                     if (filterValue) {
-                        filterValue.innerHTML = '<option value="">بدون قيمة</option>';
+                        filterValue.innerHTML = '<option value="">اختر حقل الشرط أولاً</option>';
                         filterValue.value = '';
                         filterValue.dataset.selected = '';
+                        $(filterValue).trigger('change.select2');
                     }
 
                     return;
@@ -670,13 +671,18 @@
                     const payload = await response.json();
                     const values = Array.isArray(payload.values) ? payload.values : [];
 
-                    filterValue.innerHTML = '<option value="">بدون قيمة</option>';
-                    values.forEach((value) => {
-                        const option = document.createElement('option');
-                        option.value = value;
-                        option.textContent = value;
-                        filterValue.appendChild(option);
-                    });
+                    filterValue.innerHTML = '';
+
+                    if (values.length === 0) {
+                        filterValue.innerHTML = '<option value="">لا توجد قيم محفوظة لهذا الحقل</option>';
+                    } else {
+                        values.forEach((value) => {
+                            const option = document.createElement('option');
+                            option.value = value;
+                            option.textContent = value;
+                            filterValue.appendChild(option);
+                        });
+                    }
 
                     if (selectedValue && !values.includes(selectedValue)) {
                         const option = document.createElement('option');
