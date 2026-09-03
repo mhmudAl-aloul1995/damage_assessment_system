@@ -592,6 +592,7 @@
             const statKey = form.querySelector('.js-stat-key');
             const statKeyGroup = form.querySelector('.js-stat-key-group');
             const calculationType = form.querySelector('.js-calculation-type');
+            let select2Ready = false;
 
             if (!sourceBucket) {
                 return;
@@ -635,9 +636,20 @@
 
                 if (statKey) {
                     statKey.required = !isCountByCondition;
+                    statKey.disabled = isCountByCondition;
+
+                    const statKeySelect = $(statKey);
+
+                    if (select2Ready && statKeySelect.hasClass('select2-hidden-accessible')) {
+                        statKeySelect.select2('close');
+                        statKeySelect.next('.select2-container').toggleClass('d-none', isCountByCondition);
+                    }
                 }
 
-                syncSourceOptions(statKey);
+                if (!isCountByCondition) {
+                    syncSourceOptions(statKey);
+                }
+
                 syncSourceOptions(filterField);
                 syncFilterValues();
             };
@@ -721,9 +733,17 @@
                 filterValue.dataset.selected = filterValue.value;
             });
             syncForm();
+
+            form.addEventListener('dashboard-select2-ready', () => {
+                select2Ready = true;
+                syncForm();
+            });
         });
 
         initializeDashboardSelect2();
+        document.querySelectorAll('.dashboard-card-admin form').forEach((form) => {
+            form.dispatchEvent(new Event('dashboard-select2-ready'));
+        });
 
         document.querySelectorAll('.js-icon-picker').forEach((picker) => {
             const select = picker.querySelector('.js-icon-select');
