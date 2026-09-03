@@ -260,17 +260,76 @@ class DashboardCardController extends Controller
      */
     private function itemData(FormRequest $request): array
     {
+        $conditions = $this->itemConditions($request);
+        $primaryCondition = $conditions[0] ?? null;
         $data = [
-            ...$request->safe()->except(['is_active', 'decimal_places', 'sort_order']),
+            ...$request->safe()->except(['is_active', 'decimal_places', 'sort_order', 'conditions']),
             'icon' => $request->input('icon') ?: 'ki-dot',
             'decimal_places' => (int) $request->input('decimal_places', 0),
             'sort_order' => (int) $request->input('sort_order', 0),
             'is_active' => $request->boolean('is_active'),
+            'filter_field' => $primaryCondition['field'] ?? null,
+            'filter_operator' => $primaryCondition['operator'] ?? null,
+            'filter_value' => $primaryCondition['value'] ?? null,
+            'options' => [
+                'conditions' => $conditions,
+            ],
         ];
 
         $data['stat_key'] = ($data['stat_key'] ?? null) ?: (($data['filter_field'] ?? null) ?: 'count');
 
         return $data;
+    }
+
+    /**
+     * @return array<int, array{field: string, operator: string, value: ?string}>
+     */
+    private function itemConditions(FormRequest $request): array
+    {
+        $conditions = collect($request->input('conditions', []))
+            ->map(function (mixed $condition): array {
+                $condition = is_array($condition) ? $condition : [];
+
+                return [
+                    'field' => trim((string) ($condition['field'] ?? '')),
+                    'operator' => trim((string) ($condition['operator'] ?? '=')),
+                    'value' => trim((string) ($condition['value'] ?? '')),
+                ];
+            })
+            ->filter(fn (array $condition): bool => $condition['field'] !== '')
+            ->map(function (array $condition): array {
+                if (in_array($condition['operator'], ['blank', 'not_blank'], true)) {
+                    $condition['value'] = null;
+                }
+
+                if ($condition['operator'] === '') {
+                    $condition['operator'] = '=';
+                }
+
+                return $condition;
+            })
+            ->values()
+            ->all();
+
+        if ($conditions !== []) {
+            return $conditions;
+        }
+
+        $field = trim((string) $request->input('filter_field', ''));
+
+        if ($field === '') {
+            return [];
+        }
+
+        $operator = trim((string) $request->input('filter_operator', '='));
+
+        return [[
+            'field' => $field,
+            'operator' => $operator !== '' ? $operator : '=',
+            'value' => in_array($operator, ['blank', 'not_blank'], true)
+                ? null
+                : trim((string) $request->input('filter_value', '')),
+        ]];
     }
 
     private function uniqueItemKey(DashboardCard $dashboardCard, string $baseKey): string

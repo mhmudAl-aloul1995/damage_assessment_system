@@ -1186,13 +1186,55 @@ class DamageAssessmentController extends Controller
 
         $table = $query->getModel()->getTable();
 
-        if (! $item->filter_field || ! Schema::hasColumn($table, $item->filter_field)) {
+        $conditions = $this->dashboardCardItemConditions($item);
+
+        if ($conditions === []) {
             return 0;
         }
 
-        $this->applyDashboardCardItemCondition($query, $item->filter_field, $item->filter_operator, $item->filter_value);
+        foreach ($conditions as $condition) {
+            if (! Schema::hasColumn($table, $condition['field'])) {
+                return 0;
+            }
+
+            $this->applyDashboardCardItemCondition($query, $condition['field'], $condition['operator'], $condition['value']);
+        }
 
         return $query->count();
+    }
+
+    /**
+     * @return array<int, array{field: string, operator: ?string, value: mixed}>
+     */
+    private function dashboardCardItemConditions(mixed $item): array
+    {
+        $conditions = collect($item->options['conditions'] ?? [])
+            ->map(function (mixed $condition): array {
+                $condition = is_array($condition) ? $condition : [];
+
+                return [
+                    'field' => trim((string) ($condition['field'] ?? '')),
+                    'operator' => isset($condition['operator']) ? trim((string) $condition['operator']) : '=',
+                    'value' => $condition['value'] ?? null,
+                ];
+            })
+            ->filter(fn (array $condition): bool => $condition['field'] !== '')
+            ->values()
+            ->all();
+
+        if ($conditions !== []) {
+            return $conditions;
+        }
+
+        if (! $item->filter_field) {
+            return [];
+        }
+
+        return [[
+            'field' => $item->filter_field,
+            'operator' => $item->filter_operator,
+            'value' => $item->filter_value,
+        ]];
     }
 
     private function dashboardSourceBucketQuery(string $sourceBucket, Request $request): ?Builder

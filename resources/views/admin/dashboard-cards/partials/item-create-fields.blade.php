@@ -36,32 +36,50 @@
     </select>
 </div>
 
-<div class="col-md-4">
-    <label class="form-label">حقل الشرط اختياري</label>
-    <select name="filter_field" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2">
-        <option value="">بدون شرط</option>
-        @foreach ($filterFields as $sourceBucket => $fields)
-            @foreach ($fields as $field)
-                <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}">{{ $field }}</option>
-            @endforeach
-        @endforeach
-    </select>
-</div>
+<div class="col-12">
+    <div class="condition-box js-condition-list" data-next-index="1">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <label class="form-label mb-0">الشروط</label>
+            <button type="button" class="btn btn-sm btn-light-primary js-add-condition">
+                <i class="ki-duotone ki-plus fs-3"></i>
+                إضافة شرط
+            </button>
+        </div>
 
-<div class="col-md-3">
-    <label class="form-label">عامل الشرط</label>
-    <select name="filter_operator" class="form-select ltr-input js-dashboard-select2" data-control="select2" data-hide-search="true">
-        <option value="">بدون</option>
-        @foreach ($operators as $operator)
-            <option value="{{ $operator }}">{{ $operator }}</option>
-        @endforeach
-    </select>
-</div>
-<div class="col-md-5">
-    <label class="form-label">قيمة الشرط</label>
-    <select name="filter_value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
-        <option value="">اختر حقل الشرط أولاً</option>
-    </select>
+        <div class="row g-3 align-items-end js-condition-row condition-row">
+            <div class="col-md-4">
+                <label class="form-label">حقل الشرط</label>
+                <select name="conditions[0][field]" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2">
+                    <option value="">بدون شرط</option>
+                    @foreach ($filterFields as $sourceBucket => $fields)
+                        @foreach ($fields as $field)
+                            <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}">{{ $field }}</option>
+                        @endforeach
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">عامل الشرط</label>
+                <select name="conditions[0][operator]" class="form-select ltr-input js-dashboard-select2 js-filter-operator" data-control="select2" data-hide-search="true">
+                    @foreach ($operators as $operator)
+                        <option value="{{ $operator }}" @selected($operator === '=')>{{ $operator }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">قيمة الشرط</label>
+                <select name="conditions[0][value]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
+                    <option value="">اختر حقل الشرط أولاً</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-icon btn-light-danger js-remove-condition d-none" title="حذف الشرط">
+                    <i class="ki-duotone ki-trash fs-3"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="col-md-4">
     <label class="form-label">الأيقونة</label>

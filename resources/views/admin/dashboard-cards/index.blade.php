@@ -93,6 +93,19 @@
             padding: 18px;
         }
 
+        .dashboard-card-admin .condition-box {
+            border: 1px dashed var(--admin-border);
+            border-radius: 12px;
+            background: #fbfdff;
+            padding: 16px;
+        }
+
+        .dashboard-card-admin .condition-row + .condition-row {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--admin-border);
+        }
+
         .dashboard-card-admin .settings-form {
             display: grid;
             gap: 16px;
@@ -362,6 +375,19 @@
 
                             <div class="d-flex flex-column gap-4">
                                 @forelse ($selectedCard->items as $item)
+                                    @php
+                                        $itemConditions = collect($item->options['conditions'] ?? [])
+                                            ->filter(fn ($condition) => is_array($condition) && ! empty($condition['field']))
+                                            ->values();
+
+                                        if ($itemConditions->isEmpty() && $item->filter_field) {
+                                            $itemConditions = collect([[
+                                                'field' => $item->filter_field,
+                                                'operator' => $item->filter_operator ?: '=',
+                                                'value' => $item->filter_value,
+                                            ]]);
+                                        }
+                                    @endphp
                                     <div class="item-row">
                                         <div class="item-summary">
                                             <div class="fw-bold text-gray-700 text-center">#{{ $item->sort_order }}</div>
@@ -377,7 +403,7 @@
                                                 <div class="muted-label mb-1">مصدر العدّ</div>
                                                 <span class="code-pill">
                                                     @if ($item->calculation_type === 'count_condition')
-                                                        {{ $item->filter_field }} {{ $item->filter_operator }} {{ $item->filter_value }}
+                                                        {{ $itemConditions->map(fn ($condition) => trim(($condition['field'] ?? '') . ' ' . ($condition['operator'] ?? '=') . ' ' . ($condition['value'] ?? '')))->implode(' + ') ?: 'بدون شروط' }}
                                                     @else
                                                         {{ $item->source_bucket }}.{{ $item->stat_key }}
                                                     @endif
@@ -437,31 +463,84 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">حقل الشرط</label>
-                                                        <select name="filter_field" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2" data-selected="{{ old('filter_field', $item->filter_field) }}">
-                                                            <option value="">بدون شرط</option>
-                                                            @foreach ($filterFields as $sourceBucket => $fields)
-                                                                @foreach ($fields as $field)
-                                                                    <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}" @selected(old('filter_field', $item->filter_field) === $field)>{{ $field }}</option>
-                                                                @endforeach
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">عامل الشرط</label>
-                                                        <select name="filter_operator" class="form-select js-dashboard-select2" data-control="select2" data-hide-search="true">
-                                                            <option value="">بدون</option>
-                                                            @foreach ($operators as $operator)
-                                                                <option value="{{ $operator }}" @selected(old('filter_operator', $item->filter_operator) === $operator)>{{ $operator }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label">قيمة الشرط</label>
-                                                        <select name="filter_value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" data-selected="{{ old('filter_value', $item->filter_value) }}">
-                                                            <option value="{{ old('filter_value', $item->filter_value) }}">{{ old('filter_value', $item->filter_value) ?: 'اختر حقل الشرط أولاً' }}</option>
-                                                        </select>
+                                                    <div class="col-12">
+                                                        <div class="condition-box js-condition-list" data-next-index="{{ max(1, $itemConditions->count()) }}">
+                                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                <label class="form-label mb-0">الشروط</label>
+                                                                <button type="button" class="btn btn-sm btn-light-primary js-add-condition">
+                                                                    <i class="ki-duotone ki-plus fs-3"></i>
+                                                                    إضافة شرط
+                                                                </button>
+                                                            </div>
+
+                                                            @forelse ($itemConditions as $conditionIndex => $condition)
+                                                                <div class="row g-3 align-items-end js-condition-row condition-row">
+                                                                    <div class="col-md-4">
+                                                                        <label class="form-label">حقل الشرط</label>
+                                                                        <select name="conditions[{{ $conditionIndex }}][field]" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2" data-selected="{{ $condition['field'] ?? '' }}">
+                                                                            <option value="">بدون شرط</option>
+                                                                            @foreach ($filterFields as $sourceBucket => $fields)
+                                                                                @foreach ($fields as $field)
+                                                                                    <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}" @selected(($condition['field'] ?? '') === $field)>{{ $field }}</option>
+                                                                                @endforeach
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-md-3">
+                                                                        <label class="form-label">عامل الشرط</label>
+                                                                        <select name="conditions[{{ $conditionIndex }}][operator]" class="form-select js-dashboard-select2 js-filter-operator" data-control="select2" data-hide-search="true">
+                                                                            @foreach ($operators as $operator)
+                                                                                <option value="{{ $operator }}" @selected(($condition['operator'] ?? '=') === $operator)>{{ $operator }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-md-4">
+                                                                        <label class="form-label">قيمة الشرط</label>
+                                                                        <select name="conditions[{{ $conditionIndex }}][value]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2" data-selected="{{ $condition['value'] ?? '' }}">
+                                                                            <option value="{{ $condition['value'] ?? '' }}">{{ ($condition['value'] ?? '') ?: 'اختر حقل الشرط أولاً' }}</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-md-1">
+                                                                        <button type="button" class="btn btn-icon btn-light-danger js-remove-condition {{ $itemConditions->count() <= 1 ? 'd-none' : '' }}" title="حذف الشرط">
+                                                                            <i class="ki-duotone ki-trash fs-3"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            @empty
+                                                                <div class="row g-3 align-items-end js-condition-row condition-row">
+                                                                    <div class="col-md-4">
+                                                                        <label class="form-label">حقل الشرط</label>
+                                                                        <select name="conditions[0][field]" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2">
+                                                                            <option value="">بدون شرط</option>
+                                                                            @foreach ($filterFields as $sourceBucket => $fields)
+                                                                                @foreach ($fields as $field)
+                                                                                    <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}">{{ $field }}</option>
+                                                                                @endforeach
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-md-3">
+                                                                        <label class="form-label">عامل الشرط</label>
+                                                                        <select name="conditions[0][operator]" class="form-select js-dashboard-select2 js-filter-operator" data-control="select2" data-hide-search="true">
+                                                                            @foreach ($operators as $operator)
+                                                                                <option value="{{ $operator }}" @selected($operator === '=')>{{ $operator }}</option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-md-4">
+                                                                        <label class="form-label">قيمة الشرط</label>
+                                                                        <select name="conditions[0][value]" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
+                                                                            <option value="">اختر حقل الشرط أولاً</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-md-1">
+                                                                        <button type="button" class="btn btn-icon btn-light-danger js-remove-condition d-none" title="حذف الشرط">
+                                                                            <i class="ki-duotone ki-trash fs-3"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            @endforelse
+                                                        </div>
                                                     </div>
 
                                                     <div class="col-md-4">
@@ -541,6 +620,41 @@
 @endsection
 
 @section('script')
+    <template id="dashboard_condition_row_template">
+        <div class="row g-3 align-items-end js-condition-row condition-row">
+            <div class="col-md-4">
+                <label class="form-label">حقل الشرط</label>
+                <select data-name="field" class="form-select ltr-input js-dashboard-select2 js-filter-field" data-control="select2">
+                    <option value="">بدون شرط</option>
+                    @foreach ($filterFields as $sourceBucket => $fields)
+                        @foreach ($fields as $field)
+                            <option value="{{ $field }}" data-source-bucket="{{ $sourceBucket }}">{{ $field }}</option>
+                        @endforeach
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">عامل الشرط</label>
+                <select data-name="operator" class="form-select js-dashboard-select2 js-filter-operator" data-control="select2" data-hide-search="true">
+                    @foreach ($operators as $operator)
+                        <option value="{{ $operator }}" @selected($operator === '=')>{{ $operator }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">قيمة الشرط</label>
+                <select data-name="value" class="form-select ltr-input js-dashboard-select2 js-filter-value" data-control="select2">
+                    <option value="">اختر حقل الشرط أولاً</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-icon btn-light-danger js-remove-condition" title="حذف الشرط">
+                    <i class="ki-duotone ki-trash fs-3"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+
     <script>
         const filterValuesUrl = @json(route('admin.dashboard-cards.filter-values'));
         const dashboardCardsDirection = @json(app()->getLocale() === 'ar' ? 'rtl' : 'ltr');
@@ -607,8 +721,7 @@
 
         document.querySelectorAll('.dashboard-card-admin form').forEach((form) => {
             const sourceBucket = form.querySelector('.js-source-bucket');
-            const filterField = form.querySelector('.js-filter-field');
-            const filterValue = form.querySelector('.js-filter-value');
+            const conditionList = form.querySelector('.js-condition-list');
             const statKey = form.querySelector('.js-stat-key');
             const statKeyGroup = form.querySelector('.js-stat-key-group');
             const calculationType = form.querySelector('.js-calculation-type');
@@ -649,6 +762,16 @@
                 refreshDashboardSelect2Element(select);
             };
 
+            const conditionRows = () => Array.from(form.querySelectorAll('.js-condition-row'));
+
+            const updateRemoveButtons = () => {
+                const rows = conditionRows();
+
+                rows.forEach((row) => {
+                    row.querySelector('.js-remove-condition')?.classList.toggle('d-none', rows.length <= 1);
+                });
+            };
+
             const syncForm = () => {
                 const isCountByCondition = calculationType?.value === 'count_condition';
 
@@ -673,11 +796,18 @@
                     syncSourceOptions(statKey);
                 }
 
-                syncSourceOptions(filterField);
-                syncFilterValues();
+                conditionRows().forEach((row) => {
+                    const filterField = row.querySelector('.js-filter-field');
+                    const filterValue = row.querySelector('.js-filter-value');
+
+                    syncSourceOptions(filterField);
+                    syncFilterValues(filterField, filterValue);
+                });
+
+                updateRemoveButtons();
             };
 
-            const syncFilterValues = async () => {
+            const syncFilterValues = async (filterField, filterValue) => {
                 if (!filterField || !filterValue || !filterField.value) {
                     if (filterValue) {
                         filterValue.innerHTML = '<option value="">اختر حقل الشرط أولاً</option>';
@@ -741,28 +871,98 @@
                 }
             };
 
+            const prepareConditionRow = (row, index) => {
+                row.querySelectorAll('[data-name]').forEach((input) => {
+                    input.name = `conditions[${index}][${input.dataset.name}]`;
+                });
+
+                row.querySelectorAll('.js-dashboard-select2').forEach((select) => {
+                    initializeDashboardSelect2Element(select);
+                });
+            };
+
+            const addConditionRow = () => {
+                if (!conditionList) {
+                    return;
+                }
+
+                const template = document.getElementById('dashboard_condition_row_template');
+                const row = template.content.firstElementChild.cloneNode(true);
+                const index = Number(conditionList.dataset.nextIndex || conditionRows().length);
+                conditionList.dataset.nextIndex = String(index + 1);
+
+                prepareConditionRow(row, index);
+                conditionList.appendChild(row);
+                syncForm();
+            };
+
             calculationType?.addEventListener('change', syncForm);
             $(calculationType).on('change select2:select', syncForm);
             sourceBucket.addEventListener('change', syncForm);
             $(sourceBucket).on('change select2:select', syncForm);
-            [statKey, filterField].forEach((select) => {
+            [statKey].forEach((select) => {
                 select?.addEventListener('change', () => {
                     select.dataset.selected = select.value;
-                    if (select === filterField && filterValue) {
-                        filterValue.dataset.selected = '';
-                        syncFilterValues();
-                    }
                 });
                 $(select).on('change select2:select', () => {
                     select.dataset.selected = select.value;
-                    if (select === filterField && filterValue) {
-                        filterValue.dataset.selected = '';
-                        syncFilterValues();
-                    }
                 });
             });
-            filterValue?.addEventListener('change', () => {
-                filterValue.dataset.selected = filterValue.value;
+
+            form.addEventListener('click', (event) => {
+                if (event.target.closest('.js-add-condition')) {
+                    addConditionRow();
+                    return;
+                }
+
+                const removeButton = event.target.closest('.js-remove-condition');
+
+                if (removeButton) {
+                    const row = removeButton.closest('.js-condition-row');
+
+                    row?.querySelectorAll('.js-dashboard-select2.select2-hidden-accessible').forEach((select) => {
+                        $(select).select2('destroy');
+                    });
+
+                    row?.remove();
+                    updateRemoveButtons();
+                }
+            });
+
+            form.addEventListener('change', (event) => {
+                const filterField = event.target.closest('.js-filter-field');
+                const filterValue = event.target.closest('.js-filter-value');
+
+                if (filterField) {
+                    const row = filterField.closest('.js-condition-row');
+                    const rowFilterValue = row?.querySelector('.js-filter-value');
+                    filterField.dataset.selected = filterField.value;
+
+                    if (rowFilterValue) {
+                        rowFilterValue.dataset.selected = '';
+                        syncFilterValues(filterField, rowFilterValue);
+                    }
+                }
+
+                if (filterValue) {
+                    filterValue.dataset.selected = filterValue.value;
+                }
+            });
+
+            $(form).on('select2:select select2:clear', '.js-filter-field', function() {
+                const row = this.closest('.js-condition-row');
+                const filterValue = row?.querySelector('.js-filter-value');
+
+                this.dataset.selected = this.value;
+
+                if (filterValue) {
+                    filterValue.dataset.selected = '';
+                    syncFilterValues(this, filterValue);
+                }
+            });
+
+            $(form).on('select2:select select2:clear', '.js-filter-value', function() {
+                this.dataset.selected = this.value;
             });
             syncForm();
 

@@ -1024,6 +1024,59 @@ it('renders dashboard card items counted by their configured condition', functio
         ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[DashboardCardItem::query()->where('key', 'minor_road_damage')->value('id')] === 2);
 });
 
+it('renders dashboard card items counted by multiple configured conditions', function () {
+    $user = User::factory()->create();
+    $roadCard = DashboardCard::query()->where('key', 'road_facilities')->firstOrFail();
+
+    $item = DashboardCardItem::query()->create([
+        'dashboard_card_id' => $roadCard->id,
+        'key' => 'completed_minor_road_damage',
+        'title' => 'أضرار طفيفة مكتملة',
+        'source_bucket' => 'roadFacilityStats',
+        'stat_key' => 'road_damage_level',
+        'icon' => 'ki-route',
+        'calculation_type' => 'count_condition',
+        'filter_field' => 'road_damage_level',
+        'filter_operator' => '=',
+        'filter_value' => 'minor',
+        'sort_order' => 11,
+        'is_active' => true,
+        'options' => [
+            'conditions' => [
+                ['field' => 'road_damage_level', 'operator' => '=', 'value' => 'minor'],
+                ['field' => 'field_status', 'operator' => '=', 'value' => 'COMPLETED'],
+            ],
+        ],
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8111,
+        'str_name' => 'Completed Minor Road',
+        'road_damage_level' => 'minor',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8112,
+        'str_name' => 'Pending Minor Road',
+        'road_damage_level' => 'minor',
+        'field_status' => 'PENDING',
+    ]);
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 8113,
+        'str_name' => 'Completed Severe Road',
+        'road_damage_level' => 'severe',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee('أضرار طفيفة مكتملة')
+        ->assertViewHas('dashboardCardItemValues', fn (array $values): bool => $values[$item->id] === 1);
+});
+
 it('falls back to base survey tables when audited cache tables are missing', function () {
     Schema::dropIfExists('audited_housing_units');
     Schema::dropIfExists('audited_buildings');
