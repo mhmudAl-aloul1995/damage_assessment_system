@@ -41,7 +41,7 @@ class CsoSurveyController extends Controller
     /**
      * @return array{
      *     summary: array{total_surveys: int, total_organizations: int, total_units: int, damaged_buildings: int},
-     *     filterOptions: array{municipalities: Collection, neighborhoods: Collection, researchers: Collection, damageStatuses: Collection, operationalStatuses: Collection, min_creationdate: ?string, max_creationdate: ?string},
+     *     filterOptions: array{municipalities: Collection, neighborhoods: Collection, researchers: Collection, surveyStatuses: Collection, damageStatuses: Collection, operationalStatuses: Collection, min_creationdate: ?string, max_creationdate: ?string},
      *     exportColumns: array{surveys: array<string, string>, organizations: array<string, string>, units: array<string, string>},
      *     exportColumnGroups: array{surveys: array<string, array<string, string>>, organizations: array<string, array<string, string>>, units: array<string, array<string, string>>}
      * }
@@ -62,6 +62,7 @@ class CsoSurveyController extends Controller
             'municipalities' => CsoSurvey::query()->distinct()->orderBy('municipalitie')->pluck('municipalitie')->filter()->values(),
             'neighborhoods' => CsoSurvey::query()->distinct()->orderBy('neighborhood')->pluck('neighborhood')->filter()->values(),
             'researchers' => CsoSurvey::query()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
+            'surveyStatuses' => CsoSurvey::query()->distinct()->orderBy('field_status')->pluck('field_status')->filter()->values(),
             'damageStatuses' => CsoSurvey::query()->distinct()->orderBy('building_damage_status')->pluck('building_damage_status')->filter()->values(),
             'operationalStatuses' => CsoSurvey::query()->distinct()->orderBy('operational_status')->pluck('operational_status')->filter()->values(),
             'min_creationdate' => optional(CsoSurvey::query()->whereNotNull('creationdate')->min('creationdate'))?->format('Y-m-d'),
@@ -88,9 +89,10 @@ class CsoSurveyController extends Controller
         return DataTables::eloquent($this->filteredQuery($request)->withCount(['organizations', 'units']))
             ->addColumn('actions', fn (CsoSurvey $survey): string => '<a href="'.route('cso-surveys.show', $survey).'" class="btn btn-light btn-sm">View</a>')
             ->editColumn('creationdate', fn (CsoSurvey $survey): string => $survey->creationdate?->format('Y-m-d H:i') ?? '-')
+            ->editColumn('field_status', fn (CsoSurvey $survey): string => $this->statusBadge($survey->field_status, 'primary'))
             ->editColumn('building_damage_status', fn (CsoSurvey $survey): string => '<span class="badge badge-light-danger">'.e($survey->building_damage_status ?? '-').'</span>')
             ->addColumn('assignedto', fn (CsoSurvey $survey): string => $survey->assignedto ?? '-')
-            ->rawColumns(['actions', 'building_damage_status'])
+            ->rawColumns(['actions', 'field_status', 'building_damage_status'])
             ->toJson();
     }
 
@@ -168,7 +170,7 @@ class CsoSurveyController extends Controller
     {
         $query = CsoSurvey::query();
 
-        foreach (['municipalitie', 'neighborhood', 'assignedto', 'building_damage_status', 'operational_status'] as $field) {
+        foreach (['municipalitie', 'neighborhood', 'assignedto', 'field_status', 'building_damage_status', 'operational_status'] as $field) {
             $values = $this->requestValues($request, $field);
 
             if ($values !== []) {
@@ -207,6 +209,7 @@ class CsoSurveyController extends Controller
                     ->orWhere('municipalitie', 'like', '%'.$search.'%')
                     ->orWhere('neighborhood', 'like', '%'.$search.'%')
                     ->orWhere('objectid', 'like', '%'.$search.'%')
+                    ->orWhere('field_status', 'like', '%'.$search.'%')
                     ->orWhere('building_damage_status', 'like', '%'.$search.'%')
                     ->orWhere('operational_status', 'like', '%'.$search.'%')
                     ->orWhere('assignedto', 'like', '%'.$search.'%');
@@ -287,6 +290,11 @@ class CsoSurveyController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function statusBadge(?string $status, string $color): string
+    {
+        return '<span class="badge badge-light-'.$color.'">'.e($status ?: '-').'</span>';
     }
 
     /**

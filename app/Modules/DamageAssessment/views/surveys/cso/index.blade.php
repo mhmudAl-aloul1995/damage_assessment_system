@@ -72,6 +72,14 @@
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label">Survey Status</label>
+                    <select id="filter_field_status" class="form-select form-select-solid cso-select2" data-placeholder="Select survey status" multiple>
+                        @foreach ($filterOptions['surveyStatuses'] as $status)
+                            <option value="{{ $status }}">{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <label class="form-label">Damage Status</label>
                     <select id="filter_building_damage_status" class="form-select form-select-solid cso-select2" data-placeholder="Select damage status" multiple>
                         @foreach ($filterOptions['damageStatuses'] as $status)
@@ -123,6 +131,7 @@
                             <th>Building</th>
                             <th>Municipality</th>
                             <th>Neighborhood</th>
+                            <th>Survey Status</th>
                             <th>Damage Status</th>
                             <th>Created At</th>
                             <th>Organizations</th>
@@ -156,6 +165,7 @@
                     municipalitie: $('#filter_municipalitie').val() || queryParams.get('municipalitie'),
                     neighborhood: $('#filter_neighborhood').val() || queryParams.get('neighborhood'),
                     assignedto: $('#filter_assignedto').val() || queryParams.get('assignedto'),
+                    field_status: $('#filter_field_status').val() || queryParams.get('field_status'),
                     building_damage_status: $('#filter_building_damage_status').val() || queryParams.get('building_damage_status'),
                     operational_status: $('#filter_operational_status').val() || queryParams.get('operational_status'),
                     from_date: $('#filter_from_date').val() || queryParams.get('from_date'),
@@ -178,6 +188,7 @@
                         d.municipalitie = filters.municipalitie;
                         d.neighborhood = filters.neighborhood;
                         d.assignedto = filters.assignedto;
+                        d.field_status = filters.field_status;
                         d.building_damage_status = filters.building_damage_status;
                         d.operational_status = filters.operational_status;
                         d.from_date = filters.from_date;
@@ -198,6 +209,7 @@
                     { data: 'building_name', name: 'building_name' },
                     { data: 'municipalitie', name: 'municipalitie' },
                     { data: 'neighborhood', name: 'neighborhood' },
+                    { data: 'field_status', name: 'field_status', orderable: false, searchable: false },
                     { data: 'building_damage_status', name: 'building_damage_status', orderable: false, searchable: false },
                     { data: 'creationdate', name: 'creationdate' },
                     { data: 'organizations_count', name: 'organizations_count', searchable: false },
@@ -211,7 +223,7 @@
                 table.search(this.value).draw();
             });
 
-            $('#filter_municipalitie, #filter_neighborhood, #filter_assignedto, #filter_building_damage_status, #filter_operational_status, #filter_from_date, #filter_to_date').on('change', function () {
+            $('#filter_municipalitie, #filter_neighborhood, #filter_assignedto, #filter_field_status, #filter_building_damage_status, #filter_operational_status, #filter_from_date, #filter_to_date').on('change', function () {
                 table.draw();
             });
 

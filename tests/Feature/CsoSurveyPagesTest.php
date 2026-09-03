@@ -20,6 +20,7 @@ test('it shows cso survey listing and details like other survey pages', function
         'assignedto' => 'Engineer CSO',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Al-Rimal',
+        'field_status' => 'COMPLETED',
         'building_damage_status' => 'partial_damage',
         'operational_status' => 'partially_operational',
         'creationdate' => '2026-08-19 19:55:00',
@@ -44,13 +45,29 @@ test('it shows cso survey listing and details like other survey pages', function
         'unit_damage_status' => 'minor_damage',
     ]);
 
+    CsoSurvey::query()->create([
+        'objectid' => 7302,
+        'globalid' => 'cso-survey-page-filtered-out-global-id',
+        'organization_name' => 'Filtered Out Organization',
+        'building_name' => 'Filtered Out Building',
+        'assignedto' => 'Engineer CSO',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Al-Rimal',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'partial_damage',
+        'operational_status' => 'partially_operational',
+        'creationdate' => '2026-08-19 19:55:00',
+    ]);
+
     $indexResponse = $this->actingAs($user)->get(route('cso-surveys.index'));
 
     $indexResponse->assertOk()
         ->assertSee('CSO Damage Assessment')
         ->assertSee('CSO Filters')
         ->assertSee('CSO Surveys')
-        ->assertSee('Total Surveys');
+        ->assertSee('Total Surveys')
+        ->assertSee('Survey Status')
+        ->assertSee('id="filter_field_status"', false);
 
     $dataResponse = $this->actingAs($user)->get(route('cso-surveys.data', [
         'draw' => 1,
@@ -58,6 +75,7 @@ test('it shows cso survey listing and details like other survey pages', function
         'length' => 10,
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Al-Rimal',
+        'field_status' => 'COMPLETED',
         'q' => 'Civil Support',
         'columns' => [
             ['data' => 'objectid', 'name' => 'objectid', 'searchable' => 'true', 'orderable' => 'true'],
@@ -65,6 +83,7 @@ test('it shows cso survey listing and details like other survey pages', function
             ['data' => 'building_name', 'name' => 'building_name', 'searchable' => 'true', 'orderable' => 'true'],
             ['data' => 'municipalitie', 'name' => 'municipalitie', 'searchable' => 'true', 'orderable' => 'true'],
             ['data' => 'neighborhood', 'name' => 'neighborhood', 'searchable' => 'true', 'orderable' => 'true'],
+            ['data' => 'field_status', 'name' => 'field_status', 'searchable' => 'false', 'orderable' => 'false'],
             ['data' => 'building_damage_status', 'name' => 'building_damage_status', 'searchable' => 'false', 'orderable' => 'false'],
             ['data' => 'creationdate', 'name' => 'creationdate', 'searchable' => 'true', 'orderable' => 'true'],
             ['data' => 'organizations_count', 'name' => 'organizations_count', 'searchable' => 'false', 'orderable' => 'true'],
@@ -83,7 +102,9 @@ test('it shows cso survey listing and details like other survey pages', function
 
     $dataResponse->assertOk()
         ->assertSee('Civil Support Organization')
-        ->assertSee('CSO Main Building');
+        ->assertSee('CSO Main Building')
+        ->assertSee('COMPLETED')
+        ->assertDontSee('Filtered Out Organization');
 
     $showResponse = $this->actingAs($user)->get(route('cso-surveys.show', $survey));
 
@@ -110,6 +131,7 @@ it('shows cso export data page and exports selected survey organization and unit
         'assignedto' => 'Export CSO Engineer',
         'municipalitie' => 'Gaza',
         'neighborhood' => 'Al-Rimal',
+        'field_status' => 'COMPLETED',
         'building_damage_status' => 'partial_damage',
         'operational_status' => 'partially_operational',
         'creationdate' => '2026-08-19 19:55:00',
