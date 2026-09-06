@@ -4,6 +4,7 @@ use App\Exports\AreaProductivityExport;
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
@@ -49,6 +50,157 @@ it('renders empty area productivity tables without tbody colspan rows', function
         ->not->toContain('<tbody>
                                     <tr>
                                         <td colspan=');
+});
+
+it('counts archived technical committee buildings in area productivity reports for historical date filters', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('Database Officer');
+
+    AuditedBuilding::query()->create([
+        'objectid' => 7101,
+        'globalid' => 'historical-committee-building',
+        'building_name' => 'Historical Committee Building',
+        'assignedto' => 'eng-archive',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'zone_code' => 'Z-Archive',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-08-15 10:00:00',
+        'end' => '2026-08-15 10:00:00',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => 7101,
+        'building_globalid' => 'historical-committee-building',
+        'source_type' => 'committee_decision',
+        'archived_by' => $user->id,
+        'archived_at' => '2026-04-20 12:00:00',
+        'building_snapshot' => [
+            'objectid' => 7101,
+            'globalid' => 'historical-committee-building',
+            'assignedto' => 'eng-archive',
+            'building_damage_status' => 'committee_review',
+            'governorate' => 'Gaza',
+            'municipalitie' => 'Gaza',
+            'neighborhood' => 'Rimal',
+            'zone_code' => 'Z-Archive',
+            'end' => '2026-04-20 10:00:00',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('reports.area-productivity.buildings', [
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-30',
+        ]))
+        ->assertOk();
+
+    $response->assertViewHas('summary', function (array $summary): bool {
+        return $summary['total_records'] === 1
+            && $summary['cra'] === 1
+            && $summary['tda'] === 0;
+    });
+
+    $response->assertViewHas('rows', function ($rows): bool {
+        $rimal = $rows->firstWhere('neighborhood', 'Rimal');
+
+        return $rimal !== null
+            && (int) $rimal->total_count === 1
+            && (int) $rimal->cra_range === 1
+            && (int) $rimal->tda_range === 0;
+    });
+
+    $exportRows = app(AreaProductivityReportService::class)->exportRows(AreaProductivityReportService::TYPE_BUILDINGS, [
+        'start_date' => '2026-04-01',
+        'end_date' => '2026-04-30',
+    ]);
+
+    expect((int) $exportRows->firstWhere('neighborhood', 'Rimal')->cra_range)->toBe(1);
+});
+
+it('counts archived technical committee housing units in area productivity reports for historical date filters', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('Database Officer');
+
+    AuditedBuilding::query()->create([
+        'objectid' => 7201,
+        'globalid' => 'historical-committee-unit-building',
+        'building_name' => 'Historical Committee Unit Building',
+        'assignedto' => 'eng-unit-archive',
+        'building_damage_status' => 'partially_damaged',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'zone_code' => 'Z-Unit-Archive',
+        'field_status' => 'COMPLETED',
+        'creationdate' => '2026-08-15 10:00:00',
+        'end' => '2026-08-15 10:00:00',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 7202,
+        'globalid' => 'historical-committee-unit',
+        'parentglobalid' => 'historical-committee-unit-building',
+        'unit_damage_status' => 'partially_damaged2',
+        'building_submit_date' => '2026-08-15 12:00:00',
+        'creationdate' => '2026-08-15 12:00:00',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => 7201,
+        'building_globalid' => 'historical-committee-unit-building',
+        'housing_unit_objectid' => 7202,
+        'housing_unit_globalid' => 'historical-committee-unit',
+        'source_type' => 'temporary_committee_excel_archive',
+        'archived_by' => $user->id,
+        'archived_at' => '2026-04-21 12:00:00',
+        'building_snapshot' => [
+            'objectid' => 7201,
+            'globalid' => 'historical-committee-unit-building',
+            'assignedto' => 'eng-unit-archive',
+            'governorate' => 'Gaza',
+            'municipalitie' => 'Gaza',
+            'neighborhood' => 'Rimal',
+            'zone_code' => 'Z-Unit-Archive',
+        ],
+        'housing_unit_snapshot' => [
+            'objectid' => 7202,
+            'globalid' => 'historical-committee-unit',
+            'unit_damage_status' => 'committee_review2',
+            'building_submit_date' => '2026-04-21 10:00:00',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('reports.area-productivity.housing-units', [
+            'start_date' => '2026-04-01',
+            'end_date' => '2026-04-30',
+        ]))
+        ->assertOk();
+
+    $response->assertViewHas('summary', function (array $summary): bool {
+        return $summary['total_records'] === 1
+            && $summary['cra'] === 1
+            && $summary['pda'] === 0;
+    });
+
+    $response->assertViewHas('rows', function ($rows): bool {
+        $rimal = $rows->firstWhere('neighborhood', 'Rimal');
+
+        return $rimal !== null
+            && (int) $rimal->total_count === 1
+            && (int) $rimal->cra_range === 1
+            && (int) $rimal->pda_range === 0;
+    });
+
+    $exportRows = app(AreaProductivityReportService::class)->exportRows(AreaProductivityReportService::TYPE_HOUSING_UNITS, [
+        'start_date' => '2026-04-01',
+        'end_date' => '2026-04-30',
+    ]);
+
+    expect((int) $exportRows->firstWhere('neighborhood', 'Rimal')->cra_range)->toBe(1);
 });
 
 it('renders separated area productivity reports for all supported datasets with filtering', function () {
