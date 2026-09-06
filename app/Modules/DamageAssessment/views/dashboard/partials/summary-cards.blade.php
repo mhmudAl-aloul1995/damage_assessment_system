@@ -185,8 +185,6 @@
 		@php
 			$statsBucket = $dashboardStatsBuckets[$dashboardCard->source_bucket] ?? [];
 			$totalValue = $statsBucket[$dashboardCard->total_stat_key] ?? 0;
-			$target = data_get($dashboardCard->options, 'target');
-			$targetReached = is_numeric($target) && (float) $totalValue >= (float) $target;
 			$columnClass = match ($dashboardCard->key) {
 				'cso_surveys' => 'dashboard-summary-col-cso',
 				'public_buildings' => 'dashboard-summary-col-public',
@@ -196,19 +194,11 @@
 		@endphp
 
 		<div class="col-sm-6 col-lg-6 col-xxl-3 dashboard-summary-col {{ $columnClass }}">
-			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card @if ($targetReached) housing-target-achieved @endif">
+			<div class="card card-xl-stretch mb-xl-8 dashboard-summary-card">
 				<div class="card-body p-0">
 					<div style="background-color: {{ $dashboardCard->color }};"
 						class="px-9 pt-7 card-rounded h-275px w-100 dashboard-summary-header">
-						@if ($targetReached)
-							<div class="target-confetti" aria-hidden="true">
-								@for ($i = 0; $i < 8; $i++)
-									<span></span>
-								@endfor
-							</div>
-						@endif
-
-						<div class="d-flex flex-stack @if ($targetReached) target-title-row @endif">
+						<div class="d-flex flex-stack">
 							<h3 class="m-0 text-white fw-bold fs-3">{{ $translateDashboardText($dashboardCard->title) }}</h3>
 							<div class="ms-1">
 								<button type="button"
@@ -221,12 +211,9 @@
 							</div>
 						</div>
 
-						<div class="d-flex text-center flex-column text-white pt-8 @if ($targetReached) target-total-wrap @endif">
+						<div class="d-flex text-center flex-column text-white pt-8">
 							<span class="fw-semibold fs-7 text-wrap">{{ $translateDashboardText($dashboardCard->subtitle) }}</span>
-							<span class="fw-bold fs-1 fs-lg-2x pt-1 @if ($targetReached) target-total-number @endif">{{ $formatDashboardValue($totalValue) }}</span>
-							@if ($targetReached)
-								<span class="target-achieved-badge">{{ __('ui.damage_dashboard.target_achieved', ['target' => number_format((float) $target)]) }}</span>
-							@endif
+							<span class="fw-bold fs-1 fs-lg-2x pt-1">{{ $formatDashboardValue($totalValue) }}</span>
 						</div>
 					</div>
 

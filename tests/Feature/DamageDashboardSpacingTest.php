@@ -76,19 +76,15 @@ test('dashboard summary icons match labels and use a consistent size', function 
         ->not->toContain('ki-warning-2');
 });
 
-test('housing units target celebration appears when the dashboard target is reached', function () {
-    $dashboardView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/damageAssessment.blade.php'));
+test('housing units target is configured but hidden on dashboard cards', function () {
     $summaryCardsView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/partials/summary-cards.blade.php'));
     $dashboardSeeder = file_get_contents(base_path('database/seeders/DashboardCardSeeder.php'));
 
-    expect($dashboardView)
-        ->toContain('$housingUnitsTarget = 67500;');
-
     expect($summaryCardsView)
-        ->toContain('housing-target-achieved')
-        ->toContain('target-confetti')
-        ->toContain('target-total-number')
-        ->toContain('ui.damage_dashboard.target_achieved');
+        ->not->toContain('housing-target-achieved')
+        ->not->toContain('target-confetti')
+        ->not->toContain('target-total-number')
+        ->not->toContain('ui.damage_dashboard.target_achieved');
 
     expect($dashboardSeeder)
         ->toContain("'options' => ['target' => 67500]");
