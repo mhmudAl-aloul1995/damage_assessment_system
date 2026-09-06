@@ -115,6 +115,7 @@
 		}
 
 		.damage-dashboard-toolbar {
+			--toolbar-scale: 1;
 			background: var(--bs-body-bg);
 			border-bottom: 1px solid var(--bs-gray-200);
 			box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
@@ -143,8 +144,9 @@
 			gap: 0.75rem;
 			justify-content: flex-end;
 			min-width: 0;
+			transform: scale(var(--toolbar-scale));
 			transform-origin: right center;
-			width: 100%;
+			width: max-content;
 		}
 
 		.damage-dashboard-toolbar .toolbar-control-group {
@@ -194,15 +196,15 @@
 		}
 
 		.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
-			flex: 0 1 clamp(76px, 11vw, 168px);
-			min-width: 76px;
-			width: clamp(76px, 11vw, 168px);
+			flex: 0 0 168px;
+			min-width: 168px;
+			width: 168px;
 		}
 
 		.damage-dashboard-toolbar .toolbar-date-range-wrap {
-			flex: 0 1 clamp(98px, 14vw, 210px);
-			min-width: 98px;
-			width: clamp(98px, 14vw, 210px);
+			flex: 0 0 210px;
+			min-width: 210px;
+			width: 210px;
 		}
 
 		.damage-dashboard-toolbar .toolbar-neighborhood-select,
@@ -228,7 +230,6 @@
 			.damage-dashboard-toolbar-actions {
 				align-items: center;
 				gap: 0.3rem;
-				zoom: 0.62;
 			}
 
 			.damage-dashboard-toolbar .toolbar-control-group {
@@ -252,17 +253,24 @@
 				white-space: nowrap;
 			}
 
-			.damage-dashboard-toolbar .toolbar-neighborhood-wrap,
+			.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
+				min-width: 168px;
+				width: 168px !important;
+			}
+
 			.damage-dashboard-toolbar .toolbar-date-range-wrap {
-				min-width: 76px;
-				width: 76px !important;
+				min-width: 210px;
+				width: 210px !important;
 			}
 		}
 
 		@media (min-width: 768px) and (max-width: 1199.98px) {
+			.damage-dashboard-toolbar {
+				--toolbar-scale: 0.78;
+			}
+
 			.damage-dashboard-toolbar-actions {
 				justify-content: flex-start;
-				zoom: 0.78;
 			}
 
 			.damage-dashboard-toolbar .toolbar-control-group {
@@ -275,14 +283,14 @@
 		}
 
 		@media (min-width: 992px) and (max-width: 1199.98px) {
-			.damage-dashboard-toolbar-actions {
-				zoom: 0.9;
+			.damage-dashboard-toolbar {
+				--toolbar-scale: 0.9;
 			}
 		}
 
 		@media (max-width: 575.98px) {
-			.damage-dashboard-toolbar-actions {
-				zoom: 0.48;
+			.damage-dashboard-toolbar {
+				--toolbar-scale: 0.48;
 			}
 		}
 
@@ -291,8 +299,8 @@
 				padding-inline: 0.65rem;
 			}
 
-			.damage-dashboard-toolbar-actions {
-				zoom: 0.4;
+			.damage-dashboard-toolbar {
+				--toolbar-scale: 0.4;
 			}
 
 			.damage-dashboard-toolbar .toolbar-period-button {
@@ -306,8 +314,8 @@
 		}
 
 		@media (max-width: 360px) {
-			.damage-dashboard-toolbar-actions {
-				zoom: 0.34;
+			.damage-dashboard-toolbar {
+				--toolbar-scale: 0.34;
 			}
 		}
 
