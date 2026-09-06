@@ -120,15 +120,19 @@
 			box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
 			margin: -0.5rem -0.5rem 2rem;
 			min-height: 68px;
+			overflow-x: auto;
+			overflow-y: visible;
 			padding: 0.75rem 1.65rem;
+			scrollbar-width: thin;
 		}
 
 		.damage-dashboard-toolbar-main {
 			align-items: center;
 			display: flex;
-			flex-wrap: wrap;
+			flex-wrap: nowrap;
 			gap: 1rem;
 			justify-content: flex-end;
+			min-width: max-content;
 			width: 100%;
 		}
 
@@ -136,11 +140,11 @@
 			align-items: center;
 			direction: ltr;
 			display: flex;
-			flex-wrap: wrap;
+			flex-wrap: nowrap;
 			gap: 0.75rem;
 			justify-content: flex-end;
 			min-width: 0;
-			width: 100%;
+			width: max-content;
 		}
 
 		.damage-dashboard-toolbar .toolbar-control-group {
@@ -152,7 +156,7 @@
 		}
 
 		.damage-dashboard-toolbar .toolbar-period-group {
-			flex-wrap: wrap;
+			flex-wrap: nowrap;
 			justify-content: flex-end;
 		}
 
@@ -189,15 +193,15 @@
 		}
 
 		.damage-dashboard-toolbar .toolbar-neighborhood-wrap {
-			flex: 1 1 168px;
-			min-width: 150px;
-			width: 168px;
+			flex: 0 0 clamp(120px, 12vw, 168px);
+			min-width: 120px;
+			width: clamp(120px, 12vw, 168px);
 		}
 
 		.damage-dashboard-toolbar .toolbar-date-range-wrap {
-			flex: 1 1 210px;
-			min-width: 180px;
-			width: 210px;
+			flex: 0 0 clamp(150px, 15vw, 210px);
+			min-width: 150px;
+			width: clamp(150px, 15vw, 210px);
 		}
 
 		.damage-dashboard-toolbar .toolbar-neighborhood-select,
@@ -212,51 +216,44 @@
 		@media (max-width: 767.98px) {
 			.damage-dashboard-toolbar {
 				margin-inline: 0;
-				padding: 0.85rem;
+				padding: 0.75rem 0.85rem;
 			}
 
 			.damage-dashboard-toolbar-main {
-				align-items: stretch;
-				gap: 0.75rem;
-				width: 100%;
+				align-items: center;
+				gap: 0.6rem;
 			}
 
 			.damage-dashboard-toolbar-actions {
-				align-items: stretch;
-				gap: 0.75rem;
-				justify-content: stretch;
-				width: 100%;
+				align-items: center;
+				gap: 0.6rem;
 			}
 
 			.damage-dashboard-toolbar .toolbar-control-group {
-				align-items: stretch;
-				flex: 1 1 100%;
-				flex-direction: column-reverse;
-				gap: 0.4rem;
+				align-items: center;
+				flex: 0 0 auto;
+				flex-direction: row;
+				gap: 0.35rem;
 			}
 
 			.damage-dashboard-toolbar .toolbar-period-group {
-				display: grid;
-				grid-template-columns: repeat(2, minmax(0, 1fr));
-			}
-
-			.damage-dashboard-toolbar .toolbar-period-group .toolbar-label {
-				grid-column: 1 / -1;
+				display: flex;
 			}
 
 			.damage-dashboard-toolbar .toolbar-period-button {
-				min-width: 0;
-				width: 100%;
+				min-width: 58px;
+				padding-inline: 0.7rem;
 			}
 
 			.damage-dashboard-toolbar .toolbar-label {
-				white-space: normal;
+				font-size: 0.82rem;
+				white-space: nowrap;
 			}
 
 			.damage-dashboard-toolbar .toolbar-neighborhood-wrap,
 			.damage-dashboard-toolbar .toolbar-date-range-wrap {
-				min-width: 0;
-				width: 100% !important;
+				min-width: 120px;
+				width: 120px !important;
 			}
 		}
 
@@ -266,17 +263,26 @@
 			}
 
 			.damage-dashboard-toolbar .toolbar-control-group {
-				flex: 1 1 calc(50% - 0.75rem);
+				flex: 0 0 auto;
 			}
 
 			.damage-dashboard-toolbar .toolbar-period-group {
-				flex: 1 1 100%;
+				flex: 0 0 auto;
 			}
 		}
 
 		@media (max-width: 420px) {
-			.damage-dashboard-toolbar .toolbar-period-group {
-				grid-template-columns: minmax(0, 1fr);
+			.damage-dashboard-toolbar {
+				padding-inline: 0.65rem;
+			}
+
+			.damage-dashboard-toolbar .toolbar-period-button {
+				min-width: 52px;
+				padding-inline: 0.55rem;
+			}
+
+			.damage-dashboard-toolbar .toolbar-label {
+				font-size: 0.78rem;
 			}
 		}
 
