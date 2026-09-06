@@ -45,6 +45,13 @@ beforeEach(function (): void {
         $table->string('locality')->nullable();
         $table->string('neighborhood')->nullable();
         $table->string('unit_damage_status')->nullable();
+        $table->string('mchildren_001')->nullable();
+        $table->string('myoung')->nullable();
+        $table->string('melderly')->nullable();
+        $table->string('fchildren')->nullable();
+        $table->string('fyoung_001')->nullable();
+        $table->string('felderly')->nullable();
+        $table->unsignedInteger('family_members_count')->nullable();
         $table->text('building_submit_date')->nullable();
         $table->string('building_field_status')->nullable();
         $table->string('arcgis_hash', 64)->nullable();
@@ -205,6 +212,54 @@ it('copies building location fields and submit date when syncing housing units',
     expect($housingUnit->unit_building_name)->toBe('ArcGIS Unit Building');
     expect($housingUnit->building_submit_date)->toBe('2026-05-11 09:15:00');
     expect($housingUnit->building_field_status)->toBe('COMPLETED');
+});
+
+it('calculates family members count when syncing housing units', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://example.com/HousingUnits/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/HousingUnits/FeatureServer/1?*' => Http::response([
+            'fields' => [
+                ['name' => 'OBJECTID', 'type' => 'esriFieldTypeOID'],
+                ['name' => 'globalid', 'type' => 'esriFieldTypeString', 'length' => 64],
+                ['name' => 'parentglobalid', 'type' => 'esriFieldTypeString', 'length' => 64],
+                ['name' => 'mchildren_001', 'type' => 'esriFieldTypeInteger'],
+                ['name' => 'myoung', 'type' => 'esriFieldTypeInteger'],
+                ['name' => 'melderly', 'type' => 'esriFieldTypeInteger'],
+                ['name' => 'fchildren', 'type' => 'esriFieldTypeInteger'],
+                ['name' => 'fyoung_001', 'type' => 'esriFieldTypeInteger'],
+                ['name' => 'felderly', 'type' => 'esriFieldTypeInteger'],
+            ],
+        ]),
+        'https://example.com/HousingUnits/FeatureServer/1/query*' => Http::response([
+            'features' => [
+                [
+                    'attributes' => [
+                        'objectid' => 3001,
+                        'globalid' => 'housing-global-id',
+                        'parentglobalid' => 'building-global-id',
+                        'mchildren_001' => '2',
+                        'myoung' => '1',
+                        'melderly' => '',
+                        'fchildren' => '3',
+                        'fyoung_001' => '4',
+                        'felderly' => null,
+                    ],
+                ],
+            ],
+            'exceededTransferLimit' => false,
+        ]),
+    ]);
+
+    $exitCode = Artisan::call('sync:arcgis-layers', ['table' => 'housing_units']);
+
+    expect($exitCode)->toBe(0);
+    expect(DB::table('housing_units')->where('objectid', 3001)->value('family_members_count'))->toBe(10);
 });
 
 it('deletes missing housing units without a large not in query', function (): void {

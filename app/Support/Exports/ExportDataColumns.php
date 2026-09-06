@@ -22,6 +22,8 @@ class ExportDataColumns
 
     public const BUILDING_UNITS_COUNT_COLUMN = 'housing_units_count';
 
+    public const FAMILY_MEMBERS_COUNT_COLUMN = 'family_members_count';
+
     public const LEGAL_AUDITOR_COLUMN = 'legal_auditor';
 
     public const LEGAL_NOTES_COLUMN = 'legal_notes';

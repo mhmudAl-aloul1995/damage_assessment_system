@@ -395,6 +395,11 @@ class SyncArcGISLayers extends Command
                         }
                     }
                     $row = $this->applyFallbackColumns($row, $arcgisMap, $syncColumns, $table);
+
+                    if ($table === 'housing_units' && in_array('family_members_count', $tableColumns, true)) {
+                        $row['family_members_count'] = $this->familyMembersCount($row);
+                    }
+
                     $row = $this->applyBuildingAssessmentObstacleFallback($row, $syncColumns, $table);
                     $row = $this->applyCsoUnitSurveyParentFallback($row, $table);
 
@@ -983,6 +988,34 @@ class SyncArcGISLayers extends Command
         return str_contains($column, 'date')
             || str_contains($column, 'time')
             || in_array($column, ['today', 'start', 'end', 'editdate', 'creationdate'], true);
+    }
+
+    private function familyMembersCount(array $row): ?int
+    {
+        $fields = [
+            'mchildren_001',
+            'myoung',
+            'melderly',
+            'fchildren',
+            'fyoung_001',
+            'felderly',
+        ];
+
+        $hasAnyValue = false;
+        $total = 0;
+
+        foreach ($fields as $field) {
+            $value = $row[$field] ?? null;
+
+            if ($this->isBlankSyncValue($value)) {
+                continue;
+            }
+
+            $hasAnyValue = true;
+            $total += (int) $value;
+        }
+
+        return $hasAnyValue ? $total : null;
     }
 
     private function normalizeJsonValue(mixed $value): ?string

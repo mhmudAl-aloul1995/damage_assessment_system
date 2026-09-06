@@ -122,6 +122,11 @@ class ExportDataController extends Controller
             'hint' => 'حقل مخصص يعرض عدد الوحدات السكنية المرتبطة بالمبنى',
         ];
 
+        $assessmentMeta[ExportDataColumns::FAMILY_MEMBERS_COUNT_COLUMN] = [
+            'label' => 'عدد الأفراد',
+            'hint' => 'مجموع أفراد الأسرة في الوحدة السكنية',
+        ];
+
         $assessmentLabels = Assessment::pluck('label', 'name');
         $assessmentLabels[self::ASSESSMENT_OBSTACLE_FILTER] = 'Assessment Obstacle';
         $assessmentLabels['building_states_auditig'] = 'حالات المبنى - التدقيق';

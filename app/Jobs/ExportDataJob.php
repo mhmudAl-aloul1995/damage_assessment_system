@@ -567,6 +567,8 @@ class ExportDataJob implements ShouldQueue
 
             if ($field === 'housing_units_count') {
                 $headers[$header] = 'عدد الوحدات للمبنى';
+            } elseif ($field === ExportDataColumns::FAMILY_MEMBERS_COUNT_COLUMN) {
+                $headers[$header] = 'عدد الأفراد';
             } elseif ($field === 'family_members_total') {
                 $headers[$header] = 'عدد أفراد الأسرة';
             } elseif (ExportDataColumns::isAuditNoteColumn($field)) {

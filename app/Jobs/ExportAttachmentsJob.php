@@ -1156,6 +1156,7 @@ class ExportAttachmentsJob implements ShouldQueue
             ->toArray();
 
         $labels[ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN] = 'عدد الوحدات للمبنى';
+        $labels[ExportDataColumns::FAMILY_MEMBERS_COUNT_COLUMN] = 'عدد الأفراد';
 
         return $labels;
     }

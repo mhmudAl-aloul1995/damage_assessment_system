@@ -67,6 +67,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string|null $felderly
  * @property string|null $pregnant
  * @property string|null $lactating
+ * @property int|null $family_members_count
  * @property string|null $the_unit_resident
  * @property string|null $current_address
  * @property string|null $current_residence
@@ -435,6 +436,7 @@ class HousingUnit extends Model
         'felderly',
         'pregnant',
         'lactating',
+        'family_members_count',
         'the_unit_resident',
         'tenant_name',
         'current_address',
