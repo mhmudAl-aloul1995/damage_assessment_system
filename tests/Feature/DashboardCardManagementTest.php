@@ -55,6 +55,26 @@ it('seeds dashboard card labels as translation keys available in arabic and engl
         ->and(__('ui.damage_dashboard.km', [], 'en'))->toBe('km');
 });
 
+it('keeps legacy arabic dashboard card labels translatable', function (): void {
+    $summaryCardsView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/partials/summary-cards.blade.php'));
+    $legacyAliases = [
+        'مدمر' => 'ui.damage_dashboard.destroyed',
+        'أضرار جسيمة' => 'ui.damage_dashboard.severe_damage',
+        'أضرار متوسطة' => 'ui.damage_dashboard.moderate_damage',
+        'أضرار خفيفة' => 'ui.damage_dashboard.minor_damage',
+        'غير مصنف - وحدات' => 'ui.damage_dashboard.units_unclassified',
+        'إزالة ركام' => 'ui.damage_dashboard.rubble_removal',
+        'كم' => 'ui.damage_dashboard.km',
+    ];
+
+    foreach ($legacyAliases as $legacyLabel => $translationKey) {
+        expect($summaryCardsView)
+            ->toContain("'{$legacyLabel}' => '{$translationKey}'")
+            ->and(Lang::has($translationKey, 'ar'))->toBeTrue("Missing Arabic translation for {$translationKey}")
+            ->and(Lang::has($translationKey, 'en'))->toBeTrue("Missing English translation for {$translationKey}");
+    }
+});
+
 it('lets database officers manage dashboard card items', function (): void {
     $this->seed(DashboardCardSeeder::class);
 

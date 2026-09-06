@@ -1,13 +1,80 @@
 @php
 	$dashboardStatsBuckets = compact('buildingStats', 'unitStats', 'publicBuildingStats', 'roadFacilityStats', 'csoSurveyStats', 'csoOrganizationStats', 'csoUnitStats');
 	$dashboardCardItemValues ??= [];
+	$dashboardTranslationAliases = [
+		'المباني' => 'ui.damage_dashboard.buildings',
+		'مباني تم تقييمها' => 'ui.damage_dashboard.assessed_buildings',
+		'الوحدات السكنية' => 'ui.damage_dashboard.housing_units',
+		'الوحدات السكانية' => 'ui.damage_dashboard.housing_units',
+		'إجمالي الوحدات السكنية' => 'ui.damage_dashboard.total_housing_units',
+		'إجمالي الوحدات السكانية' => 'ui.damage_dashboard.total_housing_units',
+		'منظمات المجتمع المدني' => 'ui.damage_dashboard.cso_surveys',
+		'إجمالي استبيانات المنظمات' => 'ui.damage_dashboard.total_cso_surveys',
+		'المباني العامة' => 'ui.damage_dashboard.public_buildings',
+		'إجمالي المباني العامة' => 'ui.damage_dashboard.total_public_buildings',
+		'الطرق' => 'ui.damage_dashboard.road_facilities',
+		'إجمالي الطرق' => 'ui.damage_dashboard.total_road_facilities',
+		'ضرر كلي' => 'ui.damage_dashboard.fully_damaged',
+		'ضرر جزئي' => 'ui.damage_dashboard.partially_damaged',
+		'لجنة فنية' => 'ui.damage_dashboard.committee_review',
+		'لا يوجد ضرر' => 'ui.damage_dashboard.no_damage',
+		'غير مصنف' => 'ui.damage_dashboard.unclassified',
+		'يوجد عائق' => 'ui.damage_dashboard.assessment_blocked',
+		'وجود جثث' => 'ui.damage_dashboard.bodies_present',
+		'ذخائر غير منفجرة' => 'ui.damage_dashboard.uxo_present',
+		'ركام يعيق الوصول' => 'ui.damage_dashboard.debris_blocking',
+		'مكتمل' => 'ui.damage_dashboard.completed',
+		'غير مكتمل' => 'ui.damage_dashboard.not_completed',
+		'تدعيم هيكلي' => 'ui.damage_dashboard.structural_support',
+		'قابل للانهيار' => 'ui.damage_dashboard.at_risk_of_collapse',
+		'مناسبة للسكن' => 'ui.damage_dashboard.habitable',
+		'متأثرة بالحريق' => 'ui.damage_dashboard.fire_affected',
+		'متضررة' => 'ui.damage_dashboard.damaged',
+		'مقيّمة' => 'ui.damage_dashboard.assessed',
+		'مقيمة' => 'ui.damage_dashboard.assessed',
+		'تعيق التقييم' => 'ui.damage_dashboard.undamaged',
+		'الوحدات' => 'ui.damage_dashboard.units',
+		'المنظمات' => 'ui.damage_dashboard.organizations',
+		'بدون وحدات' => 'ui.damage_dashboard.without_units',
+		'بدون منظمة' => 'ui.damage_dashboard.without_organization',
+		'البلديات' => 'ui.damage_dashboard.municipalities',
+		'الأحياء' => 'ui.damage_dashboard.neighborhoods',
+		'الطاقم المكلف' => 'ui.damage_dashboard.assigned_staff',
+		'الطاقم المكلّف' => 'ui.damage_dashboard.assigned_staff',
+		'مشغولة' => 'ui.damage_dashboard.occupied',
+		'جثث' => 'ui.damage_dashboard.bodies',
+		'ذخائر' => 'ui.damage_dashboard.uxo',
+		'طول الشوارع' => 'ui.damage_dashboard.street_length',
+		'جدول الكميات' => 'ui.damage_dashboard.items',
+		'الحفر' => 'ui.damage_dashboard.potholes',
+		'الجثث المدفونة' => 'ui.damage_dashboard.buried_bodies',
+		'مدمر' => 'ui.damage_dashboard.destroyed',
+		'أضرار جسيمة' => 'ui.damage_dashboard.severe_damage',
+		'أضرار متوسطة' => 'ui.damage_dashboard.moderate_damage',
+		'أضرار خفيفة' => 'ui.damage_dashboard.minor_damage',
+		'ضرر كلي - وحدات' => 'ui.damage_dashboard.units_fully_damaged',
+		'ضرر جزئي - وحدات' => 'ui.damage_dashboard.units_partially_damaged',
+		'غير مصنف - وحدات' => 'ui.damage_dashboard.units_unclassified',
+		'إزالة ركام' => 'ui.damage_dashboard.rubble_removal',
+		'يوجد ركام' => 'ui.damage_dashboard.rubble_present',
+		'بدون ركام' => 'ui.damage_dashboard.without_rubble',
+		'كم' => 'ui.damage_dashboard.km',
+	];
 
-	$formatDashboardValue = function ($value, int $decimalPlaces = 0, ?string $suffix = null): string {
+	$translateDashboardText = function (?string $value) use ($dashboardTranslationAliases): string {
+		if ($value === null || $value === '') {
+			return '';
+		}
+
+		return __($dashboardTranslationAliases[$value] ?? $value);
+	};
+
+	$formatDashboardValue = function ($value, int $decimalPlaces = 0, ?string $suffix = null) use ($translateDashboardText): string {
 		if (is_numeric($value)) {
 			$value = number_format((float) $value, $decimalPlaces);
 		}
 
-		return trim((string) $value . ($suffix ? ' ' . __($suffix) : ''));
+		return trim((string) $value . ($suffix ? ' ' . $translateDashboardText($suffix) : ''));
 	};
 
 	$dashboardConditionQuery = function (array $params): string {
@@ -129,7 +196,7 @@
 						@endif
 
 						<div class="d-flex flex-stack @if ($targetReached) target-title-row @endif">
-							<h3 class="m-0 text-white fw-bold fs-3">{{ __($dashboardCard->title) }}</h3>
+							<h3 class="m-0 text-white fw-bold fs-3">{{ $translateDashboardText($dashboardCard->title) }}</h3>
 							<div class="ms-1">
 								<button type="button"
 									class="btn btn-sm btn-icon btn-color-white btn-active-white border-0 me-n3"
@@ -142,7 +209,7 @@
 						</div>
 
 						<div class="d-flex text-center flex-column text-white pt-8 @if ($targetReached) target-total-wrap @endif">
-							<span class="fw-semibold fs-7 text-wrap">{{ $dashboardCard->subtitle ? __($dashboardCard->subtitle) : '' }}</span>
+							<span class="fw-semibold fs-7 text-wrap">{{ $translateDashboardText($dashboardCard->subtitle) }}</span>
 							<span class="fw-bold fs-1 fs-lg-2x pt-1 @if ($targetReached) target-total-number @endif">{{ $formatDashboardValue($totalValue) }}</span>
 							@if ($targetReached)
 								<span class="target-achieved-badge">{{ __('ui.damage_dashboard.target_achieved', ['target' => number_format((float) $target)]) }}</span>
@@ -176,9 +243,9 @@
 									<div class="mb-1 pe-3 flex-grow-1">
 										@if ($itemLink)
 											<a href="{{ $itemLink }}"
-												class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ __($dashboardCardItem->title) }}</a>
+												class="fs-10 fs-lg-7 text-gray-800 text-hover-primary fw-bold text-wrap">{{ $translateDashboardText($dashboardCardItem->title) }}</a>
 										@else
-											<span class="fs-10 fs-lg-7 text-gray-800 fw-bold text-wrap">{{ __($dashboardCardItem->title) }}</span>
+											<span class="fs-10 fs-lg-7 text-gray-800 fw-bold text-wrap">{{ $translateDashboardText($dashboardCardItem->title) }}</span>
 										@endif
 									</div>
 									<div class="fw-bold fs-7 fs-lg-7 text-gray-800 pe-1">
