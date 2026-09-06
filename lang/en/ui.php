@@ -801,6 +801,7 @@ return [
         'rubble_removal' => 'Rubble Removal',
         'rubble_present' => 'Rubble Present',
         'without_rubble' => 'Without Rubble',
+        'has_basement' => 'Has Basement',
         'target_achieved' => 'Target achieved :target+',
         'object_id' => 'Object ID',
         'damage_status' => 'Damage Status',

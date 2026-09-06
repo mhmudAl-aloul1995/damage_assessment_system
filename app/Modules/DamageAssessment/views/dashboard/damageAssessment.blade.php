@@ -473,8 +473,8 @@
 			overflow: visible;
 			text-wrap: balance;
 			white-space: normal !important;
-			word-break: keep-all;
-			overflow-wrap: anywhere;
+			word-break: normal;
+			overflow-wrap: normal;
 		}
 
 		.damage-dashboard-stats .d-flex.align-items-center.flex-wrap.w-100>.fw-bold,

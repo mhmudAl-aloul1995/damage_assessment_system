@@ -800,6 +800,7 @@ return [
         'rubble_removal' => 'إزالة ركام',
         'rubble_present' => 'يوجد ركام',
         'without_rubble' => 'بدون ركام',
+        'has_basement' => 'لديها بدروم',
         'target_achieved' => 'تم تحقيق التارجت :target+',
         'buildings_status_summary' => 'ملخص حالة المباني',
         'buildings_status_summary_hint' => 'تفاصيل إحصائية لعملية التقييم',

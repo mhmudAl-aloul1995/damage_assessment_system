@@ -64,6 +64,7 @@ it('keeps legacy arabic dashboard card labels translatable', function (): void {
         'أضرار خفيفة' => 'ui.damage_dashboard.minor_damage',
         'غير مصنف - وحدات' => 'ui.damage_dashboard.units_unclassified',
         'إزالة ركام' => 'ui.damage_dashboard.rubble_removal',
+        'لديها بدوم' => 'ui.damage_dashboard.has_basement',
         'كم' => 'ui.damage_dashboard.km',
     ];
 

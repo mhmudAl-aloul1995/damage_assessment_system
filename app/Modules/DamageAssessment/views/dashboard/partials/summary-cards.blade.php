@@ -58,6 +58,8 @@
 		'إزالة ركام' => 'ui.damage_dashboard.rubble_removal',
 		'يوجد ركام' => 'ui.damage_dashboard.rubble_present',
 		'بدون ركام' => 'ui.damage_dashboard.without_rubble',
+		'لديها بدوم' => 'ui.damage_dashboard.has_basement',
+		'لديها بدروم' => 'ui.damage_dashboard.has_basement',
 		'كم' => 'ui.damage_dashboard.km',
 	];
 
@@ -66,7 +68,18 @@
 			return '';
 		}
 
-		return __($dashboardTranslationAliases[$value] ?? $value);
+		$key = $dashboardTranslationAliases[$value] ?? $value;
+		$translated = __($key);
+
+		if ($translated !== $key) {
+			return $translated;
+		}
+
+		if (str_starts_with($key, 'ui.damage_dashboard.')) {
+			return str($key)->afterLast('.')->replace('_', ' ')->title()->toString();
+		}
+
+		return $value;
 	};
 
 	$formatDashboardValue = function ($value, int $decimalPlaces = 0, ?string $suffix = null) use ($translateDashboardText): string {

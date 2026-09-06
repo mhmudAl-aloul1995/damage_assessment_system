@@ -28,7 +28,7 @@ test('dashboard summary cards use compact vertical spacing', function () {
         ->toContain('display: block;')
         ->toContain('text-wrap: balance;')
         ->toContain('white-space: normal !important;')
-        ->toContain('overflow-wrap: anywhere;')
+        ->toContain('overflow-wrap: normal;')
         ->not->toContain('-webkit-line-clamp');
 
     expect($summaryCardsView)
