@@ -46,10 +46,13 @@ test('dashboard toolbar has responsive control groups for all devices', function
         ->toContain('@media (min-width: 768px) and (max-width: 1199.98px)')
         ->toContain('@media (max-width: 767.98px)')
         ->toContain('@media (max-width: 420px)')
-        ->toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
-        ->toContain('grid-template-columns: minmax(0, 1fr);')
-        ->toContain('flex: 1 1 100%;')
-        ->toContain('width: 100% !important;');
+        ->toContain('overflow-x: hidden;')
+        ->toContain('flex-wrap: nowrap;')
+        ->toContain('transform: scale(var(--toolbar-scale));')
+        ->toContain('--toolbar-scale: 0.34;')
+        ->not->toContain('overflow-x: auto;')
+        ->not->toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
+        ->not->toContain('flex-direction: column-reverse;');
 });
 
 test('dashboard summary icons match labels and use a consistent size', function () {
@@ -85,7 +88,7 @@ test('housing units target celebration appears when the dashboard target is reac
         ->toContain('housing-target-achieved')
         ->toContain('target-confetti')
         ->toContain('target-total-number')
-        ->toContain('تم تحقيق التارجت');
+        ->toContain('ui.damage_dashboard.target_achieved');
 
     expect($dashboardSeeder)
         ->toContain("'options' => ['target' => 67500]");

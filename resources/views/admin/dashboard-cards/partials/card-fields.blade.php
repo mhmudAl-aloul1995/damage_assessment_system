@@ -4,11 +4,11 @@
 </div>
 <div class="col-md-2">
     <label class="form-label">العنوان</label>
-    <input type="text" name="title" class="form-control" value="{{ old('title', $card?->title ? __($card->title) : null) }}" required>
+    <input type="text" name="title" class="form-control" value="{{ old('title', $card?->title) }}" required>
 </div>
 <div class="col-md-2">
     <label class="form-label">النص الفرعي</label>
-    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle', $card?->subtitle ? __($card->subtitle) : null) }}">
+    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle', $card?->subtitle) }}">
 </div>
 <div class="col-md-2">
     <label class="form-label">مصدر البيانات</label>

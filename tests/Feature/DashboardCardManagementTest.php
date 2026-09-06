@@ -5,6 +5,7 @@ use App\Models\CsoSurveyOrganization;
 use App\Models\DashboardCard;
 use App\Models\User;
 use Database\Seeders\DashboardCardSeeder;
+use Illuminate\Support\Facades\Lang;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -20,6 +21,38 @@ it('seeds the default dashboard cards and items', function (): void {
         ->and(DashboardCard::query()->where('key', 'buildings')->first()?->items()->first()?->sort_order)->toBe(1)
         ->and(DashboardCard::query()->where('key', 'housing')->first()?->items)->toHaveCount(9)
         ->and(DashboardCard::query()->where('key', 'housing')->first()?->items()->first()?->sort_order)->toBe(1);
+});
+
+it('seeds dashboard card labels as translation keys available in arabic and english', function (): void {
+    $this->seed(DashboardCardSeeder::class);
+
+    $translationKeys = DashboardCard::query()
+        ->with('items')
+        ->get()
+        ->flatMap(function (DashboardCard $card): array {
+            return array_filter([
+                $card->title,
+                $card->subtitle,
+                ...$card->items->pluck('title')->all(),
+                ...$card->items->pluck('value_suffix')->all(),
+            ]);
+        })
+        ->unique()
+        ->values();
+
+    expect($translationKeys)->not->toContain('المباني')
+        ->and($translationKeys)->toContain('ui.damage_dashboard.buildings')
+        ->and($translationKeys)->toContain('ui.damage_dashboard.km');
+
+    $translationKeys->each(function (string $key): void {
+        expect(Lang::has($key, 'ar'))->toBeTrue("Missing Arabic translation for {$key}")
+            ->and(Lang::has($key, 'en'))->toBeTrue("Missing English translation for {$key}");
+    });
+
+    expect(__('ui.damage_dashboard.buildings', [], 'ar'))->toBe('المباني')
+        ->and(__('ui.damage_dashboard.buildings', [], 'en'))->toBe('Buildings')
+        ->and(__('ui.damage_dashboard.km', [], 'ar'))->toBe('كم')
+        ->and(__('ui.damage_dashboard.km', [], 'en'))->toBe('km');
 });
 
 it('lets database officers manage dashboard card items', function (): void {
@@ -43,13 +76,16 @@ it('lets database officers manage dashboard card items', function (): void {
         'is_active' => true,
     ]);
 
+    app()->setLocale('ar');
+
     $this->actingAs($user)
+        ->withSession(['locale' => 'ar'])
         ->get(route('admin.dashboard-cards.index'))
         ->assertOk()
         ->assertSee('إدارة بطاقات لوحة التحكم')
         ->assertSee('المباني')
         ->assertSee('ضرر كلي')
-        ->assertDontSee('ui.damage_dashboard.fully_damaged')
+        ->assertSee('value="ui.damage_dashboard.fully_damaged"', false)
         ->assertSee('data-control="select2"', false)
         ->assertSee('js-icon-select')
         ->assertSee('js-stat-key-group d-none', false)

@@ -7,7 +7,7 @@
 			$value = number_format((float) $value, $decimalPlaces);
 		}
 
-		return trim((string) $value . ($suffix ? ' ' . $suffix : ''));
+		return trim((string) $value . ($suffix ? ' ' . __($suffix) : ''));
 	};
 
 	$dashboardConditionQuery = function (array $params): string {
@@ -145,7 +145,7 @@
 							<span class="fw-semibold fs-7 text-wrap">{{ $dashboardCard->subtitle ? __($dashboardCard->subtitle) : '' }}</span>
 							<span class="fw-bold fs-1 fs-lg-2x pt-1 @if ($targetReached) target-total-number @endif">{{ $formatDashboardValue($totalValue) }}</span>
 							@if ($targetReached)
-								<span class="target-achieved-badge">تم تحقيق التارجت {{ number_format((float) $target) }}+</span>
+								<span class="target-achieved-badge">{{ __('ui.damage_dashboard.target_achieved', ['target' => number_format((float) $target)]) }}</span>
 							@endif
 						</div>
 					</div>

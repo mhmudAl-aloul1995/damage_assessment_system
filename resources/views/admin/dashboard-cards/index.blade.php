@@ -270,12 +270,12 @@
 
                                 <div>
                                     <label class="form-label">العنوان</label>
-                                    <input type="text" name="title" class="form-control" value="{{ old('title', __($selectedCard->title)) }}" required>
+                                    <input type="text" name="title" class="form-control" value="{{ old('title', $selectedCard->title) }}" required>
                                 </div>
 
                                 <div>
                                     <label class="form-label">النص الفرعي</label>
-                                    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle', $selectedCard->subtitle ? __($selectedCard->subtitle) : null) }}">
+                                    <input type="text" name="subtitle" class="form-control" value="{{ old('subtitle', $selectedCard->subtitle) }}">
                                 </div>
 
                                 <div class="settings-pair">
@@ -445,7 +445,7 @@
 
                                                     <div class="col-md-8">
                                                         <label class="form-label">العنوان</label>
-                                                        <input type="text" name="title" class="form-control" value="{{ old('title', __($item->title)) }}" required>
+                                                        <input type="text" name="title" class="form-control" value="{{ old('title', $item->title) }}" required>
                                                     </div>
                                                     <div class="col-md-4">
                                                         <label class="form-label">الترتيب</label>
