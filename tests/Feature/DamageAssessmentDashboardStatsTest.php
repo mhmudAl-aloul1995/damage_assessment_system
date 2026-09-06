@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
+use App\Models\CommitteeDecision;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
@@ -535,6 +537,81 @@ it('filters dashboard housing totals by building submit date without hiding inco
             return (int) $unitStats['total_units'] === 2
                 && (int) $unitStats['fully_damaged'] === 2
                 && (int) $unitStats['partially_damaged'] === 0;
+        });
+});
+
+it('counts archived committee building decisions in the dashboard committee total for historical filters', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    $building = Building::query()->create([
+        'objectid' => 941,
+        'globalid' => 'archived-committee-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'governorate' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'submission_date' => '2026-06-12 10:00:00',
+        'end' => '2026-06-12 10:00:00',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_FULLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'completed_at' => '2026-06-14 10:00:00',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => $building->objectid,
+        'building_globalid' => $building->globalid,
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'archived_by' => $user->id,
+        'archived_at' => '2026-06-14 10:00:00',
+        'building_snapshot' => [
+            'objectid' => $building->objectid,
+            'globalid' => $building->globalid,
+            'field_status' => 'COMPLETED',
+            'building_damage_status' => 'committee_review',
+            'governorate' => 'Gaza',
+            'neighborhood' => 'Rimal',
+            'submission_date' => '2026-06-12 10:00:00',
+            'end' => '2026-06-12 10:00:00',
+        ],
+        'committee_decision_snapshot' => $decision->attributesToArray(),
+    ]);
+
+    $committeeCardItem = DashboardCardItem::query()
+        ->where('source_bucket', 'buildingStats')
+        ->where('filter_field', 'building_damage_status')
+        ->where('filter_value', 'committee_review')
+        ->firstOrFail();
+
+    $committeeCardItem->update(['calculation_type' => 'count_condition']);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', [
+            'from_date' => '2026-06-01',
+            'to_date' => '2026-06-30',
+            'governorate' => 'Gaza',
+            'neighborhood' => 'Rimal',
+        ]))
+        ->assertOk()
+        ->assertViewHas('buildingStats', function (array $buildingStats): bool {
+            return (int) $buildingStats['fully_damaged'] === 1
+                && (int) $buildingStats['committee_review'] === 1;
+        })
+        ->assertViewHas('dashboardCardItemValues', function (array $values) use ($committeeCardItem): bool {
+            return (int) $values[$committeeCardItem->id] === 1;
         });
 });
 

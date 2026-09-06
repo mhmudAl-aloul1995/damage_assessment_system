@@ -9,6 +9,7 @@ use App\Models\AssignedAssessmentUser;
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
@@ -39,6 +40,23 @@ use Yajra\Datatables\Datatables;
 
 class DamageAssessmentController extends Controller
 {
+    private const COMMITTEE_BUILDING_DAMAGE_STATUSES = [
+        'committee_review',
+        'committee_review2',
+        'commite_review',
+    ];
+
+    private const COMMITTEE_UNIT_DAMAGE_STATUSES = [
+        'committee_review2',
+        'committee_review',
+        'commite_review',
+    ];
+
+    private const COMMITTEE_ARCHIVE_SOURCE_TYPES = [
+        'committee_decision',
+        'temporary_committee_excel_archive',
+    ];
+
     private const TEMPORARY_HIDDEN_AUDIT_ACTION_USER_NAMES = [
         'ياسمين ماهر مصطفى ابومدللة',
         'غادة محمود عبدالحي الهباش',
@@ -1146,7 +1164,7 @@ class DamageAssessmentController extends Controller
                 'pending' => (int) $buildings->pending,
                 'fully_damaged' => (int) $buildings->fully_damaged,
                 'partially_damaged' => (int) $buildings->partially_damaged,
-                'committee_review' => (int) $buildings->committee_review,
+                'committee_review' => (int) $buildings->committee_review + $this->dashboardArchivedCommitteeReviewCount($request, 'building'),
                 'no_damage' => (int) $buildings->no_damage,
                 'unclassified' => (int) $buildings->unclassified,
                 'assessment_obstacle' => (int) $buildings->assessment_obstacle,
@@ -1160,7 +1178,7 @@ class DamageAssessmentController extends Controller
                 'fully_damaged' => (int) $units->fully_damaged,
                 'partially_damaged' => (int) $units->partially_damaged,
                 'damaged_total' => (int) $units->fully_damaged + (int) $units->partially_damaged,
-                'committee_review' => (int) $units->committee_review,
+                'committee_review' => (int) $units->committee_review + $this->dashboardArchivedCommitteeReviewCount($request, 'housing-unit'),
                 'no_damage' => (int) $units->no_damage,
                 'unclassified' => (int) $units->unclassified,
                 'has_fire' => (int) $units->has_fire,
@@ -1231,6 +1249,24 @@ class DamageAssessmentController extends Controller
             return 0;
         }
 
+        if ($this->isCommitteeReviewDashboardCardItem($item->source_bucket, $conditions)) {
+            $condition = $conditions[0];
+
+            if (! Schema::hasColumn($table, $condition['field'])) {
+                return $this->dashboardArchivedCommitteeReviewCount(
+                    $request,
+                    $item->source_bucket === 'buildingStats' ? 'building' : 'housing-unit'
+                );
+            }
+
+            $this->applyDashboardCardItemCondition($query, $condition['field'], $condition['operator'], $condition['value']);
+
+            return $query->count() + $this->dashboardArchivedCommitteeReviewCount(
+                $request,
+                $item->source_bucket === 'buildingStats' ? 'building' : 'housing-unit'
+            );
+        }
+
         foreach ($conditions as $condition) {
             if (! Schema::hasColumn($table, $condition['field'])) {
                 return 0;
@@ -1240,6 +1276,130 @@ class DamageAssessmentController extends Controller
         }
 
         return $query->count();
+    }
+
+    /**
+     * @param  array<int, array{field: string, operator: ?string, value: mixed}>  $conditions
+     */
+    private function isCommitteeReviewDashboardCardItem(string $sourceBucket, array $conditions): bool
+    {
+        if (! in_array($sourceBucket, ['buildingStats', 'unitStats'], true) || count($conditions) !== 1) {
+            return false;
+        }
+
+        $condition = $conditions[0];
+        $expectedField = $sourceBucket === 'buildingStats'
+            ? 'building_damage_status'
+            : 'unit_damage_status';
+
+        $values = is_array($condition['value'])
+            ? $condition['value']
+            : [$condition['value']];
+
+        $committeeStatuses = $sourceBucket === 'buildingStats'
+            ? self::COMMITTEE_BUILDING_DAMAGE_STATUSES
+            : self::COMMITTEE_UNIT_DAMAGE_STATUSES;
+
+        return $condition['field'] === $expectedField
+            && ($condition['operator'] === null || $condition['operator'] === '=')
+            && collect($values)
+                ->map(fn (mixed $value): string => strtolower(trim((string) $value)))
+                ->intersect($committeeStatuses)
+                ->isNotEmpty();
+    }
+
+    private function dashboardArchivedCommitteeReviewCount(Request $request, string $recordType): int
+    {
+        if (! Schema::hasTable('building_survey_archive_objects')) {
+            return 0;
+        }
+
+        $query = BuildingSurveyArchiveObject::query()
+            ->whereIn('source_type', self::COMMITTEE_ARCHIVE_SOURCE_TYPES);
+
+        if ($recordType === 'housing-unit') {
+            $query
+                ->whereNotNull('housing_unit_objectid')
+                ->whereIn('housing_unit_snapshot->unit_damage_status', self::COMMITTEE_UNIT_DAMAGE_STATUSES);
+
+            $this->applyDashboardArchivedCommitteeUnitFilters($query, $request);
+
+            return $query->distinct('housing_unit_objectid')->count('housing_unit_objectid');
+        }
+
+        $query
+            ->whereNull('housing_unit_objectid')
+            ->whereIn('building_snapshot->building_damage_status', self::COMMITTEE_BUILDING_DAMAGE_STATUSES);
+
+        $this->applyDashboardArchivedCommitteeBuildingFilters($query, $request);
+
+        return $query->distinct('building_objectid')->count('building_objectid');
+    }
+
+    private function applyDashboardArchivedCommitteeBuildingFilters(Builder $query, Request $request): void
+    {
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+
+        if ($request->filled('neighborhood')) {
+            $query->where('building_snapshot->neighborhood', (string) $request->string('neighborhood'));
+        }
+
+        if ($request->filled('governorate')) {
+            $query->where('building_snapshot->governorate', (string) $request->string('governorate'));
+        }
+
+        $this->applyDashboardArchivedJsonDateFilters($query, 'building_snapshot', ['submission_date', 'end'], $startDate, $endDate);
+    }
+
+    private function applyDashboardArchivedCommitteeUnitFilters(Builder $query, Request $request): void
+    {
+        [$startDate, $endDate] = $this->dashboardDateRange($request);
+
+        if ($request->filled('neighborhood')) {
+            $neighborhood = (string) $request->string('neighborhood');
+
+            $query->where(function (Builder $query) use ($neighborhood): void {
+                $query
+                    ->where('housing_unit_snapshot->neighborhood', $neighborhood)
+                    ->orWhere('building_snapshot->neighborhood', $neighborhood);
+            });
+        }
+
+        if ($request->filled('governorate')) {
+            $governorate = (string) $request->string('governorate');
+
+            $query->where(function (Builder $query) use ($governorate): void {
+                $query
+                    ->where('housing_unit_snapshot->governorate', $governorate)
+                    ->orWhere('building_snapshot->governorate', $governorate);
+            });
+        }
+
+        $this->applyDashboardArchivedJsonDateFilters($query, 'housing_unit_snapshot', ['building_submit_date'], $startDate, $endDate);
+    }
+
+    /**
+     * @param  list<string>  $dateFields
+     */
+    private function applyDashboardArchivedJsonDateFilters(Builder $query, string $snapshotColumn, array $dateFields, ?string $startDate, ?string $endDate): void
+    {
+        if ($startDate !== null) {
+            $query->where(function (Builder $query) use ($snapshotColumn, $dateFields, $startDate): void {
+                foreach ($dateFields as $index => $dateField) {
+                    $method = $index === 0 ? 'whereDate' : 'orWhereDate';
+                    $query->{$method}($snapshotColumn.'->'.$dateField, '>=', $startDate);
+                }
+            });
+        }
+
+        if ($endDate !== null) {
+            $query->where(function (Builder $query) use ($snapshotColumn, $dateFields, $endDate): void {
+                foreach ($dateFields as $index => $dateField) {
+                    $method = $index === 0 ? 'whereDate' : 'orWhereDate';
+                    $query->{$method}($snapshotColumn.'->'.$dateField, '<=', $endDate);
+                }
+            });
+        }
     }
 
     /**
