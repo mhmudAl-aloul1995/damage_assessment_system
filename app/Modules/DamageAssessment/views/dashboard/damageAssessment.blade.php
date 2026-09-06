@@ -320,6 +320,8 @@
 		}
 
 		.damage-dashboard-stats {
+			--bs-gutter-x: 1rem;
+			--bs-gutter-y: 1rem;
 			--summary-card-height: 700px;
 			--summary-header-height: 230px;
 			--summary-body-height: 560px;
@@ -337,6 +339,8 @@
 
 		@media (min-width: 1200px) {
 			.damage-dashboard-stats {
+				--bs-gutter-x: 0.75rem;
+				--bs-gutter-y: 0.75rem;
 				--summary-header-height: 190px;
 				--summary-body-offset: 44px;
 				--summary-label-size: 0.86rem;

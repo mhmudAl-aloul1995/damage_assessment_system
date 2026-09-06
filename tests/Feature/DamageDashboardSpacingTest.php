@@ -17,6 +17,10 @@ test('dashboard summary cards use compact vertical spacing', function () {
         ->not->toContain('justify-content: space-between;');
 
     expect($dashboardView)
+        ->toContain('--bs-gutter-x: 1rem;')
+        ->toContain('--bs-gutter-y: 1rem;')
+        ->toContain('--bs-gutter-x: 0.75rem;')
+        ->toContain('--bs-gutter-y: 0.75rem;')
         ->toContain('--summary-body-inline-space: clamp(1rem, 0.35rem + 1.05vw, 2.25rem);')
         ->toContain('--summary-body-inline-space: 0.65rem;')
         ->toContain('--summary-item-min-height: 2.9rem;')
