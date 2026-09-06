@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Export;
 use App\services\HousingUnitCivilRegistryNameBackfillService;
+use App\Support\Exports\CommitteeReviewArchiveFilter;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Bus\Queueable;
 use Illuminate\Container\Container;
@@ -105,9 +106,13 @@ class ExportDataJob implements ShouldQueue
 
             $buildingUnitsCountColumn = ExportDataColumns::BUILDING_UNITS_COUNT_COLUMN;
             $needsHousingUnitsCount = in_array($buildingUnitsCountColumn, $buildingColumns, true);
-            $needsHousingJoin = ! empty($housingColumns) || (! empty($importedObjectIds) && $importedObjectIdTarget === 'housing_unit');
+            $needsHousingJoin = ! empty($housingColumns)
+                || (! empty($importedObjectIds) && $importedObjectIdTarget === 'housing_unit')
+                || collect(array_keys((array) $filters))
+                    ->contains(fn (string $field): bool => ExportDataColumns::hasColumn($housingUnitsSource, $field));
             $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
             $paginateByHousing = $needsHousingJoin;
+            $committeeArchiveFilter = app(CommitteeReviewArchiveFilter::class);
 
             $assessmentLabels = DB::table('assessments')
                 ->whereNotNull('name')
@@ -123,16 +128,12 @@ class ExportDataJob implements ShouldQueue
                 : DB::table("{$buildingsSource} as b");
 
             $this->applySelectedPhaseFilter($query, $params, $buildingsSource);
-
-            $buildingEndExpression = $this->sourceColumnExpression('b', 'end');
-
-            if ($buildingEndFrom !== null && $buildingEndFrom !== '') {
-                $query->whereDate(DB::raw($buildingEndExpression), '>=', $buildingEndFrom);
-            }
-
-            if ($buildingEndTo !== null && $buildingEndTo !== '') {
-                $query->whereDate(DB::raw($buildingEndExpression), '<=', $buildingEndTo);
-            }
+            $committeeArchiveFilter->applyBuildingEndFilter(
+                $query,
+                $this->sourceColumnExpression('b', 'end'),
+                $params,
+                $needsHousingJoin,
+            );
 
             if ($needsFamily) {
                 $familySub = DB::table("{$housingUnitsSource} as hf")
@@ -209,8 +210,32 @@ class ExportDataJob implements ShouldQueue
                 }
 
                 if (ExportDataColumns::hasColumn($buildingsSource, $field)) {
+                    if ($committeeArchiveFilter->isBuildingCommitteeFilter((string) $field, $values)) {
+                        $committeeArchiveFilter->applyBuildingDamageFilter(
+                            $query,
+                            $this->sourceColumnExpression('b', (string) $field),
+                            'b.objectid',
+                            $values,
+                            $params,
+                        );
+
+                        continue;
+                    }
+
                     $query->whereIn(DB::raw($this->sourceColumnExpression('b', $field)), $values);
                 } elseif (ExportDataColumns::hasColumn($housingUnitsSource, $field)) {
+                    if ($committeeArchiveFilter->isUnitCommitteeFilter((string) $field, $values)) {
+                        $committeeArchiveFilter->applyUnitDamageFilter(
+                            $query,
+                            $this->sourceColumnExpression('h', (string) $field),
+                            'h.objectid',
+                            $values,
+                            $params,
+                        );
+
+                        continue;
+                    }
+
                     $query->whereIn(DB::raw($this->sourceColumnExpression('h', $field)), $values);
                 }
             }

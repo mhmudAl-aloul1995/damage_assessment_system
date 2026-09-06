@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Export;
 use App\services\ArcgisService;
 use App\services\HousingUnitCivilRegistryNameBackfillService;
+use App\Support\Exports\CommitteeReviewArchiveFilter;
 use App\Support\Exports\ExportDataColumns;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -300,8 +301,10 @@ class ExportAttachmentsJob implements ShouldQueue
         $exportSource = ExportDataColumns::exportSource($params['export_source'] ?? null);
         $buildingsSource ??= ExportDataColumns::buildingTableForSource($exportSource);
         $housingUnitsSource ??= ExportDataColumns::housingTableForSource($exportSource);
+        $committeeArchiveFilter = app(CommitteeReviewArchiveFilter::class);
 
         $this->applySelectedPhaseFilter($query, $params, $buildingsSource);
+        $committeeArchiveFilter->applyBuildingEndFilter($query, 'b.`end`', $params, $includeHousing);
 
         foreach ($filters as $field => $values) {
             $values = array_filter((array) $values, fn ($value): bool => $value !== null && $value !== '');
@@ -322,8 +325,32 @@ class ExportAttachmentsJob implements ShouldQueue
             }
 
             if (ExportDataColumns::hasColumn($buildingsSource, (string) $field)) {
+                if ($committeeArchiveFilter->isBuildingCommitteeFilter((string) $field, $values)) {
+                    $committeeArchiveFilter->applyBuildingDamageFilter(
+                        $query,
+                        "b.`{$field}`",
+                        'b.objectid',
+                        $values,
+                        $params,
+                    );
+
+                    continue;
+                }
+
                 $query->whereIn("b.{$field}", $values);
             } elseif (ExportDataColumns::hasColumn($housingUnitsSource, (string) $field)) {
+                if ($committeeArchiveFilter->isUnitCommitteeFilter((string) $field, $values)) {
+                    $committeeArchiveFilter->applyUnitDamageFilter(
+                        $query,
+                        "h.`{$field}`",
+                        'h.objectid',
+                        $values,
+                        $params,
+                    );
+
+                    continue;
+                }
+
                 $query->whereIn("h.{$field}", $values);
             }
         }

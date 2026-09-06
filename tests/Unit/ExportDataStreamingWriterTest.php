@@ -5,9 +5,12 @@ use App\Jobs\ExportDataJob;
 use App\Models\AssessmentStatus;
 use App\Models\Building;
 use App\Models\BuildingStatus;
+use App\Models\BuildingSurveyArchiveObject;
+use App\Models\CommitteeDecision;
 use App\Models\EditAssessment;
 use App\Models\Export;
 use App\Models\HousingStatus;
+use App\Models\HousingUnit;
 use App\Models\User;
 use App\services\ArcgisService;
 use App\Support\Exports\ExportDataColumns;
@@ -338,6 +341,213 @@ test('it filters data exports by the selected phase payload', function () {
         expect($rows)->toBe([
             ['Objectid'],
             [2102],
+        ]);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it includes buildings archived from technical committee decisions when exporting committee filtered data', function () {
+    $user = User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 2201,
+        'globalid' => 'archived-committee-export-building',
+        'building_damage_status' => 'fully_damaged',
+        'end' => '2026-08-01 10:00:00',
+    ]);
+
+    Building::query()->create([
+        'objectid' => 2202,
+        'globalid' => 'outside-committee-export-building',
+        'building_damage_status' => 'fully_damaged',
+        'end' => '2026-05-15 10:00:00',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_FULLY_DAMAGED,
+        'decision_date' => '2026-05-20',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'created_by' => $user->id,
+        'updated_by' => $user->id,
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => 2201,
+        'building_globalid' => $building->globalid,
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'archived_by' => $user->id,
+        'archived_at' => '2026-05-20 12:00:00',
+        'building_snapshot' => [
+            'objectid' => 2201,
+            'globalid' => $building->globalid,
+            'building_damage_status' => 'committee_review',
+            'end' => '2026-05-18 09:00:00',
+        ],
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid', 'building_damage_status'],
+            'building_end_from' => '2026-05-01',
+            'building_end_to' => '2026-05-31',
+            'filters' => [
+                'building_damage_status' => ['committee_review'],
+            ],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->not->toBeNull();
+
+        $reader = new Reader;
+        $reader->open(storage_path('app/public/'.$export->file_name));
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        expect($rows)->toBe([
+            ['Objectid', 'Damage Status'],
+            [2201, 'fully_damaged'],
+        ]);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
+test('it includes housing units archived from technical committee decisions when exporting committee filtered data', function () {
+    $user = User::factory()->create();
+
+    $building = Building::query()->create([
+        'objectid' => 2301,
+        'globalid' => 'archived-committee-unit-building',
+        'building_damage_status' => 'partially_damaged',
+        'end' => '2026-08-01 10:00:00',
+    ]);
+
+    $unit = HousingUnit::query()->create([
+        'objectid' => 2302,
+        'globalid' => 'archived-committee-export-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'partially_damaged2',
+        'housing_unit_number' => 'A-3',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 2303,
+        'globalid' => 'outside-committee-export-unit',
+        'parentglobalid' => $building->globalid,
+        'unit_damage_status' => 'partially_damaged2',
+        'housing_unit_number' => 'A-4',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => HousingUnit::class,
+        'decisionable_id' => $unit->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'decision_date' => '2026-05-20',
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'created_by' => $user->id,
+        'updated_by' => $user->id,
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => 2301,
+        'building_globalid' => $building->globalid,
+        'housing_unit_objectid' => 2302,
+        'housing_unit_globalid' => $unit->globalid,
+        'source_type' => 'temporary_committee_excel_archive',
+        'committee_decision_id' => $decision->id,
+        'archived_by' => $user->id,
+        'archived_at' => '2026-05-20 12:00:00',
+        'building_snapshot' => [
+            'objectid' => 2301,
+            'globalid' => $building->globalid,
+            'end' => '2026-08-01 10:00:00',
+        ],
+        'housing_unit_snapshot' => [
+            'objectid' => 2302,
+            'globalid' => $unit->globalid,
+            'unit_damage_status' => 'committee_review2',
+            'building_submit_date' => '2026-05-18',
+        ],
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid'],
+            'housing_columns' => ['objectid', 'unit_damage_status'],
+            'building_end_from' => '2026-05-01',
+            'building_end_to' => '2026-05-31',
+            'filters' => [
+                'unit_damage_status' => ['committee_review2'],
+            ],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done');
+        expect($export->processed)->toBe(1);
+        expect($export->file_name)->not->toBeNull();
+
+        $reader = new Reader;
+        $reader->open(storage_path('app/public/'.$export->file_name));
+
+        $rows = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $rows[] = $row->toArray();
+            }
+
+            break;
+        }
+
+        $reader->close();
+
+        expect($rows)->toBe([
+            ['Objectid', 'Objectid', 'Unit Damage Status'],
+            [2301, 2302, 'partially_damaged2'],
         ]);
     } finally {
         $export->refresh();
