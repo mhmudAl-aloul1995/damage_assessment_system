@@ -406,19 +406,23 @@ class ArcgisAuditedUploadService
     private function auditEditsByGlobalId(string $type, CarbonInterface $changedSince, ?int $limit = null): array
     {
         $edits = [];
+        $fieldNamesByLowercase = $this->fieldNamesByLowercase($type);
 
         EditAssessment::query()
             ->where('type', $type)
             ->where('updated_at', '>=', $changedSince)
+            ->orderBy('updated_at')
             ->orderBy('id')
             ->get(['global_id', 'field_name', 'field_value'])
-            ->each(function (EditAssessment $edit) use (&$edits): void {
+            ->each(function (EditAssessment $edit) use (&$edits, $fieldNamesByLowercase): void {
                 $globalId = $edit->getAttribute('global_id');
                 $fieldName = $edit->getAttribute('field_name');
 
                 if (! is_string($globalId) || $globalId === '' || ! is_string($fieldName) || $fieldName === '') {
                     return;
                 }
+
+                $fieldName = $fieldNamesByLowercase[strtolower($fieldName)] ?? $fieldName;
 
                 $edits[$globalId][$fieldName] = $edit->getAttribute('field_value');
             });
@@ -428,6 +432,20 @@ class ArcgisAuditedUploadService
         }
 
         return array_slice($edits, 0, $limit, preserve_keys: true);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function fieldNamesByLowercase(string $type): array
+    {
+        $modelClass = $type === 'building_table'
+            ? Building::class
+            : HousingUnit::class;
+
+        return collect((new $modelClass)->getFillable())
+            ->mapWithKeys(fn (string $field): array => [strtolower($field) => $field])
+            ->all();
     }
 
     private function uploadBuildingAuditEdits(
@@ -670,19 +688,23 @@ class ArcgisAuditedUploadService
         $editsByGlobalId = [];
         $latestAuditByGlobalId = [];
         $latestStatusByGlobalId = [];
+        $fieldNamesByLowercase = $this->fieldNamesByLowercase($type);
 
         EditAssessment::query()
             ->where('type', $type)
             ->whereIn('global_id', $globalIds)
+            ->orderBy('updated_at')
             ->orderBy('id')
             ->get(['global_id', 'field_name', 'field_value', 'user_id', 'updated_at'])
-            ->each(function (EditAssessment $edit) use (&$editsByGlobalId, &$latestAuditByGlobalId, &$latestStatusByGlobalId): void {
+            ->each(function (EditAssessment $edit) use (&$editsByGlobalId, &$latestAuditByGlobalId, &$latestStatusByGlobalId, $fieldNamesByLowercase): void {
                 $globalId = $edit->getAttribute('global_id');
                 $fieldName = $edit->getAttribute('field_name');
 
                 if (! is_string($globalId) || $globalId === '' || ! is_string($fieldName) || $fieldName === '') {
                     return;
                 }
+
+                $fieldName = $fieldNamesByLowercase[strtolower($fieldName)] ?? $fieldName;
 
                 $editsByGlobalId[$globalId][$fieldName] = $edit->getAttribute('field_value');
                 $latestAuditByGlobalId[$globalId] = $edit;

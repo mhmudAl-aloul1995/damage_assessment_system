@@ -1978,6 +1978,81 @@ it('uses housing unit audit edits by timestamp before id in the units table', fu
         ->assertJsonPath('data.0.housing_unit_number', '1');
 });
 
+it('shows legacy cased building audit edits in the assessment audit table', function () {
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'fake-token']),
+        '*' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $role = Role::query()->firstOrCreate([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    Assessment::query()->create([
+        'name' => 'security_situation',
+        'label' => 'Security Situation',
+        'hint' => 'ما هي الحالة الأمنية',
+    ]);
+
+    Filter::query()->create([
+        'list_name' => 'security_situation',
+        'name' => 'Safe',
+        'label' => 'أمن',
+    ]);
+
+    Filter::query()->create([
+        'list_name' => 'security_situation',
+        'name' => 'Unsafe',
+        'label' => 'غير آمن',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 9680,
+        'globalid' => 'legacy-cased-security-building',
+        'security_situation' => 'Unsafe',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        'global_id' => $building->globalid,
+        'type' => 'building_table',
+        'field_name' => 'Security_Situation',
+        'field_value' => 'Safe',
+        'user_id' => $user->id,
+        'created_at' => '2026-03-29 10:00:00',
+        'updated_at' => '2026-03-29 10:00:00',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->getJson(url('damage-assessment/showBuildings').'?globalid='.$building->globalid);
+
+    $row = collect($response->json('data'))->firstWhere('name', 'security_situation');
+
+    expect($row)->not->toBeNull()
+        ->and($row['answer'])->toContain('أمن')
+        ->and($row['answer'])->toContain('غير آمن')
+        ->and($row['editAnswer'])->toContain('selected');
+
+    $this
+        ->postJson(route('assessment.inline.update'), [
+            'type' => 'building_table',
+            'globalid' => $building->globalid,
+            'field' => 'security_situation',
+            'value' => 'Safe',
+        ])
+        ->assertOk()
+        ->assertJsonPath('success', false);
+
+    expect(DB::table('edit_assessments')
+        ->where('global_id', $building->globalid)
+        ->whereRaw('LOWER(field_name) = ?', ['security_situation'])
+        ->count())->toBe(1);
+});
+
 it('can undo a scheduled housing unit deletion before it is committed', function () {
     Role::query()->create([
         'name' => 'Database Officer',

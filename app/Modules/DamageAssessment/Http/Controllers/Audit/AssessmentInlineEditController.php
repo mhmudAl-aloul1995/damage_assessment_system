@@ -211,7 +211,7 @@ class AssessmentInlineEditController extends Controller
             ->with('user')
             ->where('type', $type)
             ->where('global_id', $globalid)
-            ->where('field_name', $field)
+            ->whereRaw('LOWER(field_name) = ?', [strtolower($field)])
             ->latest('created_at')
             ->latest('id')
             ->limit(20)

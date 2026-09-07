@@ -165,6 +165,12 @@ class ArcgisAuditedCacheService
         $editsByGlobalId = [];
         $latestAuditByGlobalId = [];
         $latestStatusByGlobalId = [];
+        $modelClass = $type === 'building_table'
+            ? Building::class
+            : HousingUnit::class;
+        $fieldNamesByLowercase = collect((new $modelClass)->getFillable())
+            ->mapWithKeys(fn (string $field): array => [strtolower($field) => $field])
+            ->all();
 
         EditAssessment::query()
             ->where('type', $type)
@@ -172,13 +178,15 @@ class ArcgisAuditedCacheService
             ->orderBy('updated_at')
             ->orderBy('id')
             ->get(['global_id', 'field_name', 'field_value', 'user_id', 'updated_at'])
-            ->each(function (EditAssessment $edit) use (&$editsByGlobalId, &$latestAuditByGlobalId, &$latestStatusByGlobalId): void {
+            ->each(function (EditAssessment $edit) use (&$editsByGlobalId, &$latestAuditByGlobalId, &$latestStatusByGlobalId, $fieldNamesByLowercase): void {
                 $globalId = $edit->getAttribute('global_id');
                 $fieldName = $edit->getAttribute('field_name');
 
                 if (! is_string($globalId) || $globalId === '' || ! is_string($fieldName) || $fieldName === '') {
                     return;
                 }
+
+                $fieldName = $fieldNamesByLowercase[strtolower($fieldName)] ?? $fieldName;
 
                 $editsByGlobalId[$globalId][$fieldName] = $edit->getAttribute('field_value');
                 $latestAuditByGlobalId[$globalId] = $edit;

@@ -48,7 +48,8 @@ class AssessmentEditService
             $edit = EditAssessment::query()
                 ->where('global_id', $globalId)
                 ->where('type', $type)
-                ->where('field_name', $fieldName)
+                ->whereRaw('LOWER(field_name) = ?', [strtolower($fieldName)])
+                ->latest('updated_at')
                 ->latest('id')
                 ->lockForUpdate()
                 ->first();

@@ -1702,7 +1702,7 @@ class DamageAssessmentController extends Controller
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
                 ->get()
-                ->groupBy('field_name')
+                ->groupBy(fn (EditAssessment $edit): string => strtolower((string) $edit->field_name))
                 ->map(fn ($group) => $group->first());
 
             $allEdits = EditAssessment::with('user')
@@ -1711,7 +1711,7 @@ class DamageAssessmentController extends Controller
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
                 ->get()
-                ->groupBy('field_name');
+                ->groupBy(fn (EditAssessment $edit): string => strtolower((string) $edit->field_name));
 
             $originalHistoryValueByField = AssessmentEditHistory::query()
                 ->where('type', $type)
@@ -1719,7 +1719,7 @@ class DamageAssessmentController extends Controller
                 ->orderBy('created_at')
                 ->orderBy('id')
                 ->get()
-                ->groupBy('field_name')
+                ->groupBy(fn (AssessmentEditHistory $history): string => strtolower((string) $history->field_name))
                 ->map(fn (Collection $group): mixed => $group->first()?->old_value);
         }
 
