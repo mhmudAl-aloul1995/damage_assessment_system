@@ -603,7 +603,9 @@ class MissingCitizenIdentityController extends Controller
      */
     private function importColumnValue(array $row, int $index): string
     {
-        return trim((string) ($row[$index] ?? ''));
+        $columnLetter = $this->importColumnLetter($index);
+
+        return $this->normalizeImportCellValue($row[$index] ?? $row[$columnLetter] ?? $row[$index + 1] ?? '');
     }
 
     /**
@@ -612,12 +614,19 @@ class MissingCitizenIdentityController extends Controller
     private function firstFilledValue(array $values): string
     {
         foreach ($values as $value) {
-            if (filled($value)) {
-                return trim((string) $value);
+            $normalizedValue = $this->normalizeImportCellValue($value);
+
+            if ($this->hasUsableImportValue($normalizedValue)) {
+                return $normalizedValue;
             }
         }
 
         return '';
+    }
+
+    private function hasUsableImportValue(?string $value): bool
+    {
+        return filled($value) && ! in_array(trim($value), ['-', '—', '–'], true);
     }
 
     /**
@@ -757,7 +766,7 @@ class MissingCitizenIdentityController extends Controller
         foreach ($normalizedNames as $normalizedName) {
             foreach ($headers as $index => $header) {
                 if ($header === $normalizedName) {
-                    return trim((string) ($row[$index] ?? ''));
+                    return $this->importColumnValue($row, $index);
                 }
             }
         }
@@ -804,6 +813,8 @@ class MissingCitizenIdentityController extends Controller
 
     private function singleIdNumber(string $value, int $minimumDigits = 9): ?string
     {
+        $value = $this->normalizeImportCellValue($value);
+
         preg_match_all('/\d+/', $value, $matches);
 
         $idNumbers = collect($matches[0] ?? [])
@@ -817,6 +828,71 @@ class MissingCitizenIdentityController extends Controller
         }
 
         return $idNumbers->first();
+    }
+
+    private function normalizeImportCellValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        if (is_float($value)) {
+            return fmod($value, 1.0) === 0.0
+                ? number_format($value, 0, '.', '')
+                : rtrim(rtrim(number_format($value, 10, '.', ''), '0'), '.');
+        }
+
+        $value = trim(strtr((string) $value, [
+            "\u{00A0}" => ' ',
+            '٠' => '0',
+            '١' => '1',
+            '٢' => '2',
+            '٣' => '3',
+            '٤' => '4',
+            '٥' => '5',
+            '٦' => '6',
+            '٧' => '7',
+            '٨' => '8',
+            '٩' => '9',
+            '۰' => '0',
+            '۱' => '1',
+            '۲' => '2',
+            '۳' => '3',
+            '۴' => '4',
+            '۵' => '5',
+            '۶' => '6',
+            '۷' => '7',
+            '۸' => '8',
+            '۹' => '9',
+        ]));
+
+        if (preg_match('/^\d+\.0+$/', $value) === 1) {
+            return (string) Str::before($value, '.');
+        }
+
+        if (preg_match('/^\d{1,3}(,\d{3})+$/', $value) === 1) {
+            return str_replace(',', '', $value);
+        }
+
+        return $value;
+    }
+
+    private function importColumnLetter(int $index): string
+    {
+        $letter = '';
+        $index++;
+
+        while ($index > 0) {
+            $index--;
+            $letter = chr(65 + ($index % 26)).$letter;
+            $index = intdiv($index, 26);
+        }
+
+        return $letter;
     }
 
     private function approvalCitizen(ApproveMissingCitizenIdentityNameMatchRequest $request, MissingCitizenIdentityReport $report): ?object
