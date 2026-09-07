@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -450,40 +451,52 @@ class MissingCitizenIdentityController extends Controller
             'missing_unit' => 0,
             'old_identity_mismatch' => 0,
             'already_current' => 0,
+            'technical_error' => 0,
         ];
 
         foreach ($dataRows as $row) {
-            $correction = $this->missingCitizenIdentityCorrectionFromRow((array) $row, $headerRow->all());
+            try {
+                $correction = $this->missingCitizenIdentityCorrectionFromRow((array) $row, $headerRow->all());
 
-            if ($correction === null) {
-                $skipped++;
-                $skipReasons['invalid_row']++;
+                if ($correction === null) {
+                    $skipped++;
+                    $skipReasons['invalid_row']++;
 
-                continue;
-            }
+                    continue;
+                }
 
-            $report = $this->correctionReport($correction);
+                $report = $this->correctionReport($correction);
 
-            $result = $report instanceof MissingCitizenIdentityReport
-                ? $this->approveReportWithCitizen(
-                    $report,
-                    (object) [
-                        'id' => 0,
-                        'id_card_no' => $correction['new_id_number'],
-                        'full_name' => $correction['full_name'] ?: $report->owner_name,
-                    ],
-                    $request->user()?->id,
-                    $arcgisService
-                )
-                : $this->approveHousingUnitCorrection($correction, $request->user()?->id, $arcgisService);
+                $result = $report instanceof MissingCitizenIdentityReport
+                    ? $this->approveReportWithCitizen(
+                        $report,
+                        (object) [
+                            'id' => 0,
+                            'id_card_no' => $correction['new_id_number'],
+                            'full_name' => $correction['full_name'] ?: $report->owner_name,
+                        ],
+                        $request->user()?->id,
+                        $arcgisService
+                    )
+                    : $this->approveHousingUnitCorrection($correction, $request->user()?->id, $arcgisService);
 
-            if ($result['success']) {
-                $approved++;
-            } elseif (($result['reason'] ?? null) !== null && array_key_exists($result['reason'], $skipReasons)) {
-                $skipped++;
-                $skipReasons[$result['reason']]++;
-            } else {
+                if ($result['success']) {
+                    $approved++;
+                } elseif (($result['reason'] ?? null) !== null && array_key_exists($result['reason'], $skipReasons)) {
+                    $skipped++;
+                    $skipReasons[$result['reason']]++;
+                } else {
+                    $failed++;
+                }
+            } catch (Throwable $exception) {
                 $failed++;
+                $skipReasons['technical_error']++;
+
+                Log::warning('Missing citizen identity import row failed.', [
+                    'exception' => $exception::class,
+                    'message' => $exception->getMessage(),
+                    'row' => array_values((array) $row),
+                ]);
             }
         }
 
@@ -742,7 +755,7 @@ class MissingCitizenIdentityController extends Controller
     }
 
     /**
-     * @param  array{invalid_row: int, missing_unit: int, old_identity_mismatch: int, already_current: int}  $skipReasons
+     * @param  array{invalid_row: int, missing_unit: int, old_identity_mismatch: int, already_current: int, technical_error: int}  $skipReasons
      */
     private function importSkipDetails(array $skipReasons): string
     {

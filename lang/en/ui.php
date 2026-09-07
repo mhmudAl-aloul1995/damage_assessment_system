@@ -1086,6 +1086,7 @@ return [
         'import_skip_missing_unit' => ':count rows did not match an existing unit number',
         'import_skip_old_identity_mismatch' => ':count rows had an old ID number that does not match the current unit',
         'import_skip_already_current' => ':count rows already have the new ID number on the unit',
+        'import_skip_technical_error' => ':count rows could not be updated because of a technical error and details were logged',
         'report_missing' => 'This report is no longer available after the cache refresh. Refresh the table and try again.',
         'show_candidates' => 'Show candidates',
         'search_civil_registry' => 'Search civil registry',
