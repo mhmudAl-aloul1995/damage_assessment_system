@@ -2222,6 +2222,31 @@ it('shows all audit status button groups to database officers in the assessment 
         ->toContain("setHousingStatus('need_review', 'QC/QA Engineer')");
 });
 
+it('shows the housing unit deletion action in the assessment audit view', function () {
+    $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
+    $routes = file_get_contents(base_path('app/Modules/DamageAssessment/routes/web.php'));
+    $controller = file_get_contents(app_path('Modules/DamageAssessment/Http/Controllers/Audit/auditController.php'));
+
+    expect($view)
+        ->toContain("@hasanyrole('Database Officer|Auditing Supervisor|Project Officer')")
+        ->toContain("onclick=\"scheduleHousingUnitsDeletion('both')\"")
+        ->toContain('function scheduleHousingUnitsDeletion(mode)')
+        ->toContain("url: \"{{ route('housing.assessment.delete.schedule') }}\"")
+        ->toContain("url: \"{{ route('housing.assessment.delete.undo') }}\"")
+        ->toContain("url: \"{{ route('housing.assessment.delete.commit') }}\"")
+        ->toContain('const pendingHousingDeletionTimers = {}')
+        ->toContain('يمكنك التراجع قبل انتهاء الوقت')
+        ->and($routes)
+        ->toContain("->name('housing.assessment.delete.schedule')")
+        ->toContain("->name('housing.assessment.delete.undo')")
+        ->toContain("->name('housing.assessment.delete.commit')")
+        ->and($controller)
+        ->toContain('public function scheduleHousingUnitDeletion')
+        ->toContain('public function undoHousingUnitDeletion')
+        ->toContain('public function commitHousingUnitDeletion')
+        ->toContain("hasAnyRole(['Database Officer', 'Auditing Supervisor', 'Project Officer'])");
+});
+
 it('keeps audit attachment rows visible when regular filters are applied', function () {
     $view = file_get_contents(base_path('app/Modules/DamageAssessment/views/audit/assessmentAudit.blade.php'));
 
