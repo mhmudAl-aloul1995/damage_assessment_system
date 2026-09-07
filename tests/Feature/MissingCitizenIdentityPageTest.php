@@ -671,14 +671,14 @@ it('imports corrected spouse identity numbers from excel and syncs them to arcgi
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->fromArray([
         [
-            'نوع الهوية',
-            'اسم المالك',
-            'رقم هوية المالك',
-            'اسم الزوجة/الزوجة  المعدل ',
-            'اسم الزوج/الزوجة  القديم',
-            'رقم هوية الزوج/الزوجة المعدل ',
-            'رقم هوية الزوج/الزوجة القديم',
-            'رقم الوحدة',
+            'column a',
+            'column b',
+            'column c',
+            'column d',
+            'column e',
+            'column f',
+            'column g',
+            'column h',
         ],
         [
             'الزوج/ة الأولى',

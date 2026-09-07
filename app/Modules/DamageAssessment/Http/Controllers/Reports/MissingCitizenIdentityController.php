@@ -514,16 +514,22 @@ class MissingCitizenIdentityController extends Controller
     private function missingCitizenIdentityCorrectionFromRow(array $row, array $headers): ?array
     {
         $value = fn (array $names): string => $this->importRowValue($row, $headers, $names);
-        $identityLabel = $value([
-            'نوع الهوية',
-            'identity type',
-            'identity subject',
+        $identityLabel = $this->firstFilledValue([
+            $value([
+                'نوع الهوية',
+                'identity type',
+                'identity subject',
+            ]),
+            $this->importColumnValue($row, 0),
         ]);
-        $unitObjectId = $this->singleIdNumber($value([
-            'رقم الوحدة',
-            'housing unit objectid',
-            'unit number',
-            'unit objectid',
+        $unitObjectId = $this->singleIdNumber($this->firstFilledValue([
+            $value([
+                'رقم الوحدة',
+                'housing unit objectid',
+                'unit number',
+                'unit objectid',
+            ]),
+            $this->importColumnValue($row, 7),
         ]), 1);
 
         if ($unitObjectId === null) {
@@ -536,15 +542,20 @@ class MissingCitizenIdentityController extends Controller
             return null;
         }
 
-        $newIdNumber = $this->singleIdNumber($value([
-            'هوية المواطن المقترح',
-            'suggested citizen id',
-            'matched citizen id number',
-            'رقم هوية الزوج/الزوجة المعدل',
-            'spouse partner corrected id number',
-            'spouse corrected id number',
-            'رقم هوية المالك',
-            'owner id number',
+        $newIdNumber = $this->singleIdNumber($this->firstFilledValue([
+            $value([
+                'هوية المواطن المقترح',
+                'suggested citizen id',
+                'matched citizen id number',
+                'رقم هوية الزوج/الزوجة المعدل',
+                'spouse partner corrected id number',
+                'spouse corrected id number',
+                'رقم هوية المالك',
+                'owner id number',
+            ]),
+            $identityNumberField === 'id_number1'
+                ? $this->importColumnValue($row, 2)
+                : $this->importColumnValue($row, 5),
         ]));
 
         if ($newIdNumber === null) {
@@ -555,26 +566,58 @@ class MissingCitizenIdentityController extends Controller
             'unit_objectid' => $unitObjectId,
             'identity_number_field' => $identityNumberField,
             'identity_name_field' => $this->identityNameFieldFromNumberField($identityNumberField),
-            'old_id_number' => $this->singleIdNumber($value([
-                'رقم هوية الزوج/الزوجة القديم',
-                'spouse partner old id number',
-                'spouse old id number',
-                'current missing id number',
-                'old id number',
+            'old_id_number' => $this->singleIdNumber($this->firstFilledValue([
+                $value([
+                    'رقم هوية الزوج/الزوجة القديم',
+                    'spouse partner old id number',
+                    'spouse old id number',
+                    'current missing id number',
+                    'old id number',
+                ]),
+                $identityNumberField === 'id_number1'
+                    ? null
+                    : $this->importColumnValue($row, 6),
             ])),
             'new_id_number' => $newIdNumber,
-            'full_name' => $value([
-                'المواطن المقترح',
-                'suggested citizen',
-                'matched citizen',
-                'اسم الزوجة/الزوجة  المعدل',
-                'اسم الزوج/الزوجة المعدل',
-                'spouse partner corrected name',
-                'spouse corrected name',
-                'اسم المالك',
-                'owner name',
+            'full_name' => $this->firstFilledValue([
+                $value([
+                    'المواطن المقترح',
+                    'suggested citizen',
+                    'matched citizen',
+                    'اسم الزوجة/الزوجة  المعدل',
+                    'اسم الزوج/الزوجة المعدل',
+                    'spouse partner corrected name',
+                    'spouse corrected name',
+                    'اسم المالك',
+                    'owner name',
+                ]),
+                $identityNumberField === 'id_number1'
+                    ? $this->importColumnValue($row, 1)
+                    : $this->importColumnValue($row, 3),
             ]),
         ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     */
+    private function importColumnValue(array $row, int $index): string
+    {
+        return trim((string) ($row[$index] ?? ''));
+    }
+
+    /**
+     * @param  array<int, string|null>  $values
+     */
+    private function firstFilledValue(array $values): string
+    {
+        foreach ($values as $value) {
+            if (filled($value)) {
+                return trim((string) $value);
+            }
+        }
+
+        return '';
     }
 
     /**
