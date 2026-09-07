@@ -737,6 +737,85 @@ it('imports corrected spouse identity numbers from excel and syncs them to arcgi
     });
 });
 
+it('imports corrected identity numbers directly when no report row matches', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 8802],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8802,
+        'globalid' => 'import-direct-corrected-spouse-identity',
+        'unit_owner' => 'مالك الوحدة',
+        'id_number1' => '900000002',
+        'spouse1' => 'الاسم القديم',
+        'spouse1_id' => '999999999',
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->fromArray([
+        [
+            'نوع الهوية',
+            'اسم المالك',
+            'رقم هوية المالك',
+            'اسم الزوجة/الزوجة  المعدل ',
+            'اسم الزوج/الزوجة  القديم',
+            'رقم هوية الزوج/الزوجة المعدل ',
+            'رقم هوية الزوج/الزوجة القديم',
+            'رقم الوحدة',
+        ],
+        [
+            'الزوج/ة الأولى',
+            'مالك الوحدة',
+            '900000002',
+            'الاسم الجديد',
+            'الاسم القديم',
+            '922222223',
+            '999999999',
+            '8802',
+        ],
+    ]);
+
+    $path = storage_path('framework/testing/import-direct-corrected-spouse-identity.xlsx');
+    if (! is_dir(dirname($path))) {
+        mkdir(dirname($path), 0777, true);
+    }
+
+    (new Xlsx($spreadsheet))->save($path);
+
+    $response = $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), [
+            'corrections_file' => new UploadedFile(
+                $path,
+                'import-direct-corrected-spouse-identity.xlsx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                null,
+                true
+            ),
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('approved', 1)
+        ->assertJsonPath('failed', 0)
+        ->assertJsonPath('skipped', 0);
+
+    expect($housingUnit->fresh()->spouse1_id)->toBe('922222223')
+        ->and($housingUnit->fresh()->spouse1)->toBe('الاسم الجديد')
+        ->and(MissingCitizenIdentityApproval::query()->where('housing_unit_id', $housingUnit->id)->value('missing_citizen_identity_report_id'))->toBeNull()
+        ->and(MissingCitizenIdentityApproval::query()->where('housing_unit_id', $housingUnit->id)->value('new_id_number'))->toBe('922222223');
+});
+
 it('lists ambiguous name candidates and approves the selected citizen', function (): void {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');

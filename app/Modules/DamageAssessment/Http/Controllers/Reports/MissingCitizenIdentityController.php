@@ -445,62 +445,80 @@ class MissingCitizenIdentityController extends Controller
         $approved = 0;
         $failed = 0;
         $skipped = 0;
+        $skipReasons = [
+            'invalid_row' => 0,
+            'missing_unit' => 0,
+            'old_identity_mismatch' => 0,
+            'already_current' => 0,
+        ];
 
         foreach ($dataRows as $row) {
             $correction = $this->missingCitizenIdentityCorrectionFromRow((array) $row, $headerRow->all());
 
             if ($correction === null) {
                 $skipped++;
+                $skipReasons['invalid_row']++;
 
                 continue;
             }
 
             $report = $this->correctionReport($correction);
 
-            if (! $report instanceof MissingCitizenIdentityReport) {
-                $skipped++;
-
-                continue;
-            }
-
-            $result = $this->approveReportWithCitizen(
-                $report,
-                (object) [
-                    'id' => 0,
-                    'id_card_no' => $correction['new_id_number'],
-                    'full_name' => $correction['full_name'] ?: $report->owner_name,
-                ],
-                $request->user()?->id,
-                $arcgisService
-            );
+            $result = $report instanceof MissingCitizenIdentityReport
+                ? $this->approveReportWithCitizen(
+                    $report,
+                    (object) [
+                        'id' => 0,
+                        'id_card_no' => $correction['new_id_number'],
+                        'full_name' => $correction['full_name'] ?: $report->owner_name,
+                    ],
+                    $request->user()?->id,
+                    $arcgisService
+                )
+                : $this->approveHousingUnitCorrection($correction, $request->user()?->id, $arcgisService);
 
             if ($result['success']) {
                 $approved++;
+            } elseif (($result['reason'] ?? null) !== null && array_key_exists($result['reason'], $skipReasons)) {
+                $skipped++;
+                $skipReasons[$result['reason']]++;
             } else {
                 $failed++;
             }
         }
+
+        $details = $this->importSkipDetails($skipReasons);
+        $detailsMessage = $details !== ''
+            ? __('ui.missing_citizen_identities.import_skip_details', ['details' => $details])
+            : '';
 
         return response()->json([
             'message' => __('ui.missing_citizen_identities.import_success', [
                 'approved' => $approved,
                 'failed' => $failed,
                 'skipped' => $skipped,
+                'details' => $detailsMessage,
             ]),
             'approved' => $approved,
             'failed' => $failed,
             'skipped' => $skipped,
+            'skip_reasons' => $skipReasons,
         ]);
     }
 
     /**
      * @param  array<int, mixed>  $row
      * @param  array<int, string>  $headers
-     * @return array{unit_objectid: string, identity_number_field: string, new_id_number: string, full_name: string}|null
+     * @return array{unit_objectid: string, identity_number_field: string, identity_name_field: string|null, old_id_number: string|null, new_id_number: string, full_name: string}|null
      */
     private function missingCitizenIdentityCorrectionFromRow(array $row, array $headers): ?array
     {
         $value = fn (array $names): string => $this->importRowValue($row, $headers, $names);
+        $identityLabel = $value([
+            'نوع الهوية',
+            'identity type',
+            'identity subject',
+        ]);
         $unitObjectId = $this->singleIdNumber($value([
             'رقم الوحدة',
             'housing unit objectid',
@@ -512,11 +530,7 @@ class MissingCitizenIdentityController extends Controller
             return null;
         }
 
-        $identityNumberField = $this->identityNumberFieldFromImportLabel($value([
-            'نوع الهوية',
-            'identity type',
-            'identity subject',
-        ]));
+        $identityNumberField = $this->identityNumberFieldFromImportLabel($identityLabel);
 
         if ($identityNumberField === null) {
             return null;
@@ -540,6 +554,14 @@ class MissingCitizenIdentityController extends Controller
         return [
             'unit_objectid' => $unitObjectId,
             'identity_number_field' => $identityNumberField,
+            'identity_name_field' => $this->identityNameFieldFromNumberField($identityNumberField),
+            'old_id_number' => $this->singleIdNumber($value([
+                'رقم هوية الزوج/الزوجة القديم',
+                'spouse partner old id number',
+                'spouse old id number',
+                'current missing id number',
+                'old id number',
+            ])),
             'new_id_number' => $newIdNumber,
             'full_name' => $value([
                 'المواطن المقترح',
@@ -556,18 +578,126 @@ class MissingCitizenIdentityController extends Controller
     }
 
     /**
-     * @param  array{unit_objectid: string, identity_number_field: string, new_id_number: string, full_name: string}  $correction
+     * @param  array{unit_objectid: string, identity_number_field: string, identity_name_field: string|null, old_id_number: string|null, new_id_number: string, full_name: string}  $correction
      */
     private function correctionReport(array $correction): ?MissingCitizenIdentityReport
     {
-        return MissingCitizenIdentityReport::query()
+        $query = MissingCitizenIdentityReport::query()
             ->select('missing_citizen_identity_reports.*')
             ->join('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
             ->whereNull('missing_citizen_identity_reports.approved_at')
             ->where('housing_units.objectid', $correction['unit_objectid'])
             ->where('missing_citizen_identity_reports.identity_number_field', $correction['identity_number_field'])
-            ->orderBy('missing_citizen_identity_reports.id')
+            ->orderBy('missing_citizen_identity_reports.id');
+
+        if ($correction['old_id_number'] !== null) {
+            $query->where(function (Builder $query) use ($correction): void {
+                $query
+                    ->where('missing_citizen_identity_reports.id_number', $correction['old_id_number'])
+                    ->orWhere('housing_units.'.$correction['identity_number_field'], $correction['old_id_number']);
+            });
+        }
+
+        return $query
             ->first();
+    }
+
+    /**
+     * @param  array{unit_objectid: string, identity_number_field: string, identity_name_field: string|null, old_id_number: string|null, new_id_number: string, full_name: string}  $correction
+     * @return array{success: bool, arcgis_success?: bool, arcgis_status?: string, reason?: string}
+     */
+    private function approveHousingUnitCorrection(
+        array $correction,
+        ?int $userId,
+        ArcgisService $arcgisService
+    ): array {
+        $housingUnit = HousingUnit::query()
+            ->where('objectid', $correction['unit_objectid'])
+            ->first();
+
+        if (! $housingUnit instanceof HousingUnit) {
+            return [
+                'success' => false,
+                'reason' => 'missing_unit',
+            ];
+        }
+
+        $identityNumberField = $correction['identity_number_field'];
+        $oldIdNumber = trim((string) $housingUnit->{$identityNumberField});
+
+        if ($oldIdNumber === $correction['new_id_number']) {
+            return [
+                'success' => false,
+                'reason' => 'already_current',
+            ];
+        }
+
+        if ($correction['old_id_number'] !== null && $oldIdNumber !== $correction['old_id_number']) {
+            return [
+                'success' => false,
+                'reason' => 'old_identity_mismatch',
+            ];
+        }
+
+        $housingUnitUpdates = [
+            $identityNumberField => $correction['new_id_number'],
+        ];
+
+        if ($correction['identity_name_field'] !== null && $correction['full_name'] !== '') {
+            $housingUnitUpdates = [
+                ...$housingUnitUpdates,
+                ...$this->housingUnitNameUpdates($correction['identity_name_field'], $correction['full_name']),
+            ];
+        }
+
+        DB::transaction(function () use ($housingUnit, $oldIdNumber, $correction, $userId, $housingUnitUpdates): void {
+            $housingUnit->forceFill($housingUnitUpdates)->save();
+
+            MissingCitizenIdentityApproval::query()->create([
+                'missing_citizen_identity_report_id' => null,
+                'housing_unit_id' => $housingUnit->id,
+                'housing_unit_objectid' => $housingUnit->objectid,
+                'old_id_number' => $oldIdNumber,
+                'new_id_number' => $correction['new_id_number'],
+                'owner_name' => $correction['full_name'],
+                'citizen_id' => 0,
+                'citizen_full_name' => $correction['full_name'],
+                'approved_by' => $userId,
+                'arcgis_sync_status' => 'pending',
+            ]);
+        });
+
+        $arcgisResult = $arcgisService->updateHousingUnitFields($housingUnit->objectid, $housingUnitUpdates);
+
+        MissingCitizenIdentityApproval::query()
+            ->whereNull('missing_citizen_identity_report_id')
+            ->where('housing_unit_id', $housingUnit->id)
+            ->where('new_id_number', $correction['new_id_number'])
+            ->latest('id')
+            ->first()
+            ?->forceFill([
+                'arcgis_sync_status' => $arcgisResult['status'] ?? 'failed',
+                'arcgis_sync_message' => $arcgisResult['message'] ?? null,
+                'arcgis_sync_response' => $arcgisResult['response'] ?? null,
+            ])
+            ->save();
+
+        return [
+            'success' => true,
+            'arcgis_success' => (bool) ($arcgisResult['success'] ?? false),
+            'arcgis_status' => $arcgisResult['status'] ?? 'failed',
+        ];
+    }
+
+    /**
+     * @param  array{invalid_row: int, missing_unit: int, old_identity_mismatch: int, already_current: int}  $skipReasons
+     */
+    private function importSkipDetails(array $skipReasons): string
+    {
+        return collect($skipReasons)
+            ->filter(fn (int $count): bool => $count > 0)
+            ->map(fn (int $count, string $reason): string => __('ui.missing_citizen_identities.import_skip_'.$reason, ['count' => $count]))
+            ->implode('، ');
     }
 
     /**
@@ -613,6 +743,18 @@ class MissingCitizenIdentityController extends Controller
             str_contains($normalized, 'الأولى') || str_contains($normalized, 'الاولى') || str_contains($normalized, 'first') => 'spouse1_id',
             str_contains($normalized, 'زوج') || str_contains($normalized, 'spouse') || str_contains($normalized, 'partner') => 'spouse1_id',
             str_contains($normalized, 'مالك') || str_contains($normalized, 'owner') => 'id_number1',
+            default => null,
+        };
+    }
+
+    private function identityNameFieldFromNumberField(string $identityNumberField): ?string
+    {
+        return match ($identityNumberField) {
+            'id_number1' => 'unit_owner',
+            'spouse1_id' => 'spouse1',
+            'spouse2_id' => 'spouse2',
+            'spouse3_id' => 'spouse3',
+            'spouse4_id' => 'spouse4',
             default => null,
         };
     }
