@@ -53,12 +53,28 @@ it('uploads cached base table records with the latest audit edit values without 
             'updated_at' => now(),
         ],
         [
+            'global_id' => 'base-building-globalid',
+            'type' => 'building_table',
+            'field_name' => 'building_damage_status',
+            'field_value' => 'minor',
+            'created_at' => now()->subMinutes(2),
+            'updated_at' => now()->subMinutes(2),
+        ],
+        [
             'global_id' => 'base-unit-globalid',
             'type' => 'housing_table',
             'field_name' => 'unit_damage_status',
             'field_value' => 'severe',
             'created_at' => now(),
             'updated_at' => now(),
+        ],
+        [
+            'global_id' => 'base-unit-globalid',
+            'type' => 'housing_table',
+            'field_name' => 'unit_damage_status',
+            'field_value' => 'minor',
+            'created_at' => now()->subMinutes(2),
+            'updated_at' => now()->subMinutes(2),
         ],
     ]);
 

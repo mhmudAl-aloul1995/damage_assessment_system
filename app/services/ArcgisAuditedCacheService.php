@@ -169,6 +169,7 @@ class ArcgisAuditedCacheService
         EditAssessment::query()
             ->where('type', $type)
             ->whereIn('global_id', $globalIds)
+            ->orderBy('updated_at')
             ->orderBy('id')
             ->get(['global_id', 'field_name', 'field_value', 'user_id', 'updated_at'])
             ->each(function (EditAssessment $edit) use (&$editsByGlobalId, &$latestAuditByGlobalId, &$latestStatusByGlobalId): void {
