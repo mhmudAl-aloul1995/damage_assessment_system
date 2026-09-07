@@ -42,6 +42,11 @@
                         <i class="ki-duotone ki-file-down fs-2"></i>
                         {{ __('ui.missing_citizen_identities.export_excel') }}
                     </a>
+                    <input type="file" class="d-none" accept=".xlsx,.xls,.csv" data-kt-missing-citizens-import-file>
+                    <button type="button" class="btn btn-sm btn-light-primary text-nowrap" data-kt-missing-citizens-action="import-corrections">
+                        <i class="ki-duotone ki-file-up fs-2"></i>
+                        {{ __('ui.missing_citizen_identities.import_corrections') }}
+                    </button>
                     <button type="button" class="btn btn-sm btn-light-warning text-nowrap" data-kt-missing-citizens-action="select-all-visible" disabled>
                         <i class="ki-duotone ki-check-square fs-2"></i>
                         <span data-kt-missing-citizens-select-all-label>{{ __('ui.missing_citizen_identities.select_all_matches') }}</span>
@@ -311,6 +316,7 @@
             var total = document.getElementById('missing_citizens_total');
             var approveUrlTemplate = @json(route('reports.missing-citizen-identities.approve-name-match', ['report' => '__REPORT__']));
             var bulkApproveUrl = @json(route('reports.missing-citizen-identities.bulk-approve-name-matches'));
+            var importCorrectionsUrl = @json(route('reports.missing-citizen-identities.import-corrections'));
             var exportUrl = @json(route('reports.missing-citizen-identities.export'));
             var candidatesUrlTemplate = @json(route('reports.missing-citizen-identities.name-candidates', ['report' => '__REPORT__']));
             var citizenSearchUrlTemplate = @json(route('reports.missing-citizen-identities.citizen-search', ['report' => '__REPORT__']));
@@ -1114,6 +1120,46 @@
                         .finally(function () {
                             button.textContent = '{{ __('ui.missing_citizen_identities.approve_selected') }}';
                             updateBulkState();
+                    });
+                });
+            };
+
+            var importCorrections = function (fileInput, button) {
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    return;
+                }
+
+                confirmAction('{{ __('ui.missing_citizen_identities.import_confirm') }}').then(function (confirmed) {
+                    if (!confirmed) {
+                        fileInput.value = '';
+
+                        return;
+                    }
+
+                    var formData = new FormData();
+                    formData.append('corrections_file', fileInput.files[0]);
+                    button.disabled = true;
+                    button.textContent = '{{ __('ui.missing_citizen_identities.importing') }}';
+
+                    fetch(importCorrectionsUrl, {
+                        method: 'POST',
+                        headers: jsonRequestHeaders({
+                            'X-CSRF-TOKEN': csrfToken
+                        }),
+                        body: formData
+                    })
+                        .then(parseJsonResponse)
+                        .then(function (payload) {
+                            showToast(payload.message || '{{ __('ui.missing_citizen_identities.import_done') }}', 'success');
+                            loadCursor(cursorStack[cursorIndex]);
+                        })
+                        .catch(function (payload) {
+                            showToast(payload.message || '{{ __('ui.messages.unexpected_error') }}', 'error');
+                        })
+                        .finally(function () {
+                            fileInput.value = '';
+                            button.disabled = false;
+                            button.innerHTML = '<i class="ki-duotone ki-file-up fs-2"></i> {{ __('ui.missing_citizen_identities.import_corrections') }}';
                         });
                 });
             };
@@ -1189,6 +1235,8 @@
                 var nameMatchStatus = document.querySelector('[data-kt-missing-citizens-filter="name-match-status"]');
                 var maritalStatus = document.querySelector('[data-kt-missing-citizens-filter="marital-status"]');
                 var bulkApproveButton = document.querySelector('[data-kt-missing-citizens-action="bulk-approve"]');
+                var importCorrectionsButton = document.querySelector('[data-kt-missing-citizens-action="import-corrections"]');
+                var importCorrectionsFile = document.querySelector('[data-kt-missing-citizens-import-file]');
                 var selectAll = document.querySelector('[data-kt-missing-citizens-action="select-all"]');
                 var selectAllVisible = document.querySelector('[data-kt-missing-citizens-action="select-all-visible"]');
                 var documentsButton = document.querySelector('[data-kt-missing-citizens-action="show-documents"]');
@@ -1263,6 +1311,16 @@
                 if (bulkApproveButton) {
                     bulkApproveButton.addEventListener('click', function () {
                         bulkApprove(bulkApproveButton);
+                    });
+                }
+
+                if (importCorrectionsButton && importCorrectionsFile) {
+                    importCorrectionsButton.addEventListener('click', function () {
+                        importCorrectionsFile.click();
+                    });
+
+                    importCorrectionsFile.addEventListener('change', function () {
+                        importCorrections(importCorrectionsFile, importCorrectionsButton);
                     });
                 }
 

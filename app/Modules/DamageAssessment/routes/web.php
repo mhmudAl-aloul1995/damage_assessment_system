@@ -224,6 +224,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/missing-citizen-identities/export', [MissingCitizenIdentityController::class, 'export'])
                 ->name('missing-citizen-identities.export');
 
+            Route::post('/missing-citizen-identities/import-corrections', [MissingCitizenIdentityController::class, 'importCorrections'])
+                ->name('missing-citizen-identities.import-corrections');
+
             Route::post('/missing-citizen-identities/{report}/approve-name-match', [MissingCitizenIdentityController::class, 'approveNameMatch'])
                 ->name('missing-citizen-identities.approve-name-match')
                 ->missing($missingCitizenIdentityReportResponse);

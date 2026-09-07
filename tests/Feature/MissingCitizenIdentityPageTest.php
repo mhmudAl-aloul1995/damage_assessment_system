@@ -6,10 +6,13 @@ use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -90,11 +93,14 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.approve_selected'))
         ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
         ->assertSee(__('ui.missing_citizen_identities.export_excel'))
+        ->assertSee(__('ui.missing_citizen_identities.import_corrections'))
         ->assertSee(__('ui.missing_citizen_identities.all_marital_statuses'))
         ->assertSee('justify-content-end gap-2 flex-wrap', false)
         ->assertSee('data-kt-missing-citizens-filter="marital-status"', false)
         ->assertSee('data-kt-missing-citizens-action="open-unit-objectids-modal"', false)
         ->assertSee('data-kt-missing-citizens-action="export"', false)
+        ->assertSee('data-kt-missing-citizens-action="import-corrections"', false)
+        ->assertSee('data-kt-missing-citizens-import-file', false)
         ->assertSee('missing_citizen_unit_objectids_modal')
         ->assertSee('data-kt-missing-citizens-action="select-all-visible"', false)
         ->assertSee('kt_table_missing_citizen_identities');
@@ -623,6 +629,112 @@ it('approves an owner without identity by using the matched civil registry recor
 
     expect($housingUnit->fresh()->id_number1)->toBe('333333339')
         ->and($report->fresh()->approved_at)->not->toBeNull();
+});
+
+it('imports corrected spouse identity numbers from excel and syncs them to arcgis', function (): void {
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 8801],
+            ],
+        ]),
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8801,
+        'globalid' => 'import-corrected-spouse-identity',
+        'unit_owner' => 'مالك الوحدة',
+        'id_number1' => '900000001',
+        'spouse1' => 'الاسم القديم',
+        'spouse1_id' => '999999999',
+    ]);
+
+    MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $housingUnit->id,
+        'identity_subject' => 'spouse',
+        'identity_index' => 1,
+        'identity_name_field' => 'spouse1',
+        'identity_number_field' => 'spouse1_id',
+        'owner_name' => 'الاسم القديم',
+        'normalized_owner_name' => 'الاسمالقديم',
+        'id_number' => '999999999',
+        'issue_type' => 'missing_civil_registry_identity',
+        'name_match_status' => 'not_found',
+    ]);
+
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->fromArray([
+        [
+            'نوع الهوية',
+            'اسم المالك',
+            'رقم هوية المالك',
+            'اسم الزوجة/الزوجة  المعدل ',
+            'اسم الزوج/الزوجة  القديم',
+            'رقم هوية الزوج/الزوجة المعدل ',
+            'رقم هوية الزوج/الزوجة القديم',
+            'رقم الوحدة',
+        ],
+        [
+            'الزوج/ة الأولى',
+            'مالك الوحدة',
+            '900000001',
+            'الاسم الجديد',
+            'الاسم القديم',
+            '922222222',
+            '999999999',
+            '8801',
+        ],
+        [
+            'الزوج/ة الأولى',
+            'مالك الوحدة',
+            '900000001',
+            'اسم متعدد',
+            'الاسم القديم',
+            '922222222-933333333',
+            '999999999',
+            '8801',
+        ],
+    ]);
+
+    $path = storage_path('framework/testing/import-corrected-spouse-identity.xlsx');
+    if (! is_dir(dirname($path))) {
+        mkdir(dirname($path), 0777, true);
+    }
+
+    (new Xlsx($spreadsheet))->save($path);
+
+    $response = $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), [
+            'corrections_file' => new UploadedFile(
+                $path,
+                'import-corrected-spouse-identity.xlsx',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                null,
+                true
+            ),
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('approved', 1)
+        ->assertJsonPath('failed', 0)
+        ->assertJsonPath('skipped', 1);
+
+    expect($housingUnit->fresh()->spouse1_id)->toBe('922222222')
+        ->and($housingUnit->fresh()->spouse1)->toBe('الاسم الجديد')
+        ->and(MissingCitizenIdentityApproval::query()->where('housing_unit_id', $housingUnit->id)->value('new_id_number'))->toBe('922222222');
+
+    Http::assertSent(function ($request): bool {
+        return str_ends_with($request->url(), '/FeatureServer/1/updateFeatures')
+            && str_contains((string) $request['features'], '"spouse1_id":"922222222"');
+    });
 });
 
 it('lists ambiguous name candidates and approves the selected citizen', function (): void {

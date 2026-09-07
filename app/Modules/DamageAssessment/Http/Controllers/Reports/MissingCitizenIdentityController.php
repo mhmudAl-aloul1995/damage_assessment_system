@@ -6,6 +6,7 @@ use App\Exports\MissingCitizenIdentityReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Reports\ApproveMissingCitizenIdentityNameMatchRequest;
 use App\Http\Requests\Reports\BulkApproveMissingCitizenIdentityNameMatchesRequest;
+use App\Http\Requests\Reports\ImportMissingCitizenIdentityCorrectionsRequest;
 use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
@@ -416,6 +417,221 @@ class MissingCitizenIdentityController extends Controller
             'failed' => $failed,
             'skipped' => $skipped,
         ]);
+    }
+
+    public function importCorrections(
+        ImportMissingCitizenIdentityCorrectionsRequest $request,
+        ArcgisService $arcgisService
+    ): JsonResponse {
+        $rows = collect(Excel::toArray([], $request->file('corrections_file'))[0] ?? []);
+
+        if ($rows->isEmpty()) {
+            return response()->json([
+                'message' => __('ui.missing_citizen_identities.import_no_rows'),
+            ], 422);
+        }
+
+        $headerRow = collect((array) $rows->first())
+            ->map(fn ($value): string => $this->normalizeImportHeader((string) $value))
+            ->values();
+        $dataRows = $rows->slice(1)->values();
+
+        if ($dataRows->isEmpty()) {
+            return response()->json([
+                'message' => __('ui.missing_citizen_identities.import_no_rows'),
+            ], 422);
+        }
+
+        $approved = 0;
+        $failed = 0;
+        $skipped = 0;
+
+        foreach ($dataRows as $row) {
+            $correction = $this->missingCitizenIdentityCorrectionFromRow((array) $row, $headerRow->all());
+
+            if ($correction === null) {
+                $skipped++;
+
+                continue;
+            }
+
+            $report = $this->correctionReport($correction);
+
+            if (! $report instanceof MissingCitizenIdentityReport) {
+                $skipped++;
+
+                continue;
+            }
+
+            $result = $this->approveReportWithCitizen(
+                $report,
+                (object) [
+                    'id' => 0,
+                    'id_card_no' => $correction['new_id_number'],
+                    'full_name' => $correction['full_name'] ?: $report->owner_name,
+                ],
+                $request->user()?->id,
+                $arcgisService
+            );
+
+            if ($result['success']) {
+                $approved++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return response()->json([
+            'message' => __('ui.missing_citizen_identities.import_success', [
+                'approved' => $approved,
+                'failed' => $failed,
+                'skipped' => $skipped,
+            ]),
+            'approved' => $approved,
+            'failed' => $failed,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<int, string>  $headers
+     * @return array{unit_objectid: string, identity_number_field: string, new_id_number: string, full_name: string}|null
+     */
+    private function missingCitizenIdentityCorrectionFromRow(array $row, array $headers): ?array
+    {
+        $value = fn (array $names): string => $this->importRowValue($row, $headers, $names);
+        $unitObjectId = $this->singleIdNumber($value([
+            'رقم الوحدة',
+            'housing unit objectid',
+            'unit number',
+            'unit objectid',
+        ]), 1);
+
+        if ($unitObjectId === null) {
+            return null;
+        }
+
+        $identityNumberField = $this->identityNumberFieldFromImportLabel($value([
+            'نوع الهوية',
+            'identity type',
+            'identity subject',
+        ]));
+
+        if ($identityNumberField === null) {
+            return null;
+        }
+
+        $newIdNumber = $this->singleIdNumber($value([
+            'هوية المواطن المقترح',
+            'suggested citizen id',
+            'matched citizen id number',
+            'رقم هوية الزوج/الزوجة المعدل',
+            'spouse partner corrected id number',
+            'spouse corrected id number',
+            'رقم هوية المالك',
+            'owner id number',
+        ]));
+
+        if ($newIdNumber === null) {
+            return null;
+        }
+
+        return [
+            'unit_objectid' => $unitObjectId,
+            'identity_number_field' => $identityNumberField,
+            'new_id_number' => $newIdNumber,
+            'full_name' => $value([
+                'المواطن المقترح',
+                'suggested citizen',
+                'matched citizen',
+                'اسم الزوجة/الزوجة  المعدل',
+                'اسم الزوج/الزوجة المعدل',
+                'spouse partner corrected name',
+                'spouse corrected name',
+                'اسم المالك',
+                'owner name',
+            ]),
+        ];
+    }
+
+    /**
+     * @param  array{unit_objectid: string, identity_number_field: string, new_id_number: string, full_name: string}  $correction
+     */
+    private function correctionReport(array $correction): ?MissingCitizenIdentityReport
+    {
+        return MissingCitizenIdentityReport::query()
+            ->select('missing_citizen_identity_reports.*')
+            ->join('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
+            ->whereNull('missing_citizen_identity_reports.approved_at')
+            ->where('housing_units.objectid', $correction['unit_objectid'])
+            ->where('missing_citizen_identity_reports.identity_number_field', $correction['identity_number_field'])
+            ->orderBy('missing_citizen_identity_reports.id')
+            ->first();
+    }
+
+    /**
+     * @param  array<int, mixed>  $row
+     * @param  array<int, string>  $headers
+     * @param  array<int, string>  $names
+     */
+    private function importRowValue(array $row, array $headers, array $names): string
+    {
+        $normalizedNames = collect($names)
+            ->map(fn (string $name): string => $this->normalizeImportHeader($name))
+            ->all();
+
+        foreach ($normalizedNames as $normalizedName) {
+            foreach ($headers as $index => $header) {
+                if ($header === $normalizedName) {
+                    return trim((string) ($row[$index] ?? ''));
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function normalizeImportHeader(string $value): string
+    {
+        return Str::of($value)
+            ->replaceMatches('/\s+/u', ' ')
+            ->replace(['/', '\\', '-', '_'], ' ')
+            ->lower()
+            ->trim()
+            ->toString();
+    }
+
+    private function identityNumberFieldFromImportLabel(string $label): ?string
+    {
+        $normalized = $this->normalizeImportHeader($label);
+
+        return match (true) {
+            str_contains($normalized, 'الرابعة') || str_contains($normalized, 'fourth') => 'spouse4_id',
+            str_contains($normalized, 'الثالثة') || str_contains($normalized, 'third') => 'spouse3_id',
+            str_contains($normalized, 'الثانية') || str_contains($normalized, 'second') => 'spouse2_id',
+            str_contains($normalized, 'الأولى') || str_contains($normalized, 'الاولى') || str_contains($normalized, 'first') => 'spouse1_id',
+            str_contains($normalized, 'زوج') || str_contains($normalized, 'spouse') || str_contains($normalized, 'partner') => 'spouse1_id',
+            str_contains($normalized, 'مالك') || str_contains($normalized, 'owner') => 'id_number1',
+            default => null,
+        };
+    }
+
+    private function singleIdNumber(string $value, int $minimumDigits = 9): ?string
+    {
+        preg_match_all('/\d+/', $value, $matches);
+
+        $idNumbers = collect($matches[0] ?? [])
+            ->map(fn (string $idNumber): string => trim($idNumber))
+            ->filter(fn (string $idNumber): bool => strlen($idNumber) >= $minimumDigits)
+            ->unique()
+            ->values();
+
+        if ($idNumbers->count() !== 1) {
+            return null;
+        }
+
+        return $idNumbers->first();
     }
 
     private function approvalCitizen(ApproveMissingCitizenIdentityNameMatchRequest $request, MissingCitizenIdentityReport $report): ?object
