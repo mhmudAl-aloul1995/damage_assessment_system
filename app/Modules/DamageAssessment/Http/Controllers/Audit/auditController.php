@@ -4216,15 +4216,22 @@ COALESCE(
 
     private function latestHousingEditValueSubquery(string $fieldName, string $latestAlias): \Illuminate\Database\Query\Builder
     {
-        $latestIds = DB::table('edit_assessments')
-            ->selectRaw('MAX(id) as id')
-            ->where('type', 'housing_table')
-            ->where('field_name', $fieldName)
-            ->groupBy('global_id');
-
         return DB::table('edit_assessments as ea')
-            ->joinSub($latestIds, $latestAlias, function ($join) use ($latestAlias): void {
-                $join->on('ea.id', '=', $latestAlias.'.id');
+            ->where('ea.type', 'housing_table')
+            ->where('ea.field_name', $fieldName)
+            ->whereNotExists(function ($query) use ($fieldName): void {
+                $query->selectRaw('1')
+                    ->from('edit_assessments as newer_ea')
+                    ->whereColumn('newer_ea.global_id', 'ea.global_id')
+                    ->where('newer_ea.type', 'housing_table')
+                    ->where('newer_ea.field_name', $fieldName)
+                    ->where(function ($query): void {
+                        $query->whereColumn('newer_ea.updated_at', '>', 'ea.updated_at')
+                            ->orWhere(function ($query): void {
+                                $query->whereColumn('newer_ea.updated_at', 'ea.updated_at')
+                                    ->whereColumn('newer_ea.id', '>', 'ea.id');
+                            });
+                    });
             })
             ->select(
                 'ea.global_id',

@@ -1928,6 +1928,56 @@ it('summarizes ground and repeated floor unit areas against building floor areas
         ]);
 });
 
+it('uses housing unit audit edits by timestamp before id in the units table', function () {
+    $role = Role::query()->firstOrCreate([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $building = Building::query()->create([
+        'objectid' => 9670,
+        'globalid' => 'housing-latest-edit-building',
+        'building_name' => 'Housing Latest Edit Building',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 9671,
+        'globalid' => 'housing-latest-edit-unit',
+        'parentglobalid' => $building->globalid,
+        'housing_unit_number' => '0.25',
+    ]);
+
+    DB::table('edit_assessments')->insert([
+        [
+            'global_id' => 'housing-latest-edit-unit',
+            'type' => 'housing_table',
+            'field_name' => 'housing_unit_number',
+            'field_value' => '1',
+            'user_id' => $user->id,
+            'created_at' => '2026-08-16 10:40:00',
+            'updated_at' => '2026-08-16 10:40:00',
+        ],
+        [
+            'global_id' => 'housing-latest-edit-unit',
+            'type' => 'housing_table',
+            'field_name' => 'housing_unit_number',
+            'field_value' => '0.25',
+            'user_id' => $user->id,
+            'created_at' => '2026-08-15 10:40:00',
+            'updated_at' => '2026-08-15 10:40:00',
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('housing.units.by.building', ['globalid' => $building->globalid]))
+        ->assertOk()
+        ->assertJsonPath('data.0.globalid', 'housing-latest-edit-unit')
+        ->assertJsonPath('data.0.housing_unit_number', '1');
+});
+
 it('can undo a scheduled housing unit deletion before it is committed', function () {
     Role::query()->create([
         'name' => 'Database Officer',
