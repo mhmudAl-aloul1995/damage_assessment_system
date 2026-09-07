@@ -28,6 +28,8 @@ use Throwable;
 
 class MissingCitizenIdentityController extends Controller
 {
+    private const IMPORT_CORRECTION_APPROVAL_LIMIT = 100;
+
     public function __construct()
     {
         $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer|Legal Auditor');
@@ -424,6 +426,24 @@ class MissingCitizenIdentityController extends Controller
         ImportMissingCitizenIdentityCorrectionsRequest $request,
         ArcgisService $arcgisService
     ): JsonResponse {
+        try {
+            return $this->runImportCorrections($request, $arcgisService);
+        } catch (Throwable $exception) {
+            Log::error('Missing citizen identity import failed.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => __('ui.missing_citizen_identities.import_failed'),
+            ], 500);
+        }
+    }
+
+    private function runImportCorrections(
+        ImportMissingCitizenIdentityCorrectionsRequest $request,
+        ArcgisService $arcgisService
+    ): JsonResponse {
         $rows = collect(Excel::toArray([], $request->file('corrections_file'))[0] ?? []);
 
         if ($rows->isEmpty()) {
@@ -446,11 +466,13 @@ class MissingCitizenIdentityController extends Controller
         $approved = 0;
         $failed = 0;
         $skipped = 0;
+        $processedUpdates = 0;
         $skipReasons = [
             'invalid_row' => 0,
             'missing_unit' => 0,
             'old_identity_mismatch' => 0,
             'already_current' => 0,
+            'import_limit_reached' => 0,
             'technical_error' => 0,
         ];
 
@@ -461,6 +483,13 @@ class MissingCitizenIdentityController extends Controller
                 if ($correction === null) {
                     $skipped++;
                     $skipReasons['invalid_row']++;
+
+                    continue;
+                }
+
+                if ($processedUpdates >= self::IMPORT_CORRECTION_APPROVAL_LIMIT) {
+                    $skipped++;
+                    $skipReasons['import_limit_reached']++;
 
                     continue;
                 }
@@ -482,14 +511,17 @@ class MissingCitizenIdentityController extends Controller
 
                 if ($result['success']) {
                     $approved++;
+                    $processedUpdates++;
                 } elseif (($result['reason'] ?? null) !== null && array_key_exists($result['reason'], $skipReasons)) {
                     $skipped++;
                     $skipReasons[$result['reason']]++;
                 } else {
                     $failed++;
+                    $processedUpdates++;
                 }
             } catch (Throwable $exception) {
                 $failed++;
+                $processedUpdates++;
                 $skipReasons['technical_error']++;
 
                 Log::warning('Missing citizen identity import row failed.', [
@@ -515,6 +547,7 @@ class MissingCitizenIdentityController extends Controller
             'approved' => $approved,
             'failed' => $failed,
             'skipped' => $skipped,
+            'processed_updates' => $processedUpdates,
             'skip_reasons' => $skipReasons,
         ]);
     }
@@ -755,7 +788,7 @@ class MissingCitizenIdentityController extends Controller
     }
 
     /**
-     * @param  array{invalid_row: int, missing_unit: int, old_identity_mismatch: int, already_current: int, technical_error: int}  $skipReasons
+     * @param  array{invalid_row: int, missing_unit: int, old_identity_mismatch: int, already_current: int, import_limit_reached: int, technical_error: int}  $skipReasons
      */
     private function importSkipDetails(array $skipReasons): string
     {
