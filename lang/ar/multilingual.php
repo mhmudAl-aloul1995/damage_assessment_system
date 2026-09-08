@@ -173,7 +173,7 @@ return [
             'assignedto' => 'المكلّف',
         ],
         'tabs' => [
-            'area_summary' => 'ملخص المناطق',
+            'area_summary' => 'CSOS',
             'organizations' => 'المنظمات',
             'units' => 'الوحدات',
         ],

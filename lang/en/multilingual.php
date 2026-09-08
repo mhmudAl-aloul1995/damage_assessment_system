@@ -173,7 +173,7 @@ return [
             'assignedto' => 'Assigned To',
         ],
         'tabs' => [
-            'area_summary' => 'Area Summary',
+            'area_summary' => 'CSOS',
             'organizations' => 'Organizations',
             'units' => 'Units',
         ],
