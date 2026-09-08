@@ -469,38 +469,25 @@ class AreaProductivityReportService
      */
     private function csoOrganizationRows(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
     {
-        $unitCounts = CsoSurveyUnit::query()
-            ->from('cso_survey_units as units')
-            ->selectRaw('units.parentglobalid, COUNT(*) as cso_units_count')
-            ->groupBy('units.parentglobalid');
+        $groupKey = $this->normalizedGroupExpression('surveys.neighborhood');
 
         $query = CsoSurveyOrganization::query()
             ->from('cso_survey_organizations as organizations')
             ->join('cso_surveys as surveys', 'organizations.parentglobalid', '=', 'surveys.globalid')
-            ->leftJoinSub($unitCounts, 'unit_counts', function ($join): void {
-                $join->on('unit_counts.parentglobalid', '=', 'surveys.globalid');
-            })
             ->selectRaw("
-                COALESCE(NULLIF(TRIM(organizations.organization_name_ar), ''), NULLIF(TRIM(surveys.organization_name), ''), '') as organization_name_ar,
-                COALESCE(NULLIF(TRIM(organizations.organization_name_en), ''), '') as organization_name_en,
-                COALESCE(NULLIF(TRIM(organizations.organization_acronym), ''), '') as organization_acronym,
-                COALESCE(NULLIF(TRIM(organizations.operational_status), ''), NULLIF(TRIM(surveys.operational_status), ''), '') as operational_status,
-                COALESCE(NULLIF(TRIM(surveys.assignedto), ''), '') as assignedto,
-                COALESCE(NULLIF(TRIM(surveys.building_name), ''), '') as building_name,
-                COALESCE(NULLIF(TRIM(surveys.governorate), ''), '') as governorate,
-                COALESCE(NULLIF(TRIM(surveys.municipalitie), ''), '') as municipalitie,
-                COALESCE(NULLIF(TRIM(surveys.neighborhood), ''), '') as neighborhood,
-                ".CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
-                '.CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
-                '.CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
-                '.CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
-                '.CsoDamageStatusMapper::unclassifiedCaseSql('surveys.building_damage_status').' as unclassified_count,
-                1 as total_count,
-                COALESCE(unit_counts.cso_units_count, 0) as cso_units_count,
-                organizations.creationdate as creationdate
+                {$this->preferredValueExpression('surveys.governorate')} as governorate,
+                {$this->preferredValueExpression('surveys.municipalitie')} as municipalitie,
+                {$this->preferredValueExpression('surveys.neighborhood')} as neighborhood,
+                COUNT(DISTINCT NULLIF(TRIM(surveys.assignedto), '')) as no_eng,
+                ".CsoDamageStatusMapper::sumSql('surveys.building_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
+                '.CsoDamageStatusMapper::sumSql('surveys.building_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
+                '.CsoDamageStatusMapper::sumSql('surveys.building_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
+                '.CsoDamageStatusMapper::sumSql('surveys.building_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
+                '.CsoDamageStatusMapper::unclassifiedSumSql('surveys.building_damage_status').' as unclassified_count,
+                COUNT(organizations.id) as total_count
             ')
-            ->orderBy('organizations.organization_name_ar')
-            ->orderBy('organizations.organization_name_en');
+            ->groupByRaw($groupKey)
+            ->orderByDesc('total_count');
 
         app(PhaseContext::class)->applyToEloquent($query, 'surveys.phase_number');
 
@@ -519,28 +506,25 @@ class AreaProductivityReportService
      */
     private function csoUnitRows(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
     {
+        $groupKey = $this->normalizedGroupExpression('surveys.neighborhood');
+
         $query = CsoSurveyUnit::query()
             ->from('cso_survey_units as units')
             ->join('cso_surveys as surveys', 'units.parentglobalid', '=', 'surveys.globalid')
             ->selectRaw("
-                COALESCE(NULLIF(TRIM(units.unit_name), ''), '') as unit_name,
-                units.unit_number,
-                units.unit_floor_number,
-                COALESCE(NULLIF(TRIM(surveys.organization_name), ''), '') as organization_name,
-                COALESCE(NULLIF(TRIM(surveys.building_name), ''), '') as building_name,
-                COALESCE(NULLIF(TRIM(surveys.assignedto), ''), '') as assignedto,
-                COALESCE(NULLIF(TRIM(surveys.governorate), ''), '') as governorate,
-                COALESCE(NULLIF(TRIM(surveys.municipalitie), ''), '') as municipalitie,
-                COALESCE(NULLIF(TRIM(surveys.neighborhood), ''), '') as neighborhood,
-                ".CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
-                '.CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
-                '.CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
-                '.CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
-                '.CsoDamageStatusMapper::unclassifiedCaseSql('units.unit_damage_status').' as unclassified_count,
-                1 as total_count,
-                units.creationdate as creationdate
+                {$this->preferredValueExpression('surveys.governorate')} as governorate,
+                {$this->preferredValueExpression('surveys.municipalitie')} as municipalitie,
+                {$this->preferredValueExpression('surveys.neighborhood')} as neighborhood,
+                COUNT(DISTINCT NULLIF(TRIM(surveys.assignedto), '')) as no_eng,
+                ".CsoDamageStatusMapper::sumSql('units.unit_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
+                '.CsoDamageStatusMapper::sumSql('units.unit_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
+                '.CsoDamageStatusMapper::sumSql('units.unit_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
+                '.CsoDamageStatusMapper::sumSql('units.unit_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
+                '.CsoDamageStatusMapper::unclassifiedSumSql('units.unit_damage_status').' as unclassified_count,
+                COUNT(units.id) as total_count
             ')
-            ->orderBy('units.unit_name');
+            ->groupByRaw($groupKey)
+            ->orderByDesc('total_count');
 
         app(PhaseContext::class)->applyToEloquent($query, 'surveys.phase_number');
 
@@ -567,6 +551,7 @@ class AreaProductivityReportService
             'cra' => (int) $rows->sum('cra_range'),
             'unclassified' => (int) $rows->sum('unclassified_count'),
             'cso_units_count' => (int) $rows->sum('cso_units_count'),
+            'engineers' => (int) $rows->sum('no_eng'),
         ];
     }
 

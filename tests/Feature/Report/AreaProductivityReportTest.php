@@ -334,9 +334,7 @@ it('renders cso area productivity with organizations and units tabs using shared
         ->assertSee('area-productivity-organizations-tab', false)
         ->assertSee('area-productivity-units-tab', false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.organizations_count'), false)
-        ->assertSee(__('multilingual.area_productivity_reports.columns.cso_units_count'), false)
-        ->assertSee('جمعية الأمل', false)
-        ->assertSee('Clinic', false);
+        ->assertSee(__('multilingual.area_productivity_reports.columns.cso_units_count'), false);
 
     $response->assertViewHas('summary', function (array $summary): bool {
         return $summary['total_records'] === 2
@@ -350,12 +348,23 @@ it('renders cso area productivity with organizations and units tabs using shared
     });
 
     $response->assertViewHas('cso', function (array $cso): bool {
-        return $cso['organizations']->count() === 2
+        $organizationRow = $cso['organizations']->first();
+        $unitRow = $cso['units']->first();
+
+        return $cso['organizations']->count() === 1
+            && $organizationRow !== null
+            && (int) $organizationRow->total_count === 2
+            && (int) $organizationRow->no_eng === 2
             && $cso['organization_summary']['tda'] === 1
             && $cso['organization_summary']['cra'] === 1
-            && $cso['units']->count() === 2
+            && $cso['organization_summary']['engineers'] === 2
+            && $cso['units']->count() === 1
+            && $unitRow !== null
+            && (int) $unitRow->total_count === 2
+            && (int) $unitRow->no_eng === 2
             && $cso['unit_summary']['tda'] === 1
-            && $cso['unit_summary']['cra'] === 1;
+            && $cso['unit_summary']['cra'] === 1
+            && $cso['unit_summary']['engineers'] === 2;
     });
 
     $this->actingAs($user)

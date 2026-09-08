@@ -861,46 +861,52 @@
                                 <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
                                     <thead>
                                         <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_name_ar') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_name_en') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_acronym') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.operational_status') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.cso_units_count') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.organizations_count') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.engineers') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.governorate') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.assignedto') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.sector') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @forelse ($cso['organizations'] as $organization)
                                             <tr>
-                                                <td>{{ $organization->organization_name_ar ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $organization->organization_name_en ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $organization->organization_acronym ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $organization->operational_status ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $organization->cso_units_count ?? 0 }}</td>
+                                                <td class="fw-bold">{{ $organization->total_count }}</td>
                                                 <td>{{ $organization->tda_range }}</td>
                                                 <td>{{ $organization->pda_range }}</td>
                                                 <td>{{ $organization->no_damage_count }}</td>
                                                 <td>{{ $organization->cra_range }}</td>
                                                 <td>{{ $organization->unclassified_count }}</td>
+                                                <td>{{ $organization->no_eng }}</td>
                                                 <td>{{ $organization->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
                                                 <td>{{ $organization->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
                                                 <td>{{ $organization->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $organization->assignedto ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ __($sector_key) }}</td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="14" class="text-center text-muted">{{ __('multilingual.area_productivity_reports.labels.empty') }}</td>
+                                                <td colspan="11" class="text-center text-muted">{{ __('multilingual.area_productivity_reports.labels.empty') }}</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
+                                    <tfoot class="border-top-2">
+                                        <tr class="fw-bold bg-light">
+                                            <td class="text-success fs-5">{{ $cso['organization_summary']['total_records'] }}</td>
+                                            <td class="text-danger">{{ $cso['organization_summary']['tda'] }}</td>
+                                            <td class="text-warning">{{ $cso['organization_summary']['pda'] }}</td>
+                                            <td class="text-success">{{ $cso['organization_summary']['no_damage'] }}</td>
+                                            <td class="text-primary">{{ $cso['organization_summary']['cra'] }}</td>
+                                            <td>{{ $cso['organization_summary']['unclassified'] }}</td>
+                                            <td>{{ $cso['organization_summary']['engineers'] }}</td>
+                                            <td colspan="4" class="text-center">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
@@ -911,46 +917,52 @@
                                 <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
                                     <thead>
                                         <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.unit_name') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.unit_number') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.unit_floor_number') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.cso_units_count') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_name_ar') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.building_name') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.engineers') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
                                             <th>{{ __('multilingual.area_productivity_reports.columns.governorate') }}</th>
-                                            <th>{{ __('multilingual.area_productivity_reports.columns.assignedto') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.sector') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @forelse ($cso['units'] as $unit)
                                             <tr>
-                                                <td>{{ $unit->unit_name ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $unit->unit_number ?? __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $unit->unit_floor_number ?? __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td class="fw-bold">{{ $unit->total_count }}</td>
                                                 <td>{{ $unit->tda_range }}</td>
                                                 <td>{{ $unit->pda_range }}</td>
                                                 <td>{{ $unit->no_damage_count }}</td>
                                                 <td>{{ $unit->cra_range }}</td>
                                                 <td>{{ $unit->unclassified_count }}</td>
-                                                <td>{{ $unit->organization_name ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $unit->building_name ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->no_eng }}</td>
                                                 <td>{{ $unit->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
                                                 <td>{{ $unit->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
                                                 <td>{{ $unit->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
-                                                <td>{{ $unit->assignedto ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ __($sector_key) }}</td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="14" class="text-center text-muted">{{ __('multilingual.area_productivity_reports.labels.empty') }}</td>
+                                                <td colspan="11" class="text-center text-muted">{{ __('multilingual.area_productivity_reports.labels.empty') }}</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
+                                    <tfoot class="border-top-2">
+                                        <tr class="fw-bold bg-light">
+                                            <td class="text-success fs-5">{{ $cso['unit_summary']['total_records'] }}</td>
+                                            <td class="text-danger">{{ $cso['unit_summary']['tda'] }}</td>
+                                            <td class="text-warning">{{ $cso['unit_summary']['pda'] }}</td>
+                                            <td class="text-success">{{ $cso['unit_summary']['no_damage'] }}</td>
+                                            <td class="text-primary">{{ $cso['unit_summary']['cra'] }}</td>
+                                            <td>{{ $cso['unit_summary']['unclassified'] }}</td>
+                                            <td>{{ $cso['unit_summary']['engineers'] }}</td>
+                                            <td colspan="4" class="text-center">{{ __('multilingual.area_productivity_reports.labels.grand_totals') }}</td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
