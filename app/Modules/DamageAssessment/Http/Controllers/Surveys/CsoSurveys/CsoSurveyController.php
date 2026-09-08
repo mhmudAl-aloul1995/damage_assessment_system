@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
+use App\Support\CsoDamageStatusMapper;
 use App\Support\Forms\CsoSurveyLayout;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
@@ -151,20 +152,106 @@ class CsoSurveyController extends Controller
             'units' => fn ($query) => $query->orderBy('objectid'),
         ]);
 
+        $organizationGroups = $this->organizationGroups($csoSurvey);
+
         return view('damage-assessment::surveys.cso.show', [
             'survey' => $csoSurvey,
             'sections' => $this->surveySections($csoSurvey),
-            'organizationSections' => $this->childSections(
-                records: $csoSurvey->organizations,
-                sections: CsoSurveyLayout::repeatSections('CSO_Organizations'),
-                titlePrefix: 'CSO Organization',
-            ),
-            'unitSections' => $this->childSections(
-                records: $csoSurvey->units,
-                sections: CsoSurveyLayout::repeatSections('Unit_Information'),
-                titlePrefix: 'Unit Information',
-            ),
+            'organizationGroups' => $organizationGroups,
+            'unitCount' => $organizationGroups->sum(fn (array $group): int => $group['units']->count()),
+            'buildingDamage' => CsoDamageStatusMapper::bucket($csoSurvey->building_damage_status),
+            'damageBuckets' => [
+                CsoDamageStatusMapper::FULLY_DAMAGED,
+                CsoDamageStatusMapper::PARTIALLY_DAMAGED,
+                CsoDamageStatusMapper::NO_DAMAGE,
+                CsoDamageStatusMapper::COMMITTEE_REVIEW,
+                CsoDamageStatusMapper::UNCLASSIFIED,
+            ],
         ]);
+    }
+
+    private function organizationGroups(CsoSurvey $survey): Collection
+    {
+        $organizations = $survey->organizations;
+        $organizationSections = CsoSurveyLayout::repeatSections('CSO_Organizations');
+        $unitSections = CsoSurveyLayout::repeatSections('Unit_Information');
+        $organizationIds = $organizations->pluck('globalid')->filter()->values();
+        $units = $survey->units->concat(
+            CsoSurveyUnit::query()->whereIn('parentglobalid', $organizationIds)->orderBy('objectid')->get()
+        )->unique('id')->sortBy('objectid')->values();
+        $organizationLookup = $organizations->groupBy(
+            fn (CsoSurveyOrganization $organization): string => $this->normalizeGlobalId($organization->globalid)
+        );
+
+        $groupedUnits = $units->groupBy(function (CsoSurveyUnit $unit) use ($organizationLookup): string {
+            // Sync retains the original organization parent in raw_payload when flattening the survey relation.
+            $sourceParent = CsoSurveyLayout::value((object) ['raw_payload' => $unit->raw_payload], 'parentglobalid');
+            $matches = collect([$sourceParent, $unit->parentglobalid])
+                ->map(fn (mixed $parent): string => $this->normalizeGlobalId($parent))
+                ->filter(fn (string $parent): bool => $parent !== '' && $organizationLookup->has($parent))
+                ->unique()->values();
+
+            if ($matches->count() !== 1 || $organizationLookup[$matches->first()]->count() !== 1) {
+                return 'unassigned';
+            }
+
+            return 'organization-'.$organizationLookup[$matches->first()]->first()->id;
+        });
+
+        $groups = $organizations->map(function (CsoSurveyOrganization $organization) use ($groupedUnits, $organizationSections): array {
+            $key = 'organization-'.$organization->id;
+            $preferredName = app()->getLocale() === 'ar' ? 'organization_name_ar' : 'organization_name_en';
+            $name = CsoSurveyLayout::value($organization, $preferredName)
+                ?: $organization->organization_name_en ?: $organization->organization_name_ar
+                ?: __('cso_details.organization_number', ['number' => $organization->objectid ?? $organization->id]);
+
+            return [
+                'key' => $key,
+                'name' => $name,
+                'organization' => $organization,
+                'registration' => CsoSurveyLayout::value($organization, 'registration_number') ?? '-',
+                'active' => CsoSurveyLayout::displayValue(CsoSurveyLayout::value($organization, 'is_organization_active'), [
+                    'type' => 'select_one', 'list_name' => 'yes_no',
+                ]) ?? '-',
+                'sections' => $this->detailSections($organization, $organizationSections),
+                'units' => $groupedUnits->get($key, collect()),
+            ];
+        });
+
+        if ($groupedUnits->has('unassigned')) {
+            $groups->push([
+                'key' => 'unassigned',
+                'name' => __('cso_details.unassigned'),
+                'organization' => null,
+                'sections' => [],
+                'units' => $groupedUnits['unassigned'],
+            ]);
+        }
+
+        return $groups->map(function (array $group) use ($unitSections): array {
+            $group['units'] = $group['units']->map(fn (CsoSurveyUnit $unit): array => [
+                'id' => $unit->id,
+                'name' => CsoSurveyLayout::value($unit, 'unit_name')
+                    ?: __('cso_details.unit_number', ['number' => $unit->unit_number ?? $unit->objectid ?? $unit->id]),
+                'number' => CsoSurveyLayout::value($unit, 'unit_number')
+                    ?? CsoSurveyLayout::value($unit, 'building_unit_number') ?? '-',
+                'floor' => CsoSurveyLayout::value($unit, 'unit_floor_number')
+                    ?? CsoSurveyLayout::value($unit, 'floor_number') ?? '-',
+                'function' => CsoSurveyLayout::displayValue(CsoSurveyLayout::value($unit, 'unit_function'), [
+                    'type' => 'select_multiple', 'list_name' => 'unit_function',
+                ]) ?? '-',
+                'damage' => CsoDamageStatusMapper::bucket(CsoSurveyLayout::value($unit, 'unit_damage_status')),
+                'sections' => $this->detailSections($unit, $unitSections),
+            ])->values();
+            $group['damageCounts'] = $group['units']->countBy('damage');
+
+            return $group;
+        })->values();
+    }
+
+    private function normalizeGlobalId(mixed $value): string
+    {
+        return is_scalar($value) ? strtolower(trim(trim((string) $value), '{}')) : '';
     }
 
     private function filteredQuery(Request $request): Builder
@@ -234,7 +321,7 @@ class CsoSurveyController extends Controller
         return collect(CsoSurveyLayout::sections())
             ->reject(fn (array $section): bool => in_array($section['name'] ?? '', $repeatSectionNames, true))
             ->map(fn (array $section): array => [
-                'title' => $section['label'] ?: $section['name'],
+                'title' => $this->sectionTitle($section),
                 'name' => $section['name'],
                 'rows' => $this->rowsFromLayoutFields($survey, $section['fields'] ?? []),
             ])
@@ -242,20 +329,22 @@ class CsoSurveyController extends Controller
             ->all();
     }
 
-    private function childSections($records, array $sections, string $titlePrefix): array
+    private function detailSections(object $record, array $sections): array
     {
-        return $records
-            ->values()
-            ->flatMap(fn (object $record, int $index): array => collect($sections)
-                ->map(fn (array $section): array => [
-                    'title' => $titlePrefix.' '.($index + 1).' - '.($section['label'] ?: $section['name']),
-                    'name' => $section['name'],
-                    'rows' => $this->rowsFromLayoutFields($record, $section['fields'] ?? []),
-                ])
-                ->values()
-                ->all())
+        return collect($sections)
+            ->map(fn (array $section): array => [
+                'title' => $this->sectionTitle($section),
+                'name' => $section['name'],
+                'rows' => $this->rowsFromLayoutFields($record, $section['fields'] ?? []),
+            ])
             ->values()
             ->all();
+    }
+
+    private function sectionTitle(array $section): string
+    {
+        return (app()->getLocale() === 'ar' ? ($section['hint'] ?? null) : null)
+            ?: ($section['label'] ?: $section['name']);
     }
 
     private function rowsFromLayoutFields(object $record, array $fields): array
@@ -264,12 +353,13 @@ class CsoSurveyController extends Controller
             ->reject(fn (array $field): bool => ($field['type'] ?? null) === 'calculate')
             ->map(function (array $field) use ($record): array {
                 $value = CsoSurveyLayout::value($record, $field['name']);
-                $answer = ($field['name'] ?? null) === 'building_damage_status'
-                    ? $this->damageStatusLabel(is_scalar($value) ? (string) $value : null)
+                $answer = in_array($field['name'] ?? null, ['building_damage_status', 'unit_damage_status'], true)
+                    ? __('cso_details.damage.'.CsoDamageStatusMapper::bucket($value))
                     : CsoSurveyLayout::displayValue($value, $field);
 
                 return [
-                    'question' => $field['label'] ?: $field['name'],
+                    'question' => (app()->getLocale() === 'ar' ? ($field['hint'] ?? null) : null)
+                        ?: ($field['label'] ?: $field['name']),
                     'answer' => $answer ?? $this->emptyAnswerText($field),
                     'empty' => $answer === null,
                 ];

@@ -1,31 +1,26 @@
-<div class="card card-bordered shadow-sm mb-6">
-    <div class="card-header border-0 pt-5">
-        <h3 class="card-title fw-bold">{{ $section['title'] }}</h3>
-    </div>
-    <div class="card-body py-4">
-        <div class="table-responsive">
-            <table class="table table-rounded table-striped align-middle table-row-dashed fs-6 gy-5">
-                <thead>
-                    <tr class="text-start text-gray-500 fw-bold fs-7 text-uppercase gs-0">
-                        <th class="min-w-250px">Question</th>
-                        <th class="min-w-300px">Answer</th>
+<details class="cso-section" @if ($open ?? false) open @endif>
+    <summary>{{ $section['title'] }}</summary>
+
+    <div class="cso-section-body">
+        <table class="cso-fields-table">
+            <thead class="visually-hidden">
+                <tr>
+                    <th scope="col">{{ __('cso_details.question') }}</th>
+                    <th scope="col">{{ __('cso_details.answer') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($section['rows'] as $row)
+                    <tr>
+                        <th scope="row">{{ $row['question'] }}</th>
+                        <td class="{{ ($row['empty'] ?? false) ? 'cso-muted' : '' }}">{{ $row['answer'] }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @forelse ($section['rows'] as $row)
-                        <tr>
-                            <td class="fw-semibold text-gray-800">{{ $row['question'] }}</td>
-                            <td class="{{ ($row['empty'] ?? false) ? 'text-muted' : 'text-gray-700' }}">
-                                {{ $row['answer'] }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="2" class="text-center text-muted py-8">No data available.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                @empty
+                    <tr>
+                        <td colspan="2" class="cso-muted">{{ __('cso_details.no_data') }}</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
-</div>
+</details>

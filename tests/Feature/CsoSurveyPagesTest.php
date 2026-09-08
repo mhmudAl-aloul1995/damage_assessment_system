@@ -10,6 +10,8 @@ use Illuminate\Support\Carbon;
 use OpenSpout\Reader\XLSX\Reader;
 
 test('it shows cso survey listing and details like other survey pages', function (): void {
+    app()->setLocale('ar');
+
     $user = User::factory()->create();
 
     $survey = CsoSurvey::query()->create([
@@ -29,7 +31,7 @@ test('it shows cso survey listing and details like other survey pages', function
         ],
     ]);
 
-    CsoSurveyOrganization::query()->create([
+    $organization = CsoSurveyOrganization::query()->create([
         'objectid' => 8301,
         'globalid' => 'cso-organization-page-global-id',
         'parentglobalid' => $survey->globalid,
@@ -43,6 +45,9 @@ test('it shows cso survey listing and details like other survey pages', function
         'parentglobalid' => $survey->globalid,
         'unit_name' => 'Ground Floor Unit',
         'unit_damage_status' => 'minor_damage',
+        'raw_payload' => [
+            'parentglobalid' => strtoupper('{'.$organization->globalid.'}'),
+        ],
     ]);
 
     CsoSurvey::query()->create([
@@ -117,12 +122,111 @@ test('it shows cso survey listing and details like other survey pages', function
 
     $showResponse->assertOk()
         ->assertSee('Civil Support Organization')
-        ->assertSee('Survey')
-        ->assertSee('CSO Organizations')
-        ->assertSee('Unit Information')
+        ->assertSee('بيانات الاستمارة')
+        ->assertSee('المنظمات ووحداتها')
         ->assertSee('Civil Support Organization Branch')
         ->assertSee('Ground Floor Unit')
+        ->assertSee('جزئي')
         ->assertSee('لا يوجد جواب');
+});
+
+it('groups cso units under their organization from the original repeat parent', function (): void {
+    app()->setLocale('ar');
+
+    $user = User::factory()->create();
+
+    $survey = CsoSurvey::query()->create([
+        'objectid' => 7501,
+        'globalid' => 'survey-unit-parent-map',
+        'building_name' => 'Building With CSO Units',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    $firstOrganization = CsoSurveyOrganization::query()->create([
+        'objectid' => 8501,
+        'globalid' => 'ORG-PARENT-A',
+        'parentglobalid' => $survey->globalid,
+        'organization_name_en' => 'Clinic Committee',
+        'organization_name_ar' => 'لجنة العيادة',
+        'raw_payload' => [
+            'registration_number' => 'REG-A',
+            'is_organization_active' => 'yes',
+        ],
+    ]);
+
+    $secondOrganization = CsoSurveyOrganization::query()->create([
+        'objectid' => 8502,
+        'globalid' => 'org-parent-b',
+        'parentglobalid' => $survey->globalid,
+        'organization_name_en' => 'Youth Center',
+        'organization_name_ar' => 'مركز الشباب',
+    ]);
+
+    $flattenedFirstUnit = CsoSurveyUnit::query()->create([
+        'objectid' => 9501,
+        'globalid' => 'unit-parent-map-a',
+        'parentglobalid' => $survey->globalid,
+        'unit_name' => 'Pharmacy Room',
+        'unit_floor_number' => 1,
+        'unit_damage_status' => 'partial_damage',
+        'raw_payload' => [
+            'parentglobalid' => '{org-parent-a}',
+        ],
+    ]);
+
+    $directSecondUnit = CsoSurveyUnit::query()->create([
+        'objectid' => 9502,
+        'globalid' => 'unit-parent-map-b',
+        'parentglobalid' => $secondOrganization->globalid,
+        'unit_name' => 'Training Room',
+        'unit_floor_number' => 2,
+        'unit_damage_status' => 'no_damage',
+    ]);
+
+    $unassignedUnit = CsoSurveyUnit::query()->create([
+        'objectid' => 9503,
+        'globalid' => 'unit-parent-map-unassigned',
+        'parentglobalid' => $survey->globalid,
+        'unit_name' => 'Legacy Room',
+        'unit_damage_status' => 'unexpected_value',
+    ]);
+
+    CsoSurveyUnit::query()->create([
+        'objectid' => 9504,
+        'globalid' => 'unit-parent-map-foreign',
+        'parentglobalid' => 'other-survey',
+        'unit_name' => 'Foreign Survey Unit',
+        'unit_damage_status' => 'total_damage',
+        'raw_payload' => [
+            'parentglobalid' => $firstOrganization->globalid,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get(route('cso-surveys.show', $survey));
+
+    $groups = $response->viewData('organizationGroups');
+    $firstGroup = $groups->firstWhere('key', 'organization-'.$firstOrganization->id);
+    $secondGroup = $groups->firstWhere('key', 'organization-'.$secondOrganization->id);
+    $unassignedGroup = $groups->firstWhere('key', 'unassigned');
+
+    $response->assertOk()
+        ->assertSee('المنظمات ووحداتها')
+        ->assertSee('لجنة فنية')
+        ->assertSee('لجنة العيادة')
+        ->assertSee('Pharmacy Room')
+        ->assertSee('مركز الشباب')
+        ->assertSee('Training Room')
+        ->assertSee('وحدات غير مربوطة')
+        ->assertSee('Legacy Room')
+        ->assertDontSee('Foreign Survey Unit');
+
+    expect($firstGroup['units']->pluck('id')->all())->toBe([$flattenedFirstUnit->id])
+        ->and($firstGroup['damageCounts']->get('partially_damaged'))->toBe(1)
+        ->and($firstGroup['damageCounts']->get('fully_damaged'))->toBeNull()
+        ->and($secondGroup['units']->pluck('id')->all())->toBe([$directSecondUnit->id])
+        ->and($secondGroup['damageCounts']->get('no_damage'))->toBe(1)
+        ->and($unassignedGroup['units']->pluck('id')->all())->toBe([$unassignedUnit->id])
+        ->and($unassignedGroup['damageCounts']->get('unclassified'))->toBe(1);
 });
 
 it('filters cso surveys by child organization fields from dashboard links', function (): void {
