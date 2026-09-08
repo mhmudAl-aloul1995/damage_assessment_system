@@ -50,6 +50,11 @@ class AreaProductivityReportController extends Controller
         return $this->reportData(AreaProductivityReportService::TYPE_ROAD_FACILITIES, $request->validated());
     }
 
+    public function csoSurveysData(AreaProductivityReportFilterRequest $request): JsonResponse
+    {
+        return $this->reportData(AreaProductivityReportService::TYPE_CSO_SURVEYS, $request->validated());
+    }
+
     public function publicBuildings(AreaProductivityReportFilterRequest $request): View
     {
         return $this->renderReport(AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS, $request->validated());
@@ -58,6 +63,11 @@ class AreaProductivityReportController extends Controller
     public function roadFacilities(AreaProductivityReportFilterRequest $request): View
     {
         return $this->renderReport(AreaProductivityReportService::TYPE_ROAD_FACILITIES, $request->validated());
+    }
+
+    public function csoSurveys(AreaProductivityReportFilterRequest $request): View
+    {
+        return $this->renderReport(AreaProductivityReportService::TYPE_CSO_SURVEYS, $request->validated());
     }
 
     public function exportHousingUnits(AreaProductivityReportFilterRequest $request): BinaryFileResponse
@@ -80,6 +90,11 @@ class AreaProductivityReportController extends Controller
         return $this->exportReport(AreaProductivityReportService::TYPE_ROAD_FACILITIES, $request->validated());
     }
 
+    public function exportCsoSurveys(AreaProductivityReportFilterRequest $request): BinaryFileResponse
+    {
+        return $this->exportReport(AreaProductivityReportService::TYPE_CSO_SURVEYS, $request->validated());
+    }
+
     private function renderReport(string $type, array $filters): View
     {
         return view('damage-assessment::reports.area_productivity', $this->reportService->build($type, $filters));
@@ -94,6 +109,8 @@ class AreaProductivityReportController extends Controller
                 'total_count' => (int) ($row->total_count ?? 0),
                 'total_road_length_km' => round((float) ($row->total_road_length_km ?? 0), 3),
                 'housing_units_count' => (int) ($row->housing_units_count ?? 0),
+                'organizations_count' => (int) ($row->organizations_count ?? 0),
+                'cso_units_count' => (int) ($row->cso_units_count ?? 0),
                 'tda_range' => (int) ($row->tda_range ?? 0),
                 'pda_range' => (int) ($row->pda_range ?? 0),
                 'cra_range' => (int) ($row->cra_range ?? 0),

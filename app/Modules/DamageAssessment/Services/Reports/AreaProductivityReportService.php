@@ -6,8 +6,12 @@ namespace App\Modules\DamageAssessment\Services\Reports;
 
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
+use App\Models\CsoSurvey;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
+use App\Support\CsoDamageStatusMapper;
 use App\Support\Phase\PhaseContext;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +29,8 @@ class AreaProductivityReportService
     public const TYPE_PUBLIC_BUILDINGS = 'public_buildings';
 
     public const TYPE_ROAD_FACILITIES = 'road_facilities';
+
+    public const TYPE_CSO_SURVEYS = 'cso_surveys';
 
     /**
      * @var list<string>
@@ -82,6 +88,15 @@ class AreaProductivityReportService
             $dateRange['to'],
         );
 
+        $csoDetails = $type === self::TYPE_CSO_SURVEYS
+            ? $this->csoDetails($filters, $dateRange['from'], $dateRange['to'])
+            : [
+                'organizations' => collect(),
+                'units' => collect(),
+                'organization_summary' => [],
+                'unit_summary' => [],
+            ];
+
         return [
             'type' => $type,
             'title_key' => $definition['title_key'],
@@ -115,15 +130,18 @@ class AreaProductivityReportService
                 'pda' => (int) $rows->sum('pda_range'),
                 'cra' => (int) $rows->sum('cra_range'),
                 'unclassified' => (int) $rows->sum('unclassified_count'),
+                'no_damage' => (int) $rows->sum('no_damage_count'),
                 'destroyed' => (int) $rows->sum('destroyed_count'),
                 'severe' => (int) $rows->sum('severe_count'),
                 'moderate' => (int) $rows->sum('moderate_count'),
                 'minor' => (int) $rows->sum('minor_count'),
-                'no_damage' => (int) $rows->sum('no_damage_count'),
                 'total_records' => (int) $rows->sum('total_count'),
                 'total_road_length_km' => round((float) $rows->sum('total_road_length_km'), 3),
                 'housing_units_count' => (int) $rows->sum('housing_units_count'),
+                'organizations_count' => (int) $rows->sum('organizations_count'),
+                'cso_units_count' => (int) $rows->sum('cso_units_count'),
             ],
+            'cso' => $csoDetails,
         ];
     }
 
@@ -133,6 +151,7 @@ class AreaProductivityReportService
             self::TYPE_HOUSING_UNITS, self::TYPE_BUILDINGS => $this->buildingBackedFilterOptions(),
             self::TYPE_PUBLIC_BUILDINGS => $this->surveyFilterOptions(PublicBuildingSurvey::query(), false),
             self::TYPE_ROAD_FACILITIES => $this->surveyFilterOptions(RoadFacilitySurvey::query(), true),
+            self::TYPE_CSO_SURVEYS => $this->surveyFilterOptions(CsoSurvey::query(), false),
             default => throw new InvalidArgumentException("Unsupported area productivity report type [{$type}]."),
         };
     }
@@ -166,6 +185,7 @@ class AreaProductivityReportService
             self::TYPE_BUILDINGS => $this->buildingsQuery($filters, $fromDate, $toDate),
             self::TYPE_PUBLIC_BUILDINGS => $this->publicBuildingsQuery($filters, $fromDate, $toDate),
             self::TYPE_ROAD_FACILITIES => $this->roadFacilitiesQuery($filters, $fromDate, $toDate),
+            self::TYPE_CSO_SURVEYS => $this->csoSurveysQuery($filters, $fromDate, $toDate),
             default => throw new InvalidArgumentException("Unsupported area productivity report type [{$type}]."),
         };
     }
@@ -355,6 +375,54 @@ class AreaProductivityReportService
         return $query;
     }
 
+    private function csoSurveysQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
+    {
+        $groupKey = $this->normalizedGroupExpression('cso_surveys.neighborhood');
+        $organizationCounts = CsoSurveyOrganization::query()
+            ->from('cso_survey_organizations as organizations')
+            ->selectRaw('organizations.parentglobalid, COUNT(*) as organizations_count')
+            ->groupBy('organizations.parentglobalid');
+        $unitCounts = CsoSurveyUnit::query()
+            ->from('cso_survey_units as units')
+            ->selectRaw('units.parentglobalid, COUNT(*) as cso_units_count')
+            ->groupBy('units.parentglobalid');
+
+        $query = CsoSurvey::query()
+            ->leftJoinSub($organizationCounts, 'organization_counts', function ($join): void {
+                $join->on('organization_counts.parentglobalid', '=', 'cso_surveys.globalid');
+            })
+            ->leftJoinSub($unitCounts, 'unit_counts', function ($join): void {
+                $join->on('unit_counts.parentglobalid', '=', 'cso_surveys.globalid');
+            })
+            ->selectRaw("
+                {$this->preferredValueExpression('cso_surveys.governorate')} as governorate,
+                {$this->preferredValueExpression('cso_surveys.municipalitie')} as municipalitie,
+                {$this->preferredValueExpression('cso_surveys.neighborhood')} as neighborhood,
+                COUNT(DISTINCT NULLIF(TRIM(cso_surveys.assignedto), '')) as no_eng,
+                ".CsoDamageStatusMapper::sumSql('cso_surveys.building_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
+                '.CsoDamageStatusMapper::sumSql('cso_surveys.building_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
+                '.CsoDamageStatusMapper::sumSql('cso_surveys.building_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
+                '.CsoDamageStatusMapper::sumSql('cso_surveys.building_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
+                '.CsoDamageStatusMapper::unclassifiedSumSql('cso_surveys.building_damage_status').' as unclassified_count,
+                COUNT(cso_surveys.id) as total_count,
+                SUM(COALESCE(organization_counts.organizations_count, 0)) as organizations_count,
+                SUM(COALESCE(unit_counts.cso_units_count, 0)) as cso_units_count
+            ')
+            ->groupByRaw($groupKey)
+            ->orderByDesc('total_count');
+
+        app(PhaseContext::class)->applyToEloquent($query, 'cso_surveys.phase_number');
+
+        $this->applyFilters($query, $filters, [
+            'governorate' => 'cso_surveys.governorate',
+            'municipalitie' => 'cso_surveys.municipalitie',
+            'neighborhood' => 'cso_surveys.neighborhood',
+            'assignedto' => 'cso_surveys.assignedto',
+        ], $this->dateColumn('cso_surveys'), $fromDate, $toDate);
+
+        return $query;
+    }
+
     private function applyFilters(
         Builder $query,
         array $filters,
@@ -381,6 +449,125 @@ class AreaProductivityReportService
         if ($fromDate && $toDate) {
             $query->whereBetween($dateColumn, [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
         }
+    }
+
+    private function csoDetails(array $filters, ?Carbon $fromDate, ?Carbon $toDate): array
+    {
+        $organizations = $this->csoOrganizationRows($filters, $fromDate, $toDate);
+        $units = $this->csoUnitRows($filters, $fromDate, $toDate);
+
+        return [
+            'organizations' => $organizations,
+            'units' => $units,
+            'organization_summary' => $this->damageSummary($organizations),
+            'unit_summary' => $this->damageSummary($units),
+        ];
+    }
+
+    /**
+     * @return Collection<int, object>
+     */
+    private function csoOrganizationRows(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
+    {
+        $unitCounts = CsoSurveyUnit::query()
+            ->from('cso_survey_units as units')
+            ->selectRaw('units.parentglobalid, COUNT(*) as cso_units_count')
+            ->groupBy('units.parentglobalid');
+
+        $query = CsoSurveyOrganization::query()
+            ->from('cso_survey_organizations as organizations')
+            ->join('cso_surveys as surveys', 'organizations.parentglobalid', '=', 'surveys.globalid')
+            ->leftJoinSub($unitCounts, 'unit_counts', function ($join): void {
+                $join->on('unit_counts.parentglobalid', '=', 'surveys.globalid');
+            })
+            ->selectRaw("
+                COALESCE(NULLIF(TRIM(organizations.organization_name_ar), ''), NULLIF(TRIM(surveys.organization_name), ''), '') as organization_name_ar,
+                COALESCE(NULLIF(TRIM(organizations.organization_name_en), ''), '') as organization_name_en,
+                COALESCE(NULLIF(TRIM(organizations.organization_acronym), ''), '') as organization_acronym,
+                COALESCE(NULLIF(TRIM(organizations.operational_status), ''), NULLIF(TRIM(surveys.operational_status), ''), '') as operational_status,
+                COALESCE(NULLIF(TRIM(surveys.assignedto), ''), '') as assignedto,
+                COALESCE(NULLIF(TRIM(surveys.building_name), ''), '') as building_name,
+                COALESCE(NULLIF(TRIM(surveys.governorate), ''), '') as governorate,
+                COALESCE(NULLIF(TRIM(surveys.municipalitie), ''), '') as municipalitie,
+                COALESCE(NULLIF(TRIM(surveys.neighborhood), ''), '') as neighborhood,
+                ".CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
+                '.CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
+                '.CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
+                '.CsoDamageStatusMapper::caseSql('surveys.building_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
+                '.CsoDamageStatusMapper::unclassifiedCaseSql('surveys.building_damage_status').' as unclassified_count,
+                1 as total_count,
+                COALESCE(unit_counts.cso_units_count, 0) as cso_units_count,
+                organizations.creationdate as creationdate
+            ')
+            ->orderBy('organizations.organization_name_ar')
+            ->orderBy('organizations.organization_name_en');
+
+        app(PhaseContext::class)->applyToEloquent($query, 'surveys.phase_number');
+
+        $this->applyFilters($query, $filters, [
+            'governorate' => 'surveys.governorate',
+            'municipalitie' => 'surveys.municipalitie',
+            'neighborhood' => 'surveys.neighborhood',
+            'assignedto' => 'surveys.assignedto',
+        ], $this->dateColumn('surveys'), $fromDate, $toDate);
+
+        return $query->get();
+    }
+
+    /**
+     * @return Collection<int, object>
+     */
+    private function csoUnitRows(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
+    {
+        $query = CsoSurveyUnit::query()
+            ->from('cso_survey_units as units')
+            ->join('cso_surveys as surveys', 'units.parentglobalid', '=', 'surveys.globalid')
+            ->selectRaw("
+                COALESCE(NULLIF(TRIM(units.unit_name), ''), '') as unit_name,
+                units.unit_number,
+                units.unit_floor_number,
+                COALESCE(NULLIF(TRIM(surveys.organization_name), ''), '') as organization_name,
+                COALESCE(NULLIF(TRIM(surveys.building_name), ''), '') as building_name,
+                COALESCE(NULLIF(TRIM(surveys.assignedto), ''), '') as assignedto,
+                COALESCE(NULLIF(TRIM(surveys.governorate), ''), '') as governorate,
+                COALESCE(NULLIF(TRIM(surveys.municipalitie), ''), '') as municipalitie,
+                COALESCE(NULLIF(TRIM(surveys.neighborhood), ''), '') as neighborhood,
+                ".CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::FULLY_DAMAGED).' as tda_range,
+                '.CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::PARTIALLY_DAMAGED).' as pda_range,
+                '.CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::NO_DAMAGE).' as no_damage_count,
+                '.CsoDamageStatusMapper::caseSql('units.unit_damage_status', CsoDamageStatusMapper::COMMITTEE_REVIEW).' as cra_range,
+                '.CsoDamageStatusMapper::unclassifiedCaseSql('units.unit_damage_status').' as unclassified_count,
+                1 as total_count,
+                units.creationdate as creationdate
+            ')
+            ->orderBy('units.unit_name');
+
+        app(PhaseContext::class)->applyToEloquent($query, 'surveys.phase_number');
+
+        $this->applyFilters($query, $filters, [
+            'governorate' => 'surveys.governorate',
+            'municipalitie' => 'surveys.municipalitie',
+            'neighborhood' => 'surveys.neighborhood',
+            'assignedto' => 'surveys.assignedto',
+        ], $this->dateColumn('surveys'), $fromDate, $toDate);
+
+        return $query->get();
+    }
+
+    /**
+     * @param  Collection<int, object>  $rows
+     */
+    private function damageSummary(Collection $rows): array
+    {
+        return [
+            'total_records' => (int) $rows->sum('total_count'),
+            'tda' => (int) $rows->sum('tda_range'),
+            'pda' => (int) $rows->sum('pda_range'),
+            'no_damage' => (int) $rows->sum('no_damage_count'),
+            'cra' => (int) $rows->sum('cra_range'),
+            'unclassified' => (int) $rows->sum('unclassified_count'),
+            'cso_units_count' => (int) $rows->sum('cso_units_count'),
+        ];
     }
 
     /**
@@ -664,6 +851,13 @@ class AreaProductivityReportService
                 'route_name' => 'reports.area-productivity.road-facilities',
                 'export_route_name' => 'reports.area-productivity.export.road-facilities',
                 'sector_key' => 'multilingual.area_productivity_reports.sectors.road_facilities',
+            ],
+            self::TYPE_CSO_SURVEYS => [
+                'title_key' => 'multilingual.area_productivity_reports.titles.cso_surveys',
+                'subtitle_key' => 'multilingual.area_productivity_reports.subtitles.cso_surveys',
+                'route_name' => 'reports.area-productivity.cso-surveys',
+                'export_route_name' => 'reports.area-productivity.export.cso-surveys',
+                'sector_key' => 'multilingual.area_productivity_reports.sectors.cso_surveys',
             ],
             default => throw new InvalidArgumentException("Unsupported area productivity report type [{$type}]."),
         };

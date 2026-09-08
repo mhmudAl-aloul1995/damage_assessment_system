@@ -1048,6 +1048,7 @@ return [
         'actions' => 'Actions',
         'export_excel' => 'Export Excel',
         'import_corrections' => 'Import corrections',
+        'download_import_report' => 'Download import report',
         'all_name_matches' => 'All name match statuses',
         'all_issue_types' => 'All issue types',
         'all_marital_statuses' => 'Marital status: all',

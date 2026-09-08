@@ -295,14 +295,17 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/area-productivity/buildings/data', [AreaProductivityReportController::class, 'buildingsData'])->name('reports.area-productivity.buildings.data');
     Route::get('reports/area-productivity/public-buildings/data', [AreaProductivityReportController::class, 'publicBuildingsData'])->name('reports.area-productivity.public-buildings.data');
     Route::get('reports/area-productivity/road-facilities/data', [AreaProductivityReportController::class, 'roadFacilitiesData'])->name('reports.area-productivity.road-facilities.data');
+    Route::get('reports/area-productivity/cso-surveys/data', [AreaProductivityReportController::class, 'csoSurveysData'])->name('reports.area-productivity.cso-surveys.data');
     Route::get('reports/area-productivity/housing-units', [AreaProductivityReportController::class, 'housingUnits'])->name('reports.area-productivity.housing-units');
     Route::get('reports/area-productivity/buildings', [AreaProductivityReportController::class, 'buildings'])->name('reports.area-productivity.buildings');
     Route::get('reports/area-productivity/public-buildings', [AreaProductivityReportController::class, 'publicBuildings'])->name('reports.area-productivity.public-buildings');
     Route::get('reports/area-productivity/road-facilities', [AreaProductivityReportController::class, 'roadFacilities'])->name('reports.area-productivity.road-facilities');
+    Route::get('reports/area-productivity/cso-surveys', [AreaProductivityReportController::class, 'csoSurveys'])->name('reports.area-productivity.cso-surveys');
     Route::get('reports/area-productivity/housing-units/export', [AreaProductivityReportController::class, 'exportHousingUnits'])->name('reports.area-productivity.export.housing-units');
     Route::get('reports/area-productivity/buildings/export', [AreaProductivityReportController::class, 'exportBuildings'])->name('reports.area-productivity.export.buildings');
     Route::get('reports/area-productivity/public-buildings/export', [AreaProductivityReportController::class, 'exportPublicBuildings'])->name('reports.area-productivity.export.public-buildings');
     Route::get('reports/area-productivity/road-facilities/export', [AreaProductivityReportController::class, 'exportRoadFacilities'])->name('reports.area-productivity.export.road-facilities');
+    Route::get('reports/area-productivity/cso-surveys/export', [AreaProductivityReportController::class, 'exportCsoSurveys'])->name('reports.area-productivity.export.cso-surveys');
     Route::get('reports/building-productivity', [BuildingProductivityReportController::class, 'index'])->name('reports.building-productivity.index');
     Route::get('reports/building-productivity/export', [BuildingProductivityReportController::class, 'export'])->name('reports.building-productivity.export');
     Route::get('reports/field-engineer', [FieldEngineerReportController::class, 'index'])->name('reports.field-engineer.index');

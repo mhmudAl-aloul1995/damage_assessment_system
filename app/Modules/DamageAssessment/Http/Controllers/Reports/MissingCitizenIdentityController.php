@@ -21,6 +21,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -467,6 +468,7 @@ class MissingCitizenIdentityController extends Controller
         $failed = 0;
         $skipped = 0;
         $processedUpdates = 0;
+        $importReportRows = [];
         $skipReasons = [
             'invalid_row' => 0,
             'missing_unit' => 0,
@@ -476,13 +478,16 @@ class MissingCitizenIdentityController extends Controller
             'technical_error' => 0,
         ];
 
-        foreach ($dataRows as $row) {
+        foreach ($dataRows as $index => $row) {
+            $excelRowNumber = $index + 2;
+
             try {
                 $correction = $this->missingCitizenIdentityCorrectionFromRow((array) $row, $headerRow->all());
 
                 if ($correction === null) {
                     $skipped++;
                     $skipReasons['invalid_row']++;
+                    $importReportRows[] = $this->importReportRow($excelRowNumber, 'invalid_row', null, (array) $row);
 
                     continue;
                 }
@@ -490,6 +495,7 @@ class MissingCitizenIdentityController extends Controller
                 if ($processedUpdates >= self::IMPORT_CORRECTION_APPROVAL_LIMIT) {
                     $skipped++;
                     $skipReasons['import_limit_reached']++;
+                    $importReportRows[] = $this->importReportRow($excelRowNumber, 'import_limit_reached', $correction, (array) $row);
 
                     continue;
                 }
@@ -515,14 +521,17 @@ class MissingCitizenIdentityController extends Controller
                 } elseif (($result['reason'] ?? null) !== null && array_key_exists($result['reason'], $skipReasons)) {
                     $skipped++;
                     $skipReasons[$result['reason']]++;
+                    $importReportRows[] = $this->importReportRow($excelRowNumber, (string) $result['reason'], $correction, (array) $row);
                 } else {
                     $failed++;
                     $processedUpdates++;
+                    $importReportRows[] = $this->importReportRow($excelRowNumber, 'technical_error', $correction, (array) $row);
                 }
             } catch (Throwable $exception) {
                 $failed++;
                 $processedUpdates++;
                 $skipReasons['technical_error']++;
+                $importReportRows[] = $this->importReportRow($excelRowNumber, 'technical_error', $correction ?? null, (array) $row);
 
                 Log::warning('Missing citizen identity import row failed.', [
                     'exception' => $exception::class,
@@ -536,6 +545,7 @@ class MissingCitizenIdentityController extends Controller
         $detailsMessage = $details !== ''
             ? __('ui.missing_citizen_identities.import_skip_details', ['details' => $details])
             : '';
+        $reportUrl = $this->storeImportReport($importReportRows);
 
         return response()->json([
             'message' => __('ui.missing_citizen_identities.import_success', [
@@ -549,7 +559,80 @@ class MissingCitizenIdentityController extends Controller
             'skipped' => $skipped,
             'processed_updates' => $processedUpdates,
             'skip_reasons' => $skipReasons,
+            'report_url' => $reportUrl,
         ]);
+    }
+
+    /**
+     * @param  array{unit_objectid: string, identity_number_field: string, identity_name_field: string|null, old_id_number: string|null, new_id_number: string, full_name: string}|null  $correction
+     * @param  array<int, mixed>  $row
+     * @return array<string, string|int>
+     */
+    private function importReportRow(int $excelRowNumber, string $reason, ?array $correction, array $row): array
+    {
+        return [
+            'excel_row' => $excelRowNumber,
+            'reason' => __('ui.missing_citizen_identities.import_skip_'.$reason, ['count' => 1]),
+            'unit_objectid' => $correction['unit_objectid'] ?? $this->importColumnValue($row, 7),
+            'identity_number_field' => $correction['identity_number_field'] ?? '',
+            'name' => $correction['full_name'] ?? $this->importColumnValue($row, 3),
+            'old_id_number' => $correction['old_id_number'] ?? $this->importColumnValue($row, 6),
+            'new_id_number' => $correction['new_id_number'] ?? $this->importColumnValue($row, 5),
+            'identity_label' => $this->importColumnValue($row, 0),
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, string|int>>  $rows
+     */
+    private function storeImportReport(array $rows): ?string
+    {
+        if ($rows === []) {
+            return null;
+        }
+
+        $headings = [
+            'Excel Row',
+            'Reason',
+            'Unit ObjectID',
+            'Identity Field',
+            'Name',
+            'Old ID Number',
+            'New ID Number',
+            'Identity Label',
+        ];
+        $csvRows = [
+            $this->csvLine($headings),
+            ...array_map(fn (array $row): string => $this->csvLine([
+                $row['excel_row'],
+                $row['reason'],
+                $row['unit_objectid'],
+                $row['identity_number_field'],
+                $row['name'],
+                $row['old_id_number'],
+                $row['new_id_number'],
+                $row['identity_label'],
+            ]), $rows),
+        ];
+        $path = 'missing-citizen-identity-imports/import-report-'.now()->format('Ymd-His').'-'.Str::random(8).'.csv';
+
+        Storage::disk('public')->put($path, "\xEF\xBB\xBF".implode("\r\n", $csvRows));
+
+        return Storage::disk('public')->url($path);
+    }
+
+    /**
+     * @param  array<int, mixed>  $values
+     */
+    private function csvLine(array $values): string
+    {
+        return collect($values)
+            ->map(function (mixed $value): string {
+                $value = str_replace(["\r", "\n"], ' ', (string) $value);
+
+                return '"'.str_replace('"', '""', $value).'"';
+            })
+            ->implode(',');
     }
 
     /**

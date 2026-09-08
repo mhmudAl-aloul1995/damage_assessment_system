@@ -9,21 +9,25 @@
         $showAuditedBuildingColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;
         $showAuditedHousingUnitColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS;
         $showRoadDamageColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES;
-        $useAjaxFilters = true;
+        $showCsoSurveyColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_CSO_SURVEYS;
+        $useAjaxFilters = ! $showCsoSurveyColumns;
         $ajaxRouteName = match ($type) {
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS => 'reports.area-productivity.buildings.data',
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS => 'reports.area-productivity.public-buildings.data',
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES => 'reports.area-productivity.road-facilities.data',
+            \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_CSO_SURVEYS => 'reports.area-productivity.cso-surveys.data',
             default => 'reports.area-productivity.housing-units.data',
         };
         $showLocationPies = in_array($type, [
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS,
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS,
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES,
+            \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_CSO_SURVEYS,
         ], true);
         $locationPieCountLabel = match ($type) {
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_PUBLIC_BUILDINGS => 'public buildings',
             \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_ROAD_FACILITIES => 'road facilities',
+            \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_CSO_SURVEYS => 'CSO surveys',
             default => 'housing units',
         };
         $locationPieDescription = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS
@@ -42,7 +46,8 @@
         }
 
         $hasAdvancedFilters = collect($filters)->flatten()->filter()->isNotEmpty();
-        $emptyTableColspan = $showRoadDamageColumns ? 13 : (($showAuditedBuildingColumns || $showAuditedHousingUnitColumns) ? 11 : 9);
+        $showTabbedContent = $showLocationPies || $showCsoSurveyColumns;
+        $emptyTableColspan = ($showRoadDamageColumns || $showCsoSurveyColumns) ? 13 : (($showAuditedBuildingColumns || $showAuditedHousingUnitColumns) ? 11 : 9);
     @endphp
 
     <style>
@@ -570,7 +575,7 @@
                     </div>
                 </div>
 
-                @if ($showLocationPies)
+                @if ($showTabbedContent)
                     <div class="card-body pb-0 border-top">
                         <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-6 fw-bold" role="tablist">
                             <li class="nav-item" role="presentation">
@@ -580,13 +585,31 @@
                                     Report Table
                                 </button>
                             </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="area-productivity-location-charts-tab" type="button"
-                                    data-bs-toggle="tab" data-bs-target="#area-productivity-location-charts-pane"
-                                    role="tab" aria-controls="area-productivity-location-charts-pane" aria-selected="false">
-                                    Location Pie Charts
-                                </button>
-                            </li>
+                            @if ($showLocationPies)
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="area-productivity-location-charts-tab" type="button"
+                                        data-bs-toggle="tab" data-bs-target="#area-productivity-location-charts-pane"
+                                        role="tab" aria-controls="area-productivity-location-charts-pane" aria-selected="false">
+                                        Location Pie Charts
+                                    </button>
+                                </li>
+                            @endif
+                            @if ($showCsoSurveyColumns)
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="area-productivity-organizations-tab" type="button"
+                                        data-bs-toggle="tab" data-bs-target="#area-productivity-organizations-pane"
+                                        role="tab" aria-controls="area-productivity-organizations-pane" aria-selected="false">
+                                        {{ __('multilingual.area_productivity_reports.tabs.organizations') }}
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="area-productivity-units-tab" type="button"
+                                        data-bs-toggle="tab" data-bs-target="#area-productivity-units-pane"
+                                        role="tab" aria-controls="area-productivity-units-pane" aria-selected="false">
+                                        {{ __('multilingual.area_productivity_reports.tabs.units') }}
+                                    </button>
+                                </li>
+                            @endif
                         </ul>
                     </div>
 
@@ -675,7 +698,7 @@
                     </div>
                 @endif
 
-                @if ($showLocationPies)
+                @if ($showTabbedContent)
                     <div class="tab-pane fade show active" id="area-productivity-table-pane" role="tabpanel"
                         aria-labelledby="area-productivity-table-tab">
                 @endif
@@ -690,6 +713,10 @@
                                     @if ($showHousingUnitsCount)
                                         <th>{{ __('multilingual.area_productivity_reports.columns.housing_units_count') }}</th>
                                     @endif
+                                    @if ($showCsoSurveyColumns)
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.organizations_count') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.cso_units_count') }}</th>
+                                    @endif
                                     @if ($showRoadDamageColumns)
                                         <th>{{ __('multilingual.area_productivity_reports.columns.destroyed') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.severe') }}</th>
@@ -698,6 +725,12 @@
                                         <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
                                     @elseif ($showAuditedHousingUnitColumns)
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
+                                    @elseif ($showCsoSurveyColumns)
                                         <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
@@ -730,6 +763,10 @@
                                         @if ($showHousingUnitsCount)
                                             <td>{{ $row->housing_units_count ?? 0 }}</td>
                                         @endif
+                                        @if ($showCsoSurveyColumns)
+                                            <td>{{ $row->organizations_count ?? 0 }}</td>
+                                            <td>{{ $row->cso_units_count ?? 0 }}</td>
+                                        @endif
                                         @if ($showRoadDamageColumns)
                                             <td>{{ $row->destroyed_count }}</td>
                                             <td>{{ $row->severe_count }}</td>
@@ -738,6 +775,12 @@
                                             <td>{{ $row->no_damage_count }}</td>
                                             <td>{{ $row->unclassified_count ?? 0 }}</td>
                                         @elseif ($showAuditedHousingUnitColumns)
+                                            <td>{{ $row->tda_range }}</td>
+                                            <td>{{ $row->pda_range }}</td>
+                                            <td>{{ $row->no_damage_count ?? 0 }}</td>
+                                            <td>{{ $row->cra_range }}</td>
+                                            <td>{{ $row->unclassified_count ?? 0 }}</td>
+                                        @elseif ($showCsoSurveyColumns)
                                             <td>{{ $row->tda_range }}</td>
                                             <td>{{ $row->pda_range }}</td>
                                             <td>{{ $row->no_damage_count ?? 0 }}</td>
@@ -770,6 +813,10 @@
                                     @if ($showHousingUnitsCount)
                                         <td>{{ $summary['housing_units_count'] }}</td>
                                     @endif
+                                    @if ($showCsoSurveyColumns)
+                                        <td>{{ $summary['organizations_count'] }}</td>
+                                        <td>{{ $summary['cso_units_count'] }}</td>
+                                    @endif
                                     @if ($showRoadDamageColumns)
                                         <td class="text-danger">{{ $summary['destroyed'] }}</td>
                                         <td class="text-danger">{{ $summary['severe'] }}</td>
@@ -778,6 +825,12 @@
                                         <td class="text-success">{{ $summary['no_damage'] }}</td>
                                         <td>{{ $summary['unclassified'] }}</td>
                                     @elseif ($showAuditedHousingUnitColumns)
+                                        <td class="text-danger">{{ $summary['tda'] }}</td>
+                                        <td class="text-warning">{{ $summary['pda'] }}</td>
+                                        <td class="text-success">{{ $summary['no_damage'] }}</td>
+                                        <td class="text-primary">{{ $summary['cra'] }}</td>
+                                        <td>{{ $summary['unclassified'] }}</td>
+                                    @elseif ($showCsoSurveyColumns)
                                         <td class="text-danger">{{ $summary['tda'] }}</td>
                                         <td class="text-warning">{{ $summary['pda'] }}</td>
                                         <td class="text-success">{{ $summary['no_damage'] }}</td>
@@ -799,8 +852,109 @@
                             </tfoot>
                         </table>
                     </div>
-                @if ($showLocationPies)
+                @if ($showTabbedContent)
                     </div>
+                    @if ($showCsoSurveyColumns)
+                        <div class="tab-pane fade" id="area-productivity-organizations-pane" role="tabpanel"
+                            aria-labelledby="area-productivity-organizations-tab">
+                            <div class="card-body py-4 area-productivity-table-wrap">
+                                <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
+                                    <thead>
+                                        <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_name_ar') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_name_en') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_acronym') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.operational_status') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.cso_units_count') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.governorate') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.assignedto') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($cso['organizations'] as $organization)
+                                            <tr>
+                                                <td>{{ $organization->organization_name_ar ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->organization_name_en ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->organization_acronym ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->operational_status ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->cso_units_count ?? 0 }}</td>
+                                                <td>{{ $organization->tda_range }}</td>
+                                                <td>{{ $organization->pda_range }}</td>
+                                                <td>{{ $organization->no_damage_count }}</td>
+                                                <td>{{ $organization->cra_range }}</td>
+                                                <td>{{ $organization->unclassified_count }}</td>
+                                                <td>{{ $organization->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $organization->assignedto ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="14" class="text-center text-muted">{{ __('multilingual.area_productivity_reports.labels.empty') }}</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="area-productivity-units-pane" role="tabpanel"
+                            aria-labelledby="area-productivity-units-tab">
+                            <div class="card-body py-4 area-productivity-table-wrap">
+                                <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
+                                    <thead>
+                                        <tr class="fw-bolder fs-6 text-gray-800 text-uppercase">
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.unit_name') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.unit_number') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.unit_floor_number') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.organization_name_ar') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.building_name') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.neighborhood') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.municipality') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.governorate') }}</th>
+                                            <th>{{ __('multilingual.area_productivity_reports.columns.assignedto') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($cso['units'] as $unit)
+                                            <tr>
+                                                <td>{{ $unit->unit_name ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->unit_number ?? __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->unit_floor_number ?? __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->tda_range }}</td>
+                                                <td>{{ $unit->pda_range }}</td>
+                                                <td>{{ $unit->no_damage_count }}</td>
+                                                <td>{{ $unit->cra_range }}</td>
+                                                <td>{{ $unit->unclassified_count }}</td>
+                                                <td>{{ $unit->organization_name ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->building_name ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->neighborhood ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->municipalitie ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->governorate ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                                <td>{{ $unit->assignedto ?: __('multilingual.area_productivity_reports.labels.not_available') }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="14" class="text-center text-muted">{{ __('multilingual.area_productivity_reports.labels.empty') }}</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
                     </div>
                 @endif
             </div>
@@ -858,7 +1012,8 @@
             const isBuildingsReport = @json($showAuditedBuildingColumns);
             const isHousingUnitsReport = @json($showAuditedHousingUnitColumns);
             const isRoadReport = @json($showRoadDamageColumns);
-            const isPublicBuildingsReport = @json(! $showRoadDamageColumns && ! $showAuditedBuildingColumns && ! $showAuditedHousingUnitColumns);
+            const isCsoSurveysReport = @json($showCsoSurveyColumns);
+            const isPublicBuildingsReport = @json(! $showRoadDamageColumns && ! $showAuditedBuildingColumns && ! $showAuditedHousingUnitColumns && ! $showCsoSurveyColumns);
             const dateRangeInput = document.getElementById('kt_daterangepicker');
             const startDateInput = document.getElementById('start_date');
             const endDateInput = document.getElementById('end_date');
@@ -954,6 +1109,14 @@
                     cells.push(numberFormat(row.no_damage_count));
                     cells.push(numberFormat(row.cra_range));
                     cells.push(numberFormat(row.unclassified_count));
+                } else if (isCsoSurveysReport) {
+                    cells.push(numberFormat(row.organizations_count));
+                    cells.push(numberFormat(row.cso_units_count));
+                    cells.push(numberFormat(row.tda_range));
+                    cells.push(numberFormat(row.pda_range));
+                    cells.push(numberFormat(row.no_damage_count));
+                    cells.push(numberFormat(row.cra_range));
+                    cells.push(numberFormat(row.unclassified_count));
                 } else if (isPublicBuildingsReport) {
                     cells.push(numberFormat(row.cra_range));
                     cells.push(numberFormat(row.pda_range));
@@ -990,6 +1153,14 @@
                     footerCells.eq(index++).text(numberFormat(summary.cra));
                     footerCells.eq(index++).text(numberFormat(summary.unclassified));
                 } else if (isHousingUnitsReport) {
+                    footerCells.eq(index++).text(numberFormat(summary.tda));
+                    footerCells.eq(index++).text(numberFormat(summary.pda));
+                    footerCells.eq(index++).text(numberFormat(summary.no_damage));
+                    footerCells.eq(index++).text(numberFormat(summary.cra));
+                    footerCells.eq(index++).text(numberFormat(summary.unclassified));
+                } else if (isCsoSurveysReport) {
+                    footerCells.eq(index++).text(numberFormat(summary.organizations_count));
+                    footerCells.eq(index++).text(numberFormat(summary.cso_units_count));
                     footerCells.eq(index++).text(numberFormat(summary.tda));
                     footerCells.eq(index++).text(numberFormat(summary.pda));
                     footerCells.eq(index++).text(numberFormat(summary.no_damage));
@@ -1075,11 +1246,22 @@
             }
 
             $('#filter_form').on('submit', function (event) {
+                if (! useAjaxFilters) {
+                    syncFlatDateRange(flatDateRangePicker.selectedDates, flatDateRangePicker);
+                    return;
+                }
+
                 event.preventDefault();
                 queueAutoFilter(0);
             });
 
             $('.area-report-select').on('change', function () {
+                if (! useAjaxFilters) {
+                    syncFlatDateRange(flatDateRangePicker.selectedDates, flatDateRangePicker);
+                    document.getElementById('filter_form').submit();
+                    return;
+                }
+
                 queueAutoFilter();
             });
 
@@ -1088,6 +1270,12 @@
                 dateRangeInput.value = '';
                 startDateInput.value = '';
                 endDateInput.value = '';
+
+                if (! useAjaxFilters) {
+                    document.getElementById('filter_form').submit();
+                    return;
+                }
+
                 queueAutoFilter(0);
             });
 

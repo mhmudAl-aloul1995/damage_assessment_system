@@ -56,6 +56,8 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             'total_count' => $this->data->sum('total_count'),
             'total_road_length_km' => $this->data->sum('total_road_length_km'),
             'housing_units_count' => $this->data->sum('housing_units_count'),
+            'organizations_count' => $this->data->sum('organizations_count'),
+            'cso_units_count' => $this->data->sum('cso_units_count'),
         ];
 
         return collect($this->data)->push($totals);
@@ -75,6 +77,11 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             $headings[] = __('multilingual.area_productivity_reports.columns.housing_units_count');
         }
 
+        if ($this->isCsoSurveysReport()) {
+            $headings[] = __('multilingual.area_productivity_reports.columns.organizations_count');
+            $headings[] = __('multilingual.area_productivity_reports.columns.cso_units_count');
+        }
+
         $damageHeadings = $this->isRoadFacilitiesReport()
             ? [
                 __('multilingual.area_productivity_reports.columns.destroyed'),
@@ -92,10 +99,11 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                     __('multilingual.area_productivity_reports.columns.cra'),
                     __('multilingual.area_productivity_reports.columns.unclassified'),
                 ]
-                : ($this->isBuildingsReport()
+                : ($this->isBuildingsReport() || $this->isCsoSurveysReport()
                     ? [
                         __('multilingual.area_productivity_reports.columns.tda'),
                         __('multilingual.area_productivity_reports.columns.pda'),
+                        ...($this->isCsoSurveysReport() ? [__('multilingual.area_productivity_reports.columns.no_damage')] : []),
                         __('multilingual.area_productivity_reports.columns.cra'),
                         __('multilingual.area_productivity_reports.columns.unclassified'),
                     ]
@@ -132,6 +140,11 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
             $mapped[] = $row->housing_units_count ?? 0;
         }
 
+        if ($this->isCsoSurveysReport()) {
+            $mapped[] = $row->organizations_count ?? 0;
+            $mapped[] = $row->cso_units_count ?? 0;
+        }
+
         $damageValues = $this->isRoadFacilitiesReport()
             ? [
                 $row->destroyed_count ?? 0,
@@ -149,10 +162,11 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                     $row->cra_range ?? 0,
                     $row->unclassified_count ?? 0,
                 ]
-                : ($this->isBuildingsReport()
+                : ($this->isBuildingsReport() || $this->isCsoSurveysReport()
                     ? [
                         $row->tda_range ?? 0,
                         $row->pda_range ?? 0,
+                        ...($this->isCsoSurveysReport() ? [$row->no_damage_count ?? 0] : []),
                         $row->cra_range ?? 0,
                         $row->unclassified_count ?? 0,
                     ]
@@ -265,6 +279,11 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         return $this->type === 'buildings';
     }
 
+    private function isCsoSurveysReport(): bool
+    {
+        return $this->type === 'cso_surveys';
+    }
+
     private function lastColumn(): string
     {
         if ($this->isRoadFacilitiesReport()) {
@@ -277,6 +296,10 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
 
         if ($this->isBuildingsReport()) {
             return 'K';
+        }
+
+        if ($this->isCsoSurveysReport()) {
+            return 'M';
         }
 
         return 'I';

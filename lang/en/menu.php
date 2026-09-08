@@ -42,6 +42,7 @@ return [
             'buildings' => 'Buildings',
             'public_buildings' => 'Public Buildings',
             'road_facilities' => 'Road Facilities',
+            'cso_surveys' => 'Civil Society Organizations',
             'building_assessment' => 'Building Assessment',
             'engineers' => 'Engineers',
         ],

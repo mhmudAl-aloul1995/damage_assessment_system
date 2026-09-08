@@ -325,6 +325,12 @@ return [
                         'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
                     ],
                     [
+                        'title' => 'menu.reports.productivity_items.cso_surveys',
+                        'url' => 'damage-assessment/reports/area-productivity/cso-surveys',
+                        'pattern' => 'damage-assessment/reports/area-productivity/cso-surveys*',
+                        'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
+                    ],
+                    [
                         'title' => 'menu.reports.productivity_items.building_assessment',
                         'url' => 'damage-assessment/reports/building-productivity',
                         'pattern' => 'damage-assessment/reports/building-productivity*',

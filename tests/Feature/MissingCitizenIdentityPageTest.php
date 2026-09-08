@@ -94,6 +94,7 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee(__('ui.missing_citizen_identities.select_all_matches'))
         ->assertSee(__('ui.missing_citizen_identities.export_excel'))
         ->assertSee(__('ui.missing_citizen_identities.import_corrections'))
+        ->assertSee(__('ui.missing_citizen_identities.download_import_report'))
         ->assertSee(__('ui.missing_citizen_identities.all_marital_statuses'))
         ->assertSee('justify-content-end gap-2 flex-wrap', false)
         ->assertSee('data-kt-missing-citizens-filter="marital-status"', false)
@@ -725,7 +726,8 @@ it('imports corrected spouse identity numbers from excel and syncs them to arcgi
         ->assertOk()
         ->assertJsonPath('approved', 1)
         ->assertJsonPath('failed', 0)
-        ->assertJsonPath('skipped', 1);
+        ->assertJsonPath('skipped', 1)
+        ->assertJsonStructure(['report_url']);
 
     expect($housingUnit->fresh()->spouse1_id)->toBe('922222222')
         ->and($housingUnit->fresh()->spouse1)->toBe('الاسم الجديد')

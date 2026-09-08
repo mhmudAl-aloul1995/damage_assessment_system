@@ -5,11 +5,15 @@ use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingSurveyArchiveObject;
+use App\Models\CsoSurvey;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
 use App\Models\HousingUnit;
 use App\Models\PublicBuildingSurvey;
 use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService;
+use App\Support\CsoDamageStatusMapper;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
@@ -201,6 +205,197 @@ it('counts archived technical committee housing units in area productivity repor
     ]);
 
     expect((int) $exportRows->firstWhere('neighborhood', 'Rimal')->cra_range)->toBe(1);
+});
+
+it('maps cso damage status values into shared report buckets', function (): void {
+    expect(CsoDamageStatusMapper::bucket('1'))->toBe(CsoDamageStatusMapper::FULLY_DAMAGED)
+        ->and(CsoDamageStatusMapper::bucket('fully_damaged2'))->toBe(CsoDamageStatusMapper::FULLY_DAMAGED)
+        ->and(CsoDamageStatusMapper::bucket('2'))->toBe(CsoDamageStatusMapper::PARTIALLY_DAMAGED)
+        ->and(CsoDamageStatusMapper::bucket('partially_damaged2'))->toBe(CsoDamageStatusMapper::PARTIALLY_DAMAGED)
+        ->and(CsoDamageStatusMapper::bucket('no_damaged'))->toBe(CsoDamageStatusMapper::NO_DAMAGE)
+        ->and(CsoDamageStatusMapper::bucket('3'))->toBe(CsoDamageStatusMapper::COMMITTEE_REVIEW)
+        ->and(CsoDamageStatusMapper::bucket('committee_review'))->toBe(CsoDamageStatusMapper::COMMITTEE_REVIEW)
+        ->and(CsoDamageStatusMapper::bucket('unexpected'))->toBe(CsoDamageStatusMapper::UNCLASSIFIED)
+        ->and(CsoDamageStatusMapper::bucket(null))->toBe(CsoDamageStatusMapper::UNCLASSIFIED);
+});
+
+it('renders cso area productivity with organizations and units tabs using shared damage buckets', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('Database Officer');
+
+    CsoSurvey::query()->create([
+        'objectid' => 8101,
+        'globalid' => 'cso-survey-total',
+        'field_status' => 'COMPLETED',
+        'assignedto' => 'cso-eng-1',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_name' => 'CSO Building A',
+        'organization_name' => 'Hope Association',
+        'building_damage_status' => '1',
+        'operational_status' => 'operational',
+        'creationdate' => '2026-09-02 10:00:00',
+        'created_at' => '2026-09-02 10:00:00',
+        'updated_at' => '2026-09-02 10:00:00',
+    ]);
+
+    CsoSurvey::query()->create([
+        'objectid' => 8102,
+        'globalid' => 'cso-survey-committee',
+        'field_status' => 'COMPLETED',
+        'assignedto' => 'cso-eng-2',
+        'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'building_name' => 'CSO Building B',
+        'organization_name' => 'Relief Society',
+        'building_damage_status' => 'committee_review',
+        'operational_status' => 'partial',
+        'creationdate' => '2026-09-03 10:00:00',
+        'created_at' => '2026-09-03 10:00:00',
+        'updated_at' => '2026-09-03 10:00:00',
+    ]);
+
+    CsoSurvey::query()->create([
+        'objectid' => 8103,
+        'globalid' => 'cso-survey-outside-filter',
+        'field_status' => 'COMPLETED',
+        'assignedto' => 'cso-eng-3',
+        'governorate' => 'North Gaza',
+        'municipalitie' => 'Jabalia',
+        'neighborhood' => 'Camp',
+        'building_damage_status' => '2',
+        'creationdate' => '2026-09-03 10:00:00',
+        'created_at' => '2026-09-03 10:00:00',
+        'updated_at' => '2026-09-03 10:00:00',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 8201,
+        'globalid' => 'cso-org-total',
+        'parentglobalid' => 'cso-survey-total',
+        'organization_name_ar' => 'جمعية الأمل',
+        'organization_name_en' => 'Hope Association',
+        'organization_acronym' => 'HOPE',
+        'operational_status' => 'operational',
+        'creationdate' => '2026-09-02 11:00:00',
+        'created_at' => '2026-09-02 11:00:00',
+        'updated_at' => '2026-09-02 11:00:00',
+    ]);
+
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 8202,
+        'globalid' => 'cso-org-committee',
+        'parentglobalid' => 'cso-survey-committee',
+        'organization_name_ar' => 'جمعية الإغاثة',
+        'organization_name_en' => 'Relief Society',
+        'organization_acronym' => 'REL',
+        'operational_status' => 'partial',
+        'creationdate' => '2026-09-03 11:00:00',
+        'created_at' => '2026-09-03 11:00:00',
+        'updated_at' => '2026-09-03 11:00:00',
+    ]);
+
+    CsoSurveyUnit::query()->create([
+        'objectid' => 8301,
+        'globalid' => 'cso-unit-total',
+        'parentglobalid' => 'cso-survey-total',
+        'unit_name' => 'Clinic',
+        'unit_number' => 1,
+        'unit_floor_number' => 0,
+        'unit_damage_status' => 'fully_damaged2',
+        'creationdate' => '2026-09-02 12:00:00',
+        'created_at' => '2026-09-02 12:00:00',
+        'updated_at' => '2026-09-02 12:00:00',
+    ]);
+
+    CsoSurveyUnit::query()->create([
+        'objectid' => 8302,
+        'globalid' => 'cso-unit-committee',
+        'parentglobalid' => 'cso-survey-committee',
+        'unit_name' => 'Office',
+        'unit_number' => 2,
+        'unit_floor_number' => 1,
+        'unit_damage_status' => '3',
+        'creationdate' => '2026-09-03 12:00:00',
+        'created_at' => '2026-09-03 12:00:00',
+        'updated_at' => '2026-09-03 12:00:00',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('reports.area-productivity.cso-surveys', [
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-08',
+            'municipalitie' => 'Gaza',
+        ]))
+        ->assertOk()
+        ->assertSee(__('multilingual.area_productivity_reports.titles.cso_surveys'), false)
+        ->assertSee('area-productivity-organizations-tab', false)
+        ->assertSee('area-productivity-units-tab', false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.organizations_count'), false)
+        ->assertSee(__('multilingual.area_productivity_reports.columns.cso_units_count'), false)
+        ->assertSee('جمعية الأمل', false)
+        ->assertSee('Clinic', false);
+
+    $response->assertViewHas('summary', function (array $summary): bool {
+        return $summary['total_records'] === 2
+            && $summary['organizations_count'] === 2
+            && $summary['cso_units_count'] === 2
+            && $summary['tda'] === 1
+            && $summary['cra'] === 1
+            && $summary['pda'] === 0
+            && $summary['no_damage'] === 0
+            && $summary['unclassified'] === 0;
+    });
+
+    $response->assertViewHas('cso', function (array $cso): bool {
+        return $cso['organizations']->count() === 2
+            && $cso['organization_summary']['tda'] === 1
+            && $cso['organization_summary']['cra'] === 1
+            && $cso['units']->count() === 2
+            && $cso['unit_summary']['tda'] === 1
+            && $cso['unit_summary']['cra'] === 1;
+    });
+
+    $this->actingAs($user)
+        ->getJson(route('reports.area-productivity.cso-surveys.data', [
+            'municipalitie' => 'Gaza',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('summary.total_records', 2)
+        ->assertJsonPath('summary.organizations_count', 2)
+        ->assertJsonPath('summary.cso_units_count', 2)
+        ->assertJsonPath('summary.cra', 1);
+
+    $exportRows = app(AreaProductivityReportService::class)->exportRows(AreaProductivityReportService::TYPE_CSO_SURVEYS, [
+        'municipalitie' => 'Gaza',
+    ]);
+    $export = new AreaProductivityExport(
+        $exportRows,
+        '',
+        '',
+        __('multilingual.area_productivity_reports.titles.cso_surveys'),
+        __('multilingual.area_productivity_reports.sectors.cso_surveys'),
+        AreaProductivityReportService::TYPE_CSO_SURVEYS,
+    );
+    $exportCollection = $export->collection();
+
+    expect($export->map($exportCollection->firstWhere('neighborhood', 'Rimal')))->toBe([
+        2,
+        2,
+        2,
+        1,
+        0,
+        0,
+        1,
+        0,
+        2,
+        'Rimal',
+        'Gaza',
+        'Gaza',
+        __('multilingual.area_productivity_reports.sectors.cso_surveys'),
+    ]);
 });
 
 it('renders separated area productivity reports for all supported datasets with filtering', function () {

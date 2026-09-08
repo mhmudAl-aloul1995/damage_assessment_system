@@ -888,6 +888,29 @@
                 alert(message);
             };
 
+            var showImportResult = function (payload) {
+                var message = payload.message || '{{ __('ui.missing_citizen_identities.import_done') }}';
+
+                if (typeof Swal !== 'undefined' && payload.report_url) {
+                    Swal.fire({
+                        html: '<div class="text-center">'
+                            + '<div class="mb-4">' + escapeHtml(message) + '</div>'
+                            + '<a class="btn btn-sm btn-light-primary" href="' + escapeHtml(payload.report_url) + '" target="_blank" rel="noopener">{{ __('ui.missing_citizen_identities.download_import_report') }}</a>'
+                            + '</div>',
+                        icon: 'success',
+                        buttonsStyling: false,
+                        confirmButtonText: '{{ __('ui.buttons.ok') }}',
+                        customClass: {
+                            confirmButton: 'btn btn-primary'
+                        }
+                    });
+
+                    return;
+                }
+
+                showToast(message + (payload.report_url ? '\n' + payload.report_url : ''), 'success');
+            };
+
             var confirmAction = function (message) {
                 if (typeof Swal === 'undefined') {
                     return Promise.resolve(confirm(message));
@@ -1150,7 +1173,7 @@
                     })
                         .then(parseJsonResponse)
                         .then(function (payload) {
-                            showToast(payload.message || '{{ __('ui.missing_citizen_identities.import_done') }}', 'success');
+                            showImportResult(payload);
                             loadCursor(cursorStack[cursorIndex]);
                         })
                         .catch(function (payload) {

@@ -43,6 +43,7 @@ return [
             'buildings' => 'المباني',
             'public_buildings' => 'المباني العامة',
             'road_facilities' => 'الطرق',
+            'cso_surveys' => 'منظمات المجتمع المدني',
             'building_assessment' => 'حصر المباني',
             'engineers' => 'المهندسين',
         ],

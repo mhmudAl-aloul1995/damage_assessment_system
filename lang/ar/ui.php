@@ -1032,6 +1032,7 @@ return [
         'actions' => 'الإجراءات',
         'export_excel' => 'تصدير Excel',
         'import_corrections' => 'استيراد التصحيحات',
+        'download_import_report' => 'تحميل تقرير الاستيراد',
         'all_name_matches' => 'كل حالات مطابقة الاسم',
         'all_issue_types' => 'كل أنواع المشاكل',
         'all_marital_statuses' => 'الحالة الاجتماعية: الكل',
