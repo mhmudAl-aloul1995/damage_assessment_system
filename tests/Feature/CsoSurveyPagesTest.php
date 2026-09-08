@@ -126,6 +126,10 @@ test('it shows cso survey listing and details like other survey pages', function
         ->assertSee('المنظمات ووحداتها')
         ->assertSee('Civil Support Organization Branch')
         ->assertSee('Ground Floor Unit')
+        ->assertSee('nav-line-tabs-2x', false)
+        ->assertSee('table-row-dashed', false)
+        ->assertSee('badge-light-warning', false)
+        ->assertSee('aria-label="حالة الضرر"', false)
         ->assertSee('جزئي')
         ->assertSee('لا يوجد جواب');
 });
@@ -227,7 +231,41 @@ it('groups cso units under their organization from the original repeat parent', 
         ->and($secondGroup['damageCounts']->get('no_damage'))->toBe(1)
         ->and($unassignedGroup['units']->pluck('id')->all())->toBe([$unassignedUnit->id])
         ->and($unassignedGroup['damageCounts']->get('unclassified'))->toBe(1);
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+    $xpath = new DOMXPath($document);
+
+    expect($xpath->query('//*[@data-organization-panel and not(@hidden)]')->length)->toBe(1)
+        ->and($xpath->query('//*[@data-organization-panel="'.$firstGroup['key'].'" and not(@hidden)]')->length)->toBe(1)
+        ->and($xpath->query('//template[@id="cso-unit-template-'.$flattenedFirstUnit->id.'"]')->length)->toBe(1)
+        ->and($xpath->query('//*[@data-unit-open="'.$flattenedFirstUnit->id.'"]')->length)->toBe(2)
+        ->and($xpath->query('//*[@data-organization-panel="'.$secondGroup['key'].'"]//*[@data-unit-row]//*[@data-damage="no_damage" and contains(@class, "badge-light-success")]')->length)->toBe(1);
 });
+
+it('renders the cso empty workspace in both layout directions', function (string $locale, string $direction): void {
+    app()->setLocale($locale);
+
+    $survey = CsoSurvey::query()->create([
+        'objectid' => 7510,
+        'globalid' => 'cso-empty-workspace',
+        'building_name' => '<script>alert("building")</script>',
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('cso-surveys.show', $survey))
+        ->assertOk()
+        ->assertSee('dir="'.$direction.'"', false)
+        ->assertSee(__('cso_details.no_organizations'))
+        ->assertSee($survey->building_name)
+        ->assertDontSee($survey->building_name, false)
+        ->assertSee('id="cso-survey-tab"', false)
+        ->assertSee('id="cso-workspace-pane"', false)
+        ->assertDontSee('data-organization-panel=', false);
+})->with([
+    'Arabic' => ['ar', 'rtl'],
+    'English' => ['en', 'ltr'],
+]);
 
 it('filters cso surveys by child organization fields from dashboard links', function (): void {
     $user = User::factory()->create();
