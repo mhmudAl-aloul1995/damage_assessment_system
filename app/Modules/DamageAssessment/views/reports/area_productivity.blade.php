@@ -33,20 +33,33 @@
         $locationPieDescription = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_HOUSING_UNITS
             ? 'Municipality and neighborhood charts for housing unit damage classifications.'
             : 'Municipality and neighborhood charts for totally and partially damaged '.$locationPieCountLabel.'.';
+        $csoSummaryPieDescription = 'Municipality and neighborhood charts for CSO survey damage classifications.';
+        $csoOrganizationPieDescription = 'Municipality and neighborhood charts for organization damage classifications.';
+        $csoUnitPieDescription = 'Municipality and neighborhood charts for unit damage classifications.';
         $locationPieCharts = [];
 
-        if ($showLocationPies) {
-            foreach ($charts['location_pies'] as $municipalityNode) {
+        $appendLocationPieCharts = function (array $locationPieNodes) use (&$locationPieCharts): void {
+            foreach ($locationPieNodes as $municipalityNode) {
                 $locationPieCharts[] = $municipalityNode['pie'];
 
                 foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie) {
                     $locationPieCharts[] = $neighborhoodPie;
                 }
             }
+        };
+
+        if ($showLocationPies) {
+            $appendLocationPieCharts($charts['location_pies']);
+
+            if ($showCsoSurveyColumns) {
+                $appendLocationPieCharts($cso['organization_charts']['location_pies'] ?? []);
+                $appendLocationPieCharts($cso['unit_charts']['location_pies'] ?? []);
+            }
         }
 
         $hasAdvancedFilters = collect($filters)->flatten()->filter()->isNotEmpty();
-        $showTabbedContent = $showLocationPies || $showCsoSurveyColumns;
+        $showMainLocationTab = $showLocationPies && ! $showCsoSurveyColumns;
+        $showTabbedContent = $showMainLocationTab || $showCsoSurveyColumns;
         $emptyTableColspan = ($showRoadDamageColumns || $showCsoSurveyColumns) ? 13 : (($showAuditedBuildingColumns || $showAuditedHousingUnitColumns) ? 11 : 9);
     @endphp
 
@@ -582,10 +595,10 @@
                                 <button class="nav-link active" id="area-productivity-table-tab" type="button"
                                     data-bs-toggle="tab" data-bs-target="#area-productivity-table-pane" role="tab"
                                     aria-controls="area-productivity-table-pane" aria-selected="true">
-                                    Report Table
+                                    {{ $showCsoSurveyColumns ? __('multilingual.area_productivity_reports.tabs.area_summary') : 'Report Table' }}
                                 </button>
                             </li>
-                            @if ($showLocationPies)
+                            @if ($showMainLocationTab)
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="area-productivity-location-charts-tab" type="button"
                                         data-bs-toggle="tab" data-bs-target="#area-productivity-location-charts-pane"
@@ -616,85 +629,15 @@
                     <div class="tab-content">
                 @endif
 
-                @if ($showLocationPies)
+                @if ($showMainLocationTab)
                     <div class="tab-pane fade" id="area-productivity-location-charts-pane" role="tabpanel"
                         aria-labelledby="area-productivity-location-charts-tab">
-                        <div class="card-body p-0">
-                            <div class="px-8 pt-6">
-                                <h3 class="fw-bold mb-1">Location Pie Charts</h3>
-                                <div class="text-muted fs-7">{{ $locationPieDescription }}</div>
-                            </div>
-
-                            @if (count($charts['location_pies']))
-                                <div class="location-pie-tree mt-5">
-                                    @foreach ($charts['location_pies'] as $municipalityNode)
-                                        @php
-                                            $municipalityPie = $municipalityNode['pie'];
-                                            $showNeighborhoodPies = count($municipalityNode['neighborhoods']) > 0;
-                                        @endphp
-                                        <div class="location-pie-section">
-                                            <button class="location-pie-section-toggle" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#collapse_{{ $municipalityPie['id'] }}"
-                                                aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
-                                                aria-controls="collapse_{{ $municipalityPie['id'] }}">
-                                                <span>
-                                                    <span class="location-pie-section-title d-block">{{ $municipalityPie['title'] }}</span>
-                                                    <span class="location-pie-section-meta">
-                                                        Municipality | {{ number_format($municipalityPie['items_count']) }} {{ $locationPieCountLabel }}
-                                                        @if ($showNeighborhoodPies)
-                                                            | {{ count($municipalityNode['neighborhoods']) }} neighborhoods
-                                                        @endif
-                                                    </span>
-                                                    <span class="location-collapse-cue d-block mt-1">
-                                                        <span class="when-closed">Click to expand</span>
-                                                        <span class="when-open">Click to collapse</span>
-                                                    </span>
-                                                </span>
-                                                <span class="location-collapse-icon" aria-hidden="true"></span>
-                                            </button>
-
-                                            <div id="collapse_{{ $municipalityPie['id'] }}"
-                                                class="collapse location-pie-collapse {{ $loop->first ? 'show' : '' }}">
-                                                <div class="location-primary-body">
-                                                    @include('damage-assessment::reports.partials.location_productivity_neighborhood', [
-                                                        'pie' => $municipalityPie,
-                                                        'variant' => 'primary',
-                                                        'neighborhoodsCount' => $showNeighborhoodPies ? count($municipalityNode['neighborhoods']) : null,
-                                                        'countLabel' => $locationPieCountLabel,
-                                                        'firstMetricLabel' => __('multilingual.area_productivity_reports.metrics.totally_damaged'),
-                                                        'secondMetricLabel' => __('multilingual.area_productivity_reports.metrics.partially_damaged'),
-                                                        'firstMetricClass' => 'totally-damaged',
-                                                        'secondMetricClass' => 'partially-damaged',
-                                                    ])
-                                                </div>
-
-                                                @if ($showNeighborhoodPies)
-                                                    <div class="p-4 pt-0">
-                                                        <div class="location-municipality-title mb-3">
-                                                            Neighborhoods under {{ $municipalityPie['title'] }}
-                                                        </div>
-                                                        <div class="location-neighborhood-grid">
-                                                            @foreach ($municipalityNode['neighborhoods'] as $neighborhoodPie)
-                                                                @include('damage-assessment::reports.partials.location_productivity_neighborhood', [
-                                                                    'pie' => $neighborhoodPie,
-                                                                    'countLabel' => $locationPieCountLabel,
-                                                                    'firstMetricLabel' => __('multilingual.area_productivity_reports.metrics.totally_damaged'),
-                                                                    'secondMetricLabel' => __('multilingual.area_productivity_reports.metrics.partially_damaged'),
-                                                                    'firstMetricClass' => 'totally-damaged',
-                                                                    'secondMetricClass' => 'partially-damaged',
-                                                                ])
-                                                            @endforeach
-                                                        </div>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="p-10 text-center text-muted">No matching damaged {{ $locationPieCountLabel }}.</div>
-                            @endif
-                        </div>
+                        @include('damage-assessment::reports.partials.location_productivity_tree', [
+                            'locationPieNodes' => $charts['location_pies'],
+                            'countLabel' => $locationPieCountLabel,
+                            'description' => $locationPieDescription,
+                            'emptyLabel' => 'No matching damaged '.$locationPieCountLabel.'.',
+                        ])
                     </div>
                 @endif
 
@@ -702,6 +645,38 @@
                     <div class="tab-pane fade show active" id="area-productivity-table-pane" role="tabpanel"
                         aria-labelledby="area-productivity-table-tab">
                 @endif
+                    @if ($showCsoSurveyColumns)
+                        <div class="card-body pb-0">
+                            <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-6 fw-bold" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="area-productivity-summary-table-tab" type="button"
+                                        data-bs-toggle="tab" data-bs-target="#area-productivity-summary-table-pane"
+                                        role="tab" aria-controls="area-productivity-summary-table-pane" aria-selected="true">
+                                        Report Table
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="area-productivity-summary-location-charts-tab" type="button"
+                                        data-bs-toggle="tab" data-bs-target="#area-productivity-summary-location-charts-pane"
+                                        role="tab" aria-controls="area-productivity-summary-location-charts-pane" aria-selected="false">
+                                        Location Pie Charts
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="tab-content">
+                            <div class="tab-pane fade" id="area-productivity-summary-location-charts-pane" role="tabpanel"
+                                aria-labelledby="area-productivity-summary-location-charts-tab">
+                                @include('damage-assessment::reports.partials.location_productivity_tree', [
+                                    'locationPieNodes' => $charts['location_pies'],
+                                    'countLabel' => 'CSO surveys',
+                                    'description' => $csoSummaryPieDescription,
+                                    'emptyLabel' => 'No matching CSO surveys.',
+                                ])
+                            </div>
+                            <div class="tab-pane fade show active" id="area-productivity-summary-table-pane" role="tabpanel"
+                                aria-labelledby="area-productivity-summary-table-tab">
+                    @endif
                     <div class="card-body py-4 area-productivity-table-wrap">
                         <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle" id="area_productivity_table">
                             <thead>
@@ -852,11 +827,45 @@
                             </tfoot>
                         </table>
                     </div>
+                    @if ($showCsoSurveyColumns)
+                            </div>
+                        </div>
+                    @endif
                 @if ($showTabbedContent)
                     </div>
                     @if ($showCsoSurveyColumns)
                         <div class="tab-pane fade" id="area-productivity-organizations-pane" role="tabpanel"
                             aria-labelledby="area-productivity-organizations-tab">
+                            <div class="card-body pb-0">
+                                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-6 fw-bold" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="area-productivity-organizations-table-tab" type="button"
+                                            data-bs-toggle="tab" data-bs-target="#area-productivity-organizations-table-pane"
+                                            role="tab" aria-controls="area-productivity-organizations-table-pane" aria-selected="true">
+                                            Report Table
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="area-productivity-organizations-location-charts-tab" type="button"
+                                            data-bs-toggle="tab" data-bs-target="#area-productivity-organizations-location-charts-pane"
+                                            role="tab" aria-controls="area-productivity-organizations-location-charts-pane" aria-selected="false">
+                                            Location Pie Charts
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="tab-content">
+                                <div class="tab-pane fade" id="area-productivity-organizations-location-charts-pane" role="tabpanel"
+                                    aria-labelledby="area-productivity-organizations-location-charts-tab">
+                                    @include('damage-assessment::reports.partials.location_productivity_tree', [
+                                        'locationPieNodes' => $cso['organization_charts']['location_pies'],
+                                        'countLabel' => 'organizations',
+                                        'description' => $csoOrganizationPieDescription,
+                                        'emptyLabel' => 'No matching organizations.',
+                                    ])
+                                </div>
+                                <div class="tab-pane fade show active" id="area-productivity-organizations-table-pane" role="tabpanel"
+                                    aria-labelledby="area-productivity-organizations-table-tab">
                             <div class="card-body py-4 area-productivity-table-wrap">
                                 <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
                                     <thead>
@@ -909,10 +918,42 @@
                                     </tfoot>
                                 </table>
                             </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="tab-pane fade" id="area-productivity-units-pane" role="tabpanel"
                             aria-labelledby="area-productivity-units-tab">
+                            <div class="card-body pb-0">
+                                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-transparent fs-6 fw-bold" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="area-productivity-units-table-tab" type="button"
+                                            data-bs-toggle="tab" data-bs-target="#area-productivity-units-table-pane"
+                                            role="tab" aria-controls="area-productivity-units-table-pane" aria-selected="true">
+                                            Report Table
+                                        </button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="area-productivity-units-location-charts-tab" type="button"
+                                            data-bs-toggle="tab" data-bs-target="#area-productivity-units-location-charts-pane"
+                                            role="tab" aria-controls="area-productivity-units-location-charts-pane" aria-selected="false">
+                                            Location Pie Charts
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="tab-content">
+                                <div class="tab-pane fade" id="area-productivity-units-location-charts-pane" role="tabpanel"
+                                    aria-labelledby="area-productivity-units-location-charts-tab">
+                                    @include('damage-assessment::reports.partials.location_productivity_tree', [
+                                        'locationPieNodes' => $cso['unit_charts']['location_pies'],
+                                        'countLabel' => 'units',
+                                        'description' => $csoUnitPieDescription,
+                                        'emptyLabel' => 'No matching units.',
+                                    ])
+                                </div>
+                                <div class="tab-pane fade show active" id="area-productivity-units-table-pane" role="tabpanel"
+                                    aria-labelledby="area-productivity-units-table-tab">
                             <div class="card-body py-4 area-productivity-table-wrap">
                                 <table class="table table-rounded table-striped table-row-bordered gy-7 text-center align-middle">
                                     <thead>
@@ -964,6 +1005,8 @@
                                         </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+                                </div>
                             </div>
                         </div>
                     @endif
@@ -1348,8 +1391,9 @@
                     collapseElement.addEventListener('shown.bs.collapse', renderVisibleLocationPieCharts);
                 });
 
-                document.getElementById('area-productivity-location-charts-tab')
-                    ?.addEventListener('shown.bs.tab', renderVisibleLocationPieCharts);
+                document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(function (tabButton) {
+                    tabButton.addEventListener('shown.bs.tab', renderVisibleLocationPieCharts);
+                });
             @endif
         });
     </script>

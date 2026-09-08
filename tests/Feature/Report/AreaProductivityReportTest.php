@@ -331,8 +331,12 @@ it('renders cso area productivity with organizations and units tabs using shared
         ]))
         ->assertOk()
         ->assertSee(__('multilingual.area_productivity_reports.titles.cso_surveys'), false)
+        ->assertDontSee('area-productivity-location-charts-tab', false)
+        ->assertSee('area-productivity-summary-location-charts-tab', false)
         ->assertSee('area-productivity-organizations-tab', false)
+        ->assertSee('area-productivity-organizations-location-charts-tab', false)
         ->assertSee('area-productivity-units-tab', false)
+        ->assertSee('area-productivity-units-location-charts-tab', false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.organizations_count'), false)
         ->assertSee(__('multilingual.area_productivity_reports.columns.cso_units_count'), false);
 
@@ -347,9 +351,19 @@ it('renders cso area productivity with organizations and units tabs using shared
             && $summary['unclassified'] === 0;
     });
 
+    $response->assertViewHas('charts', function (array $charts): bool {
+        $municipalityPie = $charts['location_pies'][0]['pie'] ?? null;
+
+        return $municipalityPie !== null
+            && str_starts_with($municipalityPie['id'], 'cso_summary_municipality_')
+            && $municipalityPie['series'] === [1, 0, 0, 1, 0];
+    });
+
     $response->assertViewHas('cso', function (array $cso): bool {
         $organizationRow = $cso['organizations']->first();
         $unitRow = $cso['units']->first();
+        $organizationPie = $cso['organization_charts']['location_pies'][0]['pie'] ?? null;
+        $unitPie = $cso['unit_charts']['location_pies'][0]['pie'] ?? null;
 
         return $cso['organizations']->count() === 1
             && $organizationRow !== null
@@ -358,13 +372,19 @@ it('renders cso area productivity with organizations and units tabs using shared
             && $cso['organization_summary']['tda'] === 1
             && $cso['organization_summary']['cra'] === 1
             && $cso['organization_summary']['engineers'] === 2
+            && $organizationPie !== null
+            && str_starts_with($organizationPie['id'], 'cso_organizations_municipality_')
+            && $organizationPie['series'] === [1, 0, 0, 1, 0]
             && $cso['units']->count() === 1
             && $unitRow !== null
             && (int) $unitRow->total_count === 2
             && (int) $unitRow->no_eng === 2
             && $cso['unit_summary']['tda'] === 1
             && $cso['unit_summary']['cra'] === 1
-            && $cso['unit_summary']['engineers'] === 2;
+            && $cso['unit_summary']['engineers'] === 2
+            && $unitPie !== null
+            && str_starts_with($unitPie['id'], 'cso_units_municipality_')
+            && $unitPie['series'] === [1, 0, 0, 1, 0];
     });
 
     $this->actingAs($user)

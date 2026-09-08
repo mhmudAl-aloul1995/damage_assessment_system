@@ -95,6 +95,8 @@ class AreaProductivityReportService
                 'units' => collect(),
                 'organization_summary' => [],
                 'unit_summary' => [],
+                'organization_charts' => ['location_pies' => []],
+                'unit_charts' => ['location_pies' => []],
             ];
 
         return [
@@ -120,7 +122,11 @@ class AreaProductivityReportService
             'filter_options' => $this->filterOptions($type),
             'charts' => [
                 'location_pies' => $this->supportsLocationPieCharts($type)
-                    ? $this->buildLocationPieCharts($rows, $type)
+                    ? $this->buildLocationPieCharts(
+                        $rows,
+                        $type,
+                        $type === self::TYPE_CSO_SURVEYS ? 'cso_summary' : null,
+                    )
                     : [],
             ],
             'summary' => [
@@ -461,6 +467,12 @@ class AreaProductivityReportService
             'units' => $units,
             'organization_summary' => $this->damageSummary($organizations),
             'unit_summary' => $this->damageSummary($units),
+            'organization_charts' => [
+                'location_pies' => $this->buildLocationPieCharts($organizations, self::TYPE_CSO_SURVEYS, 'cso_organizations'),
+            ],
+            'unit_charts' => [
+                'location_pies' => $this->buildLocationPieCharts($units, self::TYPE_CSO_SURVEYS, 'cso_units'),
+            ],
         ];
     }
 
@@ -896,10 +908,10 @@ class AreaProductivityReportService
      * @param  Collection<int, object>  $rows
      * @return array<int, array{pie: array<string, mixed>, neighborhoods: array<int, array<string, mixed>>}>
      */
-    private function buildLocationPieCharts(Collection $rows, string $type): array
+    private function buildLocationPieCharts(Collection $rows, string $type, ?string $idPrefixOverride = null): array
     {
         $metrics = $this->locationPieMetrics($type);
-        $idPrefix = match ($type) {
+        $idPrefix = $idPrefixOverride ?? match ($type) {
             self::TYPE_HOUSING_UNITS => 'housing_units',
             self::TYPE_PUBLIC_BUILDINGS => 'public_buildings',
             self::TYPE_ROAD_FACILITIES => 'road_facilities',
@@ -989,6 +1001,16 @@ class AreaProductivityReportService
      */
     private function locationPieMetrics(string $type): array
     {
+        if ($type === self::TYPE_CSO_SURVEYS) {
+            return [
+                ['key' => 'tda_range', 'label' => __('multilingual.area_productivity_reports.metrics.totally_damaged'), 'color' => '#F1416C'],
+                ['key' => 'pda_range', 'label' => __('multilingual.area_productivity_reports.metrics.partially_damaged'), 'color' => '#FFC700'],
+                ['key' => 'no_damage_count', 'label' => __('multilingual.area_productivity_reports.metrics.no_damage'), 'color' => '#50CD89'],
+                ['key' => 'cra_range', 'label' => __('multilingual.area_productivity_reports.metrics.committee_review'), 'color' => '#E879F9'],
+                ['key' => 'unclassified_count', 'label' => __('multilingual.area_productivity_reports.metrics.unclassified'), 'color' => '#7E8299'],
+            ];
+        }
+
         if ($type === self::TYPE_HOUSING_UNITS) {
             return [
                 ['key' => 'tda_range', 'label' => __('multilingual.area_productivity_reports.metrics.totally_damaged'), 'color' => '#F1416C'],
@@ -1042,6 +1064,7 @@ class AreaProductivityReportService
             self::TYPE_HOUSING_UNITS,
             self::TYPE_PUBLIC_BUILDINGS,
             self::TYPE_ROAD_FACILITIES,
+            self::TYPE_CSO_SURVEYS,
         ], true);
     }
 
