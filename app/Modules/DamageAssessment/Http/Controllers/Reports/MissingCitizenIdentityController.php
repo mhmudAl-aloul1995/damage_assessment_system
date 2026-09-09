@@ -18,6 +18,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -469,11 +470,14 @@ class MissingCitizenIdentityController extends Controller
         $skipped = 0;
         $processedUpdates = 0;
         $importReportRows = [];
+        $progressKey = 'missing-citizen-corrections:'.$request->user()->id.':'.hash('sha256', serialize($rows->all()));
+        $syncedCorrections = Cache::get($progressKey, []);
         $skipReasons = [
             'invalid_row' => 0,
             'missing_unit' => 0,
             'old_identity_mismatch' => 0,
             'already_current' => 0,
+            'previously_synced' => 0,
             'import_limit_reached' => 0,
             'technical_error' => 0,
         ];
@@ -481,12 +485,21 @@ class MissingCitizenIdentityController extends Controller
         foreach ($dataRows as $index => $row) {
             $excelRowNumber = $index + 2;
 
-            foreach ($this->missingCitizenIdentityCorrectionsFromRow((array) $row, $headerRow->all()) as $correction) {
+            foreach ($this->missingCitizenIdentityCorrectionsFromRow((array) $row, $headerRow->all()) as $correctionIndex => $correction) {
                 try {
                     if ($correction === null) {
                         $skipped++;
                         $skipReasons['invalid_row']++;
                         $importReportRows[] = $this->importReportRow($excelRowNumber, 'invalid_row', null, (array) $row);
+
+                        continue;
+                    }
+
+                    $correctionKey = $excelRowNumber.':'.$correctionIndex;
+
+                    if (isset($syncedCorrections[$correctionKey])) {
+                        $skipped++;
+                        $skipReasons['previously_synced']++;
 
                         continue;
                     }
@@ -501,6 +514,8 @@ class MissingCitizenIdentityController extends Controller
                     if ($result['success']) {
                         $approved++;
                         $processedUpdates++;
+                        $syncedCorrections[$correctionKey] = true;
+                        Cache::put($progressKey, $syncedCorrections, now()->addWeek());
                     } elseif (($result['reason'] ?? null) !== null && array_key_exists($result['reason'], $skipReasons)) {
                         $skipped++;
                         $skipReasons[$result['reason']]++;
@@ -508,7 +523,8 @@ class MissingCitizenIdentityController extends Controller
                     } else {
                         $failed++;
                         $processedUpdates++;
-                        $importReportRows[] = $this->importReportRow($excelRowNumber, 'technical_error', $correction, (array) $row);
+                        $reason = ($result['arcgis_success'] ?? null) === false ? 'arcgis_sync_failed' : 'technical_error';
+                        $importReportRows[] = $this->importReportRow($excelRowNumber, $reason, $correction, (array) $row);
                     }
                 } catch (Throwable $exception) {
                     $failed++;
@@ -523,6 +539,10 @@ class MissingCitizenIdentityController extends Controller
                     ]);
                 }
             }
+        }
+
+        if ($skipReasons['import_limit_reached'] === 0 && $failed === 0) {
+            Cache::forget($progressKey);
         }
 
         $details = $this->importSkipDetails($skipReasons);
@@ -787,28 +807,12 @@ class MissingCitizenIdentityController extends Controller
         return filled($value) && ! in_array(trim($value), ['-', '—', '–'], true);
     }
 
-    /**
-     * @param  array{unit_objectid: string, identity_number_field: string, identity_name_field: string|null, old_id_number: string|null, new_id_number: string|null, full_name: string}  $correction
-     */
-    private function correctionReport(array $correction): ?MissingCitizenIdentityReport
+    private function correctionReport(HousingUnit $housingUnit, string $identityNumberField): ?MissingCitizenIdentityReport
     {
-        $query = MissingCitizenIdentityReport::query()
-            ->select('missing_citizen_identity_reports.*')
-            ->join('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
-            ->whereNull('missing_citizen_identity_reports.approved_at')
-            ->where('housing_units.objectid', $correction['unit_objectid'])
-            ->where('missing_citizen_identity_reports.identity_number_field', $correction['identity_number_field'])
-            ->orderBy('missing_citizen_identity_reports.id');
-
-        if ($correction['old_id_number'] !== null) {
-            $query->where(function (Builder $query) use ($correction): void {
-                $query
-                    ->where('missing_citizen_identity_reports.id_number', $correction['old_id_number'])
-                    ->orWhere('housing_units.'.$correction['identity_number_field'], $correction['old_id_number']);
-            });
-        }
-
-        return $query
+        return MissingCitizenIdentityReport::query()
+            ->where('housing_unit_id', $housingUnit->id)
+            ->where('identity_number_field', $identityNumberField)
+            ->orderBy('id')
             ->first();
     }
 
@@ -854,25 +858,11 @@ class MissingCitizenIdentityController extends Controller
             ];
         }
 
-        $housingUnitUpdates = array_filter(
-            $housingUnitUpdates,
-            fn (string $value, string $field): bool => trim((string) $housingUnit->{$field}) !== $value,
-            ARRAY_FILTER_USE_BOTH
-        );
-
-        if ($housingUnitUpdates === []) {
-            return ['success' => false, 'reason' => 'already_current'];
-        }
-
-        if ($correction['old_id_number'] !== null && $oldIdNumber !== $correction['old_id_number']) {
-            return ['success' => false, 'reason' => 'old_identity_mismatch'];
-        }
-
         if (! $canUpdate) {
             return ['success' => false, 'reason' => 'import_limit_reached'];
         }
 
-        $report = $newIdNumber !== null ? $this->correctionReport($correction) : null;
+        $report = $newIdNumber !== null ? $this->correctionReport($housingUnit, $identityNumberField) : null;
         $newFullName = $correction['full_name'] !== ''
             ? $correction['full_name']
             : (string) $housingUnit->{$correction['identity_name_field']};
@@ -918,14 +908,14 @@ class MissingCitizenIdentityController extends Controller
         ])->save();
 
         return [
-            'success' => true,
+            'success' => (bool) ($arcgisResult['success'] ?? false),
             'arcgis_success' => (bool) ($arcgisResult['success'] ?? false),
             'arcgis_status' => $arcgisResult['status'] ?? 'failed',
         ];
     }
 
     /**
-     * @param  array{invalid_row: int, missing_unit: int, old_identity_mismatch: int, already_current: int, import_limit_reached: int, technical_error: int}  $skipReasons
+     * @param  array<string, int>  $skipReasons
      */
     private function importSkipDetails(array $skipReasons): string
     {
