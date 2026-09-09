@@ -365,6 +365,8 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/', [userController::class, 'store'])->name('users.store');
 
+        Route::post('/bulk-status', [userController::class, 'bulkUpdateStatus'])->name('users.bulk-status');
+
         Route::get('/{user}/edit', [userController::class, 'edit'])->name('users.edit');
         Route::put('/{user}', [userController::class, 'update'])->name('users.update');
 

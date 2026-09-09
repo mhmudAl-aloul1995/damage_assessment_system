@@ -20,6 +20,21 @@
 
             <div class="card-toolbar">
                 <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-light-success me-3" id="activate_selected_users" disabled>
+                        <i class="ki-duotone ki-check fs-2"></i>
+                        {{ __('ui.users.activate_selected') }}
+                    </button>
+
+                    <button type="button" class="btn btn-light-danger me-3" id="deactivate_selected_users" disabled>
+                        <i class="ki-duotone ki-cross fs-2"></i>
+                        {{ __('ui.users.deactivate_selected') }}
+                    </button>
+
+                    <button type="button" class="btn btn-light-info me-3" id="select_all_users" disabled>
+                        <i class="ki-duotone ki-check-square fs-2"></i>
+                        {{ __('ui.users.select_all_results') }}
+                    </button>
+
                     <button type="button" class="btn btn-light-primary me-3" id="reload_users_table">
                         <i class="ki-duotone ki-arrows-circle fs-2"></i>
                         {{ __('ui.buttons.reload') }}
@@ -37,13 +52,18 @@
             <table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_table_user">
                 <thead>
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th class="w-10px pe-2"></th>
+                        <th class="w-10px pe-2">
+                            <div class="form-check form-check-sm form-check-custom form-check-solid">
+                                <input class="form-check-input" type="checkbox" id="users_select_all" />
+                            </div>
+                        </th>
                         <th class="min-w-150px">{{ __('ui.users.full_name') }}</th>
                         <th class="min-w-150px">{{ __('ui.users.name_en') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.email') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.id_no') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.contract_type') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.phone') }}</th>
+                        <th class="min-w-100px">{{ __('ui.users.status') }}</th>
                         <th class="min-w-125px">{{ __('ui.users.created_at') }}</th>
                         <th class="min-w-150px">ArcGIS Username</th>
                         <th class="text-end min-w-100px">{{ __('ui.users.actions') }}</th>
@@ -278,10 +298,18 @@
             createTitle: @json(__('ui.users.create_title')),
             editTitle: @json(__('ui.users.edit_title')),
             ok: @json(__('ui.buttons.ok')),
+            cancel: @json(__('ui.buttons.cancel')),
             error: @json(__('ui.messages.unexpected_error')),
             retry: @json(__('ui.buttons.try_again')),
             loadFailed: @json(__('ui.users.load_failed')),
             saved: @json(__('ui.users.saved')),
+            activateConfirm: @json(__('ui.users.activate_confirm')),
+            deactivateConfirm: @json(__('ui.users.deactivate_confirm')),
+            activateSelected: @json(__('ui.users.activate_selected')),
+            deactivateSelected: @json(__('ui.users.deactivate_selected')),
+            selectUsersRequired: @json(__('ui.users.select_users_required')),
+            selectAllResults: @json(__('ui.users.select_all_results')),
+            allResultsSelected: @json(__('ui.users.all_results_selected')),
             dataTableLanguageUrl: @json(app()->getLocale() === 'ar' ? '//cdn.datatables.net/plug-ins/1.13.4/i18n/ar.json' : '//cdn.datatables.net/plug-ins/1.13.4/i18n/en-GB.json'),
         };
 
@@ -310,6 +338,8 @@
         });
 
         let usersTable;
+        let selectedUserIds = new Set();
+        let allUsersSelected = false;
 
         function showSwalError(message) {
             Swal.fire({
@@ -320,6 +350,89 @@
                 customClass: {
                     confirmButton: "btn btn-danger"
                 }
+            });
+        }
+
+        function selectedUserIdsArray() {
+            return Array.from(selectedUserIds);
+        }
+
+        function updateBulkButtonsState() {
+            const hasSelectedUsers = allUsersSelected || selectedUserIds.size > 0;
+            const hasVisibleUsers = $('.user-select-checkbox').length > 0;
+
+            $('#activate_selected_users, #deactivate_selected_users').prop('disabled', !hasSelectedUsers);
+            $('#select_all_users').prop('disabled', !hasVisibleUsers);
+        }
+
+        function syncSelectionControls() {
+            $('.user-select-checkbox').each(function () {
+                $(this).prop('checked', allUsersSelected || selectedUserIds.has($(this).val()));
+            });
+
+            const visibleCheckboxes = $('.user-select-checkbox');
+            const checkedVisibleCheckboxes = visibleCheckboxes.filter(':checked');
+            $('#users_select_all').prop(
+                'checked',
+                visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedVisibleCheckboxes.length
+            );
+
+            updateBulkButtonsState();
+        }
+
+        function updateUserStatus(userIds, isActive) {
+            if (!allUsersSelected && !userIds.length) {
+                showSwalError(userTranslations.selectUsersRequired);
+                return;
+            }
+
+            Swal.fire({
+                text: allUsersSelected
+                    ? userTranslations.allResultsSelected
+                    : (isActive ? userTranslations.activateConfirm : userTranslations.deactivateConfirm),
+                icon: 'warning',
+                showCancelButton: true,
+                buttonsStyling: false,
+                confirmButtonText: isActive ? userTranslations.activateSelected : userTranslations.deactivateSelected,
+                cancelButtonText: userTranslations.cancel,
+                customClass: {
+                    confirmButton: isActive ? 'btn btn-success' : 'btn btn-danger',
+                    cancelButton: 'btn btn-light'
+                }
+            }).then(function (result) {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                $.ajax({
+                    url: "{{ route('users.bulk-status') }}",
+                    type: 'POST',
+                    data: {
+                        user_ids: userIds,
+                        all: allUsersSelected ? 1 : 0,
+                        search: allUsersSelected ? $('[data-kt-user-table-filter="search"]').val() : '',
+                        is_active: isActive ? 1 : 0
+                    },
+                    success: function (response) {
+                        selectedUserIds.clear();
+                        allUsersSelected = false;
+
+                        Swal.fire({
+                            text: response.message,
+                            icon: 'success',
+                            buttonsStyling: false,
+                            confirmButtonText: userTranslations.ok,
+                            customClass: {
+                                confirmButton: 'btn btn-primary'
+                            }
+                        }).then(function () {
+                            usersTable.ajax.reload(null, false);
+                        });
+                    },
+                    error: function (xhr) {
+                        showSwalError(xhr.responseJSON?.message ?? userTranslations.error);
+                    }
+                });
             });
         }
 
@@ -414,6 +527,7 @@
                     { data: 'id_no', name: 'id_no' },
                     { data: 'contract_type', name: 'contract_type' },
                     { data: 'phone', name: 'phone' },
+                    { data: 'status', name: 'is_active', searchable: false },
                     { data: 'created_at', name: 'created_at' },
                     { data: 'username_arcgis', name: 'username_arcgis' },
                     { data: 'action', name: 'action', searchable: false, orderable: false }
@@ -423,15 +537,61 @@
                     if (typeof KTMenu !== 'undefined') {
                         KTMenu.createInstances();
                     }
+
+                    syncSelectionControls();
                 }
             });
 
+            $('#kt_table_user').on('change', '.user-select-checkbox', function () {
+                allUsersSelected = false;
+
+                if (this.checked) {
+                    selectedUserIds.add(this.value);
+                } else {
+                    selectedUserIds.delete(this.value);
+                }
+
+                syncSelectionControls();
+            });
+
+            $('#users_select_all').on('change', function () {
+                allUsersSelected = false;
+
+                $('.user-select-checkbox').each(function () {
+                    if ($('#users_select_all').prop('checked')) {
+                        selectedUserIds.add($(this).val());
+                    } else {
+                        selectedUserIds.delete($(this).val());
+                    }
+                });
+
+                syncSelectionControls();
+            });
+
             $('[data-kt-user-table-filter="search"]').on('keyup', function () {
+                selectedUserIds.clear();
+                allUsersSelected = false;
                 usersTable.search(this.value).draw();
             });
 
             $('#reload_users_table').on('click', function () {
+                selectedUserIds.clear();
+                allUsersSelected = false;
                 usersTable.ajax.reload(null, false);
+            });
+
+            $('#select_all_users').on('click', function () {
+                selectedUserIds.clear();
+                allUsersSelected = true;
+                syncSelectionControls();
+            });
+
+            $('#activate_selected_users').on('click', function () {
+                updateUserStatus(selectedUserIdsArray(), true);
+            });
+
+            $('#deactivate_selected_users').on('click', function () {
+                updateUserStatus(selectedUserIdsArray(), false);
             });
 
             $('#open_add_user_modal').on('click', function () {

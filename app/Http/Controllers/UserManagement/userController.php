@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\UserManagement;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UserManagement\BulkUpdateUserStatusRequest;
 use App\Mail\WelcomeUserMail;
 use App\Models\User;
 use App\services\ImageService;
 use App\Support\Phase\PhaseContext;
 use Hash;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Spatie\Permission\Models\Permission;
@@ -27,7 +31,7 @@ class userController extends Controller
         $this->imageService = $imageService;
         $this->middleware('role_or_permission:Database Officer|users.view')->only(['index', 'show']);
         $this->middleware('role_or_permission:Database Officer|users.create')->only('store');
-        $this->middleware('role_or_permission:Database Officer|users.update')->only(['edit', 'update']);
+        $this->middleware('role_or_permission:Database Officer|users.update')->only(['edit', 'update', 'bulkUpdateStatus']);
         $this->middleware('role_or_permission:Database Officer|users.delete')->only('destroy');
     }
 
@@ -55,7 +59,7 @@ class userController extends Controller
         return DataTables::of($users)
             ->addColumn('checkbox', function ($user) {
                 return '<div class="form-check form-check-sm form-check-custom form-check-solid">
-                    <input class="form-check-input" type="checkbox" value="'.$user->id.'" />
+                    <input class="form-check-input user-select-checkbox" type="checkbox" value="'.$user->id.'" />
                 </div>';
             })
             ->editColumn('name', fn ($user) => $user->name ?? '-')
@@ -65,16 +69,29 @@ class userController extends Controller
             ->editColumn('id_no', fn ($user) => $user->id_no ?? '-')
             ->editColumn('contract_type', fn ($user) => strtoupper($user->contract_type ?? '-'))
             ->editColumn('phone', fn ($user) => $user->phone ?? '-')
+            ->addColumn('status', function ($user) {
+                $class = $user->is_active ? 'badge-light-success' : 'badge-light-danger';
+                $label = $user->is_active ? __('ui.users.active') : __('ui.users.inactive');
+
+                return '<span class="badge '.$class.'">'.e($label).'</span>';
+            })
             ->editColumn('created_at', fn ($user) => optional($user->created_at)->format('Y-m-d h:i A'))
             ->addColumn('action', function ($user) {
+                $statusAction = $user->is_active
+                    ? '<a href="javascript:;" onclick="updateUserStatus(['.$user->id.'], false)" class="menu-link px-3 text-danger">'.e(__('ui.users.deactivate')).'</a>'
+                    : '<a href="javascript:;" onclick="updateUserStatus(['.$user->id.'], true)" class="menu-link px-3 text-success">'.e(__('ui.users.activate')).'</a>';
+
                 return '
         <a href="#" class="btn btn-light btn-active-light-primary btn-flex btn-center btn-sm" data-kt-menu-trigger="click" data-kt-menu-placement="bottom-end">
             '.e(__('ui.users.actions')).'
             <i class="ki-duotone ki-down fs-5 ms-1"></i>
         </a>
-        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-125px py-4" data-kt-menu="true">
+        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4" data-kt-menu="true">
             <div class="menu-item px-3">
                 <a href="javascript:;" onclick="showUser('.$user->id.')" class="menu-link px-3">'.e(__('ui.buttons.edit')).'</a>
+            </div>
+            <div class="menu-item px-3">
+                '.$statusAction.'
             </div>
             <div class="menu-item px-3">
                 <a href="javascript:;" class="menu-link px-3">'.e(__('ui.buttons.delete')).'</a>
@@ -82,8 +99,76 @@ class userController extends Controller
         </div>
     ';
             })
-            ->rawColumns(['checkbox', 'action'])
+            ->rawColumns(['checkbox', 'status', 'action'])
             ->make(true);
+    }
+
+    public function bulkUpdateStatus(BulkUpdateUserStatusRequest $request): JsonResponse
+    {
+        $usersQuery = User::query()
+            ->where('id', '!=', Auth::id());
+
+        if ($request->boolean('all')) {
+            $this->applyUserSearchFilter($usersQuery, $request->string('search')->toString());
+        } else {
+            $userIds = collect($request->input('user_ids', []))
+                ->map(fn (mixed $userId): int => (int) $userId)
+                ->unique()
+                ->reject(fn (int $userId): bool => $userId === Auth::id())
+                ->values();
+
+            $usersQuery->whereIn('id', $userIds);
+        }
+
+        $matchedUserIds = $usersQuery->pluck('id');
+
+        if ($matchedUserIds->isEmpty()) {
+            return response()->json([
+                'message' => __('ui.users.self_status_not_allowed'),
+            ], 422);
+        }
+
+        $isActive = $request->boolean('is_active');
+
+        User::query()
+            ->whereIn('id', $matchedUserIds)
+            ->update([
+                'is_active' => $isActive,
+                'deactivated_at' => $isActive ? null : now(),
+                'deactivated_by' => $isActive ? null : Auth::id(),
+            ]);
+
+        if (! $isActive) {
+            $this->forgetUserSessions($matchedUserIds->all());
+        }
+
+        return response()->json([
+            'message' => __('ui.users.bulk_status_updated', [
+                'count' => $matchedUserIds->count(),
+                'status' => $isActive ? __('ui.users.active') : __('ui.users.inactive'),
+            ]),
+            'count' => $matchedUserIds->count(),
+        ]);
+    }
+
+    private function applyUserSearchFilter(Builder $query, string $search): void
+    {
+        $search = trim($search);
+
+        if ($search === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($search): void {
+            $query
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('name_en', 'like', "%{$search}%")
+                ->orWhere('username_arcgis', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('id_no', 'like', "%{$search}%")
+                ->orWhere('contract_type', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%");
+        });
     }
 
     public function edit($id)
@@ -355,6 +440,20 @@ class userController extends Controller
         imagedestroy($finalImage);
 
         return $relativePath;
+    }
+
+    /**
+     * @param  array<int, int>  $userIds
+     */
+    private function forgetUserSessions(array $userIds): void
+    {
+        if (! Schema::hasTable('sessions') || ! Schema::hasColumn('sessions', 'user_id')) {
+            return;
+        }
+
+        DB::table('sessions')
+            ->whereIn('user_id', $userIds)
+            ->delete();
     }
 
     public function destroy(Request $request, $id)
