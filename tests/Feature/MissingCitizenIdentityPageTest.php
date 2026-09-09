@@ -5,11 +5,13 @@ use App\Models\HousingUnit;
 use App\Models\MissingCitizenIdentityApproval;
 use App\Models\MissingCitizenIdentityReport;
 use App\Models\User;
+use App\services\ArcgisService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -826,6 +828,228 @@ it('imports corrected identity numbers directly when no report row matches', fun
         ->and($housingUnit->fresh()->spouse1)->toBe('الاسم الجديد')
         ->and(MissingCitizenIdentityApproval::query()->where('housing_unit_id', $housingUnit->id)->value('missing_citizen_identity_report_id'))->toBeNull()
         ->and(MissingCitizenIdentityApproval::query()->where('housing_unit_id', $housingUnit->id)->value('new_id_number'))->toBe('922222223');
+});
+
+/**
+ * @param  array<int, array<int, mixed>>  $rows
+ */
+function spouseCorrectionsUpload(array $rows): UploadedFile
+{
+    $spreadsheet = new Spreadsheet;
+    $spreadsheet->getActiveSheet()->fromArray($rows);
+    $path = storage_path('framework/testing/spouse-corrections.xlsx');
+
+    if (! is_dir(dirname($path))) {
+        mkdir(dirname($path), 0777, true);
+    }
+
+    (new Xlsx($spreadsheet))->save($path);
+    $spreadsheet->disconnectWorksheets();
+
+    return new UploadedFile($path, 'spouse-corrections.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', null, true);
+}
+
+/**
+ * @return array<int, string>
+ */
+function numberedSpouseCorrectionHeaders(): array
+{
+    return [
+        'نوع الهوية', 'اسم المالك', 'رقم هوية المالك', 'اسم الزوجة/الزوجة  المعدل ',
+        'اسم الزوجة الأولى', 'اسم الزوجة التانية', 'اسم الزوجة الثالتة', 'اسم الزوجة الرابعة',
+        'اسم الزوج/الزوجة  القديم', 'رقم هوية الزوج/الزوجة المعدل ',
+        'رقم هوية الزوجة الأولى', 'رقم هوية الزوجة التانية', 'رقم هوية الزوجة الثالتة', 'اسم الزوجة الرابعة',
+        'رقم هوية الزوج/الزوجة القديم', 'رقم الوحدة', 'نوع المشكلة', 'ملاحظات', 'مطابقة الاسم',
+        'المواطن المقترح', 'هوية المواطن المقترح',
+    ];
+}
+
+it('imports all numbered spouses from one unit row in the supplied workbook layout', function (): void {
+    Storage::fake('public');
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.housing_units_url', 'https://services.example.test/FeatureServer/1');
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/FeatureServer/1/updateFeatures' => Http::response([
+            'updateResults' => [['success' => true, 'objectId' => 8901]],
+        ]),
+    ]);
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8901, 'globalid' => 'numbered-spouses', 'unit_owner' => 'مالك الوحدة', 'id_number1' => '900000001',
+        'spouse1' => 'اسم أول قديم', 'spouse1_id' => '999999991',
+        'spouse2' => 'اسم ثان قديم', 'spouse2_id' => '999999992',
+        'spouse3' => 'اسم ثالث قديم', 'spouse3_id' => '999999993',
+        'spouse4' => 'اسم رابع قديم', 'spouse4_id' => '999999994',
+    ]);
+    $report = MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $housingUnit->id, 'identity_subject' => 'spouse', 'identity_index' => 2,
+        'identity_name_field' => 'spouse2', 'identity_number_field' => 'spouse2_id', 'owner_name' => 'اسم ثان قديم',
+        'id_number' => '999999992', 'issue_type' => 'missing_civil_registry_identity', 'name_match_status' => 'not_found',
+    ]);
+    $rows = [numberedSpouseCorrectionHeaders(), [
+        'الزوج/ة الثانية', 'مالك الوحدة', '900000001', 'تصحيح عام لا يستخدم',
+        'اسم الزوجة الأولى الرباعي', 'اسم الزوجة الثانية الرباعي', 'اسم الزوجة الثالثة الرباعي', 'اسم الزوجة الرابعة الرباعي',
+        'اسم قديم', '911111111-922222222', '911111111', '922222222', '933333333', '944444444',
+        '999999999', 8901, '', '', '', '-', '-',
+    ]];
+
+    $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload($rows)])
+        ->assertOk()->assertJsonPath('approved', 4)->assertJsonPath('skipped', 0)->assertJsonPath('failed', 0);
+
+    foreach ([1 => 'الأولى', 2 => 'الثانية', 3 => 'الثالثة', 4 => 'الرابعة'] as $index => $ordinal) {
+        $number = '9'.str_repeat((string) $index, 8);
+        expect($housingUnit->fresh()->{'spouse'.$index.'_id'})->toBe($number)
+            ->and($housingUnit->fresh()->{'spouse'.$index})->toBe('اسم الزوجة '.$ordinal.' الرباعي');
+        Http::assertSent(function ($request) use ($index, $number): bool {
+            $attributes = json_decode((string) ($request['features'] ?? '[]'), true)[0]['attributes'] ?? [];
+
+            return ($attributes['spouse'.$index.'_id'] ?? null) === $number;
+        });
+    }
+
+    expect($housingUnit->fresh()->id_number1)->toBe('900000001')
+        ->and($report->fresh()->approved_at)->not->toBeNull()
+        ->and($report->fresh()->arcgis_sync_status)->toBe('synced')
+        ->and(MissingCitizenIdentityApproval::query()->count())->toBe(4);
+
+    $this->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload($rows)])
+        ->assertOk()->assertJsonPath('approved', 0)->assertJsonPath('skip_reasons.already_current', 4);
+    expect(MissingCitizenIdentityApproval::query()->count())->toBe(4);
+});
+
+it('imports independent names and identities from reordered spouse columns without changing blank fields', function (): void {
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8902, 'globalid' => 'partial-spouse-corrections', 'id_number1' => '900000001',
+        'spouse1' => 'اسم أول محفوظ', 'spouse1_id' => '999999991',
+        'spouse2' => 'اسم ثان قديم', 'spouse2_id' => '999999992',
+        'spouse3' => 'اسم ثالث محفوظ', 'spouse3_id' => '999999993',
+        'spouse4' => 'اسم رابع قديم', 'spouse4_id' => null,
+    ]);
+    $this->mock(ArcgisService::class, function ($mock): void {
+        $mock->shouldReceive('updateHousingUnitFields')->once()->with(8902, ['spouse1_id' => '911111111'])->andReturn(['success' => true, 'status' => 'synced']);
+        $mock->shouldReceive('updateHousingUnitFields')->once()->with(8902, ['spouse2' => 'اسم الزوجة الثانية الرباعي'])->andReturn(['success' => true, 'status' => 'synced']);
+        $mock->shouldReceive('updateHousingUnitFields')->once()->with(8902, ['spouse4' => 'اسم الزوجة الرابعة الرباعي'])->andReturn(['success' => true, 'status' => 'synced']);
+    });
+    $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload([
+            ['رقم هوية الزوجة الثالثة', 'اسم الزوجة الأولى', 'اسم الزوجة الثانية', 'رقم الوحدة', 'رقم هوية الزوجة الأولى', 'رقم هوية الزوجة الثانية', 'اسم الزوجة الرابعة'],
+            [null, null, 'اسم الزوجة الثانية الرباعي', 8902, '٩١١١١١١١١', null, 'اسم الزوجة الرابعة الرباعي'],
+        ])])
+        ->assertOk()->assertJsonPath('approved', 3)->assertJsonPath('skipped', 0)->assertJsonPath('failed', 0);
+
+    expect($housingUnit->fresh()->spouse1)->toBe('اسم أول محفوظ')
+        ->and($housingUnit->fresh()->spouse1_id)->toBe('911111111')
+        ->and($housingUnit->fresh()->spouse2_id)->toBe('999999992')
+        ->and($housingUnit->fresh()->spouse3_id)->toBe('999999993')
+        ->and($housingUnit->fresh()->spouse3)->toBe('اسم ثالث محفوظ')
+        ->and($housingUnit->fresh()->spouse4_id)->toBeNull();
+});
+
+it('imports legacy corrections when the new numbered spouse columns are empty', function (): void {
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8903, 'globalid' => 'legacy-expanded-columns', 'id_number1' => '900000001',
+        'spouse2' => 'اسم قديم', 'spouse2_id' => '999999992',
+    ]);
+    $this->mock(ArcgisService::class, function ($mock): void {
+        $mock->shouldReceive('updateHousingUnitFields')->once()->with(8903, ['spouse2' => 'اسم الزوجة الثانية الرباعي'])->andReturn(['success' => true, 'status' => 'synced']);
+    });
+    $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload([
+            numberedSpouseCorrectionHeaders(),
+            ['الزوج/ة الثانية', 'مالك الوحدة', '900000001', 'اسم الزوجة الثانية الرباعي', null, null, null, null, 'اسم قديم',
+                '999999992', null, null, null, null, '999999992', 8903, '', '', '', '-', '-'],
+        ])])
+        ->assertOk()->assertJsonPath('approved', 1)->assertJsonPath('failed', 0)->assertJsonPath('skipped', 0);
+    expect($housingUnit->fresh()->spouse2_id)->toBe('999999992')
+        ->and($housingUnit->fresh()->spouse2)->toBe('اسم الزوجة الثانية الرباعي');
+});
+
+it('reports invalid spouse identities and missing units while importing other valid spouses', function (): void {
+    Storage::fake('public');
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8904, 'globalid' => 'invalid-spouse-correction', 'spouse1_id' => '999999991', 'spouse2_id' => '999999992',
+    ]);
+    $this->mock(ArcgisService::class, function ($mock): void {
+        $mock->shouldReceive('updateHousingUnitFields')->once()->with(8904, ['spouse2_id' => '922222222'])->andReturn(['success' => true, 'status' => 'synced']);
+    });
+    $response = $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload([
+            ['رقم الوحدة', 'رقم هوية الزوجة الأولى', 'رقم هوية الزوجة الثانية'],
+            [8904, '911111111-933333333', '922222222'],
+            [99999, '911111111', null],
+        ])])
+        ->assertOk()->assertJsonPath('approved', 1)->assertJsonPath('failed', 0)->assertJsonPath('skipped', 2)
+        ->assertJsonPath('skip_reasons.invalid_row', 1)->assertJsonPath('skip_reasons.missing_unit', 1);
+    expect($housingUnit->fresh()->spouse1_id)->toBe('999999991');
+    $reportFiles = Storage::disk('public')->allFiles('missing-citizen-identity-imports');
+    expect($response->json('report_url'))->not->toBeNull()
+        ->and(Storage::disk('public')->get($reportFiles[0]))->toContain('spouse1_id', '8904', '99999');
+});
+
+it('does not use owner data or adjacent cells when spouse correction values are blank', function (): void {
+    Storage::fake('public');
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8905, 'globalid' => 'blank-spouse-correction', 'unit_owner' => 'اسم المالك', 'id_number1' => '900000001',
+        'spouse1' => 'اسم الزوجة المحفوظ', 'spouse1_id' => '999999991',
+    ]);
+    $this->mock(ArcgisService::class, function ($mock): void {
+        $mock->shouldNotReceive('updateHousingUnitFields');
+    });
+    $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload([
+            numberedSpouseCorrectionHeaders(),
+            ['الزوج/ة الأولى', 'اسم المالك', '900000001', null, null, null, null, null, 'اسم قديم', null,
+                null, null, null, null, '999999991', 8905, '', '', '', '-', '-'],
+        ])])
+        ->assertOk()->assertJsonPath('approved', 0)->assertJsonPath('skip_reasons.invalid_row', 1);
+    expect($housingUnit->fresh()->spouse1)->toBe('اسم الزوجة المحفوظ')
+        ->and($housingUnit->fresh()->spouse1_id)->toBe('999999991')
+        ->and(MissingCitizenIdentityApproval::query()->count())->toBe(0);
+});
+
+it('rejects a stale legacy spouse correction even when a report matches the old identity', function (): void {
+    Storage::fake('public');
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 8906, 'globalid' => 'stale-spouse-correction', 'spouse1' => 'اسم محفوظ', 'spouse1_id' => '999999991',
+    ]);
+    $report = MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $housingUnit->id, 'identity_subject' => 'spouse', 'identity_index' => 1,
+        'identity_name_field' => 'spouse1', 'identity_number_field' => 'spouse1_id', 'owner_name' => 'اسم قديم',
+        'id_number' => '999999990', 'issue_type' => 'missing_civil_registry_identity', 'name_match_status' => 'not_found',
+    ]);
+    $this->mock(ArcgisService::class, function ($mock): void {
+        $mock->shouldNotReceive('updateHousingUnitFields');
+    });
+    $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload([
+            ['رقم الوحدة', 'نوع الهوية', 'رقم هوية الزوج/الزوجة المعدل', 'رقم هوية الزوج/الزوجة القديم'],
+            [8906, 'الزوج/ة الأولى', '911111111', '999999990'],
+        ])])
+        ->assertOk()->assertJsonPath('approved', 0)->assertJsonPath('skip_reasons.old_identity_mismatch', 1);
+    expect($housingUnit->fresh()->spouse1_id)->toBe('999999991')
+        ->and($report->fresh()->approved_at)->toBeNull();
+});
+
+it('continues numbered spouse imports past the update limit when the same file is uploaded again', function (): void {
+    Storage::fake('public');
+    $rows = [['رقم الوحدة', 'رقم هوية الزوجة الأولى', 'رقم هوية الزوجة الثانية', 'رقم هوية الزوجة الثالثة', 'رقم هوية الزوجة الرابعة']];
+    for ($index = 0; $index < 26; $index++) {
+        HousingUnit::query()->create(['objectid' => 9000 + $index, 'globalid' => 'batch-spouses-'.$index]);
+        $rows[] = [9000 + $index, '911111111', '922222222', '933333333', '944444444'];
+    }
+    $this->mock(ArcgisService::class, function ($mock): void {
+        $mock->shouldReceive('updateHousingUnitFields')->times(104)->andReturn(['success' => true, 'status' => 'synced']);
+    });
+
+    $this->actingAs(missingCitizenIdentityUser())
+        ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload($rows)])
+        ->assertOk()->assertJsonPath('approved', 100)->assertJsonPath('skip_reasons.import_limit_reached', 4);
+    $this->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload($rows)])
+        ->assertOk()->assertJsonPath('approved', 4)->assertJsonPath('skip_reasons.already_current', 100)
+        ->assertJsonPath('skip_reasons.import_limit_reached', 0);
+    expect(MissingCitizenIdentityApproval::query()->count())->toBe(104);
 });
 
 it('lists ambiguous name candidates and approves the selected citizen', function (): void {
