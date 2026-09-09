@@ -1072,7 +1072,7 @@ return [
         'import_skip_missing_unit' => ':count صف لم يتم العثور على رقم وحدته',
         'import_skip_old_identity_mismatch' => ':count صف رقم الهوية القديم فيه لا يطابق الوحدة الحالية',
         'import_skip_already_current' => ':count تصحيح بياناته موجودة مسبقًا في الوحدة',
-        'import_skip_import_limit_reached' => ':count صف لم يعالج لأن حد الدفعة هو 100 تحديث في كل مرة. أعد رفع نفس الملف لاستكمال الباقي',
+        'import_skip_import_limit_reached' => ':count صف لم يعالج لأن حد الدفعة هو 400 تحديث في كل مرة. أعد رفع نفس الملف لاستكمال الباقي',
         'import_skip_technical_error' => ':count صف تعذر تحديثه بسبب خطأ تقني وتم تسجيل التفاصيل في السجل',
         'report_missing' => 'هذا السجل لم يعد موجودًا بعد تحديث الكاش. حدّث الجدول وحاول مرة أخرى.',
         'show_candidates' => 'عرض المرشحين',

@@ -1088,7 +1088,7 @@ return [
         'import_skip_missing_unit' => ':count rows did not match an existing unit number',
         'import_skip_old_identity_mismatch' => ':count rows had an old ID number that does not match the current unit',
         'import_skip_already_current' => ':count corrections already match the data on the unit',
-        'import_skip_import_limit_reached' => ':count rows were not processed because each import run is limited to 100 updates. Upload the same file again to continue',
+        'import_skip_import_limit_reached' => ':count rows were not processed because each import run is limited to 400 updates. Upload the same file again to continue',
         'import_skip_technical_error' => ':count rows could not be updated because of a technical error and details were logged',
         'report_missing' => 'This report is no longer available after the cache refresh. Refresh the table and try again.',
         'show_candidates' => 'Show candidates',

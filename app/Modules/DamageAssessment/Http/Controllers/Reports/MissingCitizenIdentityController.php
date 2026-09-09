@@ -29,7 +29,7 @@ use Throwable;
 
 class MissingCitizenIdentityController extends Controller
 {
-    private const IMPORT_CORRECTION_APPROVAL_LIMIT = 100;
+    private const IMPORT_CORRECTION_APPROVAL_LIMIT = 400;
 
     public function __construct()
     {

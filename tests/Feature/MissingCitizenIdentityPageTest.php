@@ -1035,21 +1035,21 @@ it('rejects a stale legacy spouse correction even when a report matches the old 
 it('continues numbered spouse imports past the update limit when the same file is uploaded again', function (): void {
     Storage::fake('public');
     $rows = [['رقم الوحدة', 'رقم هوية الزوجة الأولى', 'رقم هوية الزوجة الثانية', 'رقم هوية الزوجة الثالثة', 'رقم هوية الزوجة الرابعة']];
-    for ($index = 0; $index < 26; $index++) {
+    for ($index = 0; $index < 101; $index++) {
         HousingUnit::query()->create(['objectid' => 9000 + $index, 'globalid' => 'batch-spouses-'.$index]);
         $rows[] = [9000 + $index, '911111111', '922222222', '933333333', '944444444'];
     }
     $this->mock(ArcgisService::class, function ($mock): void {
-        $mock->shouldReceive('updateHousingUnitFields')->times(104)->andReturn(['success' => true, 'status' => 'synced']);
+        $mock->shouldReceive('updateHousingUnitFields')->times(404)->andReturn(['success' => true, 'status' => 'synced']);
     });
 
     $this->actingAs(missingCitizenIdentityUser())
         ->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload($rows)])
-        ->assertOk()->assertJsonPath('approved', 100)->assertJsonPath('skip_reasons.import_limit_reached', 4);
+        ->assertOk()->assertJsonPath('approved', 400)->assertJsonPath('skip_reasons.import_limit_reached', 4);
     $this->postJson(route('reports.missing-citizen-identities.import-corrections'), ['corrections_file' => spouseCorrectionsUpload($rows)])
-        ->assertOk()->assertJsonPath('approved', 4)->assertJsonPath('skip_reasons.already_current', 100)
+        ->assertOk()->assertJsonPath('approved', 4)->assertJsonPath('skip_reasons.already_current', 400)
         ->assertJsonPath('skip_reasons.import_limit_reached', 0);
-    expect(MissingCitizenIdentityApproval::query()->count())->toBe(104);
+    expect(MissingCitizenIdentityApproval::query()->count())->toBe(404);
 });
 
 it('lists ambiguous name candidates and approves the selected citizen', function (): void {
