@@ -34,7 +34,7 @@ class MissingCitizenIdentityController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer|Legal Auditor');
+        $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer|Legal Auditor|QC/QA Engineer');
     }
 
     public function index(): ViewContract
@@ -111,6 +111,8 @@ class MissingCitizenIdentityController extends Controller
                 'missing_citizen_identity_reports.matched_citizen_full_name',
                 'missing_citizen_identity_reports.matched_citizens_count',
                 'housing_units.objectid as housing_unit_objectid',
+                'housing_units.parentglobalid as housing_unit_building_globalid',
+                'housing_units.globalid as housing_unit_globalid',
                 'housing_units.unit_owner as housing_unit_owner_name',
                 'housing_units.id_number1 as housing_unit_owner_id_number',
                 'housing_units.marital_status as housing_unit_marital_status',
@@ -179,6 +181,7 @@ class MissingCitizenIdentityController extends Controller
             'housing_unit_owner_name' => $this->reportHousingUnitOwnerName($report),
             'owner_name' => $report->owner_name ?: '-',
             'housing_unit_objectid' => $report->housing_unit_objectid ? (string) $report->housing_unit_objectid : '-',
+            'assessment_url' => $this->assessmentUrl($report),
             'housing_unit_owner_id_number' => filled($report->housing_unit_owner_id_number) ? (string) $report->housing_unit_owner_id_number : '-',
             'marital_status' => $this->maritalStatusLabel($report->housing_unit_marital_status),
             'housing_unit_identity_details' => $this->housingUnitIdentityDetails($report),
@@ -194,6 +197,18 @@ class MissingCitizenIdentityController extends Controller
                 && $report->matched_citizens_count > 1,
             'can_search_citizens' => in_array($report->name_match_status, ['not_found', 'no_owner_name'], true),
         ];
+    }
+
+    private function assessmentUrl(MissingCitizenIdentityReport $report): ?string
+    {
+        if (! filled($report->housing_unit_building_globalid) || ! filled($report->housing_unit_globalid)) {
+            return null;
+        }
+
+        return url('damage-assessment/showAssessmentAudit/'
+            .rawurlencode((string) $report->housing_unit_building_globalid)
+            .'/'
+            .rawurlencode((string) $report->housing_unit_globalid));
     }
 
     private function exportRow(MissingCitizenIdentityReport $report): array

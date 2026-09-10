@@ -86,7 +86,7 @@ return [
                         'title' => 'menu.damage_assessment.missing_citizen_identities',
                         'url' => 'damage-assessment/reports/missing-citizen-identities',
                         'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
-                        'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor'],
+                        'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor', 'QC/QA Engineer'],
                     ],
                 ],
             ],

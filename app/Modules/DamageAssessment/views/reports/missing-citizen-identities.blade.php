@@ -640,6 +640,16 @@
                 updateBulkState();
             };
 
+            var openAssessmentAudit = function (reportId) {
+                var row = rowsByReportId[String(reportId)] || {};
+
+                if (!row.assessment_url) {
+                    return;
+                }
+
+                window.open(row.assessment_url, '_blank', 'noopener');
+            };
+
             var actionButton = function (row) {
                 if (row.can_approve_name_match) {
                     return '<button type="button" class="btn btn-sm btn-light-success" data-kt-missing-citizens-action="approve-name" data-report-id="' + escapeHtml(row.id) + '">{{ __('ui.missing_citizen_identities.approve_match') }}</button>';
@@ -1460,6 +1470,18 @@
                     tbody.addEventListener('change', function (event) {
                         if (event.target.matches('[data-kt-missing-citizens-row-check]')) {
                             updateBulkState();
+                        }
+                    });
+
+                    tbody.addEventListener('dblclick', function (event) {
+                        if (event.target.closest('button, a, input, select, textarea')) {
+                            return;
+                        }
+
+                        var row = event.target.closest('[data-kt-missing-citizens-row]');
+
+                        if (row) {
+                            openAssessmentAudit(row.getAttribute('data-kt-missing-citizens-row'));
                         }
                     });
 

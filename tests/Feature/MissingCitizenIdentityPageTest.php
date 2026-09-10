@@ -106,6 +106,8 @@ it('shows the missing citizen identities page', function (): void {
         ->assertSee('data-kt-missing-citizens-import-file', false)
         ->assertSee('missing_citizen_unit_objectids_modal')
         ->assertSee('data-kt-missing-citizens-action="select-all-visible"', false)
+        ->assertSee("tbody.addEventListener('dblclick'", false)
+        ->assertSee("window.open(row.assessment_url, '_blank', 'noopener')", false)
         ->assertSee('kt_table_missing_citizen_identities');
 
     expect($nameHeaderPosition)
@@ -114,7 +116,7 @@ it('shows the missing citizen identities page', function (): void {
         ->toBeLessThan($unitNumberHeaderPosition);
 });
 
-it('allows auditing supervisor and project officer roles to access the missing identities page', function (string $roleName): void {
+it('allows auditor and reporting roles to access the missing identities page', function (string $roleName): void {
     $this
         ->actingAs(missingCitizenIdentityUser($roleName))
         ->get(route('reports.missing-citizen-identities.index'))
@@ -122,6 +124,8 @@ it('allows auditing supervisor and project officer roles to access the missing i
 })->with([
     'auditing supervisor' => 'Auditing Supervisor',
     'project officer' => 'Project Officer',
+    'legal auditor' => 'Legal Auditor',
+    'qc qa engineer' => 'QC/QA Engineer',
 ]);
 
 it('blocks users without an allowed role from the missing identities page', function (): void {
@@ -136,6 +140,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         [
             'objectid' => 1001,
             'globalid' => 'missing-citizen-id',
+            'parentglobalid' => 'missing-citizen-building-id',
             'unit_owner' => 'Missing Owner',
             'id_number1' => '900000001',
             'marital_status' => 'Married',
@@ -143,6 +148,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         [
             'objectid' => 1002,
             'globalid' => 'active-citizen-id',
+            'parentglobalid' => null,
             'unit_owner' => 'Active Owner',
             'id_number1' => '900000002',
             'marital_status' => null,
@@ -150,6 +156,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         [
             'objectid' => 1003,
             'globalid' => 'inactive-citizen-id',
+            'parentglobalid' => null,
             'unit_owner' => 'Inactive Owner',
             'id_number1' => '900000003',
             'marital_status' => null,
@@ -157,6 +164,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         [
             'objectid' => 1004,
             'globalid' => 'blank-citizen-id',
+            'parentglobalid' => null,
             'unit_owner' => 'Blank Owner',
             'id_number1' => '',
             'marital_status' => null,
@@ -190,6 +198,7 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonFragment(['identity_name_field' => 'unit_owner'])
         ->assertJsonFragment(['identity_number_field' => 'id_number1'])
         ->assertJsonFragment(['matched_citizen_id_card_no' => '900000009'])
+        ->assertJsonPath('data.0.assessment_url', url('damage-assessment/showAssessmentAudit/missing-citizen-building-id/missing-citizen-id'))
         ->assertJsonFragment(['housing_unit_objectid' => '1003'])
         ->assertJsonFragment(['id_number1' => '900000003'])
         ->assertJsonFragment(['housing_unit_objectid' => '1004'])
