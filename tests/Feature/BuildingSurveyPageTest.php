@@ -3,6 +3,7 @@
 use App\Models\Assessment;
 use App\Models\AuditedBuilding;
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\Filter;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
@@ -291,6 +292,83 @@ it('uses audited buildings for summary and datatable records', function () {
     $fieldStatusResponse->assertJsonPath('recordsFiltered', 1);
     $fieldStatusResponse->assertSee('Audited Not Completed');
     $fieldStatusResponse->assertDontSee('Audited Fully');
+});
+
+it('matches archived committee buildings on the building page committee filter', function () {
+    $user = User::factory()->create();
+
+    AuditedBuilding::query()->create([
+        'assignedto' => 'Engineer Archive',
+        'globalid' => 'archived-committee-building',
+        'objectid' => 1301,
+        'building_name' => 'Archived Committee Building',
+        'owner_name' => 'Owner Archive',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    AuditedBuilding::query()->create([
+        'assignedto' => 'Engineer Current',
+        'globalid' => 'current-committee-building',
+        'objectid' => 1302,
+        'building_name' => 'Current Committee Building',
+        'owner_name' => 'Owner Current',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'committee_review',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => 1301,
+        'building_globalid' => 'archived-committee-building',
+        'source_type' => 'committee_decision',
+        'archived_by' => $user->id,
+        'archived_at' => '2026-04-20 12:00:00',
+        'building_snapshot' => [
+            'objectid' => 1301,
+            'globalid' => 'archived-committee-building',
+            'assignedto' => 'Engineer Archive',
+            'building_name' => 'Archived Committee Building',
+            'owner_name' => 'Owner Archive',
+            'field_status' => 'COMPLETED',
+            'building_damage_status' => 'committee_review',
+        ],
+    ]);
+
+    $page = $this->actingAs($user)->get('/damage-assessment/building');
+
+    $page->assertOk();
+    $page->assertViewHas('buildingSummary', function (array $summary): bool {
+        return $summary['committee_review'] === 2;
+    });
+
+    $query = http_build_query([
+        'draw' => 1,
+        'start' => 0,
+        'length' => 10,
+        'filters' => [
+            'field_status' => ['COMPLETED'],
+            'building_damage_status' => ['committee_review'],
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->get('/damage-assessment/building/show?'.$query);
+
+    $response->assertOk();
+    $response->assertJsonPath('recordsFiltered', 2);
+    $response->assertSee('Archived Committee Building');
+    $response->assertSee('Current Committee Building');
+
+    $this->actingAs($user)
+        ->getJson(route('building.objectids', [
+            'filters' => [
+                'field_status' => ['COMPLETED'],
+                'building_damage_status' => ['committee_review'],
+            ],
+        ]))
+        ->assertOk()
+        ->assertJsonPath('count', 2)
+        ->assertJsonPath('objectids.0', '1301')
+        ->assertJsonPath('objectids.1', '1302');
 });
 
 function ensureAuditedBuildingSurveyColumns(): void

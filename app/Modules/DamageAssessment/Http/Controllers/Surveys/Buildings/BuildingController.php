@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AuditedBuilding;
 use App\Models\Building;
+use App\Models\BuildingSurveyArchiveObject;
 use App\Models\Filter;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
@@ -263,6 +264,17 @@ class BuildingController extends Controller
 
     private function applyBuildingFilters(Builder $query, array $filters): void
     {
+        if ($this->hasCommitteeDamageFilter($filters)) {
+            $this->applyCommitteeArchiveAwareBuildingFilters($query, $filters);
+
+            return;
+        }
+
+        $this->applyCurrentBuildingFilters($query, $filters);
+    }
+
+    private function applyCurrentBuildingFilters(Builder $query, array $filters): void
+    {
         $selectFilters = [
             'assignedto',
             'municipalitie',
@@ -353,6 +365,132 @@ class BuildingController extends Controller
         }
     }
 
+    private function hasCommitteeDamageFilter(array $filters): bool
+    {
+        $value = $filters['building_damage_status'] ?? null;
+
+        if ($value === null || $value === '') {
+            return false;
+        }
+
+        return collect(is_array($value) ? $value : [$value])
+            ->map(fn ($item): string => trim((string) $item))
+            ->contains(fn (string $item): bool => in_array($item, self::COMMITTEE_REVIEW_STATUSES, true));
+    }
+
+    private function applyCommitteeArchiveAwareBuildingFilters(Builder $query, array $filters): void
+    {
+        $query->where(function (Builder $query) use ($filters): void {
+            $query->where(function (Builder $currentQuery) use ($filters): void {
+                $this->applyCurrentBuildingFilters($currentQuery, $filters);
+            });
+
+            if (! Schema::hasTable('building_survey_archive_objects')) {
+                return;
+            }
+
+            $query->orWhereExists(function ($archiveQuery) use ($filters): void {
+                $archiveQuery
+                    ->select(DB::raw(1))
+                    ->from('building_survey_archive_objects as committee_archives')
+                    ->whereColumn('committee_archives.building_objectid', 'audited_buildings.objectid')
+                    ->whereNull('committee_archives.housing_unit_objectid')
+                    ->whereIn('committee_archives.source_type', [
+                        'committee_decision',
+                        'temporary_committee_excel_archive',
+                    ]);
+
+                $this->applyCommitteeArchiveSnapshotFilters($archiveQuery, $filters);
+            });
+        });
+    }
+
+    private function applyCommitteeArchiveSnapshotFilters(\Illuminate\Database\Query\Builder $query, array $filters): void
+    {
+        foreach ($this->archiveSelectFilterFields() as $field) {
+            $value = $filters[$field] ?? null;
+
+            if (is_array($value)) {
+                $value = array_values(array_filter($value, fn ($item): bool => $item !== null && $item !== ''));
+            }
+
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+
+            if ($field === 'building_damage_status') {
+                $query->whereIn('committee_archives.building_snapshot->building_damage_status', self::COMMITTEE_REVIEW_STATUSES);
+
+                continue;
+            }
+
+            is_array($value)
+                ? $query->whereIn("committee_archives.building_snapshot->{$field}", $value)
+                : $query->where("committee_archives.building_snapshot->{$field}", $value);
+        }
+
+        foreach (['building_name', 'owner_name', 'owner_id', 'objectid'] as $field) {
+            $value = $filters[$field] ?? null;
+
+            if ($value !== null && $value !== '') {
+                $query->where("committee_archives.building_snapshot->{$field}", 'like', '%'.$value.'%');
+            }
+        }
+
+        foreach (['floor_nos', 'units_nos', 'damaged_units_nos'] as $field) {
+            $from = $filters[$field.'_from'] ?? null;
+            $to = $filters[$field.'_to'] ?? null;
+
+            if ($from !== null && $from !== '') {
+                $query->where("committee_archives.building_snapshot->{$field}", '>=', $from);
+            }
+
+            if ($to !== null && $to !== '') {
+                $query->where("committee_archives.building_snapshot->{$field}", '<=', $to);
+            }
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function archiveSelectFilterFields(): array
+    {
+        return [
+            'assignedto',
+            'municipalitie',
+            'neighborhood',
+            'field_status',
+            'building_damage_status',
+            'building_status_visit',
+            'building_debris_exist',
+            'building_debris_qty',
+            'building_debris_blocking',
+            'assessment_obstacle',
+            'uxo_present',
+            'bodies_present',
+            'building_type',
+            'building_use',
+            'building_material',
+            'building_age',
+            'building_roof_type',
+            'building_ownership',
+            'owner_status',
+            'building_responsible',
+            'building_authorization',
+            'has_elevator',
+            'elevator_status',
+            'has_solar',
+            'solar_damage_status',
+            'has_well',
+            'well_damage_status',
+            'has_fence',
+            'fence_damage_status',
+            'has_parking',
+            'parking_status',
+        ];
+    }
+
     private function applyBuildingSearch(Builder $query, string $search): void
     {
         $search = trim($search);
@@ -433,8 +571,36 @@ class BuildingController extends Controller
             'total' => (clone $baseQuery)->count(),
             'fully_damaged' => (clone $baseQuery)->where('building_damage_status', 'fully_damaged')->count(),
             'partially_damaged' => (clone $baseQuery)->where('building_damage_status', 'partially_damaged')->count(),
-            'committee_review' => (clone $baseQuery)->whereIn('building_damage_status', self::COMMITTEE_REVIEW_STATUSES)->count(),
+            'committee_review' => $this->committeeReviewSummaryCount($baseQuery),
         ];
+    }
+
+    private function committeeReviewSummaryCount(Builder $baseQuery): int
+    {
+        $currentObjectIds = (clone $baseQuery)
+            ->whereIn('building_damage_status', self::COMMITTEE_REVIEW_STATUSES)
+            ->pluck('objectid');
+
+        if (! Schema::hasTable('building_survey_archive_objects')) {
+            return $currentObjectIds->unique()->count();
+        }
+
+        $archivedObjectIds = BuildingSurveyArchiveObject::query()
+            ->whereNull('housing_unit_objectid')
+            ->whereIn('source_type', ['committee_decision', 'temporary_committee_excel_archive'])
+            ->whereIn('building_snapshot->building_damage_status', self::COMMITTEE_REVIEW_STATUSES)
+            ->where(function (Builder $query): void {
+                $query
+                    ->whereNotNull('building_snapshot->assignedto')
+                    ->where('building_snapshot->assignedto', '!=', '');
+            })
+            ->pluck('building_objectid');
+
+        return $currentObjectIds
+            ->merge($archivedObjectIds)
+            ->filter()
+            ->unique()
+            ->count();
     }
 
     /**
