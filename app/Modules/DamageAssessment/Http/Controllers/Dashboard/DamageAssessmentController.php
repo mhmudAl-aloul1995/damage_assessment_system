@@ -1344,7 +1344,7 @@ class DamageAssessmentController extends Controller
             $query->where('building_snapshot->governorate', (string) $request->string('governorate'));
         }
 
-        $this->applyDashboardArchivedAtDateFilters($query, $startDate, $endDate);
+        $this->applyDashboardArchivedJsonDateFilters($query, 'building_snapshot', ['submission_date', 'end'], $startDate, $endDate);
     }
 
     private function applyDashboardArchivedCommitteeUnitFilters(Builder $query, Request $request): void
@@ -1371,17 +1371,30 @@ class DamageAssessmentController extends Controller
             });
         }
 
-        $this->applyDashboardArchivedAtDateFilters($query, $startDate, $endDate);
+        $this->applyDashboardArchivedJsonDateFilters($query, 'housing_unit_snapshot', ['building_submit_date'], $startDate, $endDate);
     }
 
-    private function applyDashboardArchivedAtDateFilters(Builder $query, ?string $startDate, ?string $endDate): void
+    /**
+     * @param  list<string>  $dateFields
+     */
+    private function applyDashboardArchivedJsonDateFilters(Builder $query, string $snapshotColumn, array $dateFields, ?string $startDate, ?string $endDate): void
     {
         if ($startDate !== null) {
-            $query->whereDate('archived_at', '>=', $startDate);
+            $query->where(function (Builder $query) use ($snapshotColumn, $dateFields, $startDate): void {
+                foreach ($dateFields as $index => $dateField) {
+                    $method = $index === 0 ? 'whereDate' : 'orWhereDate';
+                    $query->{$method}($snapshotColumn.'->'.$dateField, '>=', $startDate);
+                }
+            });
         }
 
         if ($endDate !== null) {
-            $query->whereDate('archived_at', '<=', $endDate);
+            $query->where(function (Builder $query) use ($snapshotColumn, $dateFields, $endDate): void {
+                foreach ($dateFields as $index => $dateField) {
+                    $method = $index === 0 ? 'whereDate' : 'orWhereDate';
+                    $query->{$method}($snapshotColumn.'->'.$dateField, '<=', $endDate);
+                }
+            });
         }
     }
 

@@ -576,7 +576,7 @@ it('counts archived committee building decisions in the dashboard committee tota
         'source_type' => 'committee_decision',
         'committee_decision_id' => $decision->id,
         'archived_by' => $user->id,
-        'archived_at' => '2026-06-14 10:00:00',
+        'archived_at' => '2026-07-14 10:00:00',
         'building_snapshot' => [
             'objectid' => $building->objectid,
             'globalid' => $building->globalid,
@@ -615,7 +615,7 @@ it('counts archived committee building decisions in the dashboard committee tota
         'source_type' => 'committee_decision',
         'committee_decision_id' => $previouslyDamagedDecision->id,
         'archived_by' => $user->id,
-        'archived_at' => '2026-06-15 10:00:00',
+        'archived_at' => '2026-07-15 10:00:00',
         'building_snapshot' => [
             'objectid' => $previouslyDamagedBuilding->objectid,
             'globalid' => $previouslyDamagedBuilding->globalid,
@@ -703,7 +703,7 @@ it('counts committee review typo variants on the dashboard committee total', fun
         'source_type' => 'committee_decision',
         'committee_decision_id' => $decision->id,
         'archived_by' => $user->id,
-        'archived_at' => '2026-06-14 10:00:00',
+        'archived_at' => '2026-07-14 10:00:00',
         'building_snapshot' => [
             'objectid' => $building->objectid,
             'globalid' => $building->globalid,
