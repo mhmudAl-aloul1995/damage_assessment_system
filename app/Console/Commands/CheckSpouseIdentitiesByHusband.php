@@ -27,7 +27,7 @@ class CheckSpouseIdentitiesByHusband extends Command
      *
      * @var string
      */
-    protected $description = 'Check housing unit spouse identities using the husband registry by owner identity number.';
+    protected $description = 'Check housing unit spouse identities using citizens.husband_id by owner identity number.';
 
     /**
      * Execute the console command.
@@ -85,7 +85,7 @@ class CheckSpouseIdentitiesByHusband extends Command
         $query->chunkById($chunkSize, function ($housingUnits) use (&$counts, &$previewRows, $apply, $previewLimit): void {
             $counts['housing_units_scanned'] += $housingUnits->count();
 
-            $registrySpousesByHusbandId = $this->registrySpousesByHusbandId(
+            $registrySpousesByHusbandId = $this->citizenSpousesByHusbandId(
                 $housingUnits
                     ->pluck('id_number1')
                     ->map(fn ($idNumber): string => trim((string) $idNumber))
@@ -165,19 +165,19 @@ class CheckSpouseIdentitiesByHusband extends Command
      * @param  Collection<int, string>  $husbandIdNumbers
      * @return Collection<string, Collection<int, object>>
      */
-    private function registrySpousesByHusbandId(Collection $husbandIdNumbers): Collection
+    private function citizenSpousesByHusbandId(Collection $husbandIdNumbers): Collection
     {
         if ($husbandIdNumbers->isEmpty()) {
             return collect();
         }
 
-        return DB::table($this->husbandRegistryTable())
-            ->select(['id_card_no', 'full_name', 'breadwinner_id_card_no'])
+        return DB::table($this->citizensTable())
+            ->select(['id_card_no', 'full_name', 'husband_id'])
             ->where('status', 'A')
-            ->whereIn('breadwinner_id_card_no', $husbandIdNumbers)
+            ->whereIn('husband_id', $husbandIdNumbers)
             ->orderBy('id_card_no')
             ->get()
-            ->groupBy(fn ($record): string => trim((string) $record->breadwinner_id_card_no))
+            ->groupBy(fn ($record): string => trim((string) $record->husband_id))
             ->map(fn (Collection $records): Collection => $records
                 ->map(function ($record): object {
                     return (object) [
@@ -371,12 +371,12 @@ class CheckSpouseIdentitiesByHusband extends Command
             ->values();
     }
 
-    private function husbandRegistryTable(): string
+    private function citizensTable(): string
     {
         if (app()->environment('testing')) {
-            return 'citizens_to_set_husband_id';
+            return 'citizens';
         }
 
-        return 'phc_dashboard.citizens_to_set_husband_id';
+        return 'phc_dashboard.citizens';
     }
 }

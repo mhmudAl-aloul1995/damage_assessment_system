@@ -6,12 +6,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
-    Schema::create('citizens_to_set_husband_id', function (Blueprint $table): void {
+    Schema::create('citizens', function (Blueprint $table): void {
         $table->id();
         $table->string('status')->default('A');
         $table->string('id_card_no')->nullable();
         $table->string('full_name')->nullable();
-        $table->string('breadwinner_id_card_no')->nullable();
+        $table->string('husband_id')->nullable();
     });
 });
 
@@ -26,11 +26,11 @@ it('previews spouse identity corrections from the husband registry without chang
         'spouse1_id' => '999999999',
     ]);
 
-    DB::table('citizens_to_set_husband_id')->insert([
+    DB::table('citizens')->insert([
         'status' => 'A',
         'id_card_no' => '901464339',
         'full_name' => 'سناء محمد عيسى احمد',
-        'breadwinner_id_card_no' => '800000001',
+        'husband_id' => '800000001',
     ]);
 
     $this->artisan('spouse-identities:check-by-husband', ['--unit' => [147]])
@@ -54,18 +54,18 @@ it('applies spouse identity corrections and fills empty spouse slots from the hu
         'spouse2_id' => null,
     ]);
 
-    DB::table('citizens_to_set_husband_id')->insert([
+    DB::table('citizens')->insert([
         [
             'status' => 'A',
             'id_card_no' => '901464339',
             'full_name' => 'سناء محمد عيسى احمد',
-            'breadwinner_id_card_no' => '800000001',
+            'husband_id' => '800000001',
         ],
         [
             'status' => 'A',
             'id_card_no' => '901464340',
             'full_name' => 'زوجة ثانية',
-            'breadwinner_id_card_no' => '800000001',
+            'husband_id' => '800000001',
         ],
     ]);
 
