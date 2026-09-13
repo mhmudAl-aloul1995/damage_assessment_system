@@ -294,6 +294,7 @@ return [
             'damage-assessment/reports/road-facilities*',
             'damage-assessment/export-data*',
             'damage-assessment/public-buildings/export-data*',
+            'damage-assessment/road-facilities/export-data*',
             'damage-assessment/cso-surveys/export-data*',
         ],
         'items' => [
@@ -408,6 +409,12 @@ return [
                         'title' => 'menu.reports.public_buildings_export_data',
                         'url' => 'damage-assessment/public-buildings/export-data',
                         'pattern' => 'damage-assessment/public-buildings/export-data*',
+                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'QC/QA Engineer', 'Team Leader -INF', 'Area Manager'],
+                    ],
+                    [
+                        'title' => 'menu.reports.road_facilities_export_data',
+                        'url' => 'damage-assessment/road-facilities/export-data',
+                        'pattern' => 'damage-assessment/road-facilities/export-data*',
                         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'QC/QA Engineer', 'Team Leader -INF', 'Area Manager'],
                     ],
                     [

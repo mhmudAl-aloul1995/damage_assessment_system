@@ -32,33 +32,45 @@
     <table>
         <thead>
             <tr>
-                <th>{{ __('multilingual.road_facilities_page.object_id') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.road_name') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.municipality') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.neighborhood') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.damage_level') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.road_access') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.submission_date') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.linked_items') }}</th>
-                <th>{{ __('multilingual.road_facilities_page.researcher') }}</th>
+                @foreach ($columns as $label)
+                    <th>{{ $label }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse ($surveys as $survey)
                 <tr>
-                    <td>{{ $survey->objectid }}</td>
-                    <td>{{ $survey->str_name }}</td>
-                    <td>{{ $survey->municipalitie }}</td>
-                    <td>{{ $survey->neighborhood }}</td>
-                    <td>{{ $survey->road_damage_level }}</td>
-                    <td>{{ $survey->road_access }}</td>
-                    <td>{{ $survey->submissiondate?->format('Y-m-d H:i') }}</td>
-                    <td>{{ $survey->items_count }}</td>
-                    <td>{{ $survey->assignedto }}</td>
+                    @foreach ($columns as $column => $label)
+                        @php
+                            $baseValues = [
+                                'objectid' => $survey->objectid,
+                                'phase_number' => $survey->phase_number,
+                                'str_name' => $survey->str_name,
+                                'municipalitie' => $survey->municipalitie,
+                                'neighborhood' => $survey->neighborhood,
+                                'road_damage_level' => $survey->road_damage_level,
+                                'road_access' => $survey->road_access,
+                                'submissiondate' => $survey->submissiondate?->format('Y-m-d H:i'),
+                                'items_count' => $survey->items_count,
+                                'assignedto' => $survey->assignedto,
+                            ];
+
+                            $value = $baseValues[$column] ?? \App\Support\Forms\RoadFacilitySurveyLayout::value($survey, $column);
+                            $field = collect(\App\Support\Forms\RoadFacilitySurveyLayout::sections())
+                                ->reject(fn (array $section): bool => ($section['type'] ?? 'group') === 'repeat')
+                                ->flatMap(fn (array $section): array => $section['fields'] ?? [])
+                                ->firstWhere('name', $column);
+
+                            $displayValue = $field
+                                ? \App\Support\Forms\RoadFacilitySurveyLayout::displayValue($value, $field)
+                                : (is_array($value) ? implode(', ', $value) : $value);
+                        @endphp
+                        <td>{{ $displayValue }}</td>
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9">{{ __('multilingual.road_facilities_page.no_surveys') }}</td>
+                    <td colspan="{{ max(count($columns), 1) }}">{{ __('multilingual.road_facilities_page.no_surveys') }}</td>
                 </tr>
             @endforelse
         </tbody>

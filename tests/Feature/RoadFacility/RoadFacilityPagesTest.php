@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use OpenSpout\Reader\XLSX\Reader;
 
 it('shows the road facility survey page with all dynamic road filters and exports', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
@@ -116,6 +117,8 @@ it('shows the road facility survey page with all dynamic road filters and export
     $indexResponse->assertSee('High voltage');
     $indexResponse->assertSee('Export Neighborhood Lengths');
     $indexResponse->assertSee('BOQ Table');
+    $indexResponse->assertSee(route('road-facilities.export-data'), false);
+    $indexResponse->assertSee('صفحة التصدير');
 
     $dataResponse = $this->actingAs($user)->get(route('road-facilities.data', [
         'draw' => 1,
@@ -205,6 +208,119 @@ it('shows the road facility survey page with all dynamic road filters and export
     expect(RoadFacilityFilter::query()->count())->toBeGreaterThan(10);
     expect(RoadFacilityFilter::query()->where('list_name', 'traffic_signs_type')->count())->toBeGreaterThan(0);
     expect(RoadFacilityFilter::query()->where('list_name', 'demolition_type')->count())->toBeGreaterThan(0);
+
+    Carbon::setTestNow();
+});
+
+it('shows the dedicated road facility export data page', function () {
+    app(RoadFacilityFilterSeeder::class)->run();
+
+    $user = User::factory()->create();
+
+    RoadFacilitySurvey::query()->create([
+        'objectid' => 9301,
+        'globalid' => 'road-facility-export-9301',
+        'str_name' => 'Export Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'Export Engineer',
+        'road_damage_level' => 'severe',
+        'road_access' => 'partial',
+        'submissiondate' => '2026-03-05 09:30:00',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('road-facilities.export-data'));
+
+    $response
+        ->assertOk()
+        ->assertSee('تصدير بيانات الطرق')
+        ->assertSee('id="roadExportForm"', false)
+        ->assertSee('name="municipalitie[]"', false)
+        ->assertSee('name="neighborhood[]"', false)
+        ->assertSee('name="assignedto[]"', false)
+        ->assertSee('name="from_date"', false)
+        ->assertSee('name="to_date"', false)
+        ->assertSee('name="filters[traffic_signs_type][]"', false)
+        ->assertSee('name="road_facility_columns[]"', false)
+        ->assertSee('name="road_facility_item_columns[]"', false)
+        ->assertSee('value="str_name"', false)
+        ->assertSee('value="item_required"', false)
+        ->assertSee('value="quantity_001"', false)
+        ->assertSee('data-format="xlsx"', false)
+        ->assertSee('data-format="csv"', false)
+        ->assertSee('data-format="pdf"', false)
+        ->assertSee('__FORMAT__', false)
+        ->assertSee('Sheet الطرق')
+        ->assertSee('Sheet البنود');
+});
+
+it('exports only selected road facility and item columns', function () {
+    Carbon::setTestNow('2026-04-14 11:30:00');
+
+    $user = User::factory()->create();
+
+    $survey = RoadFacilitySurvey::query()->create([
+        'objectid' => 9401,
+        'globalid' => 'road-facility-selected-columns-9401',
+        'str_name' => 'Selected Road',
+        'municipalitie' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'assignedto' => 'Column Engineer',
+        'road_damage_level' => 'severe',
+        'road_access' => 'partial',
+        'submissiondate' => '2026-03-05 09:30:00',
+        'raw_payload' => [
+            'Str_No' => 'A-17',
+        ],
+    ]);
+
+    RoadFacilitySurveyItem::query()->create([
+        'parentglobalid' => $survey->globalid,
+        'objectid' => 19401,
+        'globalid' => 'road-facility-item-selected-columns-19401',
+        'item_required' => 'Selected Item',
+        'description' => 'Selected description',
+        'unit' => 'item',
+        'quantity' => 3,
+        'raw_payload' => [
+            'unit_001' => 'no',
+            'quantity_001' => 7,
+        ],
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('road-facilities.export', [
+            'format' => 'xlsx',
+            'road_facility_columns' => ['objectid', 'str_name', 'Str_No'],
+            'road_facility_item_columns' => ['road_objectid', 'item_required', 'quantity_001'],
+        ]));
+
+    $response->assertOk();
+    $response->assertHeader('content-disposition', 'attachment; filename=road_facilities_20260414_113000.xlsx');
+
+    $reader = new Reader;
+    $reader->open($response->baseResponse->getFile()->getPathname());
+
+    $xlsxRows = [];
+
+    foreach ($reader->getSheetIterator() as $sheet) {
+        $xlsxRows[$sheet->getName()] = [];
+
+        foreach ($sheet->getRowIterator() as $row) {
+            $xlsxRows[$sheet->getName()][] = $row->toArray();
+        }
+    }
+
+    $reader->close();
+
+    expect(array_keys($xlsxRows))->toBe(['Roads', 'Items']);
+    expect($xlsxRows['Roads'][0])->toBe(['Object ID', 'Road Name', '3.2 رقم الشارع']);
+    expect($xlsxRows['Roads'][1])->toBe([9401, 'Selected Road', 'A-17']);
+    expect($xlsxRows['Items'][0])->toBe(['Road Object ID', 'Item Required', '13.4 الكمية']);
+    expect($xlsxRows['Items'][1])->toBe([9401, 'Selected Item', 7]);
 
     Carbon::setTestNow();
 });

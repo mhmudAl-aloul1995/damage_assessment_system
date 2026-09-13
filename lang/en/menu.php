@@ -61,6 +61,7 @@ return [
         'road_facilities' => 'Road Facilities Report',
         'export_data' => 'Export Data',
         'public_buildings_export_data' => 'Export Public Buildings',
+        'road_facilities_export_data' => 'Export Road Facilities',
         'cso_surveys_export_data' => 'Export CSO Surveys',
     ],
     'inf_audit' => [

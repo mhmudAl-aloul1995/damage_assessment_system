@@ -13,22 +13,24 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 
-class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
+class RoadFacilitySurveyItemsExport implements FromCollection, ShouldAutoSize, WithHeadings, WithMapping, WithTitle
 {
     /**
      * @var array<string, string>
      */
     private const BASE_COLUMNS = [
-        'objectid' => 'Object ID',
-        'phase_number' => 'Phase Number',
-        'str_name' => 'Road Name',
-        'municipalitie' => 'Municipality',
-        'neighborhood' => 'Neighborhood',
-        'road_damage_level' => 'Road Damage Level',
-        'road_access' => 'Road Access',
-        'submissiondate' => 'Submission Date',
-        'items_count' => 'Linked Items',
-        'assignedto' => 'Researcher',
+        'road_objectid' => 'Road Object ID',
+        'road_globalid' => 'Road Global ID',
+        'road_name' => 'Road Name',
+        'objectid' => 'Item Object ID',
+        'globalid' => 'Item Global ID',
+        'parentglobalid' => 'Parent Global ID',
+        'repeat_index' => 'Repeat Index',
+        'item_required' => 'Item Required',
+        'description' => 'Description',
+        'unit' => 'Unit',
+        'quantity' => 'Quantity',
+        'other_comments' => 'Other Comments',
     ];
 
     /**
@@ -58,11 +60,7 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
             'Summary' => self::BASE_COLUMNS,
         ];
 
-        foreach (RoadFacilitySurveyLayout::sections() as $sectionName => $section) {
-            if (($section['type'] ?? 'group') === 'repeat') {
-                continue;
-            }
-
+        foreach (RoadFacilitySurveyLayout::repeatSections('R2') as $sectionName => $section) {
             $columns = collect($section['fields'] ?? [])
                 ->reject(fn (array $field): bool => in_array($field['type'] ?? null, ['calculate', 'note'], true))
                 ->mapWithKeys(fn (array $field): array => [
@@ -82,7 +80,8 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
 
     public function collection(): Collection
     {
-        return $this->surveys;
+        return $this->surveys
+            ->flatMap(fn (RoadFacilitySurvey $survey): Collection => $survey->items);
     }
 
     public function headings(): array
@@ -92,23 +91,26 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
 
     public function title(): string
     {
-        return 'Roads';
+        return 'Items';
     }
 
     public function map($row): array
     {
-        /** @var RoadFacilitySurvey $row */
+        $survey = $this->surveys->firstWhere('globalid', $row->parentglobalid);
+
         $baseValues = [
+            'road_objectid' => $survey?->objectid,
+            'road_globalid' => $survey?->globalid,
+            'road_name' => $survey?->str_name,
             'objectid' => $row->objectid,
-            'phase_number' => $row->phase_number,
-            'str_name' => $row->str_name,
-            'municipalitie' => $row->municipalitie,
-            'neighborhood' => $row->neighborhood,
-            'road_damage_level' => $row->road_damage_level,
-            'road_access' => $row->road_access,
-            'submissiondate' => $row->submissiondate?->format('Y-m-d H:i'),
-            'items_count' => $row->items_count,
-            'assignedto' => $row->assignedto,
+            'globalid' => $row->globalid,
+            'parentglobalid' => $row->parentglobalid,
+            'repeat_index' => $row->repeat_index,
+            'item_required' => $row->item_required,
+            'description' => $row->description,
+            'unit' => $row->unit,
+            'quantity' => $row->quantity,
+            'other_comments' => $row->other_comments,
         ];
 
         return collect($this->columns)
@@ -145,10 +147,10 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
             : (string) $field['name'];
     }
 
-    private function layoutValue(RoadFacilitySurvey $survey, string $column): ?string
+    private function layoutValue(object $item, string $column): ?string
     {
         $field = $this->fieldDefinition($column);
-        $value = RoadFacilitySurveyLayout::value($survey, $column);
+        $value = RoadFacilitySurveyLayout::value($item, $column);
 
         if ($field === null) {
             return is_scalar($value) ? trim((string) $value) : null;
@@ -159,11 +161,7 @@ class RoadFacilitySurveysExport implements FromCollection, ShouldAutoSize, WithH
 
     private function fieldDefinition(string $column): ?array
     {
-        foreach (RoadFacilitySurveyLayout::sections() as $section) {
-            if (($section['type'] ?? 'group') === 'repeat') {
-                continue;
-            }
-
+        foreach (RoadFacilitySurveyLayout::repeatSections('R2') as $section) {
             foreach ($section['fields'] ?? [] as $field) {
                 if (($field['name'] ?? null) === $column) {
                     return $field;

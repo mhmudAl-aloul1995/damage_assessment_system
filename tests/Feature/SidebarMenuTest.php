@@ -95,6 +95,7 @@ it('groups report links into sidebar categories', function () {
         ->pluck('url')
         ->toContain('damage-assessment/export-data')
         ->toContain('damage-assessment/public-buildings/export-data')
+        ->toContain('damage-assessment/road-facilities/export-data')
         ->toContain('damage-assessment/cso-surveys/export-data');
 });
 

@@ -95,6 +95,7 @@
                 <h3 class="fw-bold m-0">{{ __('multilingual.road_facilities_page.surveys_title') }}</h3>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="{{ route('road-facilities.export-data') }}" class="btn btn-primary">صفحة التصدير</a>
                 <button type="button" class="btn btn-light-primary road-facilities-export" data-format="xlsx">{{ __('multilingual.road_facilities_page.export_excel') }}</button>
                 <button type="button" class="btn btn-light-success road-facilities-export" data-format="csv">{{ __('multilingual.road_facilities_page.export_csv') }}</button>
                 <button type="button" class="btn btn-light-danger road-facilities-export" data-format="pdf">{{ __('multilingual.road_facilities_page.export_pdf') }}</button>

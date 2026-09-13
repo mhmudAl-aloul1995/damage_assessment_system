@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\RoadFacilities;
 
 use App\Exports\RoadFacilityNeighborhoodLengthsExport;
+use App\Exports\RoadFacilitySurveyItemsExport;
 use App\Exports\RoadFacilitySurveysExport;
+use App\Exports\RoadFacilitySurveysWorkbookExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RoadFacility\RoadFacilityFilterRequest;
 use App\Models\RoadFacilityFilter;
@@ -26,6 +28,25 @@ use Yajra\DataTables\Facades\DataTables;
 class RoadFacilityController extends Controller
 {
     public function index(): View
+    {
+        return view('damage-assessment::surveys.road-facilities.index', $this->indexData());
+    }
+
+    public function exportData(): View
+    {
+        return view('damage-assessment::surveys.road-facilities.export-data', $this->indexData());
+    }
+
+    /**
+     * @return array{
+     *     summary: array{total_surveys: int, total_items: int, damaged_roads: int},
+     *     filterOptions: array{municipalities: Collection, neighborhoods: Collection, researchers: Collection, min_submissiondate: ?string, max_submissiondate: ?string},
+     *     filterGroups: Collection,
+     *     exportColumns: array{roads: array<string, string>, items: array<string, string>},
+     *     exportColumnGroups: array{roads: array<string, array<string, string>>, items: array<string, array<string, string>>}
+     * }
+     */
+    private function indexData(): array
     {
         $summary = [
             'total_surveys' => RoadFacilitySurvey::query()->count(),
@@ -57,11 +78,17 @@ class RoadFacilityController extends Controller
             'max_submissiondate' => optional(RoadFacilitySurvey::query()->whereNotNull('submissiondate')->max('submissiondate'))?->format('Y-m-d'),
         ];
 
-        return view('damage-assessment::surveys.road-facilities.index', [
-            'summary' => $summary,
-            'filterOptions' => $filterOptions,
-            'filterGroups' => $filterGroups,
-        ]);
+        $exportColumns = [
+            'roads' => RoadFacilitySurveysExport::availableColumns(),
+            'items' => RoadFacilitySurveyItemsExport::availableColumns(),
+        ];
+
+        $exportColumnGroups = [
+            'roads' => RoadFacilitySurveysExport::availableColumnGroups(),
+            'items' => RoadFacilitySurveyItemsExport::availableColumnGroups(),
+        ];
+
+        return compact('summary', 'filterOptions', 'filterGroups', 'exportColumns', 'exportColumnGroups');
     }
 
     public function data(RoadFacilityFilterRequest $request): JsonResponse
@@ -98,16 +125,25 @@ class RoadFacilityController extends Controller
 
         $surveys = $this->filteredQuery($request)->get();
         $fileBaseName = 'road_facilities_'.now()->format('Ymd_His');
+        $roadColumns = $this->selectedExportColumns($request, 'road_facility_columns', RoadFacilitySurveysExport::availableColumns());
+        $itemColumns = $this->selectedExportColumns($request, 'road_facility_item_columns', RoadFacilitySurveyItemsExport::availableColumns());
 
         if ($format === 'pdf') {
             return Pdf::loadView('damage-assessment::surveys.road-facilities.export_pdf', [
                 'surveys' => $surveys,
                 'filters' => $request->validated(),
+                'columns' => array_intersect_key(RoadFacilitySurveysExport::availableColumns(), array_flip($roadColumns)),
             ])->setPaper('a4', 'landscape')->download($fileBaseName.'.pdf');
         }
 
+        if ($format === 'xlsx') {
+            $surveys->load(['items' => fn ($query) => $query->orderBy('objectid')]);
+        }
+
         return Excel::download(
-            new RoadFacilitySurveysExport($surveys),
+            $format === 'xlsx'
+                ? new RoadFacilitySurveysWorkbookExport($surveys, $roadColumns, $itemColumns)
+                : new RoadFacilitySurveysExport($surveys, $roadColumns),
             $fileBaseName.'.'.$format,
             $format === 'csv' ? ExcelFormat::CSV : ExcelFormat::XLSX,
         );
@@ -412,6 +448,31 @@ class RoadFacilityController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $availableColumns
+     * @return array<int, string>
+     */
+    private function selectedExportColumns(RoadFacilityFilterRequest $request, string $key, array $availableColumns): array
+    {
+        $availableColumnKeys = array_keys($availableColumns);
+
+        if ($request->input($key.'_mode') === 'except') {
+            $excludedColumns = array_values(array_intersect(
+                $this->normalizeValues($request->input($key.'_excluded')),
+                $availableColumnKeys,
+            ));
+
+            return array_values(array_diff($availableColumnKeys, $excludedColumns));
+        }
+
+        $selectedColumns = array_values(array_intersect(
+            $this->normalizeValues($request->input($key)),
+            $availableColumnKeys,
+        ));
+
+        return $selectedColumns !== [] ? $selectedColumns : $availableColumnKeys;
     }
 
     private function researcherColumn(): ?string
