@@ -27,7 +27,7 @@ class CheckSpouseIdentitiesByHusband extends Command
      *
      * @var string
      */
-    protected $description = 'Check housing unit spouse identities using citizens.husband_id linked to the husband citizen row.';
+    protected $description = 'Check housing unit spouse identities using citizens breadwinner spouse relations.';
 
     /**
      * Execute the console command.
@@ -85,7 +85,7 @@ class CheckSpouseIdentitiesByHusband extends Command
         $query->chunkById($chunkSize, function ($housingUnits) use (&$counts, &$previewRows, $apply, $previewLimit): void {
             $counts['housing_units_scanned'] += $housingUnits->count();
 
-            $registrySpousesByHusbandId = $this->citizenSpousesByHusbandId(
+            $registrySpousesByHusbandId = $this->citizenSpousesByBreadwinnerId(
                 $housingUnits
                     ->pluck('id_number1')
                     ->map(fn ($idNumber): string => trim((string) $idNumber))
@@ -165,25 +165,24 @@ class CheckSpouseIdentitiesByHusband extends Command
      * @param  Collection<int, string>  $husbandIdNumbers
      * @return Collection<string, Collection<int, object>>
      */
-    private function citizenSpousesByHusbandId(Collection $husbandIdNumbers): Collection
+    private function citizenSpousesByBreadwinnerId(Collection $husbandIdNumbers): Collection
     {
         if ($husbandIdNumbers->isEmpty()) {
             return collect();
         }
 
         return DB::table($this->citizensTable().' as wife')
-            ->join($this->citizensTable().' as husband', 'husband.id', '=', 'wife.husband_id')
             ->select([
                 'wife.id_card_no',
                 'wife.full_name',
-                'husband.id_card_no as husband_id_card_no',
+                'wife.breadwinner_id_card_no',
             ])
             ->where('wife.status', 'A')
-            ->where('husband.status', 'A')
-            ->whereIn('husband.id_card_no', $husbandIdNumbers)
+            ->where('wife.relation_with_breadwinner_id', 2)
+            ->whereIn('wife.breadwinner_id_card_no', $husbandIdNumbers)
             ->orderBy('wife.id_card_no')
             ->get()
-            ->groupBy(fn ($record): string => trim((string) $record->husband_id_card_no))
+            ->groupBy(fn ($record): string => trim((string) $record->breadwinner_id_card_no))
             ->map(fn (Collection $records): Collection => $records
                 ->map(function ($record): object {
                     return (object) [
