@@ -17,9 +17,9 @@ it('seeds the default dashboard cards and items', function (): void {
     $this->seed(DashboardCardSeeder::class);
 
     expect(DashboardCard::query()->count())->toBe(5)
-        ->and(DashboardCard::query()->where('key', 'buildings')->first()?->items)->toHaveCount(8)
+        ->and(DashboardCard::query()->where('key', 'buildings')->first()?->items)->toHaveCount(9)
         ->and(DashboardCard::query()->where('key', 'buildings')->first()?->items()->first()?->sort_order)->toBe(1)
-        ->and(DashboardCard::query()->where('key', 'housing')->first()?->items)->toHaveCount(9)
+        ->and(DashboardCard::query()->where('key', 'housing')->first()?->items)->toHaveCount(10)
         ->and(DashboardCard::query()->where('key', 'housing')->first()?->items()->first()?->sort_order)->toBe(1);
 });
 

@@ -766,6 +766,8 @@ return [
         'fully_damaged' => 'Fully Damaged',
         'partially_damaged' => 'Partially Damaged',
         'committee_review' => 'Committee Review',
+        'current_committee_review' => 'Current Committee Review',
+        'archived_committee_review' => 'Previous Committee Reviews',
         'no_damage' => 'No Damage',
         'unclassified' => 'Unclassified',
         'not_completed' => 'Incomplete',

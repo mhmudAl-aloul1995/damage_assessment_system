@@ -44,12 +44,16 @@ class DamageAssessmentController extends Controller
         'committee_review',
         'committee_review2',
         'commite_review',
+        'commitee_review',
+        'commitee_review2',
     ];
 
     private const COMMITTEE_UNIT_DAMAGE_STATUSES = [
         'committee_review2',
         'committee_review',
         'commite_review',
+        'commitee_review',
+        'commitee_review2',
     ];
 
     private const COMMITTEE_ARCHIVE_SOURCE_TYPES = [
@@ -1132,7 +1136,7 @@ class DamageAssessmentController extends Controller
                 COALESCE(SUM(field_status NOT IN ('COMPLETED', 'Not_Completed')), 0) as pending,
                 COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' AND LOWER(TRIM(COALESCE(building_damage_status, ''))) IN ('fully_damaged', 'fully_damaged2', 'totally_damaged', 'total_damage', 'totally') THEN 1 ELSE 0 END), 0) as fully_damaged,
                 COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' AND LOWER(TRIM(COALESCE(building_damage_status, ''))) IN ('partially_damaged', 'partially_damaged2', 'partial_damage', 'partial') THEN 1 ELSE 0 END), 0) as partially_damaged,
-                COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' AND LOWER(TRIM(COALESCE(building_damage_status, ''))) IN ('committee_review', 'committee_review2', 'commite_review') THEN 1 ELSE 0 END), 0) as committee_review,
+                COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' AND LOWER(TRIM(COALESCE(building_damage_status, ''))) IN ('committee_review', 'committee_review2', 'commite_review', 'commitee_review', 'commitee_review2') THEN 1 ELSE 0 END), 0) as committee_review,
                 COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' AND LOWER(TRIM(COALESCE(building_damage_status, ''))) IN ('no_damage', 'no_damage2', 'no_damaged') THEN 1 ELSE 0 END), 0) as no_damage,
                 COALESCE(SUM(CASE WHEN field_status = 'COMPLETED' AND (building_damage_status IS NULL OR TRIM(building_damage_status) = '') THEN 1 ELSE 0 END), 0) as unclassified,
                 COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(assessment_obstacle, ''))) = 'yes' THEN 1 ELSE 0 END), 0) as assessment_obstacle,
@@ -1146,7 +1150,7 @@ class DamageAssessmentController extends Controller
                 COUNT(*) as total_units,
                 COALESCE(SUM(unit_damage_status = 'fully_damaged2'), 0) as fully_damaged,
                 COALESCE(SUM(unit_damage_status = 'partially_damaged2'), 0) as partially_damaged,
-                COALESCE(SUM(unit_damage_status = 'committee_review2'), 0) as committee_review,
+                COALESCE(SUM(LOWER(TRIM(COALESCE(unit_damage_status, ''))) IN ('committee_review2', 'committee_review', 'commite_review', 'commitee_review', 'commitee_review2')), 0) as committee_review,
                 COALESCE(SUM(unit_damage_status = 'no_damaged'), 0) as no_damage,
                 COALESCE(SUM(CASE WHEN unit_damage_status IS NULL OR TRIM(unit_damage_status) = '' THEN 1 ELSE 0 END), 0) as unclassified,
                 COALESCE(SUM(has_fire = 'yes'), 0) as has_fire,
@@ -1164,7 +1168,8 @@ class DamageAssessmentController extends Controller
                 'pending' => (int) $buildings->pending,
                 'fully_damaged' => (int) $buildings->fully_damaged,
                 'partially_damaged' => (int) $buildings->partially_damaged,
-                'committee_review' => (int) $buildings->committee_review + $this->dashboardArchivedCommitteeReviewCount($request, 'building'),
+                'committee_review' => (int) $buildings->committee_review,
+                'archived_committee_review' => $this->dashboardArchivedCommitteeDecisionCount($request, 'building'),
                 'no_damage' => (int) $buildings->no_damage,
                 'unclassified' => (int) $buildings->unclassified,
                 'assessment_obstacle' => (int) $buildings->assessment_obstacle,
@@ -1178,7 +1183,8 @@ class DamageAssessmentController extends Controller
                 'fully_damaged' => (int) $units->fully_damaged,
                 'partially_damaged' => (int) $units->partially_damaged,
                 'damaged_total' => (int) $units->fully_damaged + (int) $units->partially_damaged,
-                'committee_review' => (int) $units->committee_review + $this->dashboardArchivedCommitteeReviewCount($request, 'housing-unit'),
+                'committee_review' => (int) $units->committee_review,
+                'archived_committee_review' => $this->dashboardArchivedCommitteeDecisionCount($request, 'housing-unit'),
                 'no_damage' => (int) $units->no_damage,
                 'unclassified' => (int) $units->unclassified,
                 'has_fire' => (int) $units->has_fire,
@@ -1253,18 +1259,12 @@ class DamageAssessmentController extends Controller
             $condition = $conditions[0];
 
             if (! Schema::hasColumn($table, $condition['field'])) {
-                return $this->dashboardArchivedCommitteeReviewCount(
-                    $request,
-                    $item->source_bucket === 'buildingStats' ? 'building' : 'housing-unit'
-                );
+                return 0;
             }
 
-            $this->applyDashboardCardItemCondition($query, $condition['field'], $condition['operator'], $condition['value']);
+            $this->applyDashboardCommitteeReviewCardItemCondition($query, $condition['field'], $item->source_bucket);
 
-            return $query->count() + $this->dashboardArchivedCommitteeReviewCount(
-                $request,
-                $item->source_bucket === 'buildingStats' ? 'building' : 'housing-unit'
-            );
+            return $query->count();
         }
 
         foreach ($conditions as $condition) {
@@ -1308,7 +1308,7 @@ class DamageAssessmentController extends Controller
                 ->isNotEmpty();
     }
 
-    private function dashboardArchivedCommitteeReviewCount(Request $request, string $recordType): int
+    private function dashboardArchivedCommitteeDecisionCount(Request $request, string $recordType): int
     {
         if (! Schema::hasTable('building_survey_archive_objects')) {
             return 0;
@@ -1318,22 +1318,18 @@ class DamageAssessmentController extends Controller
             ->whereIn('source_type', self::COMMITTEE_ARCHIVE_SOURCE_TYPES);
 
         if ($recordType === 'housing-unit') {
-            $query
-                ->whereNotNull('housing_unit_objectid')
-                ->whereIn('housing_unit_snapshot->unit_damage_status', self::COMMITTEE_UNIT_DAMAGE_STATUSES);
+            $query->whereNotNull('housing_unit_objectid');
 
             $this->applyDashboardArchivedCommitteeUnitFilters($query, $request);
 
-            return $query->distinct('housing_unit_objectid')->count('housing_unit_objectid');
+            return $query->count();
         }
 
-        $query
-            ->whereNull('housing_unit_objectid')
-            ->whereIn('building_snapshot->building_damage_status', self::COMMITTEE_BUILDING_DAMAGE_STATUSES);
+        $query->whereNull('housing_unit_objectid');
 
         $this->applyDashboardArchivedCommitteeBuildingFilters($query, $request);
 
-        return $query->distinct('building_objectid')->count('building_objectid');
+        return $query->count();
     }
 
     private function applyDashboardArchivedCommitteeBuildingFilters(Builder $query, Request $request): void
@@ -1348,7 +1344,7 @@ class DamageAssessmentController extends Controller
             $query->where('building_snapshot->governorate', (string) $request->string('governorate'));
         }
 
-        $this->applyDashboardArchivedJsonDateFilters($query, 'building_snapshot', ['submission_date', 'end'], $startDate, $endDate);
+        $this->applyDashboardArchivedAtDateFilters($query, $startDate, $endDate);
     }
 
     private function applyDashboardArchivedCommitteeUnitFilters(Builder $query, Request $request): void
@@ -1375,30 +1371,17 @@ class DamageAssessmentController extends Controller
             });
         }
 
-        $this->applyDashboardArchivedJsonDateFilters($query, 'housing_unit_snapshot', ['building_submit_date'], $startDate, $endDate);
+        $this->applyDashboardArchivedAtDateFilters($query, $startDate, $endDate);
     }
 
-    /**
-     * @param  list<string>  $dateFields
-     */
-    private function applyDashboardArchivedJsonDateFilters(Builder $query, string $snapshotColumn, array $dateFields, ?string $startDate, ?string $endDate): void
+    private function applyDashboardArchivedAtDateFilters(Builder $query, ?string $startDate, ?string $endDate): void
     {
         if ($startDate !== null) {
-            $query->where(function (Builder $query) use ($snapshotColumn, $dateFields, $startDate): void {
-                foreach ($dateFields as $index => $dateField) {
-                    $method = $index === 0 ? 'whereDate' : 'orWhereDate';
-                    $query->{$method}($snapshotColumn.'->'.$dateField, '>=', $startDate);
-                }
-            });
+            $query->whereDate('archived_at', '>=', $startDate);
         }
 
         if ($endDate !== null) {
-            $query->where(function (Builder $query) use ($snapshotColumn, $dateFields, $endDate): void {
-                foreach ($dateFields as $index => $dateField) {
-                    $method = $index === 0 ? 'whereDate' : 'orWhereDate';
-                    $query->{$method}($snapshotColumn.'->'.$dateField, '<=', $endDate);
-                }
-            });
+            $query->whereDate('archived_at', '<=', $endDate);
         }
     }
 
@@ -1466,6 +1449,15 @@ class DamageAssessmentController extends Controller
             'csoUnitStats' => $this->dashboardCsoUnitQuery($request),
             default => null,
         };
+    }
+
+    private function applyDashboardCommitteeReviewCardItemCondition(Builder $query, string $field, string $sourceBucket): void
+    {
+        $committeeStatuses = $sourceBucket === 'buildingStats'
+            ? self::COMMITTEE_BUILDING_DAMAGE_STATUSES
+            : self::COMMITTEE_UNIT_DAMAGE_STATUSES;
+
+        $query->whereIn(DB::raw("LOWER(TRIM(COALESCE({$field}, '')))"), $committeeStatuses);
     }
 
     private function applyDashboardCardItemCondition(Builder $query, string $field, ?string $operator, mixed $value): void

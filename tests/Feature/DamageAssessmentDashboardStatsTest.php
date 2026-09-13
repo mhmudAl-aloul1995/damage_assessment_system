@@ -590,10 +590,53 @@ it('counts archived committee building decisions in the dashboard committee tota
         'committee_decision_snapshot' => $decision->attributesToArray(),
     ]);
 
+    $previouslyDamagedBuilding = Building::query()->create([
+        'objectid' => 944,
+        'globalid' => 'archived-damaged-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'partially_damaged',
+        'governorate' => 'Gaza',
+        'neighborhood' => 'Rimal',
+        'submission_date' => '2026-06-10 10:00:00',
+        'end' => '2026-06-10 10:00:00',
+    ]);
+
+    $previouslyDamagedDecision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $previouslyDamagedBuilding->id,
+        'decision_type' => CommitteeDecision::TYPE_PARTIALLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'completed_at' => '2026-06-15 10:00:00',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => $previouslyDamagedBuilding->objectid,
+        'building_globalid' => $previouslyDamagedBuilding->globalid,
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $previouslyDamagedDecision->id,
+        'archived_by' => $user->id,
+        'archived_at' => '2026-06-15 10:00:00',
+        'building_snapshot' => [
+            'objectid' => $previouslyDamagedBuilding->objectid,
+            'globalid' => $previouslyDamagedBuilding->globalid,
+            'field_status' => 'COMPLETED',
+            'building_damage_status' => 'partially_damaged',
+            'governorate' => 'Gaza',
+            'neighborhood' => 'Rimal',
+            'submission_date' => '2026-06-10 10:00:00',
+            'end' => '2026-06-10 10:00:00',
+        ],
+        'committee_decision_snapshot' => $previouslyDamagedDecision->attributesToArray(),
+    ]);
+
     $committeeCardItem = DashboardCardItem::query()
         ->where('source_bucket', 'buildingStats')
         ->where('filter_field', 'building_damage_status')
         ->where('filter_value', 'committee_review')
+        ->firstOrFail();
+    $archivedCommitteeCardItem = DashboardCardItem::query()
+        ->where('source_bucket', 'buildingStats')
+        ->where('key', 'archived_committee_review')
         ->firstOrFail();
 
     $committeeCardItem->update(['calculation_type' => 'count_condition']);
@@ -608,10 +651,95 @@ it('counts archived committee building decisions in the dashboard committee tota
         ->assertOk()
         ->assertViewHas('buildingStats', function (array $buildingStats): bool {
             return (int) $buildingStats['fully_damaged'] === 1
-                && (int) $buildingStats['committee_review'] === 1;
+                && (int) $buildingStats['committee_review'] === 0
+                && (int) $buildingStats['archived_committee_review'] === 2;
         })
-        ->assertViewHas('dashboardCardItemValues', function (array $values) use ($committeeCardItem): bool {
-            return (int) $values[$committeeCardItem->id] === 1;
+        ->assertViewHas('dashboardCardItemValues', function (array $values) use ($committeeCardItem, $archivedCommitteeCardItem): bool {
+            return (int) $values[$committeeCardItem->id] === 0
+                && ! array_key_exists($archivedCommitteeCardItem->id, $values);
+        });
+});
+
+it('counts committee review typo variants on the dashboard committee total', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    Building::query()->create([
+        'objectid' => 942,
+        'globalid' => 'current-committee-typo-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'commitee_review',
+        'submission_date' => '2026-06-10 10:00:00',
+        'end' => '2026-06-10 10:00:00',
+    ]);
+
+    $building = Building::query()->create([
+        'objectid' => 943,
+        'globalid' => 'archived-committee-typo-building',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => 'fully_damaged',
+        'submission_date' => '2026-06-11 10:00:00',
+        'end' => '2026-06-11 10:00:00',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => Building::class,
+        'decisionable_id' => $building->id,
+        'decision_type' => CommitteeDecision::TYPE_FULLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'completed_at' => '2026-06-14 10:00:00',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => $building->objectid,
+        'building_globalid' => $building->globalid,
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'archived_by' => $user->id,
+        'archived_at' => '2026-06-14 10:00:00',
+        'building_snapshot' => [
+            'objectid' => $building->objectid,
+            'globalid' => $building->globalid,
+            'field_status' => 'COMPLETED',
+            'building_damage_status' => 'commitee_review',
+            'submission_date' => '2026-06-11 10:00:00',
+            'end' => '2026-06-11 10:00:00',
+        ],
+        'committee_decision_snapshot' => $decision->attributesToArray(),
+    ]);
+
+    $committeeCardItem = DashboardCardItem::query()
+        ->where('source_bucket', 'buildingStats')
+        ->where('filter_field', 'building_damage_status')
+        ->where('filter_value', 'committee_review')
+        ->firstOrFail();
+    $archivedCommitteeCardItem = DashboardCardItem::query()
+        ->where('source_bucket', 'buildingStats')
+        ->where('key', 'archived_committee_review')
+        ->firstOrFail();
+
+    $committeeCardItem->update(['calculation_type' => 'count_condition']);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', [
+            'from_date' => '2026-06-01',
+            'to_date' => '2026-06-30',
+        ]))
+        ->assertOk()
+        ->assertViewHas('buildingStats', function (array $buildingStats): bool {
+            return (int) $buildingStats['committee_review'] === 1
+                && (int) $buildingStats['archived_committee_review'] === 1;
+        })
+        ->assertViewHas('dashboardCardItemValues', function (array $values) use ($committeeCardItem, $archivedCommitteeCardItem): bool {
+            return (int) $values[$committeeCardItem->id] === 1
+                && ! array_key_exists($archivedCommitteeCardItem->id, $values);
         });
 });
 
@@ -679,6 +807,71 @@ it('counts dashboard damaged housing total from fully and partially damaged unit
         ->assertSee(__('ui.damage_dashboard.assessment_blocked'))
         ->assertSee('unit_damage_status=no_damaged', false)
         ->assertDontSee('unit_damage_status=__blank__', false);
+});
+
+it('separates current and archived committee review unit totals on the dashboard', function () {
+    $user = User::factory()->create();
+
+    $this->app->instance(ArcgisService::class, new class extends ArcgisService
+    {
+        public function getToken(): string
+        {
+            return 'fake-token';
+        }
+    });
+
+    HousingUnit::query()->create([
+        'objectid' => 907,
+        'globalid' => 'current-committee-unit',
+        'unit_damage_status' => 'committee_review2',
+        'building_submit_date' => '2026-06-10 10:00:00',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
+        'objectid' => 908,
+        'globalid' => 'archived-committee-unit',
+        'unit_damage_status' => 'fully_damaged2',
+        'building_objectid' => 1908,
+        'building_submit_date' => '2026-06-11 10:00:00',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    $decision = CommitteeDecision::query()->create([
+        'decisionable_type' => HousingUnit::class,
+        'decisionable_id' => $housingUnit->id,
+        'decision_type' => CommitteeDecision::TYPE_FULLY_DAMAGED,
+        'status' => CommitteeDecision::STATUS_COMPLETED,
+        'completed_at' => '2026-06-14 10:00:00',
+    ]);
+
+    BuildingSurveyArchiveObject::query()->create([
+        'building_objectid' => 1908,
+        'housing_unit_objectid' => $housingUnit->objectid,
+        'housing_unit_globalid' => $housingUnit->globalid,
+        'source_type' => 'committee_decision',
+        'committee_decision_id' => $decision->id,
+        'archived_by' => $user->id,
+        'archived_at' => '2026-06-14 10:00:00',
+        'housing_unit_snapshot' => [
+            'objectid' => $housingUnit->objectid,
+            'globalid' => $housingUnit->globalid,
+            'unit_damage_status' => 'partially_damaged2',
+            'building_submit_date' => '2026-06-11 10:00:00',
+        ],
+        'committee_decision_snapshot' => $decision->attributesToArray(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('damageAssessment.index', [
+            'from_date' => '2026-06-01',
+            'to_date' => '2026-06-30',
+        ]))
+        ->assertOk()
+        ->assertViewHas('unitStats', function (array $unitStats): bool {
+            return (int) $unitStats['committee_review'] === 1
+                && (int) $unitStats['archived_committee_review'] === 1;
+        });
 });
 
 it('counts dashboard housing assessment blocked from yes security situation values', function () {

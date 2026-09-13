@@ -17,6 +17,8 @@
 		'ضرر كلي' => 'ui.damage_dashboard.fully_damaged',
 		'ضرر جزئي' => 'ui.damage_dashboard.partially_damaged',
 		'لجنة فنية' => 'ui.damage_dashboard.committee_review',
+		'لجنة فنية حالية' => 'ui.damage_dashboard.current_committee_review',
+		'لجان فنية سابقة' => 'ui.damage_dashboard.archived_committee_review',
 		'لا يوجد ضرر' => 'ui.damage_dashboard.no_damage',
 		'غير مصنف' => 'ui.damage_dashboard.unclassified',
 		'يوجد عائق' => 'ui.damage_dashboard.assessment_blocked',

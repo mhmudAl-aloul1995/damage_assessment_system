@@ -766,6 +766,8 @@ return [
         'fully_damaged' => 'ضرر كلي',
         'partially_damaged' => 'ضرر جزئي',
         'committee_review' => 'لجنة فنية',
+        'current_committee_review' => 'لجنة فنية حالية',
+        'archived_committee_review' => 'لجان فنية سابقة',
         'no_damage' => 'لا يوجد ضرر',
         'unclassified' => 'غير مصنف',
         'not_completed' => 'غير مكتمل',
