@@ -11,7 +11,7 @@ beforeEach(function (): void {
         $table->string('status')->default('A');
         $table->string('id_card_no')->nullable();
         $table->string('full_name')->nullable();
-        $table->string('husband_id')->nullable();
+        $table->unsignedBigInteger('husband_id')->nullable();
     });
 });
 
@@ -26,11 +26,17 @@ it('previews spouse identity corrections from the husband registry without chang
         'spouse1_id' => '999999999',
     ]);
 
+    $husbandId = DB::table('citizens')->insertGetId([
+        'status' => 'A',
+        'id_card_no' => '800000001',
+        'full_name' => 'Preview Husband',
+    ]);
+
     DB::table('citizens')->insert([
         'status' => 'A',
         'id_card_no' => '901464339',
         'full_name' => 'سناء محمد عيسى احمد',
-        'husband_id' => '800000001',
+        'husband_id' => $husbandId,
     ]);
 
     $this->artisan('spouse-identities:check-by-husband', ['--unit' => [147]])
@@ -54,18 +60,24 @@ it('applies spouse identity corrections and fills empty spouse slots from the hu
         'spouse2_id' => null,
     ]);
 
+    $husbandId = DB::table('citizens')->insertGetId([
+        'status' => 'A',
+        'id_card_no' => '800000001',
+        'full_name' => 'Apply Husband',
+    ]);
+
     DB::table('citizens')->insert([
         [
             'status' => 'A',
             'id_card_no' => '901464339',
             'full_name' => 'سناء محمد عيسى احمد',
-            'husband_id' => '800000001',
+            'husband_id' => $husbandId,
         ],
         [
             'status' => 'A',
             'id_card_no' => '901464340',
             'full_name' => 'زوجة ثانية',
-            'husband_id' => '800000001',
+            'husband_id' => $husbandId,
         ],
     ]);
 

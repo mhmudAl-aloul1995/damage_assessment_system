@@ -27,7 +27,7 @@ class CheckSpouseIdentitiesByHusband extends Command
      *
      * @var string
      */
-    protected $description = 'Check housing unit spouse identities using citizens.husband_id by owner identity number.';
+    protected $description = 'Check housing unit spouse identities using citizens.husband_id linked to the husband citizen row.';
 
     /**
      * Execute the console command.
@@ -171,13 +171,19 @@ class CheckSpouseIdentitiesByHusband extends Command
             return collect();
         }
 
-        return DB::table($this->citizensTable())
-            ->select(['id_card_no', 'full_name', 'husband_id'])
-            ->where('status', 'A')
-            ->whereIn('husband_id', $husbandIdNumbers)
-            ->orderBy('id_card_no')
+        return DB::table($this->citizensTable().' as wife')
+            ->join($this->citizensTable().' as husband', 'husband.id', '=', 'wife.husband_id')
+            ->select([
+                'wife.id_card_no',
+                'wife.full_name',
+                'husband.id_card_no as husband_id_card_no',
+            ])
+            ->where('wife.status', 'A')
+            ->where('husband.status', 'A')
+            ->whereIn('husband.id_card_no', $husbandIdNumbers)
+            ->orderBy('wife.id_card_no')
             ->get()
-            ->groupBy(fn ($record): string => trim((string) $record->husband_id))
+            ->groupBy(fn ($record): string => trim((string) $record->husband_id_card_no))
             ->map(fn (Collection $records): Collection => $records
                 ->map(function ($record): object {
                     return (object) [
