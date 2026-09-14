@@ -13,7 +13,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('phc:queue-status', function () {
-    $queues = collect(['arcgis-cso', 'arcgis', 'default', 'exports', config('heks_kobo.queue', 'heks')])
+    $queues = collect(['arcgis', 'default', 'exports', config('heks_kobo.queue', 'heks')])
         ->filter()
         ->unique()
         ->values();
@@ -109,7 +109,7 @@ foreach (range(1, 3) as $workerSlot) {
 |--------------------------------------------------------------------------
 | يعمل كل ساعة من 01:00 حتى 23:00
 */
-Schedule::command('sync:arcgis-layers')
+Schedule::command('sync:arcgis-layers --exclude=cso_surveys --exclude=cso_survey_organizations --exclude=cso_survey_units')
     ->cron('0 16-23 * * *')
     ->withoutOverlapping(120)
     ->name('sync-arcgis-layers')

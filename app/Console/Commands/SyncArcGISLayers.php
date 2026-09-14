@@ -15,7 +15,11 @@ use Illuminate\Support\Facades\Schema;
 
 class SyncArcGISLayers extends Command
 {
-    protected $signature = 'sync:arcgis-layers {table?} {--chunk=1000} {--force : Update records even when the ArcGIS hash has not changed}';
+    protected $signature = 'sync:arcgis-layers
+        {table? : Sync one table only}
+        {--chunk=1000}
+        {--force : Update records even when the ArcGIS hash has not changed}
+        {--exclude=* : Table to skip when syncing all layers}';
 
     /**s */
     protected $description = 'Sync ArcGIS layers';
@@ -137,7 +141,15 @@ class SyncArcGISLayers extends Command
 
             $this->syncLayer($tableOnly, $layers[$tableOnly]);
         } else {
+            $excludedTables = $this->excludedTables();
+
             foreach ($layers as $name => $config) {
+                if (in_array($name, $excludedTables, true)) {
+                    $this->line("Skipping {$name}.");
+
+                    continue;
+                }
+
                 $this->syncLayer($name, $config);
             }
         }
@@ -145,6 +157,20 @@ class SyncArcGISLayers extends Command
         $this->info('Sync finished.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function excludedTables(): array
+    {
+        return collect((array) $this->option('exclude'))
+            ->flatMap(fn (string $tables): array => explode(',', $tables))
+            ->map(fn (string $table): string => trim($table))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function syncLayer(string $name, array $config): void

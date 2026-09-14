@@ -215,3 +215,9 @@ it('normalizes cso survey building damage status values from arcgis', function (
         ->and(DB::table('cso_surveys')->where('objectid', 7702)->value('building_damage_status'))->toBe('1')
         ->and(DB::table('cso_surveys')->where('objectid', 7703)->value('building_damage_status'))->toBe('2');
 });
+
+it('excludes cso layers from the scheduled full arcgis sync', function (): void {
+    $this->artisan('schedule:list')
+        ->expectsOutputToContain('sync:arcgis-layers --exclude=cso_surveys --exclude=cso_survey_organizations --exclude=cso_survey_units')
+        ->assertSuccessful();
+});

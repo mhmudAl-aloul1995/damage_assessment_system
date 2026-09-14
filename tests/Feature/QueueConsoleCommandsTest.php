@@ -38,6 +38,7 @@ it('shows phc queue status counts', function () {
     expect(Artisan::output())
         ->toContain('Queue connection:')
         ->toContain('arcgis')
+        ->not->toContain('arcgis-cso')
         ->toContain('exports')
         ->toContain('Run workers:');
 });
