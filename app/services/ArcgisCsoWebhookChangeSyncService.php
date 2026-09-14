@@ -9,6 +9,7 @@ use App\Support\CsoSurveyDamageStatusNormalizer;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
@@ -102,6 +103,11 @@ class ArcgisCsoWebhookChangeSyncService
         if ($changesUrl === null) {
             throw new RuntimeException('ArcGIS webhook payload does not include changesUrl.');
         }
+
+        Log::info('ArcGIS CSO webhook changes fetch started.', [
+            'host' => parse_url($changesUrl, PHP_URL_HOST),
+            'path' => parse_url($changesUrl, PHP_URL_PATH),
+        ]);
 
         return $this->applyChanges($this->fetchChanges($changesUrl));
     }

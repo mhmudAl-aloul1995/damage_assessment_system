@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SyncCsoArcgisWebhook;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ArcgisCsoWebhookController extends Controller
 {
@@ -18,12 +19,20 @@ class ArcgisCsoWebhookController extends Controller
         $secret = $this->secret();
 
         if ($secret === '') {
+            Log::error('ArcGIS CSO webhook secret is not configured.');
+
             return response()->json([
                 'message' => 'ArcGIS CSO webhook secret is not configured.',
             ], 503);
         }
 
         if (! $this->hasValidSignature($request, $secret)) {
+            Log::warning('ArcGIS CSO webhook rejected invalid signature.', [
+                'ip' => $request->ip(),
+                'has_signature' => $request->header('x-esriHook-Signature') !== null,
+                'content_length' => strlen($request->getContent()),
+            ]);
+
             return response()->json([
                 'message' => 'Invalid ArcGIS CSO webhook signature.',
             ], 401);
@@ -35,7 +44,17 @@ class ArcgisCsoWebhookController extends Controller
             $payload = $request->request->all();
         }
 
+        Log::info('ArcGIS CSO webhook received.', [
+            'name' => $payload['name'] ?? null,
+            'events' => $payload['events'] ?? null,
+            'has_changes_url' => filled($payload['changesUrl'] ?? $payload['changesURL'] ?? $payload['changes_url'] ?? null),
+        ]);
+
         $summary = (new SyncCsoArcgisWebhook($payload))->handle();
+
+        Log::info('ArcGIS CSO webhook synced.', [
+            'summary' => $summary,
+        ]);
 
         return response()->json([
             'message' => 'CSO ArcGIS webhook synced.',
