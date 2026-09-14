@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\SyncCsoArcgisWebhook;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function (): void {
@@ -57,4 +58,13 @@ test('arcgis cso webhook rejects invalid signatures', function (): void {
         ->assertUnauthorized();
 
     Queue::assertNothingPushed();
+});
+
+test('arcgis cso webhook sync job is unique', function (): void {
+    $job = new SyncCsoArcgisWebhook;
+
+    expect($job)
+        ->toBeInstanceOf(ShouldBeUnique::class)
+        ->and($job->uniqueId())->toBe('arcgis-cso-webhook-sync')
+        ->and($job->uniqueFor)->toBe(3600);
 });
