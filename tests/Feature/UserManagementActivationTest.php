@@ -25,6 +25,22 @@ test('inactive users cannot authenticate', function (): void {
     $response->assertRedirect('/login');
 });
 
+test('inactive authenticated users are logged out on their next request', function (): void {
+    $user = User::factory()->create([
+        'is_active' => false,
+    ]);
+
+    $this
+        ->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertRedirect(app_route('login'))
+        ->assertSessionHasErrors([
+            'email' => __('auth.inactive'),
+        ]);
+
+    $this->assertGuest();
+});
+
 test('database officers can bulk activate and deactivate selected users', function (): void {
     $databaseOfficer = User::factory()->create();
     $databaseOfficer->assignRole(Role::findOrCreate('Database Officer', 'web'));

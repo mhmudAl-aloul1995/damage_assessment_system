@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('lawyer_audit_assignments')) {
+            return;
+        }
+
         Schema::create('lawyer_audit_assignments', function (Blueprint $table) {
             $table->id();
             $table->unsignedInteger('excel_index')->unique();

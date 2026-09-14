@@ -1,8 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\ArcgisCsoWebhookController;
 use App\Http\Controllers\Api\HeksKoboWebhookController;
 use App\Http\Controllers\Api\KoboRestSubmissionController;
 use Illuminate\Support\Facades\Route;
+
+Route::match(['get', 'post'], '/arcgis/csos/webhook', ArcgisCsoWebhookController::class)
+    ->name('api.arcgis.csos.webhook');
 
 Route::post('/kobo/{service}', KoboRestSubmissionController::class)
     ->where('service', '[A-Za-z0-9_-]+')

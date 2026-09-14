@@ -18,7 +18,7 @@ return new class extends Migration
             DB::statement('ALTER TABLE housing_units ADD INDEX housing_units_id_number1_index (id_number1(11))');
         }
 
-        if (! $this->indexExists('phc_dashboard', 'citizens', 'citizens_id_card_no_status_index')) {
+        if ($this->tableExists('phc_dashboard', 'citizens') && ! $this->indexExists('phc_dashboard', 'citizens', 'citizens_id_card_no_status_index')) {
             DB::statement('ALTER TABLE phc_dashboard.citizens ADD INDEX citizens_id_card_no_status_index (id_card_no, status)');
         }
     }
@@ -36,9 +36,17 @@ return new class extends Migration
             DB::statement('ALTER TABLE housing_units DROP INDEX housing_units_id_number1_index');
         }
 
-        if ($this->indexExists('phc_dashboard', 'citizens', 'citizens_id_card_no_status_index')) {
+        if ($this->tableExists('phc_dashboard', 'citizens') && $this->indexExists('phc_dashboard', 'citizens', 'citizens_id_card_no_status_index')) {
             DB::statement('ALTER TABLE phc_dashboard.citizens DROP INDEX citizens_id_card_no_status_index');
         }
+    }
+
+    private function tableExists(string $schema, string $table): bool
+    {
+        return DB::table('information_schema.tables')
+            ->where('table_schema', $schema)
+            ->where('table_name', $table)
+            ->exists();
     }
 
     private function indexExists(string $schema, string $table, string $index): bool

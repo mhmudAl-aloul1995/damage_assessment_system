@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\NormalizeDuplicatedBasePath;
 use App\Http\Middleware\NormalizeLegacyLoginRedirects;
 use App\Http\Middleware\RecordUserActivity;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
             SetSelectedPhase::class,
+            EnsureUserIsActive::class,
             RecordUserActivity::class,
         ]);
 
