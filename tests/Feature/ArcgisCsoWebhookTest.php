@@ -43,7 +43,7 @@ test('arcgis cso webhook queues sync job when signature is valid', function (): 
         ->assertAccepted()
         ->assertJsonPath('message', 'CSO ArcGIS webhook queued.');
 
-    Queue::assertPushed(SyncCsoArcgisWebhook::class, function (SyncCsoArcgisWebhook $job) use ($payload): bool {
+    Queue::assertPushedOn('arcgis', SyncCsoArcgisWebhook::class, function (SyncCsoArcgisWebhook $job) use ($payload): bool {
         return $job->payload === $payload;
     });
 });
