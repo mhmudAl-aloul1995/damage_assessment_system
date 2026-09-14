@@ -1,7 +1,6 @@
 <?php
 
-use App\Jobs\SyncCsoArcgisWebhook;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function (): void {
@@ -19,8 +18,29 @@ test('arcgis cso webhook returns crc response token', function (): void {
         );
 });
 
-test('arcgis cso webhook queues sync job when signature is valid', function (): void {
+test('arcgis cso webhook runs sync immediately when signature is valid', function (): void {
     Queue::fake();
+    Artisan::shouldReceive('call')
+        ->once()
+        ->with('sync:arcgis-layers', [
+            'table' => 'cso_surveys',
+            '--force' => true,
+        ])
+        ->andReturn(0);
+    Artisan::shouldReceive('call')
+        ->once()
+        ->with('sync:arcgis-layers', [
+            'table' => 'cso_survey_organizations',
+            '--force' => true,
+        ])
+        ->andReturn(0);
+    Artisan::shouldReceive('call')
+        ->once()
+        ->with('sync:arcgis-layers', [
+            'table' => 'cso_survey_units',
+            '--force' => true,
+        ])
+        ->andReturn(0);
 
     $payload = [
         'name' => 'CSO webhook',
@@ -41,12 +61,10 @@ test('arcgis cso webhook queues sync job when signature is valid', function (): 
     );
 
     $response
-        ->assertAccepted()
-        ->assertJsonPath('message', 'CSO ArcGIS webhook queued.');
+        ->assertOk()
+        ->assertJsonPath('message', 'CSO ArcGIS webhook synced.');
 
-    Queue::assertPushedOn('arcgis-cso', SyncCsoArcgisWebhook::class, function (SyncCsoArcgisWebhook $job) use ($payload): bool {
-        return $job->payload === $payload;
-    });
+    Queue::assertNothingPushed();
 });
 
 test('arcgis cso webhook rejects invalid signatures', function (): void {
@@ -58,13 +76,4 @@ test('arcgis cso webhook rejects invalid signatures', function (): void {
         ->assertUnauthorized();
 
     Queue::assertNothingPushed();
-});
-
-test('arcgis cso webhook sync job is unique', function (): void {
-    $job = new SyncCsoArcgisWebhook;
-
-    expect($job)
-        ->toBeInstanceOf(ShouldBeUnique::class)
-        ->and($job->uniqueId())->toBe('arcgis-cso-webhook-sync')
-        ->and($job->uniqueFor)->toBe(3600);
 });
