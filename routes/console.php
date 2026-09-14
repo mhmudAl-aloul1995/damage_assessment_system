@@ -6,13 +6,14 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Schema;
-//اا
+
+// اا
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
 Artisan::command('phc:queue-status', function () {
-    $queues = collect(['arcgis', 'default', 'exports', config('heks_kobo.queue', 'heks')])
+    $queues = collect(['arcgis-cso', 'arcgis', 'default', 'exports', config('heks_kobo.queue', 'heks')])
         ->filter()
         ->unique()
         ->values();
@@ -43,7 +44,7 @@ Artisan::command('phc:queue-status', function () {
 Artisan::command('phc:queue-work-arcgis {--once : Process only one job} {--daemon : Keep the worker running when the queue is empty} {--slot=manual : Worker slot id for scheduler mutexes and logs}', function () {
     $options = [
         'connection' => 'database',
-        '--queue' => 'arcgis,default',
+        '--queue' => 'arcgis-cso,arcgis,default',
         '--tries' => 3,
         '--timeout' => 180,
         '--memory' => 512,
