@@ -35,10 +35,11 @@ class ArcgisCsoWebhookController extends Controller
             $payload = $request->request->all();
         }
 
-        (new SyncCsoArcgisWebhook($payload))->handle();
+        $summary = (new SyncCsoArcgisWebhook($payload))->handle();
 
         return response()->json([
             'message' => 'CSO ArcGIS webhook synced.',
+            'summary' => $summary,
         ]);
     }
 

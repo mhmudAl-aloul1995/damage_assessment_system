@@ -1,10 +1,22 @@
 <?php
 
-use Illuminate\Support\Facades\Artisan;
+use App\Jobs\SyncCsoArcgisWebhook;
+use App\Models\CsoSurvey;
+use App\Models\CsoSurveyOrganization;
+use App\Models\CsoSurveyUnit;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 
 beforeEach(function (): void {
-    config(['services.arcgis.cso_webhook_secret' => 'arcgis-secret']);
+    Cache::flush();
+
+    config([
+        'services.arcgis.cso_webhook_secret' => 'arcgis-secret',
+        'services.arcgis.username' => 'arcgis-user',
+        'services.arcgis.password' => 'arcgis-password',
+    ]);
 });
 
 test('arcgis cso webhook returns crc response token', function (): void {
@@ -20,27 +32,66 @@ test('arcgis cso webhook returns crc response token', function (): void {
 
 test('arcgis cso webhook runs sync immediately when signature is valid', function (): void {
     Queue::fake();
-    Artisan::shouldReceive('call')
-        ->once()
-        ->with('sync:arcgis-layers', [
-            'table' => 'cso_surveys',
-            '--force' => true,
-        ])
-        ->andReturn(0);
-    Artisan::shouldReceive('call')
-        ->once()
-        ->with('sync:arcgis-layers', [
-            'table' => 'cso_survey_organizations',
-            '--force' => true,
-        ])
-        ->andReturn(0);
-    Artisan::shouldReceive('call')
-        ->once()
-        ->with('sync:arcgis-layers', [
-            'table' => 'cso_survey_units',
-            '--force' => true,
-        ])
-        ->andReturn(0);
+    CsoSurveyUnit::query()->create([
+        'objectid' => 9000,
+        'globalid' => 'deleted-unit',
+        'unit_name' => 'Deleted unit',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
+            'token' => 'arcgis-token',
+        ]),
+        'https://example.com/FeatureServer/extractChanges' => Http::response([
+            'layers' => [
+                [
+                    'id' => 0,
+                    'features' => [
+                        [
+                            'attributes' => [
+                                'objectid' => 7001,
+                                'globalid' => '{CSO-SURVEY-7001}',
+                                'building_name' => 'New CSO Building',
+                                'organization_name_en' => 'New CSO Organization',
+                                'building_damage_status' => 'partial',
+                            ],
+                            'geometry' => [
+                                'x' => 34.45,
+                                'y' => 31.52,
+                            ],
+                        ],
+                    ],
+                ],
+                [
+                    'id' => 1,
+                    'updates' => [
+                        [
+                            'attributes' => [
+                                'objectid' => 8001,
+                                'globalid' => '{CSO-ORG-8001}',
+                                'parentglobalid' => '{CSO-SURVEY-7001}',
+                                'organization_name_en' => 'Updated Organization',
+                            ],
+                        ],
+                    ],
+                ],
+                [
+                    'id' => 2,
+                    'features' => [
+                        [
+                            'attributes' => [
+                                'objectid' => 9001,
+                                'globalid' => '{CSO-UNIT-9001}',
+                                'parentglobalid' => '{CSO-ORG-8001}',
+                                'unit_name' => 'New CSO Unit',
+                            ],
+                        ],
+                    ],
+                    'deletes' => [9000],
+                ],
+            ],
+        ]),
+    ]);
 
     $payload = [
         'name' => 'CSO webhook',
@@ -62,9 +113,24 @@ test('arcgis cso webhook runs sync immediately when signature is valid', functio
 
     $response
         ->assertOk()
-        ->assertJsonPath('message', 'CSO ArcGIS webhook synced.');
+        ->assertJsonPath('message', 'CSO ArcGIS webhook synced.')
+        ->assertJsonPath('summary.upserted', 3)
+        ->assertJsonPath('summary.deleted', 1);
 
     Queue::assertNothingPushed();
+
+    expect(CsoSurvey::query()->where('objectid', 7001)->value('building_name'))->toBe('New CSO Building')
+        ->and(CsoSurvey::query()->where('objectid', 7001)->value('organization_name'))->toBe('New CSO Organization')
+        ->and(CsoSurvey::query()->where('objectid', 7001)->value('building_damage_status'))->toBe('2')
+        ->and(CsoSurveyOrganization::query()->where('objectid', 8001)->value('parentglobalid'))->toBe('cso-survey-7001')
+        ->and(CsoSurveyUnit::query()->where('objectid', 9001)->value('parentglobalid'))->toBe('cso-survey-7001')
+        ->and(CsoSurveyUnit::query()->where('objectid', 9000)->exists())->toBeFalse();
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://example.com/FeatureServer/extractChanges'
+        && $request['returnInserts'] === 'true'
+        && $request['returnUpdates'] === 'true'
+        && $request['returnDeletes'] === 'true'
+        && $request['token'] === 'arcgis-token');
 });
 
 test('arcgis cso webhook rejects invalid signatures', function (): void {
@@ -76,4 +142,8 @@ test('arcgis cso webhook rejects invalid signatures', function (): void {
         ->assertUnauthorized();
 
     Queue::assertNothingPushed();
+});
+
+test('arcgis cso webhook sync is not queued', function (): void {
+    expect(new SyncCsoArcgisWebhook)->not->toBeInstanceOf(ShouldQueue::class);
 });

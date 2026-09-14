@@ -2,19 +2,17 @@
 
 namespace App\Jobs;
 
-use Illuminate\Support\Facades\Artisan;
+use App\services\ArcgisCsoWebhookChangeSyncService;
 
 class SyncCsoArcgisWebhook
 {
     public function __construct(public array $payload = []) {}
 
-    public function handle(): void
+    /**
+     * @return array<string, int>
+     */
+    public function handle(): array
     {
-        foreach (['cso_surveys', 'cso_survey_organizations', 'cso_survey_units'] as $table) {
-            Artisan::call('sync:arcgis-layers', [
-                'table' => $table,
-                '--force' => true,
-            ]);
-        }
+        return app(ArcgisCsoWebhookChangeSyncService::class)->sync($this->payload);
     }
 }
