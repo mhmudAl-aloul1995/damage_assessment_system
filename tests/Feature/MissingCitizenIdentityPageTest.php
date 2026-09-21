@@ -280,6 +280,63 @@ it('returns housing unit identities that are not active citizens', function (): 
         ->assertJsonMissing(['housing_unit_objectid' => '1003']);
 });
 
+it('excludes units blocked by security situation from missing identity totals', function (): void {
+    HousingUnit::query()->insert([
+        [
+            'objectid' => 1101,
+            'globalid' => 'safe-missing-citizen-id',
+            'unit_owner' => 'Safe Missing Owner',
+            'id_number1' => '900001101',
+            'security_situation_unit' => 'no',
+        ],
+        [
+            'objectid' => 1102,
+            'globalid' => 'blocked-missing-citizen-id',
+            'unit_owner' => 'Blocked Missing Owner',
+            'id_number1' => '900001102',
+            'security_situation_unit' => ' Yes ',
+        ],
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()->count())->toBe(1)
+        ->and(MissingCitizenIdentityReport::query()->where('id_number', '900001101')->exists())->toBeTrue()
+        ->and(MissingCitizenIdentityReport::query()->where('id_number', '900001102')->exists())->toBeFalse();
+
+    $blockedHousingUnit = HousingUnit::query()->where('objectid', 1102)->firstOrFail();
+
+    MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $blockedHousingUnit->id,
+        'identity_subject' => 'owner',
+        'identity_name_field' => 'unit_owner',
+        'identity_number_field' => 'id_number1',
+        'owner_name' => 'Blocked Missing Owner',
+        'normalized_owner_name' => 'BlockedMissingOwner',
+        'id_number' => '900001102',
+        'issue_type' => 'missing_civil_registry_identity',
+        'name_match_status' => 'not_found',
+        'matched_citizens_count' => 0,
+    ]);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->get(route('reports.missing-citizen-identities.index'))
+        ->assertOk()
+        ->assertSee('<div class="fs-2x fw-bold text-danger" id="missing_citizens_total">1</div>', false);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'identity_subject' => 'owner',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['housing_unit_objectid' => '1101'])
+        ->assertJsonMissing(['housing_unit_objectid' => '1102']);
+});
+
 it('exports missing citizen identities using the active filters', function (): void {
     Excel::fake();
 

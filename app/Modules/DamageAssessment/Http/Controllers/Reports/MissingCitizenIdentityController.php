@@ -41,7 +41,9 @@ class MissingCitizenIdentityController extends Controller
     {
         return View::make('damage-assessment::reports.missing-citizen-identities', [
             'totalMissingCitizenIdentities' => MissingCitizenIdentityReport::query()
-                ->whereNull('approved_at')
+                ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
+                ->whereNull('missing_citizen_identity_reports.approved_at')
+                ->whereRaw("LOWER(TRIM(COALESCE(housing_units.security_situation_unit, ''))) <> 'yes'")
                 ->count(),
         ]);
     }
@@ -130,7 +132,8 @@ class MissingCitizenIdentityController extends Controller
                 'housing_units.spouse4_id',
             ])
             ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
-            ->whereNull('missing_citizen_identity_reports.approved_at');
+            ->whereNull('missing_citizen_identity_reports.approved_at')
+            ->whereRaw("LOWER(TRIM(COALESCE(housing_units.security_situation_unit, ''))) <> 'yes'");
 
         if ($search !== '') {
             if (ctype_digit($search)) {

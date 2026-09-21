@@ -67,6 +67,7 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'spouse4',
                 'spouse4_id',
             ])
+            ->whereRaw("LOWER(TRIM(COALESCE(security_situation_unit, ''))) <> 'yes'")
             ->orderBy('id')
             ->chunkById($chunkSize, function ($housingUnits) use ($stagingTable, &$processed, &$missing): void {
                 $processed += $housingUnits->count();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\SyncCsoArcgisWebhook;
+use App\Models\ArcgisWebhookDelivery;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
@@ -126,6 +127,20 @@ test('arcgis cso webhook runs sync immediately when signature is valid', functio
         ->and(CsoSurveyUnit::query()->where('objectid', 9001)->value('parentglobalid'))->toBe('cso-survey-7001')
         ->and(CsoSurveyUnit::query()->where('objectid', 9000)->exists())->toBeFalse();
 
+    $delivery = ArcgisWebhookDelivery::query()->first();
+
+    expect($delivery)
+        ->not->toBeNull()
+        ->and($delivery->status)->toBe('success')
+        ->and($delivery->http_status)->toBe(200)
+        ->and($delivery->signature_present)->toBeTrue()
+        ->and($delivery->event_names)->toBe(['FeaturesCreated'])
+        ->and($delivery->summary)->toBe([
+            'upserted' => 3,
+            'deleted' => 1,
+            'skipped' => 0,
+        ]);
+
     Http::assertSent(fn ($request): bool => $request->url() === 'https://example.com/FeatureServer/extractChanges'
         && $request['returnInserts'] === 'true'
         && $request['returnUpdates'] === 'true'
@@ -138,10 +153,43 @@ test('arcgis cso webhook rejects invalid signatures', function (): void {
 
     $this
         ->withHeader('X-EsriHook-Signature', 'sha256=invalid')
-        ->postJson('/api/arcgis/csos/webhook', ['events' => ['FeaturesCreated']])
+        ->postJson('/api/arcgis/csos/webhook', [
+            'name' => 'CSO webhook',
+            'events' => ['FeaturesCreated'],
+        ])
         ->assertUnauthorized();
 
     Queue::assertNothingPushed();
+
+    expect(ArcgisWebhookDelivery::query()->first())
+        ->status->toBe('rejected')
+        ->http_status->toBe(401)
+        ->webhook_name->toBe('CSO webhook');
+});
+
+test('arcgis cso webhook records sync failures', function (): void {
+    $payload = [
+        'name' => 'CSO webhook',
+        'events' => ['FeaturesCreated'],
+    ];
+    $content = json_encode($payload, JSON_THROW_ON_ERROR);
+    $signature = 'sha256='.base64_encode(hash_hmac('sha256', $content, 'arcgis-secret', true));
+
+    $this->call(
+        method: 'POST',
+        uri: '/api/arcgis/csos/webhook',
+        content: $content,
+        server: [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_ESRIHOOK_SIGNATURE' => $signature,
+        ]
+    )->assertInternalServerError()
+        ->assertJsonPath('message', 'CSO ArcGIS webhook sync failed.');
+
+    expect(ArcgisWebhookDelivery::query()->first())
+        ->status->toBe('failed')
+        ->http_status->toBe(500)
+        ->error_message->toContain('does not include changesUrl');
 });
 
 test('arcgis cso webhook sync is not queued', function (): void {

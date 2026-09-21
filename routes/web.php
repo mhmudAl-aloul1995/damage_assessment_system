@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ArcgisLayerSyncController;
+use App\Http\Controllers\Admin\ArcgisWebhookDeliveryController;
 use App\Http\Controllers\Admin\ArtisanCommandController;
 use App\Http\Controllers\Admin\DashboardCardController;
 use App\Http\Controllers\Admin\LocalDatabaseImportController;
@@ -254,6 +255,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/system-logs/sync-arcgis-layers', [ArcgisLayerSyncController::class, 'store'])
         ->middleware('role:Database Officer')
         ->name('system.logs.sync-arcgis-layers');
+    Route::get('/admin/arcgis-webhook-deliveries', [ArcgisWebhookDeliveryController::class, 'index'])
+        ->middleware('role_or_permission:Database Officer|system-logs.view')
+        ->name('admin.arcgis-webhook-deliveries.index');
+    Route::get('/admin/arcgis-webhook-deliveries/data', [ArcgisWebhookDeliveryController::class, 'data'])
+        ->middleware('role_or_permission:Database Officer|system-logs.view')
+        ->name('admin.arcgis-webhook-deliveries.data');
 
     Route::prefix('admin/dashboard-cards')
         ->middleware('role:Database Officer')
