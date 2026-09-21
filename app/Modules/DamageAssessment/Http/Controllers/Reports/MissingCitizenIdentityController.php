@@ -44,6 +44,11 @@ class MissingCitizenIdentityController extends Controller
                 ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
                 ->whereNull('missing_citizen_identity_reports.approved_at')
                 ->whereRaw("LOWER(TRIM(COALESCE(housing_units.security_situation_unit, ''))) <> 'yes'")
+                ->where(function (Builder $query): void {
+                    $query
+                        ->where('missing_citizen_identity_reports.identity_subject', '<>', 'owner')
+                        ->orWhereRaw("LOWER(TRIM(COALESCE(housing_units.identity_type1, ''))) = 'idd='");
+                })
                 ->count(),
         ]);
     }
@@ -133,7 +138,12 @@ class MissingCitizenIdentityController extends Controller
             ])
             ->leftJoin('housing_units', 'housing_units.id', '=', 'missing_citizen_identity_reports.housing_unit_id')
             ->whereNull('missing_citizen_identity_reports.approved_at')
-            ->whereRaw("LOWER(TRIM(COALESCE(housing_units.security_situation_unit, ''))) <> 'yes'");
+            ->whereRaw("LOWER(TRIM(COALESCE(housing_units.security_situation_unit, ''))) <> 'yes'")
+            ->where(function (Builder $query): void {
+                $query
+                    ->where('missing_citizen_identity_reports.identity_subject', '<>', 'owner')
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(housing_units.identity_type1, ''))) = 'idd='");
+            });
 
         if ($search !== '') {
             if (ctype_digit($search)) {

@@ -141,6 +141,7 @@ it('returns housing unit identities that are not active citizens', function (): 
             'objectid' => 1001,
             'globalid' => 'missing-citizen-id',
             'parentglobalid' => 'missing-citizen-building-id',
+            'identity_type1' => 'idd=',
             'unit_owner' => 'Missing Owner',
             'id_number1' => '900000001',
             'marital_status' => 'Married',
@@ -149,6 +150,7 @@ it('returns housing unit identities that are not active citizens', function (): 
             'objectid' => 1002,
             'globalid' => 'active-citizen-id',
             'parentglobalid' => null,
+            'identity_type1' => 'idd=',
             'unit_owner' => 'Active Owner',
             'id_number1' => '900000002',
             'marital_status' => null,
@@ -157,6 +159,7 @@ it('returns housing unit identities that are not active citizens', function (): 
             'objectid' => 1003,
             'globalid' => 'inactive-citizen-id',
             'parentglobalid' => null,
+            'identity_type1' => 'idd=',
             'unit_owner' => 'Inactive Owner',
             'id_number1' => '900000003',
             'marital_status' => null,
@@ -165,6 +168,7 @@ it('returns housing unit identities that are not active citizens', function (): 
             'objectid' => 1004,
             'globalid' => 'blank-citizen-id',
             'parentglobalid' => null,
+            'identity_type1' => 'idd=',
             'unit_owner' => 'Blank Owner',
             'id_number1' => '',
             'marital_status' => null,
@@ -285,6 +289,7 @@ it('excludes units blocked by security situation from missing identity totals', 
         [
             'objectid' => 1101,
             'globalid' => 'safe-missing-citizen-id',
+            'identity_type1' => 'idd=',
             'unit_owner' => 'Safe Missing Owner',
             'id_number1' => '900001101',
             'security_situation_unit' => 'no',
@@ -292,6 +297,7 @@ it('excludes units blocked by security situation from missing identity totals', 
         [
             'objectid' => 1102,
             'globalid' => 'blocked-missing-citizen-id',
+            'identity_type1' => 'idd=',
             'unit_owner' => 'Blocked Missing Owner',
             'id_number1' => '900001102',
             'security_situation_unit' => ' Yes ',
@@ -337,12 +343,85 @@ it('excludes units blocked by security situation from missing identity totals', 
         ->assertJsonMissing(['housing_unit_objectid' => '1102']);
 });
 
+it('only reports owner identities when the owner identity type is civil registry', function (): void {
+    HousingUnit::query()->create([
+        'objectid' => 1201,
+        'globalid' => 'civil-registry-owner-id',
+        'identity_type1' => ' idd= ',
+        'unit_owner' => 'Civil Registry Owner',
+        'id_number1' => '900001201',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 1202,
+        'globalid' => 'passport-owner-id',
+        'identity_type1' => 'passport',
+        'unit_owner' => 'Passport Owner',
+        'id_number1' => '900001202',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 1203,
+        'globalid' => 'passport-owner-spouse-id',
+        'identity_type1' => 'passport',
+        'unit_owner' => 'Passport Owner With Spouse',
+        'id_number1' => '900001203',
+        'marital_status' => 'Married',
+        'spouse1' => 'Missing Spouse',
+        'spouse1_id' => '900001204',
+    ]);
+
+    $this->artisan('missing-citizen-identities:refresh', ['--chunk' => 2])
+        ->assertSuccessful();
+
+    expect(MissingCitizenIdentityReport::query()->count())->toBe(2)
+        ->and(MissingCitizenIdentityReport::query()->where('identity_subject', 'owner')->where('id_number', '900001201')->exists())->toBeTrue()
+        ->and(MissingCitizenIdentityReport::query()->where('identity_subject', 'owner')->where('id_number', '900001202')->exists())->toBeFalse()
+        ->and(MissingCitizenIdentityReport::query()->where('identity_subject', 'spouse')->where('id_number', '900001204')->exists())->toBeTrue();
+
+    $passportOwnerHousingUnit = HousingUnit::query()->where('objectid', 1202)->firstOrFail();
+
+    MissingCitizenIdentityReport::query()->create([
+        'housing_unit_id' => $passportOwnerHousingUnit->id,
+        'identity_subject' => 'owner',
+        'identity_name_field' => 'unit_owner',
+        'identity_number_field' => 'id_number1',
+        'owner_name' => 'Passport Owner',
+        'normalized_owner_name' => 'PassportOwner',
+        'id_number' => '900001202',
+        'issue_type' => 'missing_civil_registry_identity',
+        'name_match_status' => 'not_found',
+        'matched_citizens_count' => 0,
+    ]);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'identity_subject' => 'owner',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['housing_unit_objectid' => '1201'])
+        ->assertJsonMissing(['housing_unit_objectid' => '1202']);
+
+    $this
+        ->actingAs(missingCitizenIdentityUser())
+        ->getJson(route('reports.missing-citizen-identities.data', [
+            'identity_subject' => 'spouse',
+        ]))
+        ->assertOk()
+        ->assertJsonPath('total', 1)
+        ->assertJsonFragment(['housing_unit_objectid' => '1203'])
+        ->assertJsonFragment(['id_number1' => '900001204']);
+});
+
 it('exports missing citizen identities using the active filters', function (): void {
     Excel::fake();
 
     $ownerHousingUnit = HousingUnit::query()->create([
         'objectid' => 2101,
         'globalid' => 'export-owner-unit',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Export Owner',
         'id_number1' => '900000101',
     ]);
@@ -350,6 +429,7 @@ it('exports missing citizen identities using the active filters', function (): v
     $spouseHousingUnit = HousingUnit::query()->create([
         'objectid' => 2102,
         'globalid' => 'export-spouse-unit',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Export Spouse Owner',
         'id_number1' => '900000102',
         'marital_status' => 'Married',
@@ -417,6 +497,7 @@ it('does not report identities that exist in sgaza civil registry', function ():
     HousingUnit::query()->create([
         'objectid' => 1101,
         'globalid' => 'sgaza-existing-id',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'علي احمد يونس حمودة',
         'id_number1' => '938900636',
     ]);
@@ -461,6 +542,7 @@ it('returns only arcgis ownership image attachments for a missing identity repor
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 910,
         'globalid' => 'missing-identity-documents',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Document Owner',
         'id_number1' => '900000010',
     ]);
@@ -498,6 +580,7 @@ it('matches sgaza records using structured housing unit owner name fields', func
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 1102,
         'globalid' => 'sgaza-structured-name-match',
+        'identity_type1' => 'idd=',
         'unit_owner' => null,
         'q_9_3_1_first_name' => 'واصل',
         'q_9_3_2_second_name__father' => 'محمود',
@@ -544,6 +627,7 @@ it('approves a single name match and syncs the new identity to arcgis', function
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 501,
         'globalid' => 'missing-citizen-id',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'أحمد عطا الله',
         'id_number1' => '111111111',
     ]);
@@ -607,6 +691,7 @@ it('approves an owner identity match into the owner name fields and arcgis', fun
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 503,
         'globalid' => 'approve-owner-name-fields',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Wrong Owner Name',
         'id_number1' => '111111112',
     ]);
@@ -666,6 +751,7 @@ it('approves an owner without identity by using the matched civil registry recor
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 502,
         'globalid' => 'owner-without-identity',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Owner Without Identity',
         'id_number1' => '',
     ]);
@@ -717,6 +803,7 @@ it('imports corrected spouse identity numbers from excel and syncs them to arcgi
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 8801,
         'globalid' => 'import-corrected-spouse-identity',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'مالك الوحدة',
         'id_number1' => '900000001',
         'spouse1' => 'الاسم القديم',
@@ -824,6 +911,7 @@ it('imports corrected identity numbers directly when no report row matches', fun
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 8802,
         'globalid' => 'import-direct-corrected-spouse-identity',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'مالك الوحدة',
         'id_number1' => '900000002',
         'spouse1' => 'الاسم القديم',
@@ -942,7 +1030,8 @@ it('imports all numbered spouses from one unit row in the supplied workbook layo
         ]),
     ]);
     $housingUnit = HousingUnit::query()->create([
-        'objectid' => 8901, 'globalid' => 'numbered-spouses', 'unit_owner' => 'مالك الوحدة', 'id_number1' => '900000001',
+        'objectid' => 8901, 'globalid' => 'numbered-spouses', 'identity_type1' => 'idd=',
+        'unit_owner' => 'مالك الوحدة', 'id_number1' => '900000001',
         'spouse1' => 'اسم أول قديم', 'spouse1_id' => '999999991',
         'spouse2' => 'اسم ثان قديم', 'spouse2_id' => '999999992',
         'spouse3' => 'اسم ثالث قديم', 'spouse3_id' => '999999993',
@@ -1058,7 +1147,8 @@ it('reports invalid spouse identities and missing units while importing other va
 it('does not use owner data or adjacent cells when spouse correction values are blank', function (): void {
     Storage::fake('public');
     $housingUnit = HousingUnit::query()->create([
-        'objectid' => 8905, 'globalid' => 'blank-spouse-correction', 'unit_owner' => 'اسم المالك', 'id_number1' => '900000001',
+        'objectid' => 8905, 'globalid' => 'blank-spouse-correction', 'identity_type1' => 'idd=',
+        'unit_owner' => 'اسم المالك', 'id_number1' => '900000001',
         'spouse1' => 'اسم الزوجة المحفوظ', 'spouse1_id' => '999999991',
     ]);
     $this->mock(ArcgisService::class, function ($mock): void {
@@ -1173,6 +1263,7 @@ it('lists ambiguous name candidates and approves the selected citizen', function
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 777,
         'globalid' => 'ambiguous-citizen-id',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Ambiguous Owner',
         'id_number1' => '333333333',
     ]);
@@ -1232,6 +1323,7 @@ it('prioritizes citizens candidates before sgaza for matching names', function (
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 778,
         'globalid' => 'sgaza-priority-name',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Priority Owner',
         'id_number1' => '333333334',
     ]);
@@ -1279,6 +1371,7 @@ it('counts duplicate sgaza and citizen candidates with the same identity as one 
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 779,
         'globalid' => 'duplicate-source-name',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Duplicate Source',
         'id_number1' => '333333335',
     ]);
@@ -1336,6 +1429,7 @@ it('searches the civil registry for unmatched names and approves a manually sele
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 888,
         'globalid' => 'unmatched-citizen-id',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Unknown Owner',
         'id_number1' => '666666660',
     ]);
@@ -1403,6 +1497,7 @@ it('searches sgaza civil registry and approves a manually selected sgaza identit
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 889,
         'globalid' => 'sgaza-manual-id',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Unknown SGaza Owner',
         'id_number1' => '777777770',
     ]);
@@ -1459,6 +1554,7 @@ it('searches sgaza by first father grandfather and family name fields', function
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 890,
         'globalid' => 'sgaza-structured-search',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Unknown Owner',
         'id_number1' => '966605550',
     ]);
@@ -1496,6 +1592,7 @@ it('searches sgaza by separate name part inputs without a general query', functi
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 891,
         'globalid' => 'sgaza-name-part-search',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Unknown Owner',
         'id_number1' => '966605551',
     ]);
@@ -1536,6 +1633,7 @@ it('searches by identity number without mixing name part filters and prefers cit
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 8911,
         'globalid' => 'identity-search-with-name-parts',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Unknown Owner',
         'id_number1' => '123450000',
     ]);
@@ -1588,6 +1686,7 @@ it('searches spouse name parts in the husband registry before citizens and sgaza
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 8912,
         'globalid' => 'spouse-registry-name-part-search',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '880000001',
         'mobile_number' => '0598800001',
@@ -1727,6 +1826,7 @@ it('adds husband registry breadwinner hints to spouse candidates from sgaza', fu
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 8913,
         'globalid' => 'sgaza-spouse-breadwinner-hint',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Hint Husband',
         'id_number1' => '900176942',
         'sex' => 'M',
@@ -1780,6 +1880,7 @@ it('adds female owner registry hints to spouse husband candidates', function ():
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 8914,
         'globalid' => 'female-owner-spouse-hint',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Female Owner',
         'id_number1' => '970000021',
         'sex' => 'F',
@@ -1829,6 +1930,7 @@ it('returns missing spouse identities separately from owner identities', functio
     HousingUnit::query()->create([
         'objectid' => 892,
         'globalid' => 'missing-spouse-identities',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Active Owner',
         'id_number1' => '900000020',
         'q_9_3_1_first_name' => 'Active',
@@ -1928,6 +2030,7 @@ it('approves a spouse identity match into the spouse identity field', function (
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 893,
         'globalid' => 'approve-spouse-identity',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Active Owner',
         'id_number1' => '900000030',
         'marital_status' => 'Married',
@@ -1989,6 +2092,7 @@ it('backfills previously approved owner and spouse names into the database and a
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 892,
         'globalid' => 'approved-spouse-name-backfill',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Active Owner',
         'id_number1' => '900000040',
         'marital_status' => 'Married',
@@ -1999,6 +2103,7 @@ it('backfills previously approved owner and spouse names into the database and a
     $ownerHousingUnit = HousingUnit::query()->create([
         'objectid' => 891,
         'globalid' => 'approved-owner-name-backfill',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Old Owner Name',
         'id_number1' => '900000050',
     ]);
@@ -2120,6 +2225,7 @@ it('backfills housing unit owner and spouse names from civil registry identity n
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 993,
         'globalid' => 'housing-unit-name-registry-backfill',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Owner Short',
         'id_number1' => '920000001',
         'q_9_3_1_first_name' => 'Keep',
@@ -2195,6 +2301,7 @@ it('does not report spouse identities found in the husband registry table', func
     HousingUnit::query()->create([
         'objectid' => 894,
         'globalid' => 'spouse-id-found-in-husband-registry',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '910000001',
         'marital_status' => 'Married',
@@ -2224,6 +2331,7 @@ it('keeps spouse identities missing when the registry wife belongs to another br
     HousingUnit::query()->create([
         'objectid' => 898,
         'globalid' => 'spouse-id-linked-to-another-breadwinner',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '910000001',
         'marital_status' => 'Married',
@@ -2254,6 +2362,7 @@ it('matches a bad spouse name to the only wife registered for the breadwinner', 
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 9011,
         'globalid' => 'bad-spouse-name-single-registry-wife',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Bad Spouse Name Husband',
         'id_number1' => '934953951',
         'marital_status' => 'Married',
@@ -2290,6 +2399,7 @@ it('uses the husband registry spouse as the primary match instead of adding the 
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 9012,
         'globalid' => 'partial-spouse-name-registry-match',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'عمر فتحي محمد بدر',
         'id_number1' => '800407728',
         'marital_status' => 'Married',
@@ -2342,6 +2452,7 @@ it('matches and approves missing spouse identities from the husband registry tab
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 895,
         'globalid' => 'spouse-match-from-husband-registry',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Registry Husband',
         'id_number1' => '920000001',
         'marital_status' => 'Married',
@@ -2405,6 +2516,7 @@ it('creates spouse rows from the husband registry when housing spouse fields are
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 896,
         'globalid' => 'registry-only-spouse',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Registry Only Husband',
         'id_number1' => '930000001',
         'marital_status' => 'Married',
@@ -2457,6 +2569,7 @@ it('creates spouse rows only up to the four supported spouse slots', function ()
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 899,
         'globalid' => 'multiple-registry-spouses',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Multiple Spouses Husband',
         'id_number1' => '950000001',
         'marital_status' => 'Married',
@@ -2537,6 +2650,7 @@ it('does not report spouse rows when the marital status is not married', functio
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 900,
         'globalid' => 'single-declared-spouse',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Single Declared Husband',
         'id_number1' => '960000001',
         'marital_status' => 'Single2',
@@ -2576,6 +2690,7 @@ it('does not report a female owner spouse identity when it matches the registry 
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 9013,
         'globalid' => 'female-owner-existing-husband',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Female Owner',
         'id_number1' => '970000001',
         'marital_status' => 'Married',
@@ -2606,6 +2721,7 @@ it('matches a female owner spouse identity from the registry breadwinner', funct
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 9014,
         'globalid' => 'female-owner-wrong-husband',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Female Owner',
         'id_number1' => '970000011',
         'marital_status' => 'Married',
@@ -2660,6 +2776,7 @@ it('creates spouse rows from the husband registry when the owner is female', fun
     $housingUnit = HousingUnit::query()->create([
         'objectid' => 897,
         'globalid' => 'female-owner-registry-spouse',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Female Owner',
         'id_number1' => '940000001',
         'marital_status' => 'Married',
@@ -2723,6 +2840,7 @@ it('bulk approves selected single name matches', function (): void {
     $firstHousingUnit = HousingUnit::query()->create([
         'objectid' => 901,
         'globalid' => 'bulk-one',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Bulk One',
         'id_number1' => '701701701',
     ]);
@@ -2730,6 +2848,7 @@ it('bulk approves selected single name matches', function (): void {
     $secondHousingUnit = HousingUnit::query()->create([
         'objectid' => 902,
         'globalid' => 'bulk-two',
+        'identity_type1' => 'idd=',
         'unit_owner' => 'Bulk Two',
         'id_number1' => '702702702',
     ]);

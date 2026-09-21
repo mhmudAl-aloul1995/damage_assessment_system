@@ -52,6 +52,7 @@ class RefreshMissingCitizenIdentityReport extends Command
             ->select([
                 'id',
                 'unit_owner',
+                'identity_type1',
                 'id_number1',
                 'q_9_3_1_first_name',
                 'q_9_3_2_second_name__father',
@@ -364,8 +365,8 @@ class RefreshMissingCitizenIdentityReport extends Command
             ])
             : collect();
 
-        return collect([
-            [
+        $ownerRows = $this->hasCivilRegistryOwnerIdentity($housingUnit)
+            ? [[
                 'identity_subject' => self::SUBJECT_OWNER,
                 'identity_index' => null,
                 'identity_name_field' => 'unit_owner',
@@ -375,7 +376,11 @@ class RefreshMissingCitizenIdentityReport extends Command
                 'breadwinner_id_card_no' => null,
                 'registry_candidate_id_card_no' => null,
                 'registry_candidate_full_name' => null,
-            ],
+            ]]
+            : [];
+
+        return collect([
+            ...$ownerRows,
             ...$spouseRows->all(),
         ])
             ->filter(fn (array $identityRow): bool => filled($identityRow['owner_name']) || filled($identityRow['id_number']))
@@ -387,6 +392,11 @@ class RefreshMissingCitizenIdentityReport extends Command
                 ];
             })
             ->values();
+    }
+
+    private function hasCivilRegistryOwnerIdentity(HousingUnit $housingUnit): bool
+    {
+        return mb_strtolower(trim((string) $housingUnit->identity_type1)) === 'idd=';
     }
 
     /**
