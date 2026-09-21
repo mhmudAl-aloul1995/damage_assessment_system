@@ -396,7 +396,7 @@ class RefreshMissingCitizenIdentityReport extends Command
 
     private function hasCivilRegistryOwnerIdentity(HousingUnit $housingUnit): bool
     {
-        return mb_strtolower(trim((string) $housingUnit->identity_type1)) === 'idd=';
+        return mb_strtolower(trim((string) $housingUnit->identity_type1)) === 'idd';
     }
 
     /**

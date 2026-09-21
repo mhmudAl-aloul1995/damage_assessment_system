@@ -47,7 +47,7 @@ class MissingCitizenIdentityController extends Controller
                 ->where(function (Builder $query): void {
                     $query
                         ->where('missing_citizen_identity_reports.identity_subject', '<>', 'owner')
-                        ->orWhereRaw("LOWER(TRIM(COALESCE(housing_units.identity_type1, ''))) = 'idd='");
+                        ->orWhereRaw("LOWER(TRIM(COALESCE(housing_units.identity_type1, ''))) = 'idd'");
                 })
                 ->count(),
         ]);
@@ -142,7 +142,7 @@ class MissingCitizenIdentityController extends Controller
             ->where(function (Builder $query): void {
                 $query
                     ->where('missing_citizen_identity_reports.identity_subject', '<>', 'owner')
-                    ->orWhereRaw("LOWER(TRIM(COALESCE(housing_units.identity_type1, ''))) = 'idd='");
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(housing_units.identity_type1, ''))) = 'idd'");
             });
 
         if ($search !== '') {
