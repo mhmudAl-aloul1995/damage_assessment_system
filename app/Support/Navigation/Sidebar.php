@@ -143,10 +143,28 @@ class Sidebar
     private static function isCustomVisibleItem(array $item, User $user): bool
     {
         return match ($item['visible_when'] ?? null) {
-            'building_deletion_requests' => true,
+            'building_deletion_requests' => ! self::isCsoOfficerOnly($user),
             'restricted_lawyer_audit_assignments' => RestrictedLawyerAuditAccess::canViewAssignments($user),
             default => false,
         };
+    }
+
+    private static function isCsoOfficerOnly(User $user): bool
+    {
+        return $user->hasRole('CSO Officer')
+            && ! $user->hasAnyRole([
+                'Database Officer',
+                'Project Officer',
+                'undp-Project Manager',
+                'Team Leader',
+                'Team Leader -INF',
+                'Area Manager',
+                'Auditing Supervisor',
+                'QC/QA Engineer',
+                'Inf - QC/QA Engineer',
+                'Field Engineer',
+                'Gis Officer',
+            ]);
     }
 
     private static function isTemporaryAuditHomeItem(array $item, User $user): bool

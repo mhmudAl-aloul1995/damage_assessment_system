@@ -2,6 +2,7 @@
 
 use App\Models\CsoSurvey;
 use App\Models\User;
+use Database\Seeders\DashboardCardSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
@@ -20,6 +21,7 @@ beforeEach(function (): void {
 
 it('allows cso officers to access cso pages and assign cso audits', function (): void {
     app(RolesAndPermissionsSeeder::class)->run();
+    app(DashboardCardSeeder::class)->run();
 
     $officer = User::factory()->create();
     $officer->assignRole('CSO Officer');
@@ -45,6 +47,13 @@ it('allows cso officers to access cso pages and assign cso audits', function ():
     $this->actingAs($officer)->get(route('reports.area-productivity.cso-surveys'))->assertOk();
 
     $this->actingAs($officer)
+        ->get(route('damageAssessment.index'))
+        ->assertOk()
+        ->assertSee(__('ui.damage_dashboard.cso_surveys'), false)
+        ->assertDontSee(__('ui.damage_dashboard.buildings_status_summary'), false)
+        ->assertViewHas('dashboardCards', fn ($cards): bool => $cards->pluck('key')->all() === ['cso_surveys']);
+
+    $this->actingAs($officer)
         ->post(route('inf-audit.cso.assign'), [
             'ids' => [$survey->id],
             'assigned_to' => $auditor->id,
@@ -55,6 +64,14 @@ it('allows cso officers to access cso pages and assign cso audits', function ():
 
     $this->actingAs($officer)
         ->get(route('reports.area-productivity.housing-units'))
+        ->assertForbidden();
+
+    $this->actingAs($officer)
+        ->get(route('building-deletions.index'))
+        ->assertForbidden();
+
+    $this->actingAs($officer)
+        ->getJson(route('damageAssessment.latest-stats'))
         ->assertForbidden();
 });
 

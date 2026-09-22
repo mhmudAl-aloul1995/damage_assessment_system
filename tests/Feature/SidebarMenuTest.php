@@ -136,6 +136,7 @@ it('shows all cso links to cso officers', function () {
         ->toContain('damage-assessment/inf-audit/cso')
         ->toContain('damage-assessment/reports/area-productivity/cso-surveys')
         ->toContain('damage-assessment/cso-surveys/export-data')
+        ->not->toContain('damage-assessment/building-deletions')
         ->not->toContain('damage-assessment/public-buildings')
         ->not->toContain('damage-assessment/road-facilities');
 });

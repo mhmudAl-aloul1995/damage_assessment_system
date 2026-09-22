@@ -281,7 +281,8 @@ class DamageAssessmentController extends Controller
         $governorates = $this->dashboardGovernorates();
         $neighborhoods = $this->dashboardNeighborhoods();
         $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedNeighborhood');
-        $dashboardCards = $this->dashboardCards();
+        $isCsoOfficerDashboard = $this->isCsoOfficerOnly($request->user());
+        $dashboardCards = $this->dashboardCards($request);
         $dashboardCardItemValues = $this->dashboardCardItemValues($dashboardCards, $request);
 
         return View::make(
@@ -302,6 +303,7 @@ class DamageAssessmentController extends Controller
                 'dashboardFilters',
                 'dashboardCards',
                 'dashboardCardItemValues',
+                'isCsoOfficerDashboard',
             )
         );
     }
@@ -1099,6 +1101,8 @@ class DamageAssessmentController extends Controller
 
     public function latestStats(Request $request): \Illuminate\Http\JsonResponse
     {
+        abort_if($this->isCsoOfficerOnly($request->user()), 403);
+
         return response()->json($this->cachedDashboardCoreStats($request));
     }
 
@@ -1214,7 +1218,7 @@ class DamageAssessmentController extends Controller
             : $fallbackModelClass::query();
     }
 
-    private function dashboardCards(): Collection
+    private function dashboardCards(Request $request): Collection
     {
         if (! Schema::hasTable('dashboard_cards')) {
             return collect();
@@ -1223,9 +1227,31 @@ class DamageAssessmentController extends Controller
         return DashboardCard::query()
             ->with(['items' => fn ($query) => $query->where('is_active', true)])
             ->where('is_active', true)
+            ->when(
+                $this->isCsoOfficerOnly($request->user()),
+                fn (Builder $query): Builder => $query->where('key', 'cso_surveys')
+            )
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
+    }
+
+    private function isCsoOfficerOnly(?User $user): bool
+    {
+        return $user?->hasRole('CSO Officer') === true
+            && ! $user->hasAnyRole([
+                'Database Officer',
+                'Project Officer',
+                'undp-Project Manager',
+                'Team Leader',
+                'Team Leader -INF',
+                'Area Manager',
+                'Auditing Supervisor',
+                'QC/QA Engineer',
+                'Inf - QC/QA Engineer',
+                'Field Engineer',
+                'Gis Officer',
+            ]);
     }
 
     private function dashboardCardItemValues(Collection $dashboardCards, Request $request): array

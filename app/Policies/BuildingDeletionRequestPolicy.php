@@ -11,7 +11,7 @@ class BuildingDeletionRequestPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return ! $this->isCsoOfficerOnly($user);
     }
 
     public function view(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
@@ -26,7 +26,7 @@ class BuildingDeletionRequestPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return ! $this->isCsoOfficerOnly($user);
     }
 
     public function update(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
@@ -83,5 +83,23 @@ class BuildingDeletionRequestPolicy
     public function forceDelete(User $user, BuildingDeletionRequest $buildingDeletionRequest): bool
     {
         return false;
+    }
+
+    private function isCsoOfficerOnly(User $user): bool
+    {
+        return $user->hasRole('CSO Officer')
+            && ! $user->hasAnyRole([
+                'Database Officer',
+                'Project Officer',
+                'undp-Project Manager',
+                'Team Leader',
+                'Team Leader -INF',
+                'Area Manager',
+                'Auditing Supervisor',
+                'QC/QA Engineer',
+                'Inf - QC/QA Engineer',
+                'Field Engineer',
+                'Gis Officer',
+            ]);
     }
 }

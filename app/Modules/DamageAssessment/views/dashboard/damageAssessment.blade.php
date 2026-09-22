@@ -1010,6 +1010,7 @@
 
 	@include('damage-assessment::dashboard.partials.summary-cards')
 
+	@unless ($isCsoOfficerDashboard ?? false)
 	@if (false)
 	<div class="row g-5 g-xl-8 damage-dashboard-stats">
 		<!--begin::Col-->
@@ -4369,4 +4370,5 @@
 			});
 		})();
 	</script>
+	@endunless
 @endsection
