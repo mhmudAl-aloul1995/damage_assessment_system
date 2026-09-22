@@ -8,11 +8,20 @@ use App\Models\CsoSurveyUnit;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use OpenSpout\Reader\XLSX\Reader;
+use Spatie\Permission\Models\Role;
+
+function csoSurveyOfficerUser(): User
+{
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('CSO Officer', 'web'));
+
+    return $user;
+}
 
 test('it shows cso survey listing and details like other survey pages', function (): void {
     app()->setLocale('ar');
 
-    $user = User::factory()->create();
+    $user = csoSurveyOfficerUser();
 
     $survey = CsoSurvey::query()->create([
         'objectid' => 7301,
@@ -137,7 +146,7 @@ test('it shows cso survey listing and details like other survey pages', function
 it('groups cso units under their organization from the original repeat parent', function (): void {
     app()->setLocale('ar');
 
-    $user = User::factory()->create();
+    $user = csoSurveyOfficerUser();
 
     $survey = CsoSurvey::query()->create([
         'objectid' => 7501,
@@ -252,7 +261,7 @@ it('renders the cso empty workspace in both layout directions', function (string
         'building_name' => '<script>alert("building")</script>',
     ]);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(csoSurveyOfficerUser())
         ->get(route('cso-surveys.show', $survey))
         ->assertOk()
         ->assertSee('dir="'.$direction.'"', false)
@@ -268,7 +277,7 @@ it('renders the cso empty workspace in both layout directions', function (string
 ]);
 
 it('filters cso surveys by child organization fields from dashboard links', function (): void {
-    $user = User::factory()->create();
+    $user = csoSurveyOfficerUser();
 
     $matchingSurvey = CsoSurvey::query()->create([
         'objectid' => 7311,
@@ -336,7 +345,7 @@ it('filters cso surveys by child organization fields from dashboard links', func
 it('shows cso export data page and exports selected survey organization and unit columns', function (): void {
     Carbon::setTestNow('2026-08-31 10:15:00');
 
-    $user = User::factory()->create();
+    $user = csoSurveyOfficerUser();
 
     $survey = CsoSurvey::query()->create([
         'objectid' => 7401,

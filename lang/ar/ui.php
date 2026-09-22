@@ -636,6 +636,7 @@ return [
         'audit' => 'التدقيق',
         'building_survey_return_requests' => 'طلبات إرجاع مسح المباني',
         'committee' => 'اللجنة',
+        'cso' => 'مؤسسات المجتمع المدني',
         'damage_assessment' => 'تقييم الأضرار',
         'exports' => 'التصدير',
         'inf_audit' => 'تدقيق البنية التحتية',

@@ -636,6 +636,7 @@ return [
         'audit' => 'Audit',
         'building_survey_return_requests' => 'Building survey return requests',
         'committee' => 'Committee',
+        'cso' => 'Civil society organizations',
         'damage_assessment' => 'Damage assessment',
         'exports' => 'Exports',
         'inf_audit' => 'INF audit',

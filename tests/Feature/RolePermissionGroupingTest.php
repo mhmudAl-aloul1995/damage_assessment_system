@@ -14,6 +14,7 @@ it('groups permissions on the role management page', function (): void {
 
     Permission::findOrCreate('roles.view', 'web');
     Permission::findOrCreate('users.view', 'web');
+    Permission::findOrCreate('cso-surveys.view', 'web');
     Permission::findOrCreate('reports.export', 'web');
     Permission::findOrCreate('audit.assign', 'web');
 
@@ -24,9 +25,11 @@ it('groups permissions on the role management page', function (): void {
         ->get(route('roles.index'))
         ->assertOk()
         ->assertSee(__('ui.permission_groups.user_management'), false)
+        ->assertSee(__('ui.permission_groups.cso'), false)
         ->assertSee(__('ui.permission_groups.reports'), false)
         ->assertSee(__('ui.permission_groups.audit'), false)
         ->assertSee('users.view', false)
+        ->assertSee('cso-surveys.view', false)
         ->assertSee('reports.export', false)
         ->assertSee('audit.assign', false);
 });

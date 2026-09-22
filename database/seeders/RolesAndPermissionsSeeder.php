@@ -90,6 +90,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'inf-audit.cso.assign',
             'inf-audit.cso.update-status',
             'inf-audit.cso.update-fields',
+            'cso-surveys.view',
+            'cso-surveys.export',
+            'reports.area-productivity.cso-surveys.view',
+            'reports.area-productivity.cso-surveys.export',
             'reports.view',
             'reports.export',
             'reports.damage-statistics.view',
@@ -181,6 +185,10 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
         $infTeamLeader = Role::firstOrCreate([
             'name' => 'Team Leader -INF',
+            'guard_name' => 'web',
+        ]);
+        $csoOfficer = Role::firstOrCreate([
+            'name' => 'CSO Officer',
             'guard_name' => 'web',
         ]);
 
@@ -346,6 +354,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'inf-audit.cso.assign',
             'reports.public-buildings.view',
             'reports.road-facilities.view',
+        ]);
+        $csoOfficer->givePermissionTo([
+            'cso-surveys.view',
+            'cso-surveys.export',
+            'inf-audit.cso.view',
+            'inf-audit.cso.assign',
+            'inf-audit.cso.update-status',
+            'inf-audit.cso.update-fields',
+            'reports.area-productivity.cso-surveys.view',
+            'reports.area-productivity.cso-surveys.export',
         ]);
         /*
         $systemManager->syncPermissions($permissions);

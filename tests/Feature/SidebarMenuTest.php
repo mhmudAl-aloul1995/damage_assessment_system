@@ -124,6 +124,22 @@ it('shows infrastructure audit links to project officers', function () {
         ->toContain('damage-assessment/inf-audit/roads');
 });
 
+it('shows all cso links to cso officers', function () {
+    $role = Role::findOrCreate('CSO Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $urls = sidebarUrlsFor($user);
+
+    expect($urls)
+        ->toContain('damage-assessment/cso-surveys')
+        ->toContain('damage-assessment/inf-audit/cso')
+        ->toContain('damage-assessment/reports/area-productivity/cso-surveys')
+        ->toContain('damage-assessment/cso-surveys/export-data')
+        ->not->toContain('damage-assessment/public-buildings')
+        ->not->toContain('damage-assessment/road-facilities');
+});
+
 it('groups visible sidebar sections by module', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

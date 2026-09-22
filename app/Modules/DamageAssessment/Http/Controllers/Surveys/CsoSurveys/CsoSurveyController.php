@@ -30,6 +30,16 @@ use Yajra\DataTables\Facades\DataTables;
 
 class CsoSurveyController extends Controller
 {
+    private const VIEW_MIDDLEWARE = 'role_or_permission:Database Officer|Project Officer|undp-Project Manager|Team Leader -INF|Area Manager|Auditing Supervisor|QC/QA Engineer|CSO Officer|cso-surveys.view';
+
+    private const EXPORT_MIDDLEWARE = 'role_or_permission:Database Officer|Project Officer|undp-Project Manager|Team Leader -INF|Area Manager|Auditing Supervisor|QC/QA Engineer|CSO Officer|cso-surveys.export';
+
+    public function __construct()
+    {
+        $this->middleware(self::VIEW_MIDDLEWARE)->only(['index', 'data', 'show']);
+        $this->middleware(self::EXPORT_MIDDLEWARE)->only(['exportData', 'export']);
+    }
+
     public function index(): View
     {
         return view('damage-assessment::surveys.cso.index', $this->indexData());

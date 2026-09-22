@@ -15,9 +15,20 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AreaProductivityReportController extends Controller
 {
+    private const DEFAULT_REPORT_MIDDLEWARE = 'role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager';
+
+    private const CSO_REPORT_VIEW_MIDDLEWARE = 'role_or_permission:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|CSO Officer|reports.area-productivity.cso-surveys.view';
+
+    private const CSO_REPORT_EXPORT_MIDDLEWARE = 'role_or_permission:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|CSO Officer|reports.area-productivity.cso-surveys.export';
+
     public function __construct(private readonly AreaProductivityReportService $reportService)
     {
-        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager');
+        $this->middleware(self::DEFAULT_REPORT_MIDDLEWARE)
+            ->except(['csoSurveys', 'csoSurveysData', 'exportCsoSurveys']);
+        $this->middleware(self::CSO_REPORT_VIEW_MIDDLEWARE)
+            ->only(['csoSurveys', 'csoSurveysData']);
+        $this->middleware(self::CSO_REPORT_EXPORT_MIDDLEWARE)
+            ->only('exportCsoSurveys');
     }
 
     public function housingUnits(AreaProductivityReportFilterRequest $request): View

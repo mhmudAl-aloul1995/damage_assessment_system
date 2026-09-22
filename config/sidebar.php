@@ -41,7 +41,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.damage_assessment.title',
         'icon' => 'ki-abstract-28',
-        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Legal Auditor', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Legal Auditor', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer', 'CSO Officer'],
         'active_patterns' => [
             'damage-assessment/building*',
             'damage-assessment/housing*',
@@ -80,7 +80,7 @@ return [
                         'title' => 'menu.damage_assessment.cso_surveys',
                         'url' => 'damage-assessment/cso-surveys',
                         'pattern' => 'damage-assessment/cso-surveys*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'CSO Officer'],
                     ],
                     [
                         'title' => 'menu.damage_assessment.missing_citizen_identities',
@@ -171,7 +171,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.audit.title',
         'icon' => 'ki-medal-star',
-        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Inf - QC/QA Engineer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer', 'Team Leader', 'Team Leader -INF'],
+        'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Inf - QC/QA Engineer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer', 'Team Leader', 'Team Leader -INF', 'CSO Officer'],
         'active_patterns' => [
             'damage-assessment/audit*',
             'damage-assessment/field-engineer-audit*',
@@ -234,7 +234,7 @@ return [
                         'title' => 'menu.inf_audit.cso',
                         'url' => 'damage-assessment/inf-audit/cso',
                         'pattern' => 'damage-assessment/inf-audit/cso*',
-                        'roles' => ['Inf - QC/QA Engineer', 'Team Leader -INF', 'Database Officer', 'Project Officer'],
+                        'roles' => ['Inf - QC/QA Engineer', 'Team Leader -INF', 'Database Officer', 'Project Officer', 'CSO Officer'],
                     ],
                 ],
             ],
@@ -281,7 +281,7 @@ return [
         'module' => 'damage_assessment',
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer', 'Auditing Supervisor'],
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer', 'Auditing Supervisor', 'CSO Officer'],
         'active_patterns' => [
             'damage-assessment/reports/area-productivity*',
             'damage-assessment/reports/building-productivity*',
@@ -329,7 +329,7 @@ return [
                         'title' => 'menu.reports.productivity_items.cso_surveys',
                         'url' => 'damage-assessment/reports/area-productivity/cso-surveys',
                         'pattern' => 'damage-assessment/reports/area-productivity/cso-surveys*',
-                        'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
+                        'roles' => ['Database Officer', 'Team Leader -INF', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'CSO Officer'],
                     ],
                     [
                         'title' => 'menu.reports.productivity_items.building_assessment',
@@ -421,7 +421,7 @@ return [
                         'title' => 'menu.reports.cso_surveys_export_data',
                         'url' => 'damage-assessment/cso-surveys/export-data',
                         'pattern' => 'damage-assessment/cso-surveys/export-data*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'QC/QA Engineer', 'Team Leader -INF', 'Area Manager'],
+                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'QC/QA Engineer', 'Team Leader -INF', 'Area Manager', 'CSO Officer'],
                     ],
                 ],
             ],

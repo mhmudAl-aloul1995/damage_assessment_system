@@ -124,6 +124,10 @@ class RoleController extends Controller
                 'label' => __('ui.permission_groups.user_management'),
                 'prefixes' => ['users.', 'roles.', 'permissions.'],
             ],
+            'cso' => [
+                'label' => __('ui.permission_groups.cso'),
+                'prefixes' => ['cso-surveys.', 'inf-audit.cso.', 'reports.area-productivity.cso-surveys.'],
+            ],
             'reports' => [
                 'label' => __('ui.permission_groups.reports'),
                 'prefixes' => ['reports.'],
