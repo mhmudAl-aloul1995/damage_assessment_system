@@ -150,6 +150,30 @@
 			border-inline-start: 4px solid var(--preview-alert-color);
 		}
 
+		.damage-dashboard-preview .preview-command-mode {
+			border: 1px solid var(--bs-gray-200);
+			border-radius: 999px;
+			background: var(--bs-gray-100);
+			padding: .35rem;
+		}
+
+		.damage-dashboard-preview .preview-filter-pill {
+			border: 1px solid var(--bs-gray-300);
+			border-radius: 999px;
+			background: var(--bs-body-bg);
+			color: var(--bs-gray-700);
+		}
+
+		.damage-dashboard-preview .preview-map-card {
+			border: 1px solid rgba(0, 158, 247, .2);
+			box-shadow: 0 16px 42px rgba(15, 23, 42, .07);
+		}
+
+		.damage-dashboard-preview .preview-map-insight {
+			background: linear-gradient(135deg, rgba(0, 158, 247, .1), rgba(80, 205, 137, .1));
+			border-radius: var(--preview-radius);
+		}
+
 		@media (min-width: 1400px) {
 			.damage-dashboard-preview .preview-summary-col {
 				flex: 0 0 20%;
@@ -160,14 +184,23 @@
 
 	<div class="damage-dashboard-preview">
 		<div class="preview-toolbar p-5 mb-6">
-			<div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-4">
+			<div class="d-flex flex-column flex-xxl-row align-items-xxl-center justify-content-between gap-5">
 				<div>
-					<div class="badge badge-light-primary fw-bold mb-3">Preview</div>
+					<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+						<div class="badge badge-light-primary fw-bold">Command Center Preview</div>
+						<div class="badge badge-light-success fw-bold">آخر تحديث: اليوم 10:45 صباحاً</div>
+					</div>
 					<h2 class="fw-bold text-gray-900 mb-1">معاينة الصفحة الرئيسية حسب تحليل النظام</h2>
-					<div class="text-muted fw-semibold">نفس محاور صفحة تقييم الأضرار: المباني، الوحدات السكانية، منظمات المجتمع المدني، المباني العامة، والطرق.</div>
+					<div class="text-muted fw-semibold">ملخص تشغيلي واحد يجمع مؤشرات التقييم مع خريطة GIS للمباني، الطرق، منظمات المجتمع المدني، والمباني العامة.</div>
 				</div>
 
 				<div class="d-flex flex-wrap align-items-center gap-3">
+					<div class="preview-command-mode d-flex flex-wrap gap-1" role="group" aria-label="أوضاع عرض الصفحة">
+						<button type="button" class="btn btn-sm btn-primary rounded-pill">نظرة عامة</button>
+						<button type="button" class="btn btn-sm btn-light rounded-pill">المخاطر</button>
+						<button type="button" class="btn btn-sm btn-light rounded-pill">الإنتاجية</button>
+						<button type="button" class="btn btn-sm btn-light rounded-pill">GIS</button>
+					</div>
 					<select class="form-select form-select-sm w-175px">
 						<option>كل المحافظات</option>
 						<option>غزة</option>
@@ -179,15 +212,121 @@
 						<option>المحطة</option>
 					</select>
 					<input class="form-control form-control-sm w-225px" value="2026-09-01 - 2026-09-22" readonly>
-					<div class="btn-group" role="group" aria-label="فترة العرض">
-						<button type="button" class="btn btn-sm btn-light">أمس</button>
-						<button type="button" class="btn btn-sm btn-light">الأسبوع</button>
-						<button type="button" class="btn btn-sm btn-primary">اليوم</button>
-						<button type="button" class="btn btn-sm btn-light">الكل</button>
+				</div>
+			</div>
+			<div class="d-flex flex-wrap align-items-center gap-2 mt-5" aria-label="الفلاتر النشطة">
+				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">كل المحافظات</span>
+				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">كل الأحياء</span>
+				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">الفترة: 2026-09-01 إلى 2026-09-22</span>
+				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">الطبقات: كل GIS</span>
+				<button type="button" class="btn btn-sm btn-light-primary rounded-pill">تصدير التقرير</button>
+			</div>
+		</div>
+
+		<div class="row g-5 g-xl-8 mb-6">
+			<div class="col-md-6 col-xl-3">
+				<div class="card preview-alert-card h-100" style="--preview-alert-color: #f1416c">
+					<div class="card-body">
+						<div class="fw-bold fs-2 text-danger mb-1">196</div>
+						<div class="fw-semibold text-gray-800">مبانٍ يوجد عائق يمنع التقييم</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-6 col-xl-3">
+				<div class="card preview-alert-card h-100" style="--preview-alert-color: #3f4254">
+					<div class="card-body">
+						<div class="fw-bold fs-2 text-dark mb-1">13</div>
+						<div class="fw-semibold text-gray-800">مواقع مبانٍ عامة فيها ذخائر</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-6 col-xl-3">
+				<div class="card preview-alert-card h-100" style="--preview-alert-color: #ffc700">
+					<div class="card-body">
+						<div class="fw-bold fs-2 text-warning mb-1">73</div>
+						<div class="fw-semibold text-gray-800">استبيانات منظمات بدون وحدات</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-6 col-xl-3">
+				<div class="card preview-alert-card h-100" style="--preview-alert-color: #009ef7">
+					<div class="card-body">
+						<div class="fw-bold fs-2 text-primary mb-1">238.4 كم</div>
+						<div class="fw-semibold text-gray-800">طول شوارع مكتمل إدخالها</div>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<div class="card preview-map-card mb-6">
+			<div class="card-header border-0 pt-6">
+				<div class="card-title flex-column align-items-start">
+					<span class="badge badge-light-info fw-bold mb-2">GIS Decision Layer</span>
+					<span class="card-label fw-bold fs-3 mb-1">خريطة GIS شاملة</span>
+					<span class="text-muted fw-semibold fs-7">طبقات ArcGIS الفعلية للمباني، الطرق، منظمات المجتمع المدني، والمباني العامة</span>
+				</div>
+				<div class="card-toolbar">
+					<div class="d-flex flex-wrap gap-2" role="group" aria-label="طبقات الخريطة">
+						<button type="button" class="btn btn-sm btn-light-primary preview-layer-button active" data-preview-layer="all">عرض الكل</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="buildings">كل المباني</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="roadFacilities">الطرق</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="csoSurveys">منظمات المجتمع المدني</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="publicBuildings">المباني العامة</button>
+					</div>
+				</div>
+			</div>
+			<div class="card-body p-lg-8">
+				<div class="row g-6">
+					<div class="col-lg-4">
+						<div class="preview-map-insight p-5 mb-4">
+							<div class="fw-bold text-gray-900 fs-5 mb-1">قراءة سريعة للخريطة</div>
+							<div class="text-muted fw-semibold fs-7">ابدأ من المناطق ذات كثافة الضرر، ثم افتح طبقة الطرق لمعرفة قابلية الوصول قبل توزيع فرق التقييم.</div>
+						</div>
+						<div class="d-grid gap-4">
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">كل المباني</div>
+									<span class="badge badge-light-danger fw-bold">Buildings GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">طبقة المباني الأساسية من ArcGIS مع تصنيف حالة الضرر.</div>
+							</div>
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">الطرق</div>
+									<span class="badge badge-light-dark fw-bold">Roads GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">طبقة مرافق الطرق، وتظهر كخطوط حسب مستوى الضرر.</div>
+							</div>
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">منظمات المجتمع المدني</div>
+									<span class="badge badge-light-info fw-bold">CSO GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">استبيانات منظمات المجتمع المدني من طبقة CSO Survey.</div>
+							</div>
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">المباني العامة</div>
+									<span class="badge badge-light-primary fw-bold">Public GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">طبقة المباني العامة من ArcGIS مع الحالة والموقع.</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-8">
+						<div class="preview-map" id="dashboard_preview_gis_map">
+							<div class="preview-map-loading" data-preview-map-loading>
+								<div class="text-center">
+									<span class="spinner-border text-primary"></span>
+									<div class="fw-bold text-gray-800 mt-3">تحميل طبقات GIS...</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
 
 		<div class="row g-5 g-xl-6 mb-6">
 			@foreach ($summaryCards as $summaryCard)
@@ -326,104 +465,8 @@
 			</div>
 		</div>
 
-		<div class="card mb-6">
-			<div class="card-header border-0 pt-6">
-				<div class="card-title flex-column align-items-start">
-					<span class="card-label fw-bold fs-3 mb-1">خريطة GIS شاملة</span>
-					<span class="text-muted fw-semibold fs-7">طبقات ArcGIS الفعلية للمباني، الطرق، منظمات المجتمع المدني، والمباني العامة</span>
-				</div>
-				<div class="card-toolbar">
-					<div class="d-flex flex-wrap gap-2" role="group" aria-label="طبقات الخريطة">
-						<button type="button" class="btn btn-sm btn-light-primary preview-layer-button active" data-preview-layer="all">عرض الكل</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="buildings">كل المباني</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="roadFacilities">الطرق</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="csoSurveys">منظمات المجتمع المدني</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="publicBuildings">المباني العامة</button>
-					</div>
-				</div>
-			</div>
-			<div class="card-body p-lg-8">
-				<div class="row g-6">
-					<div class="col-lg-5">
-						<div class="d-grid gap-4">
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">كل المباني</div>
-									<span class="badge badge-light-danger fw-bold">Buildings GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">طبقة المباني الأساسية من ArcGIS مع تصنيف حالة الضرر.</div>
-							</div>
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">الطرق</div>
-									<span class="badge badge-light-dark fw-bold">Roads GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">طبقة مرافق الطرق، وتظهر كخطوط حسب مستوى الضرر.</div>
-							</div>
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">منظمات المجتمع المدني</div>
-									<span class="badge badge-light-info fw-bold">CSO GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">استبيانات منظمات المجتمع المدني من طبقة CSO Survey.</div>
-							</div>
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">المباني العامة</div>
-									<span class="badge badge-light-primary fw-bold">Public GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">طبقة المباني العامة من ArcGIS مع الحالة والموقع.</div>
-							</div>
-						</div>
-					</div>
-					<div class="col-lg-7">
-						<div class="preview-map" id="dashboard_preview_gis_map">
-							<div class="preview-map-loading" data-preview-map-loading>
-								<div class="text-center">
-									<span class="spinner-border text-primary"></span>
-									<div class="fw-bold text-gray-800 mt-3">تحميل طبقات GIS...</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
 
-		<div class="row g-5 g-xl-8">
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #f1416c">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-danger mb-1">196</div>
-						<div class="fw-semibold text-gray-800">مبانٍ يوجد عائق يمنع التقييم</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #3f4254">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-dark mb-1">13</div>
-						<div class="fw-semibold text-gray-800">مواقع مبانٍ عامة فيها ذخائر</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #ffc700">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-warning mb-1">73</div>
-						<div class="fw-semibold text-gray-800">استبيانات منظمات بدون وحدات</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #009ef7">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-primary mb-1">238.4 كم</div>
-						<div class="fw-semibold text-gray-800">طول شوارع مكتمل إدخالها</div>
-					</div>
-				</div>
-			</div>
-		</div>
+
 	</div>
 @endsection
 
@@ -581,7 +624,7 @@
 							outFields: ['*'],
 							visible: true,
 							popupTemplate: {
-								title: '{' + config.displayField + '}',
+								title: config.title + ' - {' + config.displayField + '}',
 								content: [{
 									type: 'fields',
 									fieldInfos: config.popupFields,
