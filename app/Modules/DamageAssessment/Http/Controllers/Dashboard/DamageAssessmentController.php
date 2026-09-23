@@ -83,7 +83,17 @@ class DamageAssessmentController extends Controller
 
     public function preview(): ViewResponse
     {
-        return View::make('damage-assessment::dashboard.preview');
+        $arcgis = app(ArcgisService::class);
+        $token = $arcgis->getToken();
+
+        $previewLayerUrls = [
+            'buildings' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.buildings_url')),
+            'publicBuildings' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url')),
+            'roadFacilities' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url')),
+            'csoSurveys' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.cso_survey_layer_url')),
+        ];
+
+        return View::make('damage-assessment::dashboard.preview', compact('previewLayerUrls', 'token'));
     }
 
     public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse

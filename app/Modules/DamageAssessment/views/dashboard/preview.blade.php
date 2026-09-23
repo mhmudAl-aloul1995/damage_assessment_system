@@ -79,6 +79,8 @@
 		];
 	@endphp
 
+	<link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css">
+
 	<style>
 		.damage-dashboard-preview {
 			--preview-radius: .85rem;
@@ -108,72 +110,40 @@
 		}
 
 		.damage-dashboard-preview .preview-map {
-			min-height: 430px;
-			background:
-				linear-gradient(135deg, rgba(0, 158, 247, .14), transparent 36%),
-				linear-gradient(45deg, transparent 0 20%, rgba(126, 130, 153, .18) 20% 20.5%, transparent 20.5% 48%, rgba(126, 130, 153, .18) 48% 48.5%, transparent 48.5%),
-				var(--bs-gray-100);
-			border: 1px solid var(--bs-gray-300);
+			height: 560px;
+			background: var(--bs-gray-100);
 			border-radius: var(--preview-radius);
 			position: relative;
 			overflow: hidden;
 		}
 
-		.damage-dashboard-preview .preview-map::before {
-			content: "";
-			position: absolute;
-			inset: 13% 17% 15% 18%;
-			border: 2px solid rgba(0, 158, 247, .42);
-			border-radius: 44% 38% 48% 32%;
-			transform: rotate(-9deg);
+		.damage-dashboard-preview .preview-map .esri-view-root {
+			border-radius: var(--preview-radius);
 		}
 
-		.damage-dashboard-preview .preview-map::after {
-			content: "";
+		.damage-dashboard-preview .preview-map-loading {
 			position: absolute;
-			inset: 29% 31% 31% 27%;
-			border: 3px dashed rgba(241, 65, 108, .55);
-			border-radius: 50%;
-			transform: rotate(18deg);
-		}
-
-		.damage-dashboard-preview .preview-map-pin {
-			position: absolute;
-			width: 14px;
-			height: 14px;
-			border-radius: 999px;
-			background: var(--preview-pin-color);
-			box-shadow: 0 0 0 7px color-mix(in srgb, var(--preview-pin-color) 18%, transparent);
+			inset: 0;
 			z-index: 2;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(245, 248, 250, .72);
+			backdrop-filter: blur(2px);
 		}
 
-		.damage-dashboard-preview .preview-map-pin-one {
-			inset-inline-start: 34%;
-			inset-block-start: 30%;
+		.damage-dashboard-preview .preview-gis-source {
+			border: 1px dashed var(--bs-gray-300);
+			border-radius: var(--preview-radius);
 		}
 
-		.damage-dashboard-preview .preview-map-pin-two {
-			inset-inline-start: 55%;
-			inset-block-start: 46%;
+		.damage-dashboard-preview .preview-layer-button.active {
+			background: var(--bs-primary);
+			color: #fff;
 		}
 
-		.damage-dashboard-preview .preview-map-pin-three {
-			inset-inline-start: 43%;
-			inset-block-start: 64%;
-		}
-
-		.damage-dashboard-preview .preview-map-tools {
-			position: absolute;
-			inset-inline-start: 1rem;
-			inset-block-start: 1rem;
-			z-index: 3;
-		}
-
-		.damage-dashboard-preview .preview-map-legend {
-			position: absolute;
-			inset-inline-end: 1rem;
-			inset-block-end: 1rem;
-			z-index: 3;
+		.damage-dashboard-preview .esri-popup {
+			z-index: 10;
 		}
 
 		.damage-dashboard-preview .preview-alert-card {
@@ -359,70 +329,60 @@
 		<div class="card mb-6">
 			<div class="card-header border-0 pt-6">
 				<div class="card-title flex-column align-items-start">
-					<span class="card-label fw-bold fs-3 mb-1">خرائط ArcGIS المرتبطة بالجداول</span>
-					<span class="text-muted fw-semibold fs-7">نفس منطق الصفحة الحالية: جدول على اليسار وخريطة على اليمين</span>
+					<span class="card-label fw-bold fs-3 mb-1">خريطة GIS شاملة</span>
+					<span class="text-muted fw-semibold fs-7">طبقات ArcGIS الفعلية للمباني، الطرق، منظمات المجتمع المدني، والمباني العامة</span>
 				</div>
 				<div class="card-toolbar">
-					<div class="btn-group" role="group" aria-label="نوع الخريطة">
-						<button type="button" class="btn btn-sm btn-primary" data-preview-map-tab="public">المباني العامة</button>
-						<button type="button" class="btn btn-sm btn-light" data-preview-map-tab="roads">الطرق</button>
+					<div class="d-flex flex-wrap gap-2" role="group" aria-label="طبقات الخريطة">
+						<button type="button" class="btn btn-sm btn-light-primary preview-layer-button active" data-preview-layer="all">عرض الكل</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="buildings">كل المباني</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="roadFacilities">الطرق</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="csoSurveys">منظمات المجتمع المدني</button>
+						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="publicBuildings">المباني العامة</button>
 					</div>
 				</div>
 			</div>
 			<div class="card-body p-lg-8">
-				<div class="row g-6 align-items-stretch">
+				<div class="row g-6">
 					<div class="col-lg-5">
-						<div class="table-responsive">
-							<table class="table table-rounded table-striped align-middle fs-7 gy-5 mb-0">
-								<thead>
-									<tr class="text-muted fw-bold text-uppercase">
-										<th>البلدية</th>
-										<th>الحي</th>
-										<th>OBJECTID</th>
-										<th data-preview-map-heading>اسم المبنى</th>
-										<th>الحالة</th>
-									</tr>
-								</thead>
-								<tbody class="text-gray-600 fw-semibold" data-preview-map-rows>
-									<tr>
-										<td>غزة</td>
-										<td>الرمال</td>
-										<td>PB-204</td>
-										<td>مدرسة الرمال</td>
-										<td><span class="badge badge-light-danger fw-bold">متضرر</span></td>
-									</tr>
-									<tr>
-										<td>خانيونس</td>
-										<td>المحطة</td>
-										<td>PB-188</td>
-										<td>مركز صحي</td>
-										<td><span class="badge badge-light-warning fw-bold">لجنة</span></td>
-									</tr>
-									<tr>
-										<td>دير البلح</td>
-										<td>البلد</td>
-										<td>PB-151</td>
-										<td>مبنى بلدي</td>
-										<td><span class="badge badge-light-success fw-bold">مكتمل</span></td>
-									</tr>
-								</tbody>
-							</table>
+						<div class="d-grid gap-4">
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">كل المباني</div>
+									<span class="badge badge-light-danger fw-bold">Buildings GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">طبقة المباني الأساسية من ArcGIS مع تصنيف حالة الضرر.</div>
+							</div>
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">الطرق</div>
+									<span class="badge badge-light-dark fw-bold">Roads GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">طبقة مرافق الطرق، وتظهر كخطوط حسب مستوى الضرر.</div>
+							</div>
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">منظمات المجتمع المدني</div>
+									<span class="badge badge-light-info fw-bold">CSO GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">استبيانات منظمات المجتمع المدني من طبقة CSO Survey.</div>
+							</div>
+							<div class="preview-gis-source p-4">
+								<div class="d-flex align-items-center justify-content-between mb-2">
+									<div class="fw-bold text-gray-900">المباني العامة</div>
+									<span class="badge badge-light-primary fw-bold">Public GIS</span>
+								</div>
+								<div class="text-muted fw-semibold fs-7">طبقة المباني العامة من ArcGIS مع الحالة والموقع.</div>
+							</div>
 						</div>
 					</div>
 					<div class="col-lg-7">
-						<div class="preview-map">
-							<div class="preview-map-tools d-grid gap-2">
-								<span class="btn btn-sm btn-icon btn-light">+</span>
-								<span class="btn btn-sm btn-icon btn-light">-</span>
-								<span class="btn btn-sm btn-icon btn-light"><i class="ki-duotone ki-magnifier fs-4"><span class="path1"></span><span class="path2"></span></i></span>
-							</div>
-							<span class="preview-map-pin preview-map-pin-one" style="--preview-pin-color: #f1416c"></span>
-							<span class="preview-map-pin preview-map-pin-two" style="--preview-pin-color: #ffc700"></span>
-							<span class="preview-map-pin preview-map-pin-three" style="--preview-pin-color: #50cd89"></span>
-							<div class="preview-map-legend bg-body border rounded p-4 shadow-sm">
-								<div class="d-flex align-items-center mb-2"><span class="bullet bullet-dot bg-danger me-3"></span><span class="fw-semibold text-muted">ضرر عالي</span></div>
-								<div class="d-flex align-items-center mb-2"><span class="bullet bullet-dot bg-warning me-3"></span><span class="fw-semibold text-muted">متوسط/لجنة</span></div>
-								<div class="d-flex align-items-center"><span class="bullet bullet-dot bg-success me-3"></span><span class="fw-semibold text-muted">مكتمل</span></div>
+						<div class="preview-map" id="dashboard_preview_gis_map">
+							<div class="preview-map-loading" data-preview-map-loading>
+								<div class="text-center">
+									<span class="spinner-border text-primary"></span>
+									<div class="fw-bold text-gray-800 mt-3">تحميل طبقات GIS...</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -468,65 +428,243 @@
 @endsection
 
 @section('script')
+	<script src="https://js.arcgis.com/4.22/"></script>
 	<script>
 		KTUtil.onDOMContentLoaded(function () {
-			const tabs = document.querySelectorAll('[data-preview-map-tab]');
-			const heading = document.querySelector('[data-preview-map-heading]');
-			const rows = document.querySelector('[data-preview-map-rows]');
-			const data = {
-				public: {
-					heading: 'اسم المبنى',
-					rows: [
-						['غزة', 'الرمال', 'PB-204', 'مدرسة الرمال', 'badge-light-danger', 'متضرر'],
-						['خانيونس', 'المحطة', 'PB-188', 'مركز صحي', 'badge-light-warning', 'لجنة'],
-						['دير البلح', 'البلد', 'PB-151', 'مبنى بلدي', 'badge-light-success', 'مكتمل'],
-					],
-				},
-				roads: {
-					heading: 'اسم الطريق',
-					rows: [
-						['غزة', 'النصر', 'RD-991', 'شارع النصر', 'badge-light-danger', 'مدمر'],
-						['رفح', 'الجنينة', 'RD-774', 'طريق الخدمات', 'badge-light-warning', 'أضرار جسيمة'],
-						['الشمال', 'جباليا', 'RD-630', 'شارع السوق', 'badge-light-primary', 'أضرار متوسطة'],
-					],
-				},
-			};
+			const layerUrls = @json($previewLayerUrls);
+			const arcgisToken = @json($token);
+			const layerButtons = document.querySelectorAll('[data-preview-layer]');
+			const loadingElement = document.querySelector('[data-preview-map-loading]');
 
-			function renderMapTable(type) {
-				const selected = data[type] || data.public;
+			require([
+				'esri/Map',
+				'esri/views/MapView',
+				'esri/layers/FeatureLayer',
+				'esri/identity/IdentityManager',
+				'esri/widgets/BasemapToggle',
+				'esri/widgets/LayerList',
+				'esri/widgets/Legend',
+				'esri/widgets/Search',
+				'esri/widgets/ScaleBar',
+				'esri/widgets/Expand',
+			], function (
+				Map,
+				MapView,
+				FeatureLayer,
+				esriId,
+				BasemapToggle,
+				LayerList,
+				Legend,
+				Search,
+				ScaleBar,
+				Expand
+			) {
+				const layerConfigs = {
+					buildings: {
+						title: 'كل المباني',
+						url: layerUrls.buildings,
+						color: [241, 65, 108, 0.55],
+						searchFields: ['building_name', 'owner_name', 'objectid', 'municipalitie', 'neighborhood'],
+						displayField: 'building_name',
+						popupFields: [
+							{ fieldName: 'objectid', label: 'OBJECTID' },
+							{ fieldName: 'building_name', label: 'اسم المبنى' },
+							{ fieldName: 'owner_name', label: 'المالك' },
+							{ fieldName: 'municipalitie', label: 'البلدية' },
+							{ fieldName: 'neighborhood', label: 'الحي' },
+							{ fieldName: 'building_damage_status', label: 'حالة الضرر' },
+						],
+					},
+					roadFacilities: {
+						title: 'الطرق',
+						url: layerUrls.roadFacilities,
+						color: [63, 66, 84, 0.9],
+						searchFields: ['str_name', 'objectid', 'municipalitie', 'neighborhood'],
+						displayField: 'str_name',
+						popupFields: [
+							{ fieldName: 'objectid', label: 'OBJECTID' },
+							{ fieldName: 'str_name', label: 'اسم الطريق' },
+							{ fieldName: 'municipalitie', label: 'البلدية' },
+							{ fieldName: 'neighborhood', label: 'الحي' },
+							{ fieldName: 'road_damage_level', label: 'مستوى الضرر' },
+						],
+					},
+					csoSurveys: {
+						title: 'منظمات المجتمع المدني',
+						url: layerUrls.csoSurveys,
+						color: [114, 57, 234, 0.65],
+						searchFields: ['organization_name', 'cso_name', 'objectid', 'municipalitie', 'neighborhood'],
+						displayField: 'organization_name',
+						popupFields: [
+							{ fieldName: 'objectid', label: 'OBJECTID' },
+							{ fieldName: 'organization_name', label: 'اسم المنظمة' },
+							{ fieldName: 'cso_name', label: 'المنظمة' },
+							{ fieldName: 'municipalitie', label: 'البلدية' },
+							{ fieldName: 'neighborhood', label: 'الحي' },
+							{ fieldName: 'building_damage_status', label: 'حالة الضرر' },
+						],
+					},
+					publicBuildings: {
+						title: 'المباني العامة',
+						url: layerUrls.publicBuildings,
+						color: [0, 158, 247, 0.55],
+						searchFields: ['building_name', 'objectid', 'municipalitie', 'neighborhood'],
+						displayField: 'building_name',
+						popupFields: [
+							{ fieldName: 'objectid', label: 'OBJECTID' },
+							{ fieldName: 'building_name', label: 'اسم المبنى' },
+							{ fieldName: 'municipalitie', label: 'البلدية' },
+							{ fieldName: 'neighborhood', label: 'الحي' },
+							{ fieldName: 'building_damage_status', label: 'حالة الضرر' },
+						],
+					},
+				};
 
-				heading.textContent = selected.heading;
-				rows.replaceChildren();
-
-				selected.rows.forEach(function (row) {
-					const tr = document.createElement('tr');
-
-					row.slice(0, 4).forEach(function (value) {
-						const td = document.createElement('td');
-						td.textContent = value;
-						tr.appendChild(td);
-					});
-
-					const statusCell = document.createElement('td');
-					const statusBadge = document.createElement('span');
-					statusBadge.className = 'badge ' + row[4] + ' fw-bold';
-					statusBadge.textContent = row[5];
-					statusCell.appendChild(statusBadge);
-					tr.appendChild(statusCell);
-					rows.appendChild(tr);
+				Object.values(layerConfigs).forEach(function (config) {
+					if (config.url && arcgisToken) {
+						esriId.registerToken({
+							server: config.url,
+							token: arcgisToken,
+							expires: Date.now() + (60 * 60 * 1000),
+						});
+					}
 				});
-			}
 
-			tabs.forEach(function (tab) {
-				tab.addEventListener('click', function () {
-					tabs.forEach(function (item) {
-						item.classList.remove('btn-primary');
-						item.classList.add('btn-light');
+				function rendererForLayer(layer, config) {
+					if (layer.geometryType === 'polyline') {
+						return {
+							type: 'simple',
+							symbol: {
+								type: 'simple-line',
+								color: config.color,
+								width: 3,
+							},
+						};
+					}
+
+					if (layer.geometryType === 'point' || layer.geometryType === 'multipoint') {
+						return {
+							type: 'simple',
+							symbol: {
+								type: 'simple-marker',
+								size: 9,
+								color: config.color,
+								outline: {
+									color: [255, 255, 255, 0.85],
+									width: 1,
+								},
+							},
+						};
+					}
+
+					return {
+						type: 'simple',
+						symbol: {
+							type: 'simple-fill',
+							color: config.color,
+							outline: {
+								color: [255, 255, 255, 0.85],
+								width: 1,
+							},
+						},
+					};
+				}
+
+				const layers = Object.entries(layerConfigs)
+					.filter(function ([, config]) {
+						return Boolean(config.url);
+					})
+					.map(function ([key, config]) {
+						const layer = new FeatureLayer({
+							url: config.url,
+							title: config.title,
+							outFields: ['*'],
+							visible: true,
+							popupTemplate: {
+								title: '{' + config.displayField + '}',
+								content: [{
+									type: 'fields',
+									fieldInfos: config.popupFields,
+								}],
+							},
+						});
+
+						layer.previewKey = key;
+						layer.when(function () {
+							layer.renderer = rendererForLayer(layer, config);
+						});
+
+						return layer;
 					});
 
-					tab.classList.add('btn-primary');
-					tab.classList.remove('btn-light');
-					renderMapTable(tab.dataset.previewMapTab);
+				const map = new Map({
+					basemap: 'satellite',
+					layers: layers,
+				});
+
+				const view = new MapView({
+					container: 'dashboard_preview_gis_map',
+					map: map,
+					center: [34.460987, 31.514266],
+					zoom: 12,
+				});
+
+				const searchSources = layers.map(function (layer) {
+					const config = layerConfigs[layer.previewKey];
+
+					return {
+						layer: layer,
+						searchFields: config.searchFields,
+						displayField: config.displayField,
+						exactMatch: false,
+						outFields: ['*'],
+						name: config.title,
+						placeholder: 'بحث في ' + config.title,
+					};
+				});
+
+				view.ui.add(new BasemapToggle({ view: view, nextBasemap: 'osm' }), 'top-left');
+				view.ui.add(new Search({
+					view: view,
+					allPlaceholder: 'بحث في طبقات GIS',
+					includeDefaultSources: false,
+					sources: searchSources,
+				}), 'top-right');
+				view.ui.add(new ScaleBar({ view: view, unit: 'metric' }), 'bottom-left');
+				view.ui.add(new Expand({
+					view: view,
+					content: new LayerList({ view: view }),
+					expanded: false,
+				}), 'top-left');
+				view.ui.add(new Expand({
+					view: view,
+					content: new Legend({ view: view }),
+					expanded: false,
+				}), 'bottom-right');
+
+				function setVisibleLayer(layerKey) {
+					layers.forEach(function (layer) {
+						layer.visible = layerKey === 'all' || layer.previewKey === layerKey;
+					});
+				}
+
+				layerButtons.forEach(function (button) {
+					button.addEventListener('click', function () {
+						layerButtons.forEach(function (item) {
+							item.classList.remove('active', 'btn-primary');
+							item.classList.add('btn-light');
+						});
+
+						button.classList.add('active', 'btn-primary');
+						button.classList.remove('btn-light');
+						setVisibleLayer(button.dataset.previewLayer);
+					});
+				});
+
+				view.when(function () {
+					if (loadingElement) {
+						loadingElement.remove();
+					}
 				});
 			});
 		});
