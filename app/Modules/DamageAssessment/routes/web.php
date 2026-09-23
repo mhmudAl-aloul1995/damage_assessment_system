@@ -271,6 +271,8 @@ Route::middleware('auth')->group(function () {
         ->name('damageAssessment.hud.stats');
     Route::get('/damageAssessment/hud/building-units', [DamageAssessmentController::class, 'hudBuildingUnits'])
         ->name('damageAssessment.hud.building-units');
+    Route::get('/damageAssessment/dashboard-preview', [DamageAssessmentController::class, 'preview'])
+        ->name('damageAssessment.preview');
     Route::resource('damageAssessment', controller: DamageAssessmentController::class);
     Route::get('/showBuildings', action: [DamageAssessmentController::class, 'showBuildings']);
     Route::get('/showHousings', action: [DamageAssessmentController::class, 'showHousings']);

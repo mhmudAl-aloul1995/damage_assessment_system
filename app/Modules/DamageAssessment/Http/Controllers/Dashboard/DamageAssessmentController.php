@@ -81,6 +81,11 @@ class DamageAssessmentController extends Controller
         '400591194',
     ];
 
+    public function preview(): ViewResponse
+    {
+        return View::make('damage-assessment::dashboard.preview');
+    }
+
     public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
     {
         if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
