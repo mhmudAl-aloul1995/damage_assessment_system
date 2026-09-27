@@ -95,6 +95,7 @@ it('reports source target differences without applying changes by default', func
                 'features' => [
                     ['attributes' => ['objectid' => 1, 'Field_status' => 'COMPLETED']],
                     ['attributes' => ['objectid' => 2, 'Field_status' => 'Not_Completed']],
+                    ['attributes' => ['objectid' => 4, 'Field_status' => 'COMPLETED']],
                 ],
             ]);
         },
@@ -107,6 +108,7 @@ it('reports source target differences without applying changes by default', func
                 'features' => [
                     ['attributes' => ['objectid' => 10, 'old_objectid_B' => 1, 'Field_status' => 'COMPLETED']],
                     ['attributes' => ['objectid' => 11, 'old_objectid_B' => 3, 'Field_status' => 'Not_Completed']],
+                    ['attributes' => ['objectid' => 12, 'old_objectid_B' => 4, 'Field_status' => 'Not_Completed']],
                 ],
             ]);
         },
@@ -121,7 +123,9 @@ it('reports source target differences without applying changes by default', func
         ->and($output)->toContain('missing')
         ->and($output)->toContain('source_completed_buildings')
         ->and($output)->toContain('source_not_completed_buildings')
-        ->and($output)->toContain('| source_completed_buildings      | 1')
+        ->and($output)->toContain('source_completed_buildings            | 2')
+        ->and($output)->toContain('status_mismatch_buildings             | 1')
+        ->and($output)->toContain('Status mismatch building examples: 4 source=COMPLETED target=Not_Completed')
         ->and($output)->toContain('missing_not_completed_buildings')
         ->and($output)->toContain('extra_not_completed_buildings');
 

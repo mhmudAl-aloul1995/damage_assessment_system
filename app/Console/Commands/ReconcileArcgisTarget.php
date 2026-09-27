@@ -49,6 +49,7 @@ class ReconcileArcgisTarget extends Command
         foreach ($jobs as $job) {
             $this->newLine();
             $this->info('Checking '.$job['name'].'...');
+            $statusMismatches = [];
 
             $sourceRows = $this->sourceRows($job, $token);
             $sourceIds = array_fill_keys(array_keys($sourceRows), true);
@@ -73,9 +74,10 @@ class ReconcileArcgisTarget extends Command
             ];
 
             if ($job['name'] === 'buildings') {
+                $statusMismatches = $this->buildingStatusMismatches($sourceRows, $targetRows);
                 $summary[$job['name']] = array_merge(
                     $summary[$job['name']],
-                    $this->buildingStatusSummary($sourceRows, $targetRows, $missing, $extraRows),
+                    $this->buildingStatusSummary($sourceRows, $targetRows, $missing, $extraRows, $statusMismatches),
                 );
             }
 
@@ -90,6 +92,10 @@ class ReconcileArcgisTarget extends Command
 
             if ($extraRows !== []) {
                 $this->line('Extra old object id examples: '.implode(', ', array_slice(array_column($extraRows, 'old_objectid'), 0, 20)));
+            }
+
+            if (($statusMismatches ?? []) !== []) {
+                $this->line('Status mismatch building examples: '.$this->formatStatusMismatchExamples($statusMismatches));
             }
 
             $summary[$job['name']]['missing_ids'] = $missing;
@@ -268,9 +274,10 @@ class ReconcileArcgisTarget extends Command
      * @param  array<int, array{objectid: int, old_objectid: string, field_status: string|null}>  $targetRows
      * @param  array<int, string>  $missing
      * @param  array<int, array{objectid: int, old_objectid: string, field_status: string|null}>  $extraRows
+     * @param  array<int, array{objectid: string, source_status: string|null, target_status: string|null}>  $statusMismatches
      * @return array<string, int>
      */
-    private function buildingStatusSummary(array $sourceRows, array $targetRows, array $missing, array $extraRows): array
+    private function buildingStatusSummary(array $sourceRows, array $targetRows, array $missing, array $extraRows, array $statusMismatches): array
     {
         $sourceCompleted = collect($sourceRows)
             ->filter(fn (array $row): bool => $this->isCompletedFieldStatus($row['field_status']))
@@ -288,6 +295,14 @@ class ReconcileArcgisTarget extends Command
             ->filter(fn (array $row): bool => $this->isCompletedFieldStatus($row['field_status']))
             ->count();
 
+        $sourceCompletedTargetNotCompleted = collect($statusMismatches)
+            ->filter(fn (array $row): bool => $this->isCompletedFieldStatus($row['source_status']) && ! $this->isCompletedFieldStatus($row['target_status']))
+            ->count();
+
+        $sourceNotCompletedTargetCompleted = collect($statusMismatches)
+            ->filter(fn (array $row): bool => ! $this->isCompletedFieldStatus($row['source_status']) && $this->isCompletedFieldStatus($row['target_status']))
+            ->count();
+
         return [
             'source_completed_buildings' => $sourceCompleted,
             'source_not_completed_buildings' => count($sourceRows) - $sourceCompleted,
@@ -297,7 +312,54 @@ class ReconcileArcgisTarget extends Command
             'missing_not_completed_buildings' => count($missing) - $missingCompleted,
             'extra_completed_buildings' => $extraCompleted,
             'extra_not_completed_buildings' => count($extraRows) - $extraCompleted,
+            'status_mismatch_buildings' => count($statusMismatches),
+            'source_completed_target_not_completed' => $sourceCompletedTargetNotCompleted,
+            'source_not_completed_target_completed' => $sourceNotCompletedTargetCompleted,
         ];
+    }
+
+    /**
+     * @param  array<string, array{objectid: string, field_status: string|null}>  $sourceRows
+     * @param  array<int, array{objectid: int, old_objectid: string, field_status: string|null}>  $targetRows
+     * @return array<int, array{objectid: string, source_status: string|null, target_status: string|null}>
+     */
+    private function buildingStatusMismatches(array $sourceRows, array $targetRows): array
+    {
+        return collect($targetRows)
+            ->filter(fn (array $targetRow): bool => isset($sourceRows[$targetRow['old_objectid']]))
+            ->map(function (array $targetRow) use ($sourceRows): ?array {
+                $sourceStatus = $sourceRows[$targetRow['old_objectid']]['field_status'] ?? null;
+                $targetStatus = $targetRow['field_status'];
+
+                if ($this->isCompletedFieldStatus($sourceStatus) === $this->isCompletedFieldStatus($targetStatus)) {
+                    return null;
+                }
+
+                return [
+                    'objectid' => $targetRow['old_objectid'],
+                    'source_status' => $sourceStatus,
+                    'target_status' => $targetStatus,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array{objectid: string, source_status: string|null, target_status: string|null}>  $statusMismatches
+     */
+    private function formatStatusMismatchExamples(array $statusMismatches): string
+    {
+        return collect($statusMismatches)
+            ->take(20)
+            ->map(fn (array $row): string => sprintf(
+                '%s source=%s target=%s',
+                $row['objectid'],
+                $row['source_status'] ?? '-',
+                $row['target_status'] ?? '-',
+            ))
+            ->implode(', ');
     }
 
     private function isCompletedFieldStatus(?string $fieldStatus): bool
