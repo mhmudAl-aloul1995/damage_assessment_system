@@ -208,6 +208,77 @@ it('keeps local statuses unchanged when arcgis rejects the update after archivin
         ->and(DB::table('housing_units')->where('objectid', 9301)->value('building_field_status'))->toBe('COMPLETED');
 });
 
+it('fails instead of counting target units as updated when their layer has no status fields', function (): void {
+    ensureHousingStatusColumns();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://target.example.test/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+
+    $archiver = User::factory()->create();
+
+    DB::table('buildings')->insert([
+        'objectid' => 7070,
+        'globalid' => 'missing-unit-status-building-globalid',
+        'building_name' => 'Missing unit status building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 9701,
+        'globalid' => 'missing-unit-status-unit-globalid',
+        'parentglobalid' => 'missing-unit-status-building-globalid',
+        'field_status' => 'COMPLETED',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://target.example.test/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'OBJECTID',
+            'fields' => [
+                ['name' => 'OBJECTID'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'Field_status'],
+            ],
+        ]),
+        'https://target.example.test/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'OBJECTID',
+            'fields' => [
+                ['name' => 'OBJECTID'],
+                ['name' => 'old_objectid_U'],
+            ],
+        ]),
+        'https://target.example.test/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['OBJECTID' => 9800]],
+            ],
+        ]),
+        'https://target.example.test/FeatureServer/1/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['OBJECTID' => 9801]],
+            ],
+        ]),
+        'https://target.example.test/FeatureServer/0/updateFeatures' => Http::response([
+            'updateResults' => [
+                ['success' => true, 'objectId' => 9800],
+            ],
+        ]),
+    ]);
+
+    $this->artisan('arcgis:mark-phase-exceptions-not-completed', [
+        '--ids' => '7070',
+        '--archived-by' => $archiver->id,
+    ])->assertFailed();
+
+    expect(DB::table('buildings')->where('objectid', 7070)->value('field_status'))->toBe('COMPLETED')
+        ->and(DB::table('housing_units')->where('objectid', 9701)->value('field_status'))->toBe('COMPLETED')
+        ->and(DB::table('housing_units')->where('objectid', 9701)->value('building_field_status'))->toBe('COMPLETED');
+});
+
 it('can preview workbook exceptions without changing local or arcgis records', function (): void {
     ensureHousingStatusColumns();
 

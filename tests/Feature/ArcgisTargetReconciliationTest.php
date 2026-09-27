@@ -93,8 +93,8 @@ it('reports source target differences without applying changes by default', func
 
             return Http::response([
                 'features' => [
-                    ['attributes' => ['objectid' => 1]],
-                    ['attributes' => ['objectid' => 2]],
+                    ['attributes' => ['objectid' => 1, 'field_status' => 'COMPLETED']],
+                    ['attributes' => ['objectid' => 2, 'field_status' => 'Not_Completed']],
                 ],
             ]);
         },
@@ -105,8 +105,8 @@ it('reports source target differences without applying changes by default', func
 
             return Http::response([
                 'features' => [
-                    ['attributes' => ['objectid' => 10, 'old_objectid_B' => 1]],
-                    ['attributes' => ['objectid' => 11, 'old_objectid_B' => 3]],
+                    ['attributes' => ['objectid' => 10, 'old_objectid_B' => 1, 'field_status' => 'COMPLETED']],
+                    ['attributes' => ['objectid' => 11, 'old_objectid_B' => 3, 'field_status' => 'Not_Completed']],
                 ],
             ]);
         },
@@ -115,9 +115,14 @@ it('reports source target differences without applying changes by default', func
     $exitCode = Artisan::call('arcgis:reconcile-target', [
         '--only' => 'buildings',
     ]);
+    $output = Artisan::output();
 
     expect($exitCode)->toBe(0)
-        ->and(Artisan::output())->toContain('missing');
+        ->and($output)->toContain('missing')
+        ->and($output)->toContain('source_completed_buildings')
+        ->and($output)->toContain('source_not_completed_buildings')
+        ->and($output)->toContain('missing_not_completed_buildings')
+        ->and($output)->toContain('extra_not_completed_buildings');
 
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'addFeatures')
         || str_contains($request->url(), 'deleteFeatures'));

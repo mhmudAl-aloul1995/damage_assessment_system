@@ -50,7 +50,8 @@ class ReconcileArcgisTarget extends Command
             $this->newLine();
             $this->info('Checking '.$job['name'].'...');
 
-            $sourceIds = $this->sourceObjectIds($job, $token);
+            $sourceRows = $this->sourceRows($job, $token);
+            $sourceIds = array_fill_keys(array_keys($sourceRows), true);
             $targetRows = $this->targetRows($job, $token);
             $targetIds = array_fill_keys(array_column($targetRows, 'old_objectid'), true);
 
@@ -70,6 +71,13 @@ class ReconcileArcgisTarget extends Command
                 'objectids_to_sync' => $syncObjectIds ? $this->targetObjectIdBackfillCount($job, $token) : 0,
                 'available_for_upload' => $available,
             ];
+
+            if ($job['name'] === 'buildings') {
+                $summary[$job['name']] = array_merge(
+                    $summary[$job['name']],
+                    $this->buildingStatusSummary($sourceRows, $targetRows, $missing, $extraRows),
+                );
+            }
 
             $this->table(['Metric', 'Value'], collect($summary[$job['name']])
                 ->map(fn (int $value, string $metric): array => [$metric, (string) $value])
@@ -184,22 +192,46 @@ class ReconcileArcgisTarget extends Command
 
     /**
      * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
-     * @return array<string, bool>
+     * @return array<string, array{objectid: string, field_status: string|null}>
      */
-    private function sourceObjectIds(array $job, string $token): array
+    private function sourceRows(array $job, string $token): array
     {
-        return $this->fetchIdSet($this->sourceLayerUrl($job['source_layer']), 'objectid', $token);
+        $outFields = $job['name'] === 'buildings'
+            ? 'objectid,field_status'
+            : 'objectid';
+
+        $rows = [];
+
+        foreach ($this->queryLayerRows($this->sourceLayerUrl($job['source_layer']), $outFields, $token, 'objectid ASC') as $attributes) {
+            $objectId = $attributes['objectid'] ?? null;
+
+            if ($objectId === null || $objectId === '') {
+                continue;
+            }
+
+            $rows[(string) $objectId] = [
+                'objectid' => (string) $objectId,
+                'field_status' => isset($attributes['field_status']) ? (string) $attributes['field_status'] : null,
+            ];
+        }
+
+        return $rows;
     }
 
     /**
      * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
-     * @return array<int, array{objectid: int, old_objectid: string}>
+     * @return array<int, array{objectid: int, old_objectid: string, field_status: string|null}>
      */
     private function targetRows(array $job, string $token): array
     {
         $rows = [];
+        $outFields = 'objectid,'.$job['old_field'];
 
-        foreach ($this->queryLayerRows($this->targetLayerUrl($job['target_layer']), 'objectid,'.$job['old_field'], $token, 'objectid ASC') as $attributes) {
+        if ($job['name'] === 'buildings') {
+            $outFields .= ',field_status';
+        }
+
+        foreach ($this->queryLayerRows($this->targetLayerUrl($job['target_layer']), $outFields, $token, 'objectid ASC') as $attributes) {
             $objectId = $attributes['objectid'] ?? null;
             $oldObjectId = $attributes[$job['old_field']] ?? null;
 
@@ -210,10 +242,53 @@ class ReconcileArcgisTarget extends Command
             $rows[] = [
                 'objectid' => (int) $objectId,
                 'old_objectid' => (string) $oldObjectId,
+                'field_status' => isset($attributes['field_status']) ? (string) $attributes['field_status'] : null,
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, array{objectid: string, field_status: string|null}>  $sourceRows
+     * @param  array<int, array{objectid: int, old_objectid: string, field_status: string|null}>  $targetRows
+     * @param  array<int, string>  $missing
+     * @param  array<int, array{objectid: int, old_objectid: string, field_status: string|null}>  $extraRows
+     * @return array<string, int>
+     */
+    private function buildingStatusSummary(array $sourceRows, array $targetRows, array $missing, array $extraRows): array
+    {
+        $sourceCompleted = collect($sourceRows)
+            ->filter(fn (array $row): bool => $this->isCompletedFieldStatus($row['field_status']))
+            ->count();
+
+        $targetCompleted = collect($targetRows)
+            ->filter(fn (array $row): bool => $this->isCompletedFieldStatus($row['field_status']))
+            ->count();
+
+        $missingCompleted = collect($missing)
+            ->filter(fn (string $objectId): bool => $this->isCompletedFieldStatus($sourceRows[$objectId]['field_status'] ?? null))
+            ->count();
+
+        $extraCompleted = collect($extraRows)
+            ->filter(fn (array $row): bool => $this->isCompletedFieldStatus($row['field_status']))
+            ->count();
+
+        return [
+            'source_completed_buildings' => $sourceCompleted,
+            'source_not_completed_buildings' => count($sourceRows) - $sourceCompleted,
+            'target_completed_buildings' => $targetCompleted,
+            'target_not_completed_buildings' => count($targetRows) - $targetCompleted,
+            'missing_completed_buildings' => $missingCompleted,
+            'missing_not_completed_buildings' => count($missing) - $missingCompleted,
+            'extra_completed_buildings' => $extraCompleted,
+            'extra_not_completed_buildings' => count($extraRows) - $extraCompleted,
+        ];
+    }
+
+    private function isCompletedFieldStatus(?string $fieldStatus): bool
+    {
+        return strtoupper(trim((string) $fieldStatus)) === 'COMPLETED';
     }
 
     /**
@@ -356,24 +431,6 @@ class ReconcileArcgisTarget extends Command
             'object_id_field' => $objectIdField,
             'data_objectid_field' => $dataObjectIdField,
         ];
-    }
-
-    /**
-     * @return array<string, bool>
-     */
-    private function fetchIdSet(string $layerUrl, string $field, string $token): array
-    {
-        $ids = [];
-
-        foreach ($this->queryLayerRows($layerUrl, $field, $token, $field.' ASC') as $attributes) {
-            $value = $attributes[$field] ?? null;
-
-            if ($value !== null && $value !== '') {
-                $ids[(string) $value] = true;
-            }
-        }
-
-        return $ids;
     }
 
     /**

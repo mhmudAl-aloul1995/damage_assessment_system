@@ -87,6 +87,7 @@ class MarkPhaseExceptionsNotCompleted extends Command
             'local_units_updated' => 0,
             'target_buildings_updated' => 0,
             'target_units_updated' => 0,
+            'target_status_fields_missing' => 0,
             'target_features_missing' => 0,
             'errors' => 0,
         ];
@@ -261,6 +262,7 @@ class MarkPhaseExceptionsNotCompleted extends Command
         }
 
         $summary['local_archive_snapshots'] += $this->archiveLocalSnapshot($building, $units, $archiveUserId, $status);
+        $missingStatusFields = 0;
 
         $targetBuilding = $this->targetFeature(
             $this->targetBuildingsLayer(),
@@ -276,9 +278,15 @@ class MarkPhaseExceptionsNotCompleted extends Command
             $summary['target_features_missing']++;
             $this->warn('Target building not found for OBJECTID '.$building->objectid);
         } else {
-            $this->updateTargetFeature($this->targetBuildingsLayer(), (int) $targetBuilding['object_id'], [
+            if (! $this->updateTargetFeature($this->targetBuildingsLayer(), (int) $targetBuilding['object_id'], [
                 'field_status' => $status,
-            ]);
+            ])) {
+                $summary['target_status_fields_missing']++;
+                $missingStatusFields++;
+
+                throw new RuntimeException('Target building layer is missing a writable status field.');
+            }
+
             $summary['target_buildings_updated']++;
         }
 
@@ -300,11 +308,21 @@ class MarkPhaseExceptionsNotCompleted extends Command
                 continue;
             }
 
-            $this->updateTargetFeature($this->targetUnitsLayer(), (int) $targetUnit['object_id'], [
+            if (! $this->updateTargetFeature($this->targetUnitsLayer(), (int) $targetUnit['object_id'], [
                 'field_status' => $status,
                 'building_field_status' => $status,
-            ]);
+            ])) {
+                $summary['target_status_fields_missing']++;
+                $missingStatusFields++;
+
+                continue;
+            }
+
             $summary['target_units_updated']++;
+        }
+
+        if ($missingStatusFields > 0) {
+            throw new RuntimeException('One or more target features were not updated because their layer is missing status fields.');
         }
 
         $building->forceFill(['field_status' => $status])->save();
@@ -463,7 +481,7 @@ class MarkPhaseExceptionsNotCompleted extends Command
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function updateTargetFeature(int|string $layerId, int $objectId, array $attributes): void
+    private function updateTargetFeature(int|string $layerId, int $objectId, array $attributes): bool
     {
         $metadata = $this->targetLayerMetadata($layerId);
         $objectIdField = $metadata['object_id_field'];
@@ -487,7 +505,7 @@ class MarkPhaseExceptionsNotCompleted extends Command
         if (count($payloadAttributes) === 1) {
             $this->warn("No status fields exist on target layer {$layerId}; skipping OBJECTID {$objectId}.");
 
-            return;
+            return false;
         }
 
         $response = $this->http()
@@ -507,6 +525,8 @@ class MarkPhaseExceptionsNotCompleted extends Command
         if (! $response->successful() || ! (bool) $response->json('updateResults.0.success')) {
             throw new RuntimeException('ArcGIS updateFeatures failed: '.$response->body());
         }
+
+        return true;
     }
 
     /**
