@@ -80,6 +80,8 @@ it('marks workbook buildings and units as not completed on the target arcgis ser
             ]);
         },
         'https://target.example.test/FeatureServer/0/updateFeatures' => function ($request) {
+            expect($request->header('Content-Type')[0] ?? '')->toContain('application/x-www-form-urlencoded');
+
             $features = json_decode($request['features'], true);
 
             expect($features[0]['attributes'])->toBe([
@@ -94,6 +96,8 @@ it('marks workbook buildings and units as not completed on the target arcgis ser
             ]);
         },
         'https://target.example.test/FeatureServer/1/updateFeatures' => function ($request) {
+            expect($request->header('Content-Type')[0] ?? '')->toContain('application/x-www-form-urlencoded');
+
             $features = json_decode($request['features'], true);
 
             expect($features[0]['attributes'])->toBe([
@@ -134,6 +138,74 @@ it('marks workbook buildings and units as not completed on the target arcgis ser
         ->and(DB::table('housing_units')->where('objectid', 9001)->value('building_field_status'))->toBe('Not_Completed');
 
     Http::assertSentCount(7);
+});
+
+it('keeps local statuses unchanged when arcgis rejects the update after archiving', function (): void {
+    ensureHousingStatusColumns();
+
+    config()->set('services.arcgis.username', 'tester');
+    config()->set('services.arcgis.password', 'secret');
+    config()->set('services.arcgis.referer', 'http://localhost');
+    config()->set('services.arcgis.target_service', 'https://target.example.test/FeatureServer');
+    config()->set('services.arcgis.target_buildings_layer', 0);
+    config()->set('services.arcgis.target_units_layer', 1);
+
+    $archiver = User::factory()->create();
+
+    DB::table('buildings')->insert([
+        'objectid' => 3904,
+        'globalid' => 'arcgis-failure-building-globalid',
+        'building_name' => 'ArcGIS failure building',
+        'field_status' => 'COMPLETED',
+    ]);
+
+    DB::table('housing_units')->insert([
+        'objectid' => 9301,
+        'globalid' => 'arcgis-failure-unit-globalid',
+        'parentglobalid' => 'arcgis-failure-building-globalid',
+        'field_status' => 'COMPLETED',
+        'building_field_status' => 'COMPLETED',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://target.example.test/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'OBJECTID',
+            'fields' => [
+                ['name' => 'OBJECTID'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'Field_status'],
+            ],
+        ]),
+        'https://target.example.test/FeatureServer/0/query*' => Http::response([
+            'features' => [
+                ['attributes' => ['OBJECTID' => 9400]],
+            ],
+        ]),
+        'https://target.example.test/FeatureServer/0/updateFeatures' => Http::response([
+            'error' => [
+                'code' => 499,
+                'message' => 'Token Required',
+            ],
+        ]),
+    ]);
+
+    $this->artisan('arcgis:mark-phase-exceptions-not-completed', [
+        '--ids' => '3904',
+        '--archived-by' => $archiver->id,
+    ])->assertFailed();
+
+    $archives = BuildingSurveyArchiveObject::query()
+        ->where('building_objectid', 3904)
+        ->orderBy('id')
+        ->get();
+
+    expect($archives)->toHaveCount(2)
+        ->and($archives[0]->building_snapshot['field_status'])->toBe('COMPLETED')
+        ->and($archives[1]->housing_unit_snapshot['field_status'])->toBe('COMPLETED')
+        ->and(DB::table('buildings')->where('objectid', 3904)->value('field_status'))->toBe('COMPLETED')
+        ->and(DB::table('housing_units')->where('objectid', 9301)->value('field_status'))->toBe('COMPLETED')
+        ->and(DB::table('housing_units')->where('objectid', 9301)->value('building_field_status'))->toBe('COMPLETED');
 });
 
 it('can preview workbook exceptions without changing local or arcgis records', function (): void {

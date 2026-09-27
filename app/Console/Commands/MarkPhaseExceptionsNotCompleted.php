@@ -262,25 +262,6 @@ class MarkPhaseExceptionsNotCompleted extends Command
 
         $summary['local_archive_snapshots'] += $this->archiveLocalSnapshot($building, $units, $archiveUserId, $status);
 
-        $building->forceFill(['field_status' => $status])->save();
-        $summary['local_buildings_updated']++;
-
-        $unitUpdates = [];
-
-        if (Schema::hasColumn('housing_units', 'field_status')) {
-            $unitUpdates['field_status'] = $status;
-        }
-
-        if (Schema::hasColumn('housing_units', 'building_field_status')) {
-            $unitUpdates['building_field_status'] = $status;
-        }
-
-        if ($unitUpdates !== []) {
-            $summary['local_units_updated'] += HousingUnit::query()
-                ->where('parentglobalid', $building->globalid)
-                ->update($unitUpdates);
-        }
-
         $targetBuilding = $this->targetFeature(
             $this->targetBuildingsLayer(),
             [
@@ -325,6 +306,25 @@ class MarkPhaseExceptionsNotCompleted extends Command
             ]);
             $summary['target_units_updated']++;
         }
+
+        $building->forceFill(['field_status' => $status])->save();
+        $summary['local_buildings_updated']++;
+
+        $unitUpdates = [];
+
+        if (Schema::hasColumn('housing_units', 'field_status')) {
+            $unitUpdates['field_status'] = $status;
+        }
+
+        if (Schema::hasColumn('housing_units', 'building_field_status')) {
+            $unitUpdates['building_field_status'] = $status;
+        }
+
+        if ($unitUpdates !== []) {
+            $summary['local_units_updated'] += HousingUnit::query()
+                ->where('parentglobalid', $building->globalid)
+                ->update($unitUpdates);
+        }
     }
 
     /**
@@ -344,19 +344,41 @@ class MarkPhaseExceptionsNotCompleted extends Command
             'building_snapshot' => $building->getAttributes(),
         ];
 
-        BuildingSurveyArchiveObject::query()->create($common);
-        $created = 1;
+        $created = $this->createArchiveSnapshotIfMissing($common, null);
 
         foreach ($units as $unit) {
-            BuildingSurveyArchiveObject::query()->create($common + [
+            $created += $this->createArchiveSnapshotIfMissing($common + [
                 'housing_unit_objectid' => $unit->objectid,
                 'housing_unit_globalid' => $unit->globalid,
                 'housing_unit_snapshot' => $unit->getAttributes(),
-            ]);
-            $created++;
+            ], $unit->objectid);
         }
 
         return $created;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function createArchiveSnapshotIfMissing(array $attributes, int|string|null $housingUnitObjectId): int
+    {
+        $query = BuildingSurveyArchiveObject::query()
+            ->where('source_type', 'phase_exception_not_completed')
+            ->where('building_objectid', $attributes['building_objectid']);
+
+        if ($housingUnitObjectId === null) {
+            $query->whereNull('housing_unit_objectid');
+        } else {
+            $query->where('housing_unit_objectid', $housingUnitObjectId);
+        }
+
+        if ($query->exists()) {
+            return 0;
+        }
+
+        BuildingSurveyArchiveObject::query()->create($attributes);
+
+        return 1;
     }
 
     private function archiveUserId(): int
@@ -468,15 +490,17 @@ class MarkPhaseExceptionsNotCompleted extends Command
             return;
         }
 
-        $response = $this->http()->post($this->targetLayerUrl($layerId).'/updateFeatures', [
-            'f' => 'json',
-            'token' => $this->token,
-            'features' => json_encode([
-                [
-                    'attributes' => $payloadAttributes,
-                ],
-            ], JSON_THROW_ON_ERROR),
-        ]);
+        $response = $this->http()
+            ->asForm()
+            ->post($this->targetLayerUrl($layerId).'/updateFeatures', [
+                'f' => 'json',
+                'token' => $this->token,
+                'features' => json_encode([
+                    [
+                        'attributes' => $payloadAttributes,
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
 
         $this->throwIfArcgisError($response->json(), 'ArcGIS updateFeatures failed');
 
