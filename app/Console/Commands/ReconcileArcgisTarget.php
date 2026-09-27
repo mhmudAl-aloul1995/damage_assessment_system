@@ -197,7 +197,7 @@ class ReconcileArcgisTarget extends Command
     private function sourceRows(array $job, string $token): array
     {
         $outFields = $job['name'] === 'buildings'
-            ? 'objectid,field_status'
+            ? '*'
             : 'objectid';
 
         $rows = [];
@@ -211,7 +211,7 @@ class ReconcileArcgisTarget extends Command
 
             $rows[(string) $objectId] = [
                 'objectid' => (string) $objectId,
-                'field_status' => isset($attributes['field_status']) ? (string) $attributes['field_status'] : null,
+                'field_status' => $this->attributeValue($attributes, 'field_status'),
             ];
         }
 
@@ -228,7 +228,7 @@ class ReconcileArcgisTarget extends Command
         $outFields = 'objectid,'.$job['old_field'];
 
         if ($job['name'] === 'buildings') {
-            $outFields .= ',field_status';
+            $outFields = '*';
         }
 
         foreach ($this->queryLayerRows($this->targetLayerUrl($job['target_layer']), $outFields, $token, 'objectid ASC') as $attributes) {
@@ -242,11 +242,25 @@ class ReconcileArcgisTarget extends Command
             $rows[] = [
                 'objectid' => (int) $objectId,
                 'old_objectid' => (string) $oldObjectId,
-                'field_status' => isset($attributes['field_status']) ? (string) $attributes['field_status'] : null,
+                'field_status' => $this->attributeValue($attributes, 'field_status'),
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function attributeValue(array $attributes, string $field): ?string
+    {
+        foreach ($attributes as $attribute => $value) {
+            if (strcasecmp((string) $attribute, $field) === 0) {
+                return $value === null ? null : (string) $value;
+            }
+        }
+
+        return null;
     }
 
     /**
