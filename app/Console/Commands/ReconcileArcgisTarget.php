@@ -2,12 +2,15 @@
 
 namespace App\Console\Commands;
 
+use App\Exports\ArcgisBuildingStatusDiffExport;
 use App\services\ArcgisAuditedCacheService;
 use App\services\ArcgisAuditedUploadService;
 use Illuminate\Console\Command;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 use RuntimeException;
 
 class ReconcileArcgisTarget extends Command
@@ -19,6 +22,8 @@ class ReconcileArcgisTarget extends Command
         {--only= : Reconcile only buildings or units.}
         {--skip-cache-refresh : Do not rebuild audited cache tables before uploading missing rows.}
         {--without-attachments : Upload missing features without copying attachments.}
+        {--export-status-diff : Export building status differences to an Excel file on the local disk.}
+        {--status-diff-path= : Optional local disk path for the building status difference Excel file.}
         {--chunk=1000 : ArcGIS query page size.}';
 
     protected $description = 'Reconcile audited ArcGIS target counts against source, using local database audit values for uploads.';
@@ -96,6 +101,10 @@ class ReconcileArcgisTarget extends Command
 
             if (($statusMismatches ?? []) !== []) {
                 $this->line('Status mismatch building examples: '.$this->formatStatusMismatchExamples($statusMismatches));
+            }
+
+            if ($job['name'] === 'buildings' && (bool) $this->option('export-status-diff')) {
+                $this->exportBuildingStatusDiff($statusMismatches);
             }
 
             $summary[$job['name']]['missing_ids'] = $missing;
@@ -339,6 +348,7 @@ class ReconcileArcgisTarget extends Command
                     'objectid' => $targetRow['old_objectid'],
                     'source_status' => $sourceStatus,
                     'target_status' => $targetStatus,
+                    'target_objectid' => $targetRow['objectid'],
                 ];
             })
             ->filter()
@@ -347,7 +357,7 @@ class ReconcileArcgisTarget extends Command
     }
 
     /**
-     * @param  array<int, array{objectid: string, source_status: string|null, target_status: string|null}>  $statusMismatches
+     * @param  array<int, array{objectid: string, source_status: string|null, target_status: string|null, target_objectid: int}>  $statusMismatches
      */
     private function formatStatusMismatchExamples(array $statusMismatches): string
     {
@@ -360,6 +370,51 @@ class ReconcileArcgisTarget extends Command
                 $row['target_status'] ?? '-',
             ))
             ->implode(', ');
+    }
+
+    /**
+     * @param  array<int, array{objectid: string, source_status: string|null, target_status: string|null, target_objectid: int}>  $statusMismatches
+     */
+    private function exportBuildingStatusDiff(array $statusMismatches): void
+    {
+        $path = $this->statusDiffExportPath();
+        $rows = collect($statusMismatches)
+            ->map(fn (array $row): array => [
+                'building_objectid' => $row['objectid'],
+                'source_field_status' => $row['source_status'],
+                'target_field_status' => $row['target_status'],
+                'difference_type' => $this->statusDifferenceType($row['source_status'], $row['target_status']),
+                'target_objectid' => $row['target_objectid'],
+            ]);
+
+        Excel::store(new ArcgisBuildingStatusDiffExport($rows), $path, 'local');
+
+        $this->components->info('Building status difference export created: '.Storage::disk('local')->path($path));
+        $this->line('Building status difference rows exported: '.$rows->count());
+    }
+
+    private function statusDiffExportPath(): string
+    {
+        $path = trim((string) $this->option('status-diff-path'));
+
+        if ($path !== '') {
+            return $path;
+        }
+
+        return 'arcgis-reports/building-status-diff-'.now()->format('Y-m-d-His').'.xlsx';
+    }
+
+    private function statusDifferenceType(?string $sourceStatus, ?string $targetStatus): string
+    {
+        if ($this->isCompletedFieldStatus($sourceStatus) && ! $this->isCompletedFieldStatus($targetStatus)) {
+            return 'source_completed_target_not_completed';
+        }
+
+        if (! $this->isCompletedFieldStatus($sourceStatus) && $this->isCompletedFieldStatus($targetStatus)) {
+            return 'source_not_completed_target_completed';
+        }
+
+        return 'status_value_mismatch';
     }
 
     private function isCompletedFieldStatus(?string $fieldStatus): bool

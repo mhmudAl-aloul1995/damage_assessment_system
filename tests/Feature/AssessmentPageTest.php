@@ -107,9 +107,27 @@ it('exports the assessment page as a pdf with attachments', function () {
     ]);
 
     Assessment::query()->create([
+        'name' => 'obstacle_type',
+        'label' => 'Obstacle Type',
+        'hint' => 'Reason the assessment could not proceed',
+    ]);
+
+    Assessment::query()->create([
         'name' => 'q_9_3_1_first_name',
         'label' => 'First Name',
         'hint' => 'Housing owner first name',
+    ]);
+
+    Filter::query()->create([
+        'list_name' => 'obstacle_type',
+        'name' => '1',
+        'label' => 'Owner refused access',
+    ]);
+
+    Filter::query()->create([
+        'list_name' => 'land_ownership',
+        'name' => '1',
+        'label' => 'Owned land',
     ]);
 
     $building = Building::query()->create([
@@ -117,6 +135,7 @@ it('exports the assessment page as a pdf with attachments', function () {
         'globalid' => 'building-101',
         'building_name' => 'Tower A',
         'owner_name' => 'Original Owner',
+        'obstacle_type' => '1',
     ]);
 
     HousingUnit::query()->create([
@@ -145,6 +164,8 @@ it('exports the assessment page as a pdf with attachments', function () {
         return $pdf->viewName === 'damage-assessment::pdf.assessment'
             && $pdf->contains('Tower A')
             && $pdf->contains('Edited Owner')
+            && $pdf->contains('Owner refused access')
+            && ! $pdf->contains('Owned land')
             && $pdf->contains('building-photo.jpg')
             && $pdf->contains('housing-photo.jpg')
             && $pdf->contains('fake-token');

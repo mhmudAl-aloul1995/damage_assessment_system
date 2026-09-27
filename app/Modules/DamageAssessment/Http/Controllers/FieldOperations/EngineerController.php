@@ -226,7 +226,10 @@ class EngineerController extends Controller
     {
         $record = $model->toArray();
         $fillable = (new $model)->getFillable();
-        $filtersMap = Filter::query()->pluck('label', 'name');
+        $filtersByList = Filter::query()
+            ->get(['list_name', 'name', 'label'])
+            ->groupBy('list_name')
+            ->map(fn (Collection $filters): Collection => $filters->pluck('label', 'name'));
         $latestEdits = EditAssessment::query()
             ->where('type', $type)
             ->where('global_id', $model->globalid)
@@ -239,13 +242,13 @@ class EngineerController extends Controller
             ->whereIn('name', $fillable)
             ->orderBy('id')
             ->get(['name', 'label', 'hint'])
-            ->map(function (Assessment $assessment) use ($record, $filtersMap, $latestEdits) {
+            ->map(function (Assessment $assessment) use ($record, $filtersByList, $latestEdits) {
                 $editedValue = $latestEdits->get($assessment->name)?->field_value;
                 $rawValue = ($editedValue !== null && $editedValue !== '')
                     ? $editedValue
                     : ($record[$assessment->name] ?? null);
 
-                $mappedValue = $filtersMap[$rawValue] ?? $rawValue;
+                $mappedValue = $this->filterLabelForAssessmentValue($filtersByList, $assessment->name, $rawValue);
                 $answer = $this->normalizeAssessmentValue($mappedValue);
 
                 return [
@@ -296,6 +299,32 @@ class EngineerController extends Controller
             'no', 'no1', 'no2', 'no3', 'no4', 'no5', 'No' => 'لا',
             default => $value,
         };
+    }
+
+    private function filterLabelForAssessmentValue(Collection $filtersByList, string $fieldName, mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $filters = $filtersByList->get($fieldName);
+
+        if (! $filters instanceof Collection || $filters->isEmpty()) {
+            return $value;
+        }
+
+        $values = array_values(array_filter(
+            array_map('trim', explode(',', (string) $value)),
+            fn (string $item): bool => $item !== ''
+        ));
+
+        if ($values === []) {
+            return $value;
+        }
+
+        return collect($values)
+            ->map(fn (string $item): string => (string) ($filters->get($item) ?? $item))
+            ->implode(', ');
     }
 
     public function gitPush(Request $request)

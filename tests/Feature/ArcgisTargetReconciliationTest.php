@@ -1,11 +1,13 @@
 <?php
 
+use App\Exports\ArcgisBuildingStatusDiffExport;
 use App\services\ArcgisAuditedUploadService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Facades\Excel;
 
 beforeEach(function (): void {
     config()->set('services.arcgis.username', 'tester');
@@ -206,4 +208,53 @@ it('syncs existing target objectid values from old object ids when requested', f
         ->and(Artisan::output())->toContain('Updated buildings objectid values: 1');
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures');
+});
+
+it('exports building status differences to Excel when requested', function (): void {
+    Excel::fake();
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => function ($request) {
+            if ((int) ($request['resultOffset'] ?? 0) > 0) {
+                return Http::response(['features' => []]);
+            }
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => ['objectid' => 10499, 'Field_status' => 'COMPLETED']],
+                    ['attributes' => ['objectid' => 20044, 'Field_status' => 'Not_Completed']],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if ((int) ($request['resultOffset'] ?? 0) > 0) {
+                return Http::response(['features' => []]);
+            }
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => ['objectid' => 510499, 'old_objectid_B' => 10499, 'Field_status' => 'Not_Completed']],
+                    ['attributes' => ['objectid' => 520044, 'old_objectid_B' => 20044, 'Field_status' => 'COMPLETED']],
+                ],
+            ]);
+        },
+    ]);
+
+    $exitCode = Artisan::call('arcgis:reconcile-target', [
+        '--only' => 'buildings',
+        '--export-status-diff' => true,
+        '--status-diff-path' => 'testing/building-status-diff.xlsx',
+    ]);
+
+    expect($exitCode)->toBe(0)
+        ->and(Artisan::output())->toContain('Building status difference rows exported: 2');
+
+    Excel::assertStored('testing/building-status-diff.xlsx', 'local', function (ArcgisBuildingStatusDiffExport $export): bool {
+        $rows = $export->collection();
+
+        return $rows->count() === 2
+            && $rows->first()['building_objectid'] === '10499'
+            && $rows->first()['difference_type'] === 'source_completed_target_not_completed';
+    });
 });
