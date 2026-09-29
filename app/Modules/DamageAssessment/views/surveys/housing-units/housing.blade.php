@@ -3,6 +3,39 @@
 @section('pageName', __('ui.housing_page.title'))
 
 @section('content')
+    <style>
+        .housing-export-column-toolbar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.75rem;
+        }
+
+        .housing-export-column-list {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .housing-export-column-option {
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .housing-export-column-option:hover,
+        .housing-export-column-option:has(.form-check-input:checked) {
+            background-color: var(--bs-primary-light);
+            border-color: var(--bs-primary);
+        }
+
+        .housing-export-column-summary {
+            min-height: 38px;
+        }
+
+        @media (max-width: 575.98px) {
+            .housing-export-column-toolbar {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
     <div class="row g-5 mb-5">
         @foreach ([
             ['total', 'total_units', 'text-gray-900'],
@@ -191,11 +224,45 @@
         </div></div>
     </div>
 
-    <div class="modal fade" id="kt_modal_export_housing" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered mw-650px"><div class="modal-content">
+    <div class="modal fade" id="kt_modal_export_housing" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered mw-900px"><div class="modal-content">
         <div class="modal-header"><h2 class="fw-bold">{{ __('ui.housing_page.export_housing') }}</h2><div class="btn btn-icon btn-sm btn-active-icon-primary" data-kt-housing-modal-action="close"><i class="ki-duotone ki-cross fs-1"></i></div></div>
         <div class="modal-body scroll-y mx-5 mx-xl-15 my-7"><form id="kt_modal_export_housing_form" class="form" action="#">
             <input type="hidden" name="_method" value="get"><input type="hidden" name="_token" value="{{ csrf_token() }}">
-            <div class="fv-row mb-10"><label class="fs-6 fw-semibold form-label mb-2">{{ __('ui.housing_page.select_columns') }}</label><select multiple data-allow-clear="true" data-close-on-select="false" name="housing_columns[]" data-control="select2" data-placeholder="{{ __('ui.housing_page.select_columns') }}" class="form-select form-select-solid fw-bold"><option value=""></option>@foreach ($assessments as $value) @if (Schema::hasColumn('audited_housing_units', $value->name)) <option value="{{ $value->name }}">{{ $value->hint ?: $value->label }}</option> @endif @endforeach</select></div>
+            <div class="fv-row mb-10" data-housing-column-picker data-selected-count-template="{{ __('ui.housing_page.selected_columns_count') }}" data-more-template="{{ __('ui.housing_page.selected_columns_more') }}">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                    <label class="fs-6 fw-semibold form-label m-0">{{ __('ui.housing_page.select_columns') }}</label>
+                    <span class="badge badge-light-primary" data-housing-selected-count>{{ __('ui.housing_page.selected_columns_count', ['count' => 0]) }}</span>
+                </div>
+                <div class="housing-export-column-summary d-flex flex-wrap gap-2 mb-4" data-housing-selected-summary data-empty-text="{{ __('ui.housing_page.no_columns_selected') }}">
+                    <span class="text-muted fs-7">{{ __('ui.housing_page.no_columns_selected') }}</span>
+                </div>
+                <div class="housing-export-column-toolbar mb-4">
+                    <div class="position-relative">
+                        <i class="ki-duotone ki-magnifier fs-2 position-absolute top-50 translate-middle-y ms-4"></i>
+                        <input type="text" class="form-control form-control-solid ps-12" data-housing-column-search placeholder="{{ __('ui.housing_page.search_columns') }}">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light-primary" data-housing-columns-select-visible>{{ __('ui.housing_page.select_visible_columns') }}</button>
+                        <button type="button" class="btn btn-light" data-housing-columns-clear>{{ __('ui.housing_page.clear_columns') }}</button>
+                    </div>
+                </div>
+                <div class="housing-export-column-list border rounded p-3" data-housing-column-list>
+                    <div class="row g-3">
+                        @foreach ($assessments as $value)
+                            @if (Schema::hasColumn('audited_housing_units', $value->name))
+                                @php($columnLabel = $value->hint ?: $value->label)
+                                <div class="col-md-6 housing-export-column-item" data-column-label="{{ str($columnLabel)->lower() }}" data-column-name="{{ str($value->name)->lower() }}">
+                                    <label class="housing-export-column-option border rounded d-flex align-items-center gap-3 p-3 h-100">
+                                        <input class="form-check-input m-0" type="checkbox" name="housing_columns[]" value="{{ $value->name }}" data-housing-column-checkbox data-column-label="{{ $columnLabel }}">
+                                        <span class="fw-semibold text-gray-800">{{ $columnLabel }}</span>
+                                    </label>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="text-center text-muted fs-7 py-8 d-none" data-housing-columns-empty>{{ __('ui.housing_page.no_matching_columns') }}</div>
+                </div>
+            </div>
             <div class="fv-row mb-10"><label class="required fs-6 fw-semibold form-label mb-2">{{ __('ui.housing_page.export_format') }}</label><select name="format" data-control="select2" data-placeholder="{{ __('ui.housing_page.export_format') }}" class="form-select form-select-solid fw-bold"><option></option><option value="XLSX">Excel</option><option value="pdf">PDF</option><option value="csv">CSV</option></select></div>
             <div class="text-center"><button type="reset" class="btn btn-light me-3" data-kt-housing-modal-action="close">{{ __('ui.housing_page.cancel') }}</button><button type="submit" class="btn btn-primary" data-kt-housing-modal-action="submit"><span class="indicator-label">{{ __('ui.housing_page.export') }}</span><span class="indicator-progress">{{ __('ui.housing_page.please_wait') }} <span class="spinner-border spinner-border-sm align-middle ms-2"></span></span></button></div>
         </form></div>

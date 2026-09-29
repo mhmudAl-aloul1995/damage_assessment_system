@@ -61,6 +61,14 @@ it('shows grouped housing unit filters from the assessment survey', function () 
     $response->assertSee('value="Unsafe"', false);
     $response->assertSee('Housing Unit Object IDs');
     $response->assertSee('Paste up to 200 Object IDs from Excel');
+    $response->assertSee('data-housing-column-picker', false);
+    $response->assertSee('data-housing-column-search', false);
+    $response->assertSee('data-housing-selected-count', false);
+    $response->assertSee('name="housing_columns[]"', false);
+    $response->assertSee('value="housing_unit_type"', false);
+    $response->assertSee('data-column-label="نوع الوحدة السكنية"', false);
+    $response->assertSee('Select visible');
+    $response->assertSee('No columns selected');
     $response->assertSee('var url_phc', false);
     $response->assertSee('export-housings.js?v=', false);
     $response->assertSee('Apartment');
@@ -71,6 +79,8 @@ it('shows grouped housing unit filters from the assessment survey', function () 
         ->toContain('showExportLoading')
         ->toContain('hideExportLoading')
         ->toContain('startDownload')
+        ->toContain('initColumnPicker')
+        ->toContain('data-housing-columns-select-visible')
         ->not->toContain('120000');
 });
 
