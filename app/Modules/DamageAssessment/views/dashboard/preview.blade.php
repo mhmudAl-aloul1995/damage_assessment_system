@@ -11,7 +11,11 @@
 				'subtitle' => 'مباني تم تقييمها',
 				'total' => '18,420',
 				'icon' => 'ki-home',
-				'color' => '#ad3d3d',
+				'key' => 'buildings',
+                'tone' => 'primary',
+                'route' => 'building.index',
+                'layer' => 'buildings',
+                'map_note' => 'المباني',
 				'items' => [
 					['label' => 'ضرر كلي', 'value' => '4,218', 'class' => 'danger'],
 					['label' => 'ضرر جزئي', 'value' => '8,536', 'class' => 'warning'],
@@ -25,7 +29,11 @@
 				'subtitle' => 'إجمالي الوحدات السكانية',
 				'total' => '67,500',
 				'icon' => 'ki-home-2',
-				'color' => '#5f9867',
+				'key' => 'housing',
+                'tone' => 'success',
+                'route' => 'housing.index',
+                'layer' => 'buildings',
+                'map_note' => 'الوحدات السكانية: تظهر مواقع المباني الحاوية لها',
 				'items' => [
 					['label' => 'ضرر كلي', 'value' => '12,804', 'class' => 'danger'],
 					['label' => 'ضرر جزئي', 'value' => '24,118', 'class' => 'warning'],
@@ -39,7 +47,11 @@
 				'subtitle' => 'إجمالي استبيانات المنظمات',
 				'total' => '1,086',
 				'icon' => 'ki-people',
-				'color' => '#7239ea',
+				'key' => 'cso',
+                'tone' => 'info',
+                'route' => 'cso-surveys.index',
+                'layer' => 'csoSurveys',
+                'map_note' => 'منظمات المجتمع المدني',
 				'items' => [
 					['label' => 'مكتمل', 'value' => '934', 'class' => 'success'],
 					['label' => 'متضررة', 'value' => '618', 'class' => 'danger'],
@@ -53,7 +65,11 @@
 				'subtitle' => 'إجمالي المباني العامة',
 				'total' => '642',
 				'icon' => 'ki-office-bag',
-				'color' => '#009ef7',
+				'key' => 'public',
+                'tone' => 'warning',
+                'route' => 'public-buildings.index',
+                'layer' => 'publicBuildings',
+                'map_note' => 'المباني العامة',
 				'items' => [
 					['label' => 'متضررة', 'value' => '338', 'class' => 'danger'],
 					['label' => 'الوحدات', 'value' => '1,227', 'class' => 'success'],
@@ -67,7 +83,11 @@
 				'subtitle' => 'إجمالي الطرق',
 				'total' => '1,473',
 				'icon' => 'ki-map',
-				'color' => '#3f4254',
+				'key' => 'roads',
+                'tone' => 'dark',
+                'route' => 'road-facilities.index',
+                'layer' => 'roadFacilities',
+                'map_note' => 'الطرق',
 				'items' => [
 					['label' => 'مقيّمة', 'value' => '884', 'class' => 'danger'],
 					['label' => 'تعيق التقييم', 'value' => '121', 'class' => 'warning'],
@@ -77,397 +97,158 @@
 				],
 			],
 		];
-	@endphp
 
-	<link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css">
+    @endphp
 
-	<style>
-		.damage-dashboard-preview {
-			--preview-radius: .85rem;
-			--preview-muted: #7e8299;
-		}
+    <link rel="stylesheet" href="https://js.arcgis.com/4.22/esri/themes/light/main.css">
 
-		.damage-dashboard-preview .preview-toolbar {
-			background: var(--bs-body-bg);
-			border: 1px solid var(--bs-gray-200);
-			border-radius: var(--preview-radius);
-			box-shadow: 0 6px 18px rgba(15, 23, 42, .04);
-		}
+    <div class="damage-dashboard-preview" lang="ar" dir="rtl">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-4 mb-7">
+            <div>
+                <div class="d-flex align-items-center flex-wrap gap-3 mb-2">
+                    <h2 class="fw-bold text-gray-900 mb-0">لوحة متابعة تقييم الأضرار</h2>
+                    <span class="badge badge-light-primary">معاينة Metronic</span>
+                </div>
+                <span class="text-muted fw-semibold fs-7">ملخص العمل وأولويات المتابعة، مع تفاصيل مستقلة لكل قطاع.</span>
+            </div>
+            <a class="btn btn-sm btn-light-primary" href="{{ route('damageAssessment.index') }}">العودة للصفحة الحالية <i class="ki-outline ki-arrow-left fs-4 ms-2" aria-hidden="true"></i></a>
+        </div>
 
-		.damage-dashboard-preview .preview-summary-card {
-			overflow: hidden;
-		}
+        <div class="notice d-flex bg-light-warning rounded border-warning border border-dashed p-4 mb-6" role="note">
+            <i class="ki-outline ki-information-5 fs-2 text-warning me-3" aria-hidden="true"></i>
+            <div class="fs-7 text-gray-700"><strong class="me-2">معاينة تصميم · بيانات توضيحية</strong>الأرقام والرسوم توضيحية ولا تمثل تقارير النظام. الخريطة تعرض الطبقات الفعلية عند توفر الاتصال.</div>
+        </div>
 
-		.damage-dashboard-preview .preview-summary-header {
-			min-height: 175px;
-			background: var(--preview-card-color);
-		}
+        <section aria-label="نظرة على نطاق العمل" class="mb-7">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-5">
+                @foreach ($summaryCards as $summaryCard)
+                    <div class="col">
+                        <div class="card card-flush h-100 border border-gray-200">
+                            <div class="card-body p-5">
+                                <div class="d-flex align-items-center justify-content-between gap-2 mb-5">
+                                    <span class="symbol symbol-40px"><span class="symbol-label bg-light-{{ $summaryCard['tone'] }}"><i class="ki-outline {{ $summaryCard['icon'] }} fs-2 text-{{ $summaryCard['tone'] }}" aria-hidden="true"></i></span></span>
+                                    <span class="badge badge-light fs-9">توضيحي</span>
+                                </div>
+                                <div class="fs-2hx fw-bold text-gray-900 lh-1 mb-3"><bdi>{{ $summaryCard['total'] }}</bdi></div>
+                                <h3 class="fs-7 fw-bold text-gray-800 mb-2">{{ $summaryCard['title'] }}</h3>
+                                <span class="text-muted fs-8">{{ $summaryCard['subtitle'] }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </section>
 
-		.damage-dashboard-preview .preview-floating-body {
-			margin: -3.25rem 1.15rem 1.15rem;
-			position: relative;
-			z-index: 1;
-		}
+        <div class="card mb-7">
+            <div class="card-header border-0 px-6">
+                <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-7 fw-bold gap-5" role="tablist" aria-label="قطاعات تقييم الأضرار">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-active-primary active py-5" id="preview-tab-overview" data-bs-toggle="tab" data-bs-target="#preview-pane-overview" data-preview-sector="all" data-preview-map-note="جميع القطاعات" type="button" role="tab" aria-controls="preview-pane-overview" aria-selected="true">نظرة عامة</button>
+                    </li>
+                    @foreach ($summaryCards as $summaryCard)
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link text-active-primary py-5" id="preview-tab-{{ $summaryCard['key'] }}" data-bs-toggle="tab" data-bs-target="#preview-pane-{{ $summaryCard['key'] }}" data-preview-sector="{{ $summaryCard['layer'] }}" data-preview-map-note="{{ $summaryCard['map_note'] }}" type="button" role="tab" aria-controls="preview-pane-{{ $summaryCard['key'] }}" aria-selected="false" tabindex="-1">{{ $summaryCard['title'] }}</button>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+            <div class="card-body border-top border-gray-200 p-6">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="preview-pane-overview" role="tabpanel" aria-labelledby="preview-tab-overview" tabindex="0">
+                        <div class="row align-items-center g-6">
+                            <div class="col-lg-7">
+                                <h3 class="fs-5 fw-bold text-gray-900 mb-3">المشهد العام في مكان واحد</h3>
+                                <p class="text-muted fs-7 mb-4">ابدأ بالخريطة وأولويات المتابعة، أو اختر قطاعاً للاطلاع على مؤشراته وفتح سجلاته.</p>
+                                <div class="d-flex flex-wrap gap-3"><span class="badge badge-light-primary">5 قطاعات</span><span class="badge badge-light-success">4 طبقات مكانية</span><span class="badge badge-light-warning">3 أولويات للمتابعة</span></div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="border border-dashed border-gray-300 rounded p-4">
+                                    <div class="d-flex justify-content-between gap-3 mb-3"><span class="text-gray-700 fs-7 fw-semibold">مبانٍ بضرر كلي أو جزئي</span><span class="fw-bold text-primary">69.2%</span></div>
+                                    <div class="progress h-6px bg-light-primary"><div class="progress-bar bg-primary" style="width: 69.2%" role="progressbar" aria-label="المباني ذات الضرر الكلي أو الجزئي في المعاينة" aria-valuenow="69.2" aria-valuemin="0" aria-valuemax="100"></div></div>
+                                    <div class="text-muted fs-8 mt-3">12,754 من أصل 18,420 مبنى · مثال توضيحي</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @foreach ($summaryCards as $summaryCard)
+                        <div class="tab-pane fade" id="preview-pane-{{ $summaryCard['key'] }}" role="tabpanel" aria-labelledby="preview-tab-{{ $summaryCard['key'] }}" tabindex="0">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-5">
+                                <div><h3 class="fs-5 fw-bold mb-2">مؤشرات {{ $summaryCard['title'] }}</h3><span class="text-muted fs-8">تفاصيل توضيحية للقطاع؛ الفئات قد تتداخل ولا تُجمع للحصول على الإجمالي.</span></div>
+                                <a href="{{ route($summaryCard['route']) }}" class="btn btn-sm btn-light-primary">فتح السجلات الفعلية <i class="ki-outline ki-arrow-left fs-5 ms-1" aria-hidden="true"></i></a>
+                            </div>
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
+                                @foreach ($summaryCard['items'] as $item)
+                                    <div class="col"><div class="border border-dashed border-gray-300 rounded p-4 h-100"><span class="bullet bullet-dot bg-{{ $item['class'] }} me-2" aria-hidden="true"></span><span class="fs-8 text-gray-600">{{ $item['label'] }}</span><div class="fw-bold fs-2 text-gray-900 mt-3"><bdi>{{ $item['value'] }}</bdi></div></div></div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
 
-		.damage-dashboard-preview .preview-map {
-			height: 560px;
-			background: var(--bs-gray-100);
-			border-radius: var(--preview-radius);
-			position: relative;
-			overflow: hidden;
-		}
+        <div class="row g-6 mb-7">
+            <div class="col-lg-8">
+                <section class="card card-flush h-100" aria-labelledby="preview-map-title">
+                    <div class="card-header pt-5">
+                        <div class="card-title flex-column align-items-start"><h3 id="preview-map-title" class="fw-bold fs-4 mb-2">خريطة GIS شاملة</h3><span class="text-muted fs-8" data-preview-map-context aria-live="polite">جميع القطاعات</span></div>
+                        <div class="card-toolbar"><span class="badge badge-light-primary">ArcGIS</span></div>
+                    </div>
+                    <div class="card-body pt-4 px-6 pb-5">
+                        <div class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="طبقات الخريطة">
+                            @foreach (['all' => 'عرض الكل', 'buildings' => 'كل المباني', 'roadFacilities' => 'الطرق', 'csoSurveys' => 'منظمات المجتمع المدني', 'publicBuildings' => 'المباني العامة'] as $layerKey => $layerLabel)
+                                <button type="button" class="btn btn-sm btn-light btn-active-light-primary {{ $loop->first ? 'active' : '' }}" data-preview-layer="{{ $layerKey }}" aria-pressed="{{ $loop->first ? 'true' : 'false' }}">{{ $layerLabel }}</button>
+                            @endforeach
+                        </div>
+                        <div class="position-relative rounded overflow-hidden bg-light">
+                            <div class="h-400px w-100" id="dashboard_preview_gis_map" aria-label="خريطة مواقع التقييم"></div>
+                            <div class="position-absolute top-0 start-0 w-100 h-100 bg-light d-flex align-items-center justify-content-center p-5" data-preview-map-loading role="status" aria-live="polite">
+                                <div class="text-center"><span class="spinner-border text-primary" aria-hidden="true"></span><div class="text-gray-600 fs-7 mt-4">جارٍ تحميل الخريطة المكانية…</div></div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-muted fs-8 mt-4"><i class="ki-outline ki-information-5 fs-5" aria-hidden="true"></i>الخريطة مستقلة عن أرقام المعاينة؛ اختيار القطاع يحدد الطبقة المعروضة.</div>
+                    </div>
+                </section>
+            </div>
+            <div class="col-lg-4">
+                <section class="card card-flush h-100" aria-labelledby="preview-followup-title">
+                    <div class="card-header pt-5"><div class="card-title flex-column align-items-start"><h3 id="preview-followup-title" class="fw-bold fs-4 mb-2">تحتاج انتباهك</h3><span class="text-muted fs-8">أولويات المتابعة · أمثلة توضيحية</span></div><div class="card-toolbar"><span class="badge badge-light-danger">3</span></div></div>
+                    <div class="card-body pt-4">
+                        <div class="notice d-flex bg-light-danger rounded border-danger border border-dashed p-4 mb-6"><i class="ki-outline ki-shield-cross fs-2 text-danger me-3" aria-hidden="true"></i><span class="fs-8 text-gray-700 lh-lg">مراجعة عوائق التقييم ومخاطر المواقع قبل جدولة الزيارات الميدانية.</span></div>
+                        <div class="d-flex align-items-center mb-5"><span class="bullet bullet-vertical h-40px bg-danger me-4" aria-hidden="true"></span><div class="flex-grow-1"><h4 class="text-gray-800 fs-7 fw-bold mb-2">مبانٍ تعذّر تقييمها</h4><a href="{{ route('building.index', ['assessment_obstacle' => 'yes']) }}" class="text-muted text-hover-primary fs-8">فتح السجلات الفعلية ←</a></div><span class="badge badge-light-danger fs-5">196</span></div>
+                        <div class="separator separator-dashed mb-5"></div>
+                        <div class="d-flex align-items-center mb-5"><span class="bullet bullet-vertical h-40px bg-warning me-4" aria-hidden="true"></span><div class="flex-grow-1"><h4 class="text-gray-800 fs-7 fw-bold mb-2">مبانٍ عامة فيها ذخائر</h4><a href="{{ route('public-buildings.index', ['uxo_only' => 1]) }}" class="text-muted text-hover-primary fs-8">فتح السجلات الفعلية ←</a></div><span class="badge badge-light-warning fs-5">13</span></div>
+                        <div class="separator separator-dashed mb-5"></div>
+                        <div class="d-flex align-items-center mb-6"><span class="bullet bullet-vertical h-40px bg-info me-4" aria-hidden="true"></span><div class="flex-grow-1"><h4 class="text-gray-800 fs-7 fw-bold mb-2">استبيانات منظمات بدون وحدات</h4><a href="{{ route('cso-surveys.index', ['without_units' => 1]) }}" class="text-muted text-hover-primary fs-8">فتح السجلات الفعلية ←</a></div><span class="badge badge-light-info fs-5">73</span></div>
+                        <div class="bg-light rounded p-4 text-muted fs-8 lh-lg">الروابط تفتح سجلات النظام الفعلية. أعداد المعاينة أعلاه أمثلة للتصميم فقط.</div>
+                    </div>
+                </section>
+            </div>
+        </div>
 
-		.damage-dashboard-preview .preview-map .esri-view-root {
-			border-radius: var(--preview-radius);
-		}
-
-		.damage-dashboard-preview .preview-map-loading {
-			position: absolute;
-			inset: 0;
-			z-index: 2;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: rgba(245, 248, 250, .72);
-			backdrop-filter: blur(2px);
-		}
-
-		.damage-dashboard-preview .preview-gis-source {
-			border: 1px dashed var(--bs-gray-300);
-			border-radius: var(--preview-radius);
-		}
-
-		.damage-dashboard-preview .preview-layer-button.active {
-			background: var(--bs-primary);
-			color: #fff;
-		}
-
-		.damage-dashboard-preview .esri-popup {
-			z-index: 10;
-		}
-
-		.damage-dashboard-preview .preview-alert-card {
-			border-inline-start: 4px solid var(--preview-alert-color);
-		}
-
-		.damage-dashboard-preview .preview-command-mode {
-			border: 1px solid var(--bs-gray-200);
-			border-radius: 999px;
-			background: var(--bs-gray-100);
-			padding: .35rem;
-		}
-
-		.damage-dashboard-preview .preview-filter-pill {
-			border: 1px solid var(--bs-gray-300);
-			border-radius: 999px;
-			background: var(--bs-body-bg);
-			color: var(--bs-gray-700);
-		}
-
-		.damage-dashboard-preview .preview-map-card {
-			border: 1px solid rgba(0, 158, 247, .2);
-			box-shadow: 0 16px 42px rgba(15, 23, 42, .07);
-		}
-
-		.damage-dashboard-preview .preview-map-insight {
-			background: linear-gradient(135deg, rgba(0, 158, 247, .1), rgba(80, 205, 137, .1));
-			border-radius: var(--preview-radius);
-		}
-
-		@media (min-width: 1400px) {
-			.damage-dashboard-preview .preview-summary-col {
-				flex: 0 0 20%;
-				max-width: 20%;
-			}
-		}
-	</style>
-
-	<div class="damage-dashboard-preview">
-		<div class="preview-toolbar p-5 mb-6">
-			<div class="d-flex flex-column flex-xxl-row align-items-xxl-center justify-content-between gap-5">
-				<div>
-					<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-						<div class="badge badge-light-primary fw-bold">Command Center Preview</div>
-						<div class="badge badge-light-success fw-bold">آخر تحديث: اليوم 10:45 صباحاً</div>
-					</div>
-					<h2 class="fw-bold text-gray-900 mb-1">معاينة الصفحة الرئيسية حسب تحليل النظام</h2>
-					<div class="text-muted fw-semibold">ملخص تشغيلي واحد يجمع مؤشرات التقييم مع خريطة GIS للمباني، الطرق، منظمات المجتمع المدني، والمباني العامة.</div>
-				</div>
-
-				<div class="d-flex flex-wrap align-items-center gap-3">
-					<div class="preview-command-mode d-flex flex-wrap gap-1" role="group" aria-label="أوضاع عرض الصفحة">
-						<button type="button" class="btn btn-sm btn-primary rounded-pill">نظرة عامة</button>
-						<button type="button" class="btn btn-sm btn-light rounded-pill">المخاطر</button>
-						<button type="button" class="btn btn-sm btn-light rounded-pill">الإنتاجية</button>
-						<button type="button" class="btn btn-sm btn-light rounded-pill">GIS</button>
-					</div>
-					<select class="form-select form-select-sm w-175px">
-						<option>كل المحافظات</option>
-						<option>غزة</option>
-						<option>خانيونس</option>
-					</select>
-					<select class="form-select form-select-sm w-175px">
-						<option>كل الأحياء</option>
-						<option>الرمال</option>
-						<option>المحطة</option>
-					</select>
-					<input class="form-control form-control-sm w-225px" value="2026-09-01 - 2026-09-22" readonly>
-				</div>
-			</div>
-			<div class="d-flex flex-wrap align-items-center gap-2 mt-5" aria-label="الفلاتر النشطة">
-				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">كل المحافظات</span>
-				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">كل الأحياء</span>
-				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">الفترة: 2026-09-01 إلى 2026-09-22</span>
-				<span class="preview-filter-pill px-4 py-2 fw-semibold fs-7">الطبقات: كل GIS</span>
-				<button type="button" class="btn btn-sm btn-light-primary rounded-pill">تصدير التقرير</button>
-			</div>
-		</div>
-
-		<div class="row g-5 g-xl-8 mb-6">
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #f1416c">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-danger mb-1">196</div>
-						<div class="fw-semibold text-gray-800">مبانٍ يوجد عائق يمنع التقييم</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #3f4254">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-dark mb-1">13</div>
-						<div class="fw-semibold text-gray-800">مواقع مبانٍ عامة فيها ذخائر</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #ffc700">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-warning mb-1">73</div>
-						<div class="fw-semibold text-gray-800">استبيانات منظمات بدون وحدات</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-3">
-				<div class="card preview-alert-card h-100" style="--preview-alert-color: #009ef7">
-					<div class="card-body">
-						<div class="fw-bold fs-2 text-primary mb-1">238.4 كم</div>
-						<div class="fw-semibold text-gray-800">طول شوارع مكتمل إدخالها</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<div class="card preview-map-card mb-6">
-			<div class="card-header border-0 pt-6">
-				<div class="card-title flex-column align-items-start">
-					<span class="badge badge-light-info fw-bold mb-2">GIS Decision Layer</span>
-					<span class="card-label fw-bold fs-3 mb-1">خريطة GIS شاملة</span>
-					<span class="text-muted fw-semibold fs-7">طبقات ArcGIS الفعلية للمباني، الطرق، منظمات المجتمع المدني، والمباني العامة</span>
-				</div>
-				<div class="card-toolbar">
-					<div class="d-flex flex-wrap gap-2" role="group" aria-label="طبقات الخريطة">
-						<button type="button" class="btn btn-sm btn-light-primary preview-layer-button active" data-preview-layer="all">عرض الكل</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="buildings">كل المباني</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="roadFacilities">الطرق</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="csoSurveys">منظمات المجتمع المدني</button>
-						<button type="button" class="btn btn-sm btn-light preview-layer-button" data-preview-layer="publicBuildings">المباني العامة</button>
-					</div>
-				</div>
-			</div>
-			<div class="card-body p-lg-8">
-				<div class="row g-6">
-					<div class="col-lg-4">
-						<div class="preview-map-insight p-5 mb-4">
-							<div class="fw-bold text-gray-900 fs-5 mb-1">قراءة سريعة للخريطة</div>
-							<div class="text-muted fw-semibold fs-7">ابدأ من المناطق ذات كثافة الضرر، ثم افتح طبقة الطرق لمعرفة قابلية الوصول قبل توزيع فرق التقييم.</div>
-						</div>
-						<div class="d-grid gap-4">
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">كل المباني</div>
-									<span class="badge badge-light-danger fw-bold">Buildings GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">طبقة المباني الأساسية من ArcGIS مع تصنيف حالة الضرر.</div>
-							</div>
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">الطرق</div>
-									<span class="badge badge-light-dark fw-bold">Roads GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">طبقة مرافق الطرق، وتظهر كخطوط حسب مستوى الضرر.</div>
-							</div>
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">منظمات المجتمع المدني</div>
-									<span class="badge badge-light-info fw-bold">CSO GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">استبيانات منظمات المجتمع المدني من طبقة CSO Survey.</div>
-							</div>
-							<div class="preview-gis-source p-4">
-								<div class="d-flex align-items-center justify-content-between mb-2">
-									<div class="fw-bold text-gray-900">المباني العامة</div>
-									<span class="badge badge-light-primary fw-bold">Public GIS</span>
-								</div>
-								<div class="text-muted fw-semibold fs-7">طبقة المباني العامة من ArcGIS مع الحالة والموقع.</div>
-							</div>
-						</div>
-					</div>
-					<div class="col-lg-8">
-						<div class="preview-map" id="dashboard_preview_gis_map">
-							<div class="preview-map-loading" data-preview-map-loading>
-								<div class="text-center">
-									<span class="spinner-border text-primary"></span>
-									<div class="fw-bold text-gray-800 mt-3">تحميل طبقات GIS...</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-
-		<div class="row g-5 g-xl-6 mb-6">
-			@foreach ($summaryCards as $summaryCard)
-				<div class="col-sm-6 col-xl-4 preview-summary-col">
-					<div class="card card-xl-stretch preview-summary-card h-100">
-						<div class="preview-summary-header px-7 pt-6 text-white" style="--preview-card-color: {{ $summaryCard['color'] }}">
-							<div class="d-flex justify-content-between align-items-start">
-								<h3 class="fw-bold text-white fs-4 mb-0">{{ $summaryCard['title'] }}</h3>
-								<i class="ki-duotone {{ $summaryCard['icon'] }} fs-2x text-white">
-									<span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
-								</i>
-							</div>
-							<div class="text-center pt-8">
-								<div class="fw-semibold opacity-75">{{ $summaryCard['subtitle'] }}</div>
-								<div class="fw-bold fs-1 pt-1">{{ $summaryCard['total'] }}</div>
-							</div>
-						</div>
-
-						<div class="preview-floating-body bg-body shadow-sm card-rounded px-5 py-5">
-							@foreach ($summaryCard['items'] as $item)
-								<div class="d-flex align-items-center justify-content-between gap-3 mb-4">
-									<div class="d-flex align-items-center min-w-0">
-										<span class="bullet bullet-dot bg-{{ $item['class'] }} me-3"></span>
-										<span class="text-gray-800 fw-bold text-truncate">{{ $item['label'] }}</span>
-									</div>
-									<span class="fw-bold text-gray-900 text-nowrap">{{ $item['value'] }}</span>
-								</div>
-							@endforeach
-						</div>
-					</div>
-				</div>
-			@endforeach
-		</div>
-
-		<div class="row g-5 g-xl-8 mb-6">
-			<div class="col-xl-6">
-				<div class="card card-xl-stretch h-100">
-					<div class="card-header border-0 pt-5">
-						<h3 class="card-title align-items-start flex-column">
-							<span class="card-label fw-bold fs-3 mb-1">ملخص حالة المباني</span>
-							<span class="text-muted mt-1 fw-semibold fs-7">تفاصيل إحصائية لعملية التقييم</span>
-						</h3>
-					</div>
-					<div class="card-body pt-2">
-						<div class="table-responsive">
-							<table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4 mb-0">
-								<thead>
-									<tr class="fw-bold text-muted">
-										<th>الفئة</th>
-										<th class="text-end">العدد</th>
-										<th class="text-end min-w-150px">النسبة</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td class="fw-bold text-gray-800">ضرر كلي</td>
-										<td class="text-end fw-bold text-muted">4,218</td>
-										<td class="text-end">
-											<div class="d-flex align-items-center justify-content-end">
-												<span class="text-muted fw-bold me-2">30%</span>
-												<div class="progress h-6px w-100px">
-													<div class="progress-bar bg-danger" style="width: 30%"></div>
-												</div>
-											</div>
-										</td>
-									</tr>
-									<tr>
-										<td class="fw-bold text-gray-800">ضرر جزئي</td>
-										<td class="text-end fw-bold text-muted">8,536</td>
-										<td class="text-end">
-											<div class="d-flex align-items-center justify-content-end">
-												<span class="text-muted fw-bold me-2">61%</span>
-												<div class="progress h-6px w-100px">
-													<div class="progress-bar bg-warning" style="width: 61%"></div>
-												</div>
-											</div>
-										</td>
-									</tr>
-									<tr>
-										<td class="fw-bold text-gray-800">لجنة فنية</td>
-										<td class="text-end fw-bold text-muted">742</td>
-										<td class="text-end">
-											<div class="d-flex align-items-center justify-content-end">
-												<span class="text-muted fw-bold me-2">5%</span>
-												<div class="progress h-6px w-100px">
-													<div class="progress-bar bg-primary" style="width: 5%"></div>
-												</div>
-											</div>
-										</td>
-									</tr>
-									<tr>
-										<td class="fw-bold text-gray-800">غير مصنف</td>
-										<td class="text-end fw-bold text-muted">511</td>
-										<td class="text-end">
-											<div class="d-flex align-items-center justify-content-end">
-												<span class="text-muted fw-bold me-2">4%</span>
-												<div class="progress h-6px w-100px">
-													<div class="progress-bar bg-secondary" style="width: 4%"></div>
-												</div>
-											</div>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div class="col-xl-6">
-				<div class="card card-xl-stretch h-100">
-					<div class="card-header border-0 pt-5">
-						<h3 class="card-title align-items-start flex-column">
-							<span class="card-label fw-bold fs-3 mb-1">ملخص حالة الوحدات السكانية</span>
-							<span class="text-muted mt-1 fw-semibold fs-7">ضرر كلي، ضرر جزئي، ولجان فنية</span>
-						</h3>
-					</div>
-					<div class="card-body">
-						<div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-8">
-							<div class="position-relative w-175px h-175px rounded-circle"
-								style="background: conic-gradient(#f1416c 0 34%, #ffc700 34% 57%, #009ef7 57% 74%, #e4e6ef 74% 100%);">
-								<div class="position-absolute top-50 start-50 translate-middle bg-body rounded-circle w-100px h-100px d-flex flex-column align-items-center justify-content-center">
-									<span class="fw-bold fs-2 text-gray-900">56%</span>
-									<span class="text-muted fs-8">مصنفة</span>
-								</div>
-							</div>
-							<div class="d-grid gap-4">
-								<div class="d-flex align-items-center"><span class="bullet bullet-dot bg-danger me-3"></span><span class="fw-bold text-gray-800">ضرر كلي: 12,804</span></div>
-								<div class="d-flex align-items-center"><span class="bullet bullet-dot bg-warning me-3"></span><span class="fw-bold text-gray-800">ضرر جزئي: 24,118</span></div>
-								<div class="d-flex align-items-center"><span class="bullet bullet-dot bg-primary me-3"></span><span class="fw-bold text-gray-800">لجنة فنية: 1,294</span></div>
-								<div class="d-flex align-items-center"><span class="bullet bullet-dot bg-secondary me-3"></span><span class="fw-bold text-gray-800">باقي/غير مصنف</span></div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-
-
-	</div>
+        <section class="card mb-6" aria-labelledby="preview-analysis-title">
+            <div class="card-header"><div class="card-title"><h3 id="preview-analysis-title" class="fw-bold fs-4 mb-0">قراءة في الأضرار</h3></div><div class="card-toolbar"><span class="badge badge-light">بيانات توضيحية</span></div></div>
+            <div class="card-body">
+                <div class="row g-8">
+                    <div class="col-lg-6">
+                        <h4 class="fs-6 fw-bold mb-5">توزيع حالات المباني</h4>
+                        @foreach ([['ضرر كلي', '4,218', '22.9', 'danger'], ['ضرر جزئي', '8,536', '46.3', 'warning'], ['لجنة فنية حالية', '742', '4.0', 'primary'], ['باقي الحالات', '4,924', '26.7', 'secondary']] as [$label, $count, $percent, $color])
+                            <div class="mb-5"><div class="d-flex justify-content-between fs-7 mb-2"><span class="text-gray-600">{{ $label }}</span><span class="fw-bold text-gray-800">{{ $count }} <span class="text-muted fw-normal fs-8">· {{ $percent }}%</span></span></div><div class="progress h-6px bg-light"><div class="progress-bar bg-{{ $color }}" style="width: {{ $percent }}%" role="progressbar" aria-label="{{ $label }}" aria-valuenow="{{ $percent }}" aria-valuemin="0" aria-valuemax="100"></div></div></div>
+                        @endforeach
+                    </div>
+                    <div class="col-lg-6">
+                        <h4 class="fs-6 fw-bold mb-5">ملخص الوحدات السكانية</h4>
+                        <div class="table-responsive"><table class="table table-row-dashed align-middle gs-0 gy-3 mb-0"><caption class="text-muted fs-8">من أصل 67,500 وحدة في المعاينة؛ النسب مقربة.</caption><thead><tr class="text-muted fs-8 fw-bold"><th scope="col">حالة الضرر</th><th scope="col" class="text-end">الوحدات</th><th scope="col" class="text-end">النسبة</th></tr></thead><tbody>
+                            @foreach ([['ضرر كلي', '12,804', '19.0', 'danger'], ['ضرر جزئي', '24,118', '35.7', 'warning'], ['لجنة فنية', '1,294', '1.9', 'primary'], ['باقي الحالات', '29,284', '43.4', 'secondary']] as [$label, $count, $percent, $color])
+                                <tr><th scope="row" class="fw-semibold text-gray-700 fs-7"><span class="bullet bullet-dot bg-{{ $color }} me-2" aria-hidden="true"></span>{{ $label }}</th><td class="text-end fw-bold text-gray-800 fs-7">{{ $count }}</td><td class="text-end"><span class="badge badge-light-{{ $color }}">{{ $percent }}%</span></td></tr>
+                            @endforeach
+                        </tbody></table></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="d-flex flex-wrap justify-content-between gap-3 text-muted fs-8 mb-5"><span>معاينة الصفحة الرئيسية · نظرة عامة وتفاصيل القطاعات</span><span>Metronic · مكوّنات القالب الحالي</span></div>
+    </div>
 @endsection
 
 @section('script')
@@ -477,7 +258,44 @@
 			const layerUrls = @json($previewLayerUrls);
 			const arcgisToken = @json($token);
 			const layerButtons = document.querySelectorAll('[data-preview-layer]');
+			const sectorTabs = document.querySelectorAll('[data-preview-sector]');
+			const mapContext = document.querySelector('[data-preview-map-context]');
+			let selectedLayer = 'all';
+			let updateMapLayers = function () {};
+
+			function selectPreviewLayer(layerKey, label) {
+				selectedLayer = layerKey;
+				layerButtons.forEach(function (button) {
+					const active = button.dataset.previewLayer === layerKey;
+					button.classList.toggle('active', active);
+					button.setAttribute('aria-pressed', String(active));
+				});
+				mapContext.textContent = label;
+				updateMapLayers(layerKey);
+			}
+
+			sectorTabs.forEach(function (tab) {
+				tab.addEventListener('shown.bs.tab', function () {
+					selectPreviewLayer(tab.dataset.previewSector, tab.dataset.previewMapNote);
+				});
+			});
+
+			layerButtons.forEach(function (button) {
+				button.addEventListener('click', function () {
+					selectPreviewLayer(button.dataset.previewLayer, button.textContent.trim());
+				});
+			});
 			const loadingElement = document.querySelector('[data-preview-map-loading]');
+			const showMapError = function () {
+				if (loadingElement) {
+					loadingElement.textContent = 'تعذّر تحميل الخريطة. تحقق من الاتصال ثم أعد تحميل الصفحة.';
+				}
+			};
+
+			if (typeof require !== 'function') {
+				showMapError();
+				return;
+			}
 
 			require([
 				'esri/Map',
@@ -691,25 +509,15 @@
 					});
 				}
 
-				layerButtons.forEach(function (button) {
-					button.addEventListener('click', function () {
-						layerButtons.forEach(function (item) {
-							item.classList.remove('active', 'btn-primary');
-							item.classList.add('btn-light');
-						});
-
-						button.classList.add('active', 'btn-primary');
-						button.classList.remove('btn-light');
-						setVisibleLayer(button.dataset.previewLayer);
-					});
-				});
+				updateMapLayers = setVisibleLayer;
+				updateMapLayers(selectedLayer);
 
 				view.when(function () {
 					if (loadingElement) {
 						loadingElement.remove();
 					}
-				});
-			});
+				}, showMapError);
+			}, showMapError);
 		});
 	</script>
 @endsection
