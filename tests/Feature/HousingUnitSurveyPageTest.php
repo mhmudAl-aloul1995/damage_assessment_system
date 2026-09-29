@@ -1,6 +1,7 @@
 <?php
 
 use App\Exports\HousingUnitBoqExport;
+use App\Exports\HousingUnitsSelectedColumnsExport;
 use App\Models\Assessment;
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
@@ -597,7 +598,6 @@ it('exports filtered housing units to excel from the audited housing units view'
         'filters' => [
             'municipalitie' => ['Gaza'],
         ],
-        'housing_columns' => ['objectid', 'globalid', 'unit_owner', 'municipalitie'],
     ]))->assertOk();
 
     Excel::matchByRegex();
@@ -613,6 +613,59 @@ it('exports filtered housing units to excel from the audited housing units view'
             && ! $rows->contains(fn (array $row): bool => $row[1] === 'DM1' && $row[4] === '1')
             && ! $rows->contains(fn (array $row): bool => is_string($row[1] ?? null) && str_contains($row[1], ':'))
             && ! $rows->contains(['Object ID', 'رقم الوحدة', 'مالك الوحدة', 'القسم', 'الكود', 'البند', 'الوحدة', 'الكمية']);
+    });
+});
+
+it('exports selected housing unit columns without building a BOQ workbook', function () {
+    Excel::fake();
+
+    $user = User::factory()->create();
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 3651,
+        'globalid' => 'selected-columns-included',
+        'housing_unit_type' => 'apartment',
+        'unit_owner' => 'Selected Owner',
+        'municipalitie' => 'Gaza',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 3652,
+        'globalid' => 'selected-columns-excluded',
+        'housing_unit_type' => 'warehouse',
+        'unit_owner' => 'Excluded Owner',
+        'municipalitie' => 'Rafah',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'housing_unit_type',
+        'label' => 'Housing Unit Type',
+        'hint' => 'نوع الوحدة السكنية',
+        'type' => '0',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'unit_owner',
+        'label' => 'Unit Owner',
+        'hint' => 'مالك الوحدة',
+        'type' => '0',
+    ]);
+
+    $this->actingAs($user)->get(route('housing.export', [
+        'format' => 'xlsx',
+        'filters' => [
+            'municipalitie' => ['Gaza'],
+        ],
+        'housing_columns' => ['housing_unit_type', 'unit_owner'],
+    ]))->assertOk();
+
+    Excel::matchByRegex();
+    Excel::assertDownloaded('/housing-units-selected-\d{8}-\d{6}\.xlsx/', function (HousingUnitsSelectedColumnsExport $export): bool {
+        $row = $export->query()->firstOrFail();
+
+        return $export->headings() === ['نوع الوحدة السكنية', 'مالك الوحدة']
+            && $export->query()->count() === 1
+            && $export->map($row) === ['apartment', 'Selected Owner'];
     });
 });
 

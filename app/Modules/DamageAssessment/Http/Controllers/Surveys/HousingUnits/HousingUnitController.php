@@ -3,6 +3,7 @@
 namespace App\Modules\DamageAssessment\Http\Controllers\Surveys\HousingUnits;
 
 use App\Exports\HousingUnitBoqExport;
+use App\Exports\HousingUnitsSelectedColumnsExport;
 use App\Exports\TableExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HousingUnitExportRequest;
@@ -624,6 +625,12 @@ class HousingUnitController extends Controller
 
         abort_unless(in_array($format, ['xlsx', 'pdf', 'csv'], true), 422, 'صيغة التصدير غير صحيحة.');
 
+        $selectedColumns = $this->selectedHousingExportColumns($request->input('housing_columns'));
+
+        if ($selectedColumns !== [] && in_array($format, ['xlsx', 'csv'], true)) {
+            return $this->downloadSelectedHousingColumns($request, $selectedColumns, $format);
+        }
+
         $housingColumns = $this->housingBoqSelectColumns();
         $assessmentHints = Assessment::query()
             ->whereIn('name', $this->housingBoqColumns())
@@ -690,6 +697,77 @@ class HousingUnitController extends Controller
         $zip->close();
 
         return response()->download($zipPath, $zipFileName)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * @param  array<int, string>  $columns
+     */
+    private function downloadSelectedHousingColumns(HousingUnitExportRequest $request, array $columns, string $format): BinaryFileResponse
+    {
+        $assessmentHints = Assessment::query()
+            ->whereIn('name', $columns)
+            ->get(['name', 'hint', 'label'])
+            ->keyBy('name');
+
+        $query = $this->selectedHousingExportQuery($request, $columns)
+            ->orderBy('objectid');
+
+        $writerType = $format === 'csv'
+            ? \Maatwebsite\Excel\Excel::CSV
+            : \Maatwebsite\Excel\Excel::XLSX;
+
+        return Excel::download(
+            new HousingUnitsSelectedColumnsExport($query, $columns, $assessmentHints),
+            'housing-units-selected-'.now()->format('Ymd-His').'.'.$format,
+            $writerType,
+        );
+    }
+
+    /**
+     * @param  array<int, string>  $columns
+     * @return Builder<AuditedHousingUnit>
+     */
+    private function selectedHousingExportQuery(HousingUnitExportRequest $request, array $columns): Builder
+    {
+        $query = AuditedHousingUnit::query()->select($columns);
+        $filters = $request->input('filters', []);
+
+        if (! is_array($filters)) {
+            $filters = [];
+        }
+
+        if ($request->filled('globalid')) {
+            $query->where('globalid', $request->string('globalid')->toString());
+        }
+
+        if ($request->filled('parentglobalid')) {
+            $query->where('parentglobalid', $request->string('parentglobalid')->toString());
+        }
+
+        $objectIds = $this->exportHousingObjectIds($request);
+
+        if ($objectIds !== []) {
+            $query->whereIn('objectid', $objectIds);
+        }
+
+        $this->applyHousingFilters($query, $filters, 'audited_housing_units');
+
+        return $query;
+    }
+
+    /**
+     * @param  array<int, string|null>|mixed  $requestedColumns
+     * @return array<int, string>
+     */
+    private function selectedHousingExportColumns(mixed $requestedColumns): array
+    {
+        $requestedColumns = is_array($requestedColumns) ? $requestedColumns : [];
+        $availableColumns = Schema::getColumnListing('audited_housing_units');
+
+        return array_values(array_intersect(
+            array_values(array_filter($requestedColumns, fn (mixed $column): bool => is_string($column) && $column !== '')),
+            $availableColumns,
+        ));
     }
 
     /**
