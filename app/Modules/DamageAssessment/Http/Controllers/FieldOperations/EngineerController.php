@@ -4,6 +4,8 @@ namespace App\Modules\DamageAssessment\Http\Controllers\FieldOperations;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\Filter;
@@ -134,18 +136,27 @@ class EngineerController extends Controller
 
     public function exportAssessmentPdf(string $globalid)
     {
-        $building = Building::query()->where('globalid', $globalid)->firstOrFail();
-        $housingUnits = HousingUnit::query()->where('parentglobalid', $globalid)->get();
+        $sourceBuilding = Building::query()->where('globalid', $globalid)->firstOrFail();
+        $building = AuditedBuilding::query()->where('globalid', $globalid)->first() ?? $sourceBuilding;
+        $sourceHousingUnits = HousingUnit::query()->where('parentglobalid', $globalid)->get();
+        $housingUnits = AuditedHousingUnit::query()->where('parentglobalid', $globalid)->get();
+
+        if ($housingUnits->isEmpty()) {
+            $housingUnits = $sourceHousingUnits;
+        }
 
         $buildingTitle = $this->resolveBuildingTitle($building);
-        $buildingRows = $this->buildAssessmentRows($building, 'building_table');
-        $buildingAttachments = $this->buildAttachmentItems($building);
+        $buildingRows = $this->buildAssessmentRows($building, 'building_table', Building::class, $sourceBuilding);
+        $buildingAttachments = $this->buildAttachmentItems($sourceBuilding);
 
-        $housingSections = $housingUnits->map(function (HousingUnit $housingUnit) {
+        $sourceHousingUnitsByGlobalId = $sourceHousingUnits->keyBy('globalid');
+        $housingSections = $housingUnits->map(function (Model $housingUnit) use ($sourceHousingUnitsByGlobalId) {
+            $sourceHousingUnit = $sourceHousingUnitsByGlobalId->get($housingUnit->globalid) ?? $housingUnit;
+
             return [
                 'title' => $this->resolveHousingTitle($housingUnit),
-                'rows' => $this->buildAssessmentRows($housingUnit, 'housing_table'),
-                'attachments' => $this->buildAttachmentItems($housingUnit),
+                'rows' => $this->buildAssessmentRows($housingUnit, 'housing_table', HousingUnit::class, $sourceHousingUnit),
+                'attachments' => $this->buildAttachmentItems($sourceHousingUnit),
             ];
         });
 
@@ -200,13 +211,13 @@ class EngineerController extends Controller
             ->make(true);
     }
 
-    private function resolveBuildingTitle(Building $building): string
+    private function resolveBuildingTitle(Model $building): string
     {
         return $building->building_name
             ?: 'Building #'.($building->objectid ?? $building->globalid);
     }
 
-    private function resolveHousingTitle(HousingUnit $housingUnit): string
+    private function resolveHousingTitle(Model $housingUnit): string
     {
         $fullName = trim((string) ($housingUnit->full_name ?? ''));
 
@@ -222,10 +233,15 @@ class EngineerController extends Controller
     }
 
     // 9
-    private function buildAssessmentRows(Model $model, string $type): Collection
+    /**
+     * @param  class-string<Model>|null  $fillableModelClass
+     */
+    private function buildAssessmentRows(Model $model, string $type, ?string $fillableModelClass = null, ?Model $fallbackModel = null): Collection
     {
-        $record = $model->toArray();
-        $fillable = (new $model)->getFillable();
+        $record = array_replace($fallbackModel?->toArray() ?? [], $model->toArray());
+        $fillable = $fillableModelClass !== null
+            ? (new $fillableModelClass)->getFillable()
+            : (new $model)->getFillable();
         $filtersByList = Filter::query()
             ->get(['list_name', 'name', 'label'])
             ->groupBy('list_name')

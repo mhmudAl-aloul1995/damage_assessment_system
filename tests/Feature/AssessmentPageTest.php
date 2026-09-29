@@ -6,6 +6,7 @@ use App\Models\Assessment;
 use App\Models\AssessmentEditHistory;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
+use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
@@ -107,6 +108,12 @@ it('exports the assessment page as a pdf with attachments', function () {
     ]);
 
     Assessment::query()->create([
+        'name' => 'building_name',
+        'label' => 'Building Name',
+        'hint' => 'Audited building display name',
+    ]);
+
+    Assessment::query()->create([
         'name' => 'obstacle_type',
         'label' => 'Obstacle Type',
         'hint' => 'Reason the assessment could not proceed',
@@ -116,6 +123,12 @@ it('exports the assessment page as a pdf with attachments', function () {
         'name' => 'q_9_3_1_first_name',
         'label' => 'First Name',
         'hint' => 'Housing owner first name',
+    ]);
+
+    Assessment::query()->create([
+        'name' => 'unit_owner',
+        'label' => 'Unit Owner',
+        'hint' => 'Audited housing owner',
     ]);
 
     Filter::query()->create([
@@ -138,12 +151,28 @@ it('exports the assessment page as a pdf with attachments', function () {
         'obstacle_type' => '1',
     ]);
 
-    HousingUnit::query()->create([
+    AuditedBuilding::query()->create([
+        'objectid' => 9101,
+        'globalid' => $building->globalid,
+        'building_name' => 'Audited Tower A',
+        'building_damage_status' => 'fully_damaged',
+    ]);
+
+    $housingUnit = HousingUnit::query()->create([
         'objectid' => 201,
         'globalid' => 'housing-201',
         'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Original Unit Owner',
         'q_9_3_1_first_name' => 'Ali',
         'q_9_3_4_last_name' => 'Saleh',
+    ]);
+
+    AuditedHousingUnit::query()->create([
+        'objectid' => 9201,
+        'globalid' => $housingUnit->globalid,
+        'parentglobalid' => $building->globalid,
+        'unit_owner' => 'Audited Unit Owner',
+        'unit_damage_status' => 'partially_damaged2',
     ]);
 
     EditAssessment::query()->create([
@@ -162,7 +191,9 @@ it('exports the assessment page as a pdf with attachments', function () {
 
     Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf) {
         return $pdf->viewName === 'damage-assessment::pdf.assessment'
-            && $pdf->contains('Tower A')
+            && $pdf->contains('Audited Tower A')
+            && ! $pdf->contains('Original Unit Owner')
+            && $pdf->contains('Audited Unit Owner')
             && $pdf->contains('Edited Owner')
             && $pdf->contains('Owner refused access')
             && ! $pdf->contains('Owned land')
