@@ -87,7 +87,59 @@ class DamageAssessmentController extends Controller
             return redirect()->to(app_route('audit.fieldEngineer'));
         }
 
-        return View::make('damage-assessment::dashboard.preview', $this->dashboardViewData($request));
+        return View::make('damage-assessment::dashboard.preview', [
+            ...$this->dashboardViewData($request),
+            'previewGis' => $this->previewGisData($request),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function previewGisData(Request $request): array
+    {
+        $definitions = [
+            'buildings' => ['المباني', 'buildings_url', 'building.index', Building::class, 'end'],
+            'housing' => ['الوحدات السكانية', 'housing_units_url', 'housing.index', HousingUnit::class, 'creationdate'],
+            'cso' => ['منظمات المجتمع المدني', 'cso_survey_layer_url', 'cso-surveys.index', CsoSurvey::class, 'creationdate'],
+            'public' => ['المباني العامة', 'public_building_survey_layer_url', 'public-buildings.index', PublicBuildingSurvey::class, 'creationdate'],
+            'roads' => ['الطرق', 'road_facility_survey_layer_url', 'road-facilities.index', RoadFacilitySurvey::class, 'creationdate'],
+        ];
+        if ($this->isCsoOfficerOnly($request->user())) {
+            $definitions = ['cso' => $definitions['cso']];
+        }
+
+        $sectors = [];
+        foreach ($definitions as $key => [$title, $configKey, $route, $model, $dateField]) {
+            $sectors[$key] = [
+                'title' => $title,
+                'url' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.'.$configKey)),
+                'listUrl' => route($route),
+                'dateField' => $dateField,
+                'scopeObjectIds' => app(PhaseContext::class)->selected() === null ? null : $model::query()
+                    ->whereNotNull('objectid')->pluck('objectid')->map(fn (mixed $id): int => (int) $id)->all(),
+            ];
+        }
+
+        $token = null;
+        $error = null;
+        try {
+            $token = app(ArcgisService::class)->getToken();
+        } catch (\Throwable) {
+            $error = 'تعذّر الاتصال بخدمة GIS. أعد تحميل الصفحة للمحاولة مجددًا.';
+        }
+
+        [$from, $to] = $this->dashboardDateRange($request);
+
+        return [
+            'sectors' => $sectors,
+            'token' => $token,
+            'error' => $error,
+            'filters' => [
+                'governorate' => (string) $request->string('governorate'),
+                'neighborhood' => (string) $request->string('neighborhood'),
+                'from' => $from,
+                'to' => $to,
+            ],
+        ];
     }
 
     public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse

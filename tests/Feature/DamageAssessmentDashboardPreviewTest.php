@@ -13,70 +13,35 @@ use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
     Cache::flush();
+    $this->mock(ArcgisService::class)->shouldReceive('getToken')->andReturn('test-gis-token');
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
 });
 
-it('renders the damage assessment dashboard preview page', function (string $routeName): void {
+it('renders the damage assessment dashboard preview page with live GIS layers', function (string $routeName): void {
     Http::fake();
-
+    config()->set('services.arcgis.public_building_survey_layer_url', 'https://example.com/ArcGIS/rest/services/public/FeatureServer');
     $response = $this->actingAs(User::factory()->create())->get(route($routeName));
-
-    $response
-        ->assertOk()
-        ->assertViewIs('damage-assessment::dashboard.preview')
-        ->assertSee('معاينة الصفحة الرئيسية')
-        ->assertSee('معاينة Metronic')
-        ->assertSee('معاينة تصميم · بيانات توضيحية.')
-        ->assertSee('فلاتره مستقلة عن البطاقات الفعلية أعلاه.')
-        ->assertSee('فلاتر البطاقات الفعلية')
-        ->assertSee('فلاتر المعاينة')
-        ->assertSee('لا توجد نتائج مطابقة')
-        ->assertSee('بحث في السجلات')
-        ->assertSee('dashboard_preview_gis_map')
-        ->assertSee('dashboard-preview.js')
-        ->assertSee('href="'.route('damageAssessment.index').'"', false);
-
+    $response->assertOk()->assertViewIs('damage-assessment::dashboard.preview')
+        ->assertSee('معاينة Metronic')->assertSee('خرائط GIS للقطاعات')
+        ->assertSee('طبقات النظام الفعلية')->assertSee('dashboard-preview.js')
+        ->assertDontSee('DEMO-')->assertDontSee('مواقع افتراضية');
     $document = new DOMDocument;
     $previousErrorHandling = libxml_use_internal_errors(true);
     $document->loadHTML($response->getContent());
     libxml_clear_errors();
     libxml_use_internal_errors($previousErrorHandling);
     $xpath = new DOMXPath($document);
-
-    expect($xpath->query('//*[@data-preview-sector]'))->toHaveCount(6);
-    expect($xpath->query('//*[@data-preview-sector and @aria-selected="true"]'))->toHaveCount(1);
-    expect($xpath->query('//*[@data-preview-stat]'))->toHaveCount(4);
-    expect($xpath->query('//*[@id="preview-records"]/tr'))->toHaveCount(8);
-    expect($xpath->query('//*[@data-preview-view="table" and @aria-pressed="true"]'))->toHaveCount(1);
-    expect($xpath->query('//*[@id="preview-map-panel" and @hidden]'))->toHaveCount(1);
-
-    foreach (['overview', 'buildings', 'housing', 'cso', 'public', 'roads'] as $sector) {
-        $tab = $xpath->query('//*[@id="preview-tab-'.$sector.'"]')->item(0);
-        $pane = $xpath->query('//*[@id="preview-pane-'.$sector.'"]')->item(0);
-
-        expect($tab)->not->toBeNull();
-        expect($pane)->not->toBeNull();
-        expect($tab->getAttribute('aria-controls'))->toBe($pane->getAttribute('id'));
-        expect($pane->getAttribute('aria-labelledby'))->toBe($tab->getAttribute('id'));
-    }
-
-    foreach (['building.index', 'housing.index', 'cso-surveys.index', 'public-buildings.index', 'road-facilities.index'] as $sectorRoute) {
-        $response->assertSee('href="'.route($sectorRoute).'"', false);
-    }
-
-    $data = json_decode($xpath->query('//*[@id="preview-dashboard-data"]')->item(0)->textContent, true, 512, JSON_THROW_ON_ERROR);
-    expect($data['records'])->toHaveCount(30);
-    expect(array_unique(array_column($data['records'], 'id')))->toHaveCount(30);
-    foreach (array_keys($data['sectors']) as $sector) {
-        expect(array_filter($data['records'], fn (array $record): bool => $record['sector'] === $sector))->toHaveCount(6);
-    }
-    foreach (['completed', 'review', 'blocked'] as $status) {
-        $expected = count(array_filter($data['records'], fn (array $record): bool => $record['status'] === $status));
-        expect((int) $xpath->query('//*[@data-preview-stat="'.$status.'"]')->item(0)->textContent)->toBe($expected);
-    }
-
+    expect($xpath->query('//*[@data-gis-sector]'))->toHaveCount(5);
+    expect($xpath->query('//*[@data-gis-sector and @aria-pressed="true"]'))->toHaveCount(1);
+    expect($xpath->query('//*[@id="dashboard_preview_gis_map"]/ancestor::details'))->toHaveCount(0);
+    $data = json_decode($xpath->query('//*[@id="preview-gis-data"]')->item(0)->textContent, true, 512, JSON_THROW_ON_ERROR);
+    expect($data['token'])->toBe('test-gis-token');
+    expect($data['sectors']['public']['url'])->toBe('https://example.com/ArcGIS/rest/services/public/FeatureServer/0');
+    expect($data['sectors']['housing']['url'])->toBe(config('services.arcgis.housing_units_url'));
+    expect($data['sectors']['buildings']['scopeObjectIds'])->toBeNull();
+    expect($data)->not->toHaveKey('records');
     Http::assertNothingSent();
 })->with(['damageAssessment.preview', 'damageAssessment.dashboard-preview']);
 
@@ -137,6 +102,7 @@ it('limits preview cards to the same sectors allowed on the dashboard', function
 
     $response = $this->actingAs($user)->get(route('damageAssessment.preview'))->assertOk();
     expect($response['dashboardCards']->pluck('key')->all())->toBe(['cso_surveys']);
+    expect(array_keys($response['previewGis']['sectors']))->toBe(['cso']);
     $response->assertDontSee('data-dashboard-card="buildings"', false);
 });
 
@@ -151,3 +117,22 @@ it('shows an empty state when no dashboard cards are active', function (): void 
 it('requires authentication to view the dashboard design preview', function (string $routeName): void {
     $this->get(route($routeName))->assertRedirect(route('login'));
 })->with(['damageAssessment.preview', 'damageAssessment.dashboard-preview']);
+
+it('keeps dashboard cards available when GIS authentication fails', function (): void {
+    $this->mock(ArcgisService::class)->shouldReceive('getToken')->andThrow(new RuntimeException('Unavailable'));
+    $response = $this->actingAs(User::factory()->create())->get(route('damageAssessment.preview'))->assertOk();
+    expect($response['previewGis']['token'])->toBeNull();
+    $response->assertSee('تعذّر الاتصال بخدمة GIS.');
+});
+
+it('scopes GIS features to the selected phase and passes the active filters', function (): void {
+    foreach ([1, 2] as $phase) {
+        PublicBuildingSurvey::query()->create(['objectid' => 9000 + $phase, 'globalid' => 'preview-phase-'.$phase, 'phase_number' => $phase]);
+    }
+    $user = User::factory()->create(['allowed_phase_numbers' => [2], 'default_phase_number' => 2]);
+    $response = $this->actingAs($user)->get(route('damageAssessment.preview', [
+        'governorate' => 'Gaza', 'neighborhood' => 'Rimal', 'from_date' => '2026-09-01', 'to_date' => '2026-09-30',
+    ]))->assertOk();
+    expect($response['previewGis']['sectors']['public']['scopeObjectIds'])->toBe([9002]);
+    expect($response['previewGis']['filters'])->toBe(['governorate' => 'Gaza', 'neighborhood' => 'Rimal', 'from' => '2026-09-01', 'to' => '2026-09-30']);
+});

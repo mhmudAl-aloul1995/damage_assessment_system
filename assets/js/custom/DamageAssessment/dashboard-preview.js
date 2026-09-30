@@ -1,261 +1,213 @@
-export function filterPreviewRecords(records, filters, statuses = {}) {
-    const query = (filters.query || '').normalize('NFKC').trim().toLocaleLowerCase('ar');
-    return records.filter(record => {
-        const searchable = [record.code, record.sectorLabel, record.governorate, record.municipality, record.date, statuses[record.status]?.label || record.status].join(' ').normalize('NFKC').toLocaleLowerCase('ar');
-        return (!filters.sector || filters.sector === 'all' || record.sector === filters.sector)
-            && (!filters.governorate || record.governorate === filters.governorate)
-            && (!filters.municipality || record.municipality === filters.municipality)
-            && (!filters.from || record.date >= filters.from)
-            && (!filters.to || record.date <= filters.to)
-            && (!query || searchable.includes(query));
-    });
+export function resolveGisField(fields, name) {
+    return fields.find(field => field.name.toLowerCase() === name.toLowerCase()) || null;
 }
 
-export function summarizePreviewRecords(records) {
-    return records.reduce((summary, record) => {
-        summary.total += 1;
-        if (Object.hasOwn(summary, record.status) && record.status !== 'total') {
-            summary[record.status] += 1;
+export function buildGisWhere(fields, filters, dateFieldName, objectIdField, scopeObjectIds = null) {
+    const clauses = [];
+    const identifier = name => {
+        if (!/^[a-z_][a-z0-9_]*$/i.test(name)) throw new Error('حقل GIS غير صالح.');
+        return '"' + name + '"';
+    };
+    for (const [key, label] of [['governorate', 'المحافظة'], ['neighborhood', 'الحي']]) {
+        if (!filters[key]) continue;
+        const field = resolveGisField(fields, key);
+        if (!field) throw new Error('طبقة GIS لا تدعم فلتر ' + label + ' المختار.');
+        clauses.push(identifier(field.name) + " = '" + String(filters[key]).replace(/'/g, "''") + "'");
+    }
+    if (filters.from || filters.to) {
+        const field = resolveGisField(fields, dateFieldName) || resolveGisField(fields, 'creationdate');
+        if (!field || field.type !== 'date') throw new Error('طبقة GIS لا تدعم فلتر التاريخ المختار.');
+        const date = value => {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('تاريخ غير صالح.');
+            const parsed = new Date(value + 'T00:00:00Z');
+            if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== value) throw new Error('تاريخ غير صالح.');
+            return parsed;
+        };
+        if (filters.from) {
+            date(filters.from);
+            clauses.push(identifier(field.name) + " >= TIMESTAMP '" + filters.from + " 00:00:00'");
         }
-        return summary;
-    }, { total: 0, completed: 0, review: 0, blocked: 0 });
+        if (filters.to) {
+            const nextDay = date(filters.to);
+            nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+            clauses.push(identifier(field.name) + " < TIMESTAMP '" + nextDay.toISOString().slice(0, 10) + " 00:00:00'");
+        }
+        if (filters.from && filters.to && filters.from > filters.to) throw new Error('تاريخ البداية يجب أن يسبق تاريخ النهاية.');
+    }
+    if (scopeObjectIds !== null) {
+        const ids = [...new Set(scopeObjectIds.filter(id => Number.isSafeInteger(id) && id >= 0))];
+        if (!ids.length) return '1=0';
+        const groups = [];
+        for (let offset = 0; offset < ids.length; offset += 500) {
+            groups.push(identifier(objectIdField) + ' IN (' + ids.slice(offset, offset + 500).join(',') + ')');
+        }
+        clauses.push('(' + groups.join(' OR ') + ')');
+    }
+    return clauses.length ? clauses.join(' AND ') : '1=1';
 }
 
-export function paginatePreviewRecords(records, page, pageSize = 8) {
-    const pages = Math.max(1, Math.ceil(records.length / pageSize));
-    const current = Math.max(1, Math.min(page, pages));
-    const offset = (current - 1) * pageSize;
-    return { rows: records.slice(offset, offset + pageSize), page: current, pages, start: records.length ? offset + 1 : 0, end: Math.min(offset + pageSize, records.length) };
+export function createDamageRenderer(geometryType, field) {
+    if (!field) return null;
+    const symbol = color => {
+        if (geometryType === 'polygon') return {type: 'simple-fill', color: [...color, 0.55], outline: {color, width: 1}};
+        if (geometryType === 'polyline') return {type: 'simple-line', color, width: 3};
+        return {type: 'simple-marker', color, size: 9, outline: {color: 'white', width: 1}};
+    };
+    const statuses = [
+        ['fully_damaged', 'ضرر كلي', [220, 53, 69]], ['destroyed', 'مدمر', [220, 53, 69]],
+        ['severe', 'ضرر جسيم', [240, 100, 30]], ['partially_damaged', 'ضرر جزئي', [255, 193, 7]],
+        ['partial_damage', 'ضرر جزئي', [255, 193, 7]], ['moderate', 'ضرر متوسط', [255, 193, 7]],
+        ['committee_review', 'لجنة فنية', [150, 90, 220]], ['minor', 'ضرر خفيف', [40, 167, 69]],
+        ['no_damage', 'لا يوجد ضرر', [40, 167, 69]], ['No_Damage', 'لا يوجد ضرر', [40, 167, 69]],
+        ['no_damaged', 'لا يوجد ضرر', [40, 167, 69]],
+    ];
+    return {
+        type: 'unique-value', field: field.name, defaultLabel: 'حالات أخرى / غير مصنف', defaultSymbol: symbol([120, 130, 140]),
+        uniqueValueInfos: statuses.map(([value, label, color]) => ({value, label, symbol: symbol(color)})),
+    };
 }
 
-export function previewMapFeatures(records, statuses) {
-    return records.map(record => ({
-        geometry: { type: 'point', longitude: record.longitude, latitude: record.latitude },
-        symbol: { type: 'simple-marker', size: 11, color: statuses[record.status].color, outline: { color: '#ffffff', width: 1.5 } },
-        attributes: { ...record, statusLabel: statuses[record.status].label },
-        popupTemplate: {
-            title: 'موقع افتراضي: {code}',
-            content: [{ type: 'fields', fieldInfos: [
-                { fieldName: 'sectorLabel', label: 'القطاع' },
-                { fieldName: 'municipality', label: 'البلدية' },
-                { fieldName: 'date', label: 'تاريخ التقييم' },
-                { fieldName: 'statusLabel', label: 'الحالة' },
-            ] }],
-        },
-    }));
-}
-
+let arcgisPromise;
 function loadArcgis() {
-    return new Promise((resolve, reject) => {
-        const loadModules = () => window.require([
-            'esri/Map', 'esri/views/MapView', 'esri/layers/GraphicsLayer', 'esri/Graphic',
-        ], (...modules) => resolve(modules), reject);
-        if (typeof window.require === 'function') {
-            loadModules();
-            return;
-        }
+    if (arcgisPromise) return arcgisPromise;
+    arcgisPromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('انتهت مهلة تحميل مكتبة GIS.')), 30000);
+        const done = modules => { clearTimeout(timeout); resolve(modules); };
+        const fail = error => { clearTimeout(timeout); reject(error); };
+        const modules = () => window.require([
+            'esri/Map', 'esri/views/MapView', 'esri/layers/FeatureLayer', 'esri/identity/IdentityManager',
+            'esri/widgets/BasemapToggle', 'esri/widgets/Legend', 'esri/widgets/Expand', 'esri/widgets/ScaleBar',
+            'esri/request', 'esri/geometry/Extent',
+        ], (...loaded) => done(loaded), fail);
         if (!document.querySelector('[data-preview-arcgis-style]')) {
-            const stylesheet = document.createElement('link');
-            stylesheet.rel = 'stylesheet';
-            stylesheet.href = 'https://js.arcgis.com/4.22/esri/themes/light/main.css';
-            stylesheet.dataset.previewArcgisStyle = '';
-            document.head.append(stylesheet);
+            const css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'https://js.arcgis.com/4.22/esri/themes/light/main.css';
+            css.dataset.previewArcgisStyle = '';
+            document.head.append(css);
         }
+        if (typeof window.require === 'function') { modules(); return; }
         const script = document.createElement('script');
         script.src = 'https://js.arcgis.com/4.22/';
-        const timeout = setTimeout(() => {
-            script.remove();
-            reject(new Error('Map loading timed out'));
-        }, 20000);
-        script.onload = () => {
-            clearTimeout(timeout);
-            loadModules();
-        };
-        script.onerror = () => {
-            clearTimeout(timeout);
-            script.remove();
-            reject(new Error('Map library unavailable'));
-        };
+        script.onload = modules;
+        script.onerror = () => { script.remove(); fail(new Error('تعذّر تحميل مكتبة GIS.')); };
         document.head.append(script);
-    });
+    }).catch(error => { arcgisPromise = null; throw error; });
+    return arcgisPromise;
 }
 
-function initializePreview(root) {
-    const data = JSON.parse(document.getElementById('preview-dashboard-data').textContent);
+async function initializeGis(root) {
+    const data = JSON.parse(document.getElementById('preview-gis-data').textContent);
     const find = selector => root.querySelector(selector);
-    const form = find('#preview-filters');
-    const governorate = find('#preview-governorate');
-    const municipality = find('#preview-municipality');
-    const fromDate = find('#preview-date-from');
-    const toDate = find('#preview-date-to');
-    const search = find('#preview-search');
-    const mapMessage = find('#preview-map-message');
-    const retryMap = find('#preview-map-retry');
-    const mapContainer = find('#dashboard_preview_gis_map');
-    let selectedSector = 'all';
-    let selectedView = 'table';
-    let filteredRecords = data.records;
-    let page = 1;
-    let mapState = null;
-    let mapPromise = null;
+    const message = find('#preview-gis-message');
+    const retry = find('#preview-gis-retry');
+    const fit = find('#preview-gis-fit');
+    const container = find('#dashboard_preview_gis_map');
+    let selected = Object.keys(data.sectors)[0];
+    let revision = 0;
+    let map;
+    let view;
+    let legend;
+    let activeExtent;
+    let modules;
+    const layers = new Map();
+    const popupNames = ['objectid', 'building_name', 'str_name', 'governorate', 'municipalitie', 'neighborhood', 'building_damage_status', 'road_damage_level', 'field_status'];
 
-    function renderTable() {
-        const pagination = paginatePreviewRecords(filteredRecords, page);
-        page = pagination.page;
-        const rows = pagination.rows.map(record => {
-            const row = document.createElement('tr');
-            const values = [record.code, record.sectorLabel, record.governorate, record.municipality, record.date];
-            values.forEach((value, index) => {
-                const cell = document.createElement(index === 0 ? 'th' : 'td');
-                cell.className = index === 0 ? 'fw-bold text-gray-800 fs-7' : 'text-gray-600 fs-7';
-                if (index === 0) {
-                    cell.scope = 'row';
-                }
-                const text = document.createElement('bdi');
-                text.textContent = value;
-                cell.append(text);
-                row.append(cell);
-            });
-            const statusCell = document.createElement('td');
-            const badge = document.createElement('span');
-            badge.className = 'badge badge-light-' + data.statuses[record.status].tone;
-            badge.textContent = data.statuses[record.status].label;
-            statusCell.append(badge);
-            row.append(statusCell);
-            return row;
-        });
-        find('#preview-records').replaceChildren(...rows);
-        find('#preview-page-info').textContent = `${pagination.start}–${pagination.end} من ${filteredRecords.length}`;
-        find('#preview-page-previous').disabled = page === 1;
-        find('#preview-page-next').disabled = page === pagination.pages;
+    async function zoomToExtent(extent) {
+        if (!extent) return;
+        try { await view.goTo(extent.expand(1.15), {animate: false}); }
+        catch (error) {
+            if (!['AbortError', 'view:goto-interrupted'].includes(error.name)) message.textContent += ' استخدم أدوات التكبير لاستعراض الطبقة.';
+        }
     }
 
-    function fitMap() {
-        if (!mapState || find('#preview-map-panel').hidden || !filteredRecords.length) {
-            return;
-        }
-        const target = { target: mapState.layer.graphics.toArray() };
-        if (filteredRecords.length === 1) {
-            target.zoom = 13;
-        }
-        mapState.view.goTo(target, { animate: false }).catch(error => {
-            if (!['AbortError', 'view:goto-interrupted'].includes(error.name)) {
-                mapMessage.textContent = 'تعذّر تقريب الخريطة تلقائياً؛ استخدم أدوات التكبير لاستكشاف المواقع الافتراضية.';
+    async function showSector(key) {
+        selected = key;
+        const currentRevision = ++revision;
+        const sector = data.sectors[key];
+        find('#preview-gis-title').textContent = sector.title;
+        find('#preview-gis-records').href = sector.listUrl;
+        root.querySelectorAll('[data-gis-sector]').forEach(button => {
+            const active = button.dataset.gisSector === key;
+            button.setAttribute('aria-pressed', String(active));
+            button.classList.toggle('btn-primary', active);
+            button.classList.toggle('btn-light', !active);
+        });
+        fit.disabled = true;
+        retry.hidden = true;
+        activeExtent = null;
+        if (map) map.removeAll();
+        if (view) view.popup.close();
+        container.hidden = true;
+        delete container.dataset.featureCount;
+        message.textContent = 'جارٍ تحميل طبقة ' + sector.title + ' من GIS…';
+        if (data.error || !data.token) { message.textContent = data.error || 'جلسة GIS غير متاحة؛ أعد تحميل الصفحة.'; return; }
+        if (!sector.url) { message.textContent = 'رابط طبقة GIS لهذا القطاع غير مُعدّ في النظام.'; return; }
+        try {
+            modules = await loadArcgis();
+            if (currentRevision !== revision) return;
+            const [ArcgisMap, MapView, FeatureLayer, identity, BasemapToggle, Legend, Expand, ScaleBar, esriRequest, Extent] = modules;
+            if (!view) {
+                map = new ArcgisMap({basemap: 'satellite'});
+                view = new MapView({container, map, center: [34.38, 31.43], zoom: 10});
+                legend = new Legend({view});
+                view.ui.add(new Expand({view, content: legend, expandTooltip: 'مفتاح الخريطة'}), 'bottom-right');
+                view.ui.add(new BasemapToggle({view, nextBasemap: 'osm'}), 'top-left');
+                view.ui.add(new ScaleBar({view, unit: 'metric'}), 'bottom-left');
             }
-        });
-    }
-
-    function updateMap() {
-        if (!mapState) {
-            return;
-        }
-        mapState.view.popup.close();
-        mapState.layer.removeAll();
-        mapState.layer.addMany(previewMapFeatures(filteredRecords, data.statuses).map(feature => new mapState.Graphic(feature)));
-        mapContainer.dataset.recordCount = String(filteredRecords.length);
-        mapMessage.textContent = `${filteredRecords.length} موقع افتراضي يطابق النتائج المفلترة. المواقع تقريبية لأغراض التصميم فقط.`;
-        fitMap();
-    }
-
-    async function ensureMap() {
-        if (mapPromise) {
-            return mapPromise;
-        }
-        mapMessage.textContent = 'جارٍ تحميل الخريطة…';
-        retryMap.hidden = true;
-        mapPromise = (async () => {
-            let view;
-            try {
-                const [Map, MapView, GraphicsLayer, Graphic] = await loadArcgis();
-                const layer = new GraphicsLayer();
-                view = new MapView({ container: mapContainer, map: new Map({ basemap: 'osm', layers: [layer] }), center: [34.38, 31.43], zoom: 10 });
-                await view.when();
-                mapState = { view, layer, Graphic };
-                updateMap();
-            } catch (error) {
-                if (view) {
-                    view.destroy();
-                }
-                mapPromise = null;
-                mapState = null;
-                mapMessage.textContent = 'تعذّر تحميل الخريطة. النتائج ما زالت متاحة في الجدول؛ تحقق من الاتصال ثم أعد المحاولة.';
-                retryMap.hidden = false;
+            identity.registerToken({server: sector.url.replace(/\/\d+$/, ''), token: data.token});
+            if (!layers.has(key)) {
+                const layer = new FeatureLayer({url: sector.url, title: sector.title, definitionExpression: '1=0', minScale: 0, maxScale: 0});
+                layers.set(key, layer.load().then(() => layer).catch(error => { layers.delete(key); throw error; }));
             }
-        })();
-        return mapPromise;
-    }
-
-    function refreshResults() {
-        const invalidDates = fromDate.value && toDate.value && fromDate.value > toDate.value;
-        toDate.setCustomValidity(invalidDates ? 'تاريخ البداية يجب أن يسبق تاريخ النهاية.' : '');
-        toDate.setAttribute('aria-invalid', String(Boolean(invalidDates)));
-        find('#preview-date-error').hidden = !invalidDates;
-        if (invalidDates) {
-            return;
-        }
-        filteredRecords = filterPreviewRecords(data.records, { sector: selectedSector, governorate: governorate.value, municipality: municipality.value, from: fromDate.value, to: toDate.value, query: search.value }, data.statuses);
-        const summary = summarizePreviewRecords(filteredRecords);
-        root.querySelectorAll('[data-preview-stat]').forEach(element => {
-            element.textContent = String(summary[element.dataset.previewStat]);
-        });
-        find('#preview-result-count').textContent = `${filteredRecords.length} نتيجة`;
-        find('#preview-empty').hidden = filteredRecords.length > 0;
-        page = 1;
-        renderTable();
-        updateMap();
-    }
-
-    function refreshMunicipalities() {
-        const previous = municipality.value;
-        const options = [...new Set(data.records.filter(record => !governorate.value || record.governorate === governorate.value).map(record => record.municipality))];
-        municipality.replaceChildren(new Option('كل البلديات', ''), ...options.map(value => new Option(value, value)));
-        municipality.value = options.includes(previous) ? previous : '';
-    }
-
-    form.addEventListener('submit', event => event.preventDefault());
-    governorate.addEventListener('change', () => { refreshMunicipalities(); refreshResults(); });
-    [municipality, fromDate, toDate].forEach(element => element.addEventListener('change', refreshResults));
-    search.addEventListener('input', refreshResults);
-    root.querySelectorAll('[data-preview-sector]').forEach(tab => tab.addEventListener('shown.bs.tab', () => {
-        selectedSector = tab.dataset.previewSector;
-        refreshResults();
-    }));
-    root.querySelectorAll('[data-preview-view]').forEach(button => button.addEventListener('click', () => {
-        selectedView = button.dataset.previewView;
-        root.querySelectorAll('[data-preview-view]').forEach(item => {
-            const selected = item === button;
-            item.setAttribute('aria-pressed', String(selected));
-            item.classList.toggle('active', selected);
-            item.classList.toggle('btn-light-primary', selected);
-            item.classList.toggle('btn-light', !selected);
-        });
-        find('#preview-table-panel').hidden = selectedView !== 'table';
-        find('#preview-map-panel').hidden = selectedView !== 'map';
-        if (selectedView === 'map') {
-            if (mapState) {
-                fitMap();
-            } else {
-                ensureMap();
+            const layer = await layers.get(key);
+            if (currentRevision !== revision) return;
+            if (!layer.geometryType) {
+                message.textContent = 'بيانات هذا القطاع جدول GIS مرتبط بالمباني، ولا تحتوي على مواقع جغرافية مستقلة. افتح سجلات القطاع لعرض التفاصيل.';
+                return;
             }
+            layer.definitionExpression = buildGisWhere(layer.fields, data.filters, sector.dateField, layer.objectIdField, sector.scopeObjectIds);
+            const popupFields = popupNames.map(name => resolveGisField(layer.fields, name)).filter(Boolean);
+            layer.outFields = [...new Set([layer.objectIdField, ...popupFields.map(field => field.name)])];
+            layer.popupTemplate = {title: sector.title, content: [{type: 'fields', fieldInfos: popupFields.map(field => ({fieldName: field.name, label: field.alias || field.name}))}]};
+            const damageField = resolveGisField(layer.fields, 'building_damage_status') || resolveGisField(layer.fields, 'road_damage_level');
+            const renderer = createDamageRenderer(layer.geometryType, damageField);
+            if (renderer) layer.renderer = renderer;
+            map.add(layer);
+            legend.layerInfos = [{layer, title: sector.title}];
+            container.hidden = false;
+            await view.when();
+            await view.whenLayerView(layer);
+            const query = layer.createQuery();
+            const [count, response] = await Promise.all([
+                layer.queryFeatureCount(query),
+                esriRequest(sector.url + '/query', {
+                    query: {f: 'json', where: layer.definitionExpression, returnExtentOnly: true, outSR: 4326, token: data.token},
+                    responseType: 'json', method: 'post',
+                }),
+            ]);
+            if (currentRevision !== revision) return;
+            if (response.data.error) throw new Error('تعذّر حساب نطاق طبقة GIS.');
+            activeExtent = response.data.extent ? new Extent(response.data.extent) : null;
+            fit.disabled = !activeExtent;
+            container.dataset.featureCount = String(count);
+            message.textContent = count ? count.toLocaleString('ar') + ' عنصر جغرافي من طبقة ' + sector.title + '. اضغط على العنصر لعرض تفاصيله.' : 'لا توجد عناصر جغرافية مطابقة للفلاتر المختارة.';
+            await zoomToExtent(activeExtent);
+        } catch (error) {
+            if (currentRevision !== revision) return;
+            if (map) map.removeAll();
+            container.hidden = true;
+            message.textContent = error.message?.startsWith('طبقة GIS') || error.message?.startsWith('تاريخ') ? error.message : 'تعذّر تحميل طبقة GIS. تحقق من الاتصال وصلاحية جلسة GIS، ثم أعد المحاولة أو حدّث الصفحة.';
+            retry.hidden = false;
         }
-    }));
-    retryMap.addEventListener('click', ensureMap);
-    find('#preview-page-previous').addEventListener('click', () => { page -= 1; renderTable(); });
-    find('#preview-page-next').addEventListener('click', () => { page += 1; renderTable(); });
-    form.addEventListener('reset', event => {
-        event.preventDefault();
-        [governorate, municipality, fromDate, toDate, search].forEach(element => { element.value = ''; });
-        selectedSector = 'all';
-        refreshMunicipalities();
-        bootstrap.Tab.getOrCreateInstance(find('#preview-tab-overview')).show();
-        refreshResults();
-    });
-    refreshResults();
+    }
+    root.querySelectorAll('[data-gis-sector]').forEach(button => button.addEventListener('click', () => showSector(button.dataset.gisSector)));
+    retry.addEventListener('click', () => showSector(selected));
+    fit.addEventListener('click', () => zoomToExtent(activeExtent));
+    await showSector(selected);
 }
 
 if (typeof document !== 'undefined') {
     const root = document.getElementById('damage-dashboard-preview');
-    if (root) {
-        initializePreview(root);
-    }
+    if (root && document.getElementById('preview-gis-data')) initializeGis(root);
 }
