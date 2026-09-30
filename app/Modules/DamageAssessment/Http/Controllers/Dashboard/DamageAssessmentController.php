@@ -81,19 +81,13 @@ class DamageAssessmentController extends Controller
         '400591194',
     ];
 
-    public function preview(): ViewResponse
+    public function preview(Request $request): ViewResponse|RedirectResponse
     {
-        $arcgis = app(ArcgisService::class);
-        $token = $arcgis->getToken();
+        if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
+            return redirect()->to(app_route('audit.fieldEngineer'));
+        }
 
-        $previewLayerUrls = [
-            'buildings' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.buildings_url')),
-            'publicBuildings' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url')),
-            'roadFacilities' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url')),
-            'csoSurveys' => $this->normalizeFeatureLayerUrl((string) config('services.arcgis.cso_survey_layer_url')),
-        ];
-
-        return View::make('damage-assessment::dashboard.preview', compact('previewLayerUrls', 'token'));
+        return View::make('damage-assessment::dashboard.preview', $this->dashboardViewData($request));
     }
 
     public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
@@ -105,6 +99,18 @@ class DamageAssessmentController extends Controller
         $arcgis = app(ArcgisService::class);
         $token = $arcgis->getToken();
 
+        $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
+        $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
+
+        return View::make('damage-assessment::dashboard.damageAssessment', [
+            ...$this->dashboardViewData($request),
+            ...compact('token', 'publicBuildingLayerUrl', 'roadFacilityLayerUrl'),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function dashboardViewData(Request $request): array
+    {
         [$startDate, $endDate, $period] = $this->dashboardDateRange($request);
         $selectedNeighborhood = $request->filled('neighborhood')
             ? (string) $request->string('neighborhood')
@@ -291,8 +297,6 @@ class DamageAssessmentController extends Controller
                 ->where('unit_damage_status', '!=', '')
                 ->count(),
         ];
-        $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
-        $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
         $governorates = $this->dashboardGovernorates();
         $neighborhoods = $this->dashboardNeighborhoods();
         $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedNeighborhood');
@@ -300,27 +304,76 @@ class DamageAssessmentController extends Controller
         $dashboardCards = $this->dashboardCards($request);
         $dashboardCardItemValues = $this->dashboardCardItemValues($dashboardCards, $request);
 
-        return View::make(
-            'damage-assessment::dashboard.damageAssessment',
-            compact(
-                'token',
-                'unitStats',
-                'buildingStats',
-                'publicBuildingStats',
-                'roadFacilityStats',
-                'csoSurveyStats',
-                'csoOrganizationStats',
-                'csoUnitStats',
-                'publicBuildingLayerUrl',
-                'roadFacilityLayerUrl',
-                'governorates',
-                'neighborhoods',
-                'dashboardFilters',
-                'dashboardCards',
-                'dashboardCardItemValues',
-                'isCsoOfficerDashboard',
-            )
+        $dashboardStatLinks = $this->dashboardStatLinks();
+
+        return compact(
+            'unitStats', 'buildingStats', 'publicBuildingStats', 'roadFacilityStats',
+            'csoSurveyStats', 'csoOrganizationStats', 'csoUnitStats',
+            'governorates', 'neighborhoods', 'dashboardFilters', 'dashboardCards',
+            'dashboardCardItemValues', 'isCsoOfficerDashboard', 'dashboardStatLinks',
         );
+    }
+
+    /** @return array<string, array<string, string>> */
+    private function dashboardStatLinks(): array
+    {
+        return [
+            'buildings' => [
+                'fully_damaged' => url('damage-assessment/building').'?'.http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => 'fully_damaged']),
+                'partially_damaged' => url('damage-assessment/building').'?'.http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => 'partially_damaged']),
+                'committee_review' => url('damage-assessment/building').'?'.http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => 'committee_review']),
+                'archived_committee_review' => route('committee-archive.index').'?'.http_build_query(['record_type' => 'building']),
+                'unclassified' => url('damage-assessment/building').'?'.http_build_query(['field_status' => 'COMPLETED', 'building_damage_status' => '__blank__']),
+                'assessment_blocked' => url('damage-assessment/building').'?'.http_build_query(['assessment_obstacle' => 'yes']),
+                'bodies_present' => url('damage-assessment/building').'?'.http_build_query(['bodies_present' => 'yes3']),
+                'uxo_present' => url('damage-assessment/building').'?'.http_build_query(['uxo_present' => 'yes3']),
+                'debris_blocking' => url('damage-assessment/building').'?'.http_build_query(['building_debris_blocking' => 'yes']),
+                'completed' => url('damage-assessment/building').'?'.http_build_query(['field_status' => 'COMPLETED']),
+            ],
+            'housing' => [
+                'fully_damaged' => url('damage-assessment/housing').'?'.http_build_query(['unit_damage_status' => 'fully_damaged2']),
+                'partially_damaged' => url('damage-assessment/housing').'?'.http_build_query(['unit_damage_status' => 'partially_damaged2']),
+                'committee_review' => url('damage-assessment/housing').'?'.http_build_query(['unit_damage_status' => 'committee_review2']),
+                'archived_committee_review' => route('committee-archive.index').'?'.http_build_query(['record_type' => 'housing-unit']),
+                'no_damage' => url('damage-assessment/housing').'?'.http_build_query(['unit_damage_status' => 'no_damaged']),
+                'unclassified' => url('damage-assessment/housing').'?'.http_build_query(['unit_damage_status' => '__blank__']),
+                'assessment_blocked' => url('damage-assessment/housing').'?'.http_build_query(['security_situation_unit' => 'yes']),
+                'structural_support' => url('damage-assessment/housing').'?'.http_build_query(['unit_support_needed' => 'yes']),
+                'at_risk_of_collapse' => url('damage-assessment/housing').'?'.http_build_query(['unit_stripping' => 'yes']),
+                'habitable' => url('damage-assessment/housing').'?'.http_build_query(['is_the_housing_unit_or_living_habitable' => 'yes']),
+                'fire_affected' => url('damage-assessment/housing').'?'.http_build_query(['has_fire' => 'yes']),
+            ],
+            'public_buildings' => [
+                'damaged' => route('public-buildings.index').'?'.http_build_query(['damaged_only' => 1]),
+                'units' => route('public-buildings.index').'?'.http_build_query(['with_units' => 1]),
+                'municipalities' => route('public-buildings.index').'?'.http_build_query(['has_municipality' => 1]),
+                'neighborhoods' => route('public-buildings.index').'?'.http_build_query(['has_neighborhood' => 1]),
+                'assigned_staff' => route('public-buildings.index').'?'.http_build_query(['has_assignedto' => 1]),
+                'occupied' => route('public-buildings.index').'?'.http_build_query(['occupied_only' => 1]),
+                'bodies' => route('public-buildings.index').'?'.http_build_query(['bodies_only' => 1]),
+                'uxo' => route('public-buildings.index').'?'.http_build_query(['uxo_only' => 1]),
+            ],
+            'road_facilities' => [
+                'damaged' => route('road-facilities.index').'?'.http_build_query(['damaged_only' => 1]),
+                'undamaged' => route('road-facilities.index').'?'.http_build_query(['security_situation' => 'Unsafe']),
+                'items' => route('road-facilities.index').'?'.http_build_query(['with_items' => 1]),
+                'municipalities' => route('road-facilities.index').'?'.http_build_query(['has_municipality' => 1]),
+                'neighborhoods' => route('road-facilities.index').'?'.http_build_query(['has_neighborhood' => 1]),
+                'potholes' => route('road-facilities.index').'?'.http_build_query(['potholes_only' => 1]),
+                'buried_bodies' => route('road-facilities.index').'?'.http_build_query(['buried_bodies_only' => 1]),
+                'uxo' => route('road-facilities.index').'?'.http_build_query(['uxo_only' => 1]),
+            ],
+            'cso_surveys' => [
+                'index' => route('cso-surveys.index'),
+                'completed' => route('cso-surveys.index').'?'.http_build_query(['field_status' => 'COMPLETED']),
+                'damaged' => route('cso-surveys.index').'?'.http_build_query(['damaged_only' => 1]),
+                'organizations' => route('cso-surveys.index').'?'.http_build_query(['with_organizations' => 1]),
+                'units' => route('cso-surveys.index').'?'.http_build_query(['with_units' => 1]),
+                'without_units' => route('cso-surveys.index').'?'.http_build_query(['without_units' => 1]),
+                'without_organization' => route('cso-surveys.index').'?'.http_build_query(['without_organization' => 1]),
+                'assessment_blocked' => route('cso-surveys.index').'?'.http_build_query(['assessment_blocked' => 1]),
+            ],
+        ];
     }
 
     public function hud(Request $request): \Illuminate\View\View

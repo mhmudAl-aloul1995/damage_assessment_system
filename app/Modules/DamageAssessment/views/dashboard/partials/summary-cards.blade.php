@@ -182,6 +182,9 @@
 	};
 @endphp
 
+@if ($compactDashboardCards ?? false)
+    @include('damage-assessment::dashboard.partials.preview-summary-cards')
+@else
 <div class="row g-5 g-xl-8 damage-dashboard-stats">
 	@forelse ($dashboardCards as $dashboardCard)
 		@php
@@ -266,3 +269,5 @@
 		</div>
 	@endforelse
 </div>
+
+@endif
