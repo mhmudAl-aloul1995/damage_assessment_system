@@ -1,11 +1,11 @@
-<section class="row g-5 mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards">
+<section class="row g-3 flex-xl-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards">
     @forelse ($dashboardCards as $dashboardCard)
-        <div class="col-md-6 col-xxl-4" data-dashboard-card="{{ $dashboardCard->key }}">
+        <div class="col-12 col-md-6 col-xl" data-dashboard-card="{{ $dashboardCard->key }}">
             <article class="card card-flush h-100 border-top border-3" style="border-top-color: {{ $dashboardCard->color }} !important;">
-                <div class="card-body p-6">
-                    <div class="d-flex align-items-center gap-3 mb-5">
-                        <span class="symbol symbol-40px"><span class="symbol-label bg-light"><i class="ki-duotone {{ $dashboardCard->icon }} fs-2" style="color: {{ $dashboardCard->color }}" aria-hidden="true"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i></span></span>
-                        <h3 class="fs-5 fw-bold text-gray-900 mb-0">{{ $translateDashboardText($dashboardCard->title) }}</h3>
+                <div class="card-body p-4 p-xxl-5">
+                    <div class="d-flex align-items-center gap-2 mb-5">
+                        <span class="symbol symbol-30px"><span class="symbol-label bg-light"><i class="ki-duotone {{ $dashboardCard->icon }} fs-2" style="color: {{ $dashboardCard->color }}" aria-hidden="true"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i></span></span>
+                        <h3 class="fs-6 fw-bold text-gray-900 mb-0">{{ $translateDashboardText($dashboardCard->title) }}</h3>
                     </div>
                     <div class="fs-2hx fw-bold text-gray-900" data-dashboard-total>{{ $formatDashboardValue($dashboardStatsBuckets[$dashboardCard->source_bucket][$dashboardCard->total_stat_key] ?? 0) }}</div>
                     <p class="text-muted fs-7 mb-5">{{ $translateDashboardText($dashboardCard->subtitle) }}</p>
