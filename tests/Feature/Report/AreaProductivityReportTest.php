@@ -56,7 +56,7 @@ it('renders empty area productivity tables without tbody colspan rows', function
                                         <td colspan=');
 });
 
-it('counts archived technical committee buildings in area productivity reports for historical date filters', function (): void {
+it('excludes archived technical committee buildings from homepage-aligned totals', function (): void {
     $user = User::factory()->create();
     $user->assignRole('Database Officer');
 
@@ -73,6 +73,7 @@ it('counts archived technical committee buildings in area productivity reports f
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-08-15 10:00:00',
         'end' => '2026-08-15 10:00:00',
+        'submission_date' => '2026-08-15 10:00:00',
     ]);
 
     BuildingSurveyArchiveObject::query()->create([
@@ -102,29 +103,22 @@ it('counts archived technical committee buildings in area productivity reports f
         ->assertOk();
 
     $response->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 1
-            && $summary['cra'] === 1
+        return $summary['total_records'] === 0
+            && $summary['cra'] === 0
             && $summary['tda'] === 0;
     });
 
-    $response->assertViewHas('rows', function ($rows): bool {
-        $rimal = $rows->firstWhere('neighborhood', 'Rimal');
-
-        return $rimal !== null
-            && (int) $rimal->total_count === 1
-            && (int) $rimal->cra_range === 1
-            && (int) $rimal->tda_range === 0;
-    });
+    $response->assertViewHas('rows', fn ($rows): bool => $rows->isEmpty());
 
     $exportRows = app(AreaProductivityReportService::class)->exportRows(AreaProductivityReportService::TYPE_BUILDINGS, [
         'start_date' => '2026-04-01',
         'end_date' => '2026-04-30',
     ]);
 
-    expect((int) $exportRows->firstWhere('neighborhood', 'Rimal')->cra_range)->toBe(1);
+    expect($exportRows)->toBeEmpty();
 });
 
-it('counts archived technical committee housing units in area productivity reports for historical date filters', function (): void {
+it('excludes archived technical committee housing units from homepage-aligned totals', function (): void {
     $user = User::factory()->create();
     $user->assignRole('Database Officer');
 
@@ -141,6 +135,7 @@ it('counts archived technical committee housing units in area productivity repor
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-08-15 10:00:00',
         'end' => '2026-08-15 10:00:00',
+        'submission_date' => '2026-08-15 10:00:00',
     ]);
 
     AuditedHousingUnit::query()->create([
@@ -185,26 +180,79 @@ it('counts archived technical committee housing units in area productivity repor
         ->assertOk();
 
     $response->assertViewHas('summary', function (array $summary): bool {
-        return $summary['total_records'] === 1
-            && $summary['cra'] === 1
+        return $summary['total_records'] === 0
+            && $summary['cra'] === 0
             && $summary['pda'] === 0;
     });
 
-    $response->assertViewHas('rows', function ($rows): bool {
-        $rimal = $rows->firstWhere('neighborhood', 'Rimal');
-
-        return $rimal !== null
-            && (int) $rimal->total_count === 1
-            && (int) $rimal->cra_range === 1
-            && (int) $rimal->pda_range === 0;
-    });
+    $response->assertViewHas('rows', fn ($rows): bool => $rows->isEmpty());
 
     $exportRows = app(AreaProductivityReportService::class)->exportRows(AreaProductivityReportService::TYPE_HOUSING_UNITS, [
         'start_date' => '2026-04-01',
         'end_date' => '2026-04-30',
     ]);
 
-    expect((int) $exportRows->firstWhere('neighborhood', 'Rimal')->cra_range)->toBe(1);
+    expect($exportRows)->toBeEmpty();
+});
+
+it('matches homepage totals for completed buildings and all audited housing units', function (): void {
+    foreach ([
+        [7301, 'homepage-building-full', 'fully_damaged2', 'COMPLETED'],
+        [7302, 'homepage-building-partial', 'partial_damage', 'COMPLETED'],
+        [7303, 'homepage-building-no-damage', 'No_Damage', 'COMPLETED'],
+        [7304, 'homepage-building-other', 'unexpected_status', 'COMPLETED'],
+        [7305, 'homepage-building-incomplete', 'fully_damaged', 'IN_PROGRESS'],
+    ] as [$objectId, $globalId, $damageStatus, $fieldStatus]) {
+        AuditedBuilding::query()->create([
+            'objectid' => $objectId,
+            'globalid' => $globalId,
+            'building_name' => $globalId,
+            'assignedto' => 'homepage-engineer',
+            'building_damage_status' => $damageStatus,
+            'governorate' => 'Gaza',
+            'municipalitie' => 'Gaza',
+            'neighborhood' => 'Homepage Area',
+            'zone_code' => 'Z-Homepage',
+            'field_status' => $fieldStatus,
+            'submission_date' => '2026-09-01 10:00:00',
+        ]);
+    }
+
+    foreach ([
+        [7401, 'homepage-unit-full', 'homepage-building-full', 'fully_damaged2'],
+        [7402, 'homepage-unit-partial', 'homepage-building-full', 'partially_damaged2'],
+        [7403, 'homepage-unit-no-damage', 'homepage-building-partial', 'no_damaged'],
+        [7404, 'homepage-unit-other', 'homepage-building-no-damage', 'unexpected_status'],
+        [7405, 'homepage-unit-unclassified', 'homepage-building-other', null],
+        [7406, 'homepage-unit-orphan', 'missing-building', 'unexpected_status'],
+    ] as [$objectId, $globalId, $parentGlobalId, $damageStatus]) {
+        AuditedHousingUnit::query()->create([
+            'objectid' => $objectId,
+            'globalid' => $globalId,
+            'parentglobalid' => $parentGlobalId,
+            'unit_damage_status' => $damageStatus,
+            'governorate' => 'Gaza',
+            'municipalitie' => 'Gaza',
+            'neighborhood' => 'Homepage Area',
+            'building_submit_date' => '2026-09-01 10:00:00',
+        ]);
+    }
+
+    $service = app(AreaProductivityReportService::class);
+    $buildingReport = $service->build(AreaProductivityReportService::TYPE_BUILDINGS, []);
+    $housingUnitReport = $service->build(AreaProductivityReportService::TYPE_HOUSING_UNITS, []);
+
+    expect($buildingReport['summary']['total_records'])
+        ->toBe(AuditedBuilding::query()->where('field_status', 'COMPLETED')->count())
+        ->and($buildingReport['summary']['tda'])->toBe(1)
+        ->and($buildingReport['summary']['pda'])->toBe(1)
+        ->and($buildingReport['summary']['no_damage'])->toBe(1)
+        ->and($housingUnitReport['summary']['total_records'])
+        ->toBe(AuditedHousingUnit::query()->count())
+        ->and($housingUnitReport['summary']['tda'])->toBe(1)
+        ->and($housingUnitReport['summary']['pda'])->toBe(1)
+        ->and($housingUnitReport['summary']['no_damage'])->toBe(1)
+        ->and($housingUnitReport['summary']['unclassified'])->toBe(1);
 });
 
 it('maps cso damage status values into shared report buckets', function (): void {
@@ -468,6 +516,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-10 10:00:00',
         'end' => '2026-04-10 10:00:00',
+        'submission_date' => '2026-04-10 10:00:00',
     ]);
 
     AuditedBuilding::query()->create([
@@ -483,6 +532,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-11 10:00:00',
         'end' => '2026-04-11 10:00:00',
+        'submission_date' => '2026-04-11 10:00:00',
     ]);
 
     AuditedBuilding::query()->create([
@@ -498,6 +548,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-11 10:00:00',
         'end' => '2026-04-11 10:00:00',
+        'submission_date' => '2026-04-11 10:00:00',
     ]);
 
     AuditedBuilding::query()->create([
@@ -513,6 +564,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-04-12 10:00:00',
         'end' => '2026-04-12 10:00:00',
+        'submission_date' => '2026-04-12 10:00:00',
     ]);
 
     AuditedBuilding::query()->create([
@@ -528,6 +580,7 @@ it('renders separated area productivity reports for all supported datasets with 
         'field_status' => 'COMPLETED',
         'creationdate' => '2026-03-13 10:00:00',
         'end' => '2026-04-13 10:00:00',
+        'submission_date' => '2026-04-13 10:00:00',
     ]);
 
     AuditedHousingUnit::query()->create([

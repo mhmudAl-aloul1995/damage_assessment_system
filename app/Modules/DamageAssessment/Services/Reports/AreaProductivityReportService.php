@@ -35,58 +35,38 @@ class AreaProductivityReportService
     /**
      * @var list<string>
      */
-    private const HOUSING_UNIT_PRODUCTIVITY_STATUSES = [
+    private const BUILDING_FULL_DAMAGE_STATUSES = [
+        'fully_damaged',
         'fully_damaged2',
+        'totally_damaged',
+        'total_damage',
+        'totally',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const BUILDING_PARTIAL_DAMAGE_STATUSES = [
+        'partially_damaged',
         'partially_damaged2',
+        'partial_damage',
+        'partial',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const BUILDING_NO_DAMAGE_STATUSES = [
+        'no_damage',
+        'no_damage2',
         'no_damaged',
-        'committee_review2',
-        'committee_review',
-        'commite_review',
-        'commitee_review2',
-        'commitee_review',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    private const BUILDING_COMMITTEE_STATUSES = [
-        'committee_review',
-        'commite_review',
-        'commitee_review',
-        'committee_review2',
-        'commitee_review2',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    private const UNIT_COMMITTEE_STATUSES = [
-        'committee_review2',
-        'committee_review',
-        'commite_review',
-        'commitee_review2',
-        'commitee_review',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    private const COMMITTEE_ARCHIVE_SOURCE_TYPES = [
-        'committee_decision',
-        'temporary_committee_excel_archive',
     ];
 
     public function build(string $type, array $filters): array
     {
         $definition = $this->definition($type);
         $dateRange = $this->resolveDateRange($filters);
-        $rows = $this->withArchivedCommitteeProductivity(
-            $type,
-            $this->groupedQuery($type, $filters, $dateRange['from'], $dateRange['to'])->get(),
-            $filters,
-            $dateRange['from'],
-            $dateRange['to'],
-        );
+        $rows = $this->groupedQuery($type, $filters, $dateRange['from'], $dateRange['to'])->get();
 
         $csoDetails = $type === self::TYPE_CSO_SURVEYS
             ? $this->csoDetails($filters, $dateRange['from'], $dateRange['to'])
@@ -170,13 +150,8 @@ class AreaProductivityReportService
         $definition = $this->definition($type);
         $dateRange = $this->resolveDateRange($filters);
 
-        return $this->withArchivedCommitteeProductivity(
-            $type,
-            $this->groupedQuery($type, $filters, $dateRange['from'], $dateRange['to'])->get(),
-            $filters,
-            $dateRange['from'],
-            $dateRange['to'],
-        )
+        return $this->groupedQuery($type, $filters, $dateRange['from'], $dateRange['to'])
+            ->get()
             ->map(function (object $row) use ($definition) {
                 $row->Sector = __($definition['sector_key']);
 
@@ -198,28 +173,25 @@ class AreaProductivityReportService
 
     private function housingUnitsQuery(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Builder
     {
-        $groupKey = $this->normalizedGroupExpression('buildings.neighborhood');
+        $governorateExpression = "COALESCE(NULLIF(TRIM(buildings.governorate), ''), housing_units.governorate)";
+        $municipalityExpression = "COALESCE(NULLIF(TRIM(buildings.municipalitie), ''), housing_units.municipalitie)";
+        $neighborhoodExpression = "COALESCE(NULLIF(TRIM(buildings.neighborhood), ''), housing_units.neighborhood)";
+        $groupKey = $this->normalizedGroupExpression($neighborhoodExpression);
 
         $query = AuditedHousingUnit::query()
             ->from('audited_housing_units as housing_units')
-            ->join('audited_buildings as buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
+            ->leftJoin('audited_buildings as buildings', 'housing_units.parentglobalid', '=', 'buildings.globalid')
             ->selectRaw("
-                {$this->preferredValueExpression('buildings.governorate')} as governorate,
-                {$this->preferredValueExpression('buildings.municipalitie')} as municipalitie,
-                {$this->preferredValueExpression('buildings.neighborhood')} as neighborhood,
+                {$this->preferredValueExpression($governorateExpression)} as governorate,
+                {$this->preferredValueExpression($municipalityExpression)} as municipalitie,
+                {$this->preferredValueExpression($neighborhoodExpression)} as neighborhood,
                 COUNT(DISTINCT buildings.assignedto) as no_eng,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'fully_damaged2' THEN 1 ELSE 0 END) as tda_range,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'partially_damaged2' THEN 1 ELSE 0 END) as pda_range,
                 SUM(CASE WHEN housing_units.unit_damage_status = 'no_damaged' THEN 1 ELSE 0 END) as no_damage_count,
                 SUM(CASE WHEN housing_units.unit_damage_status IN ('committee_review2', 'committee_review', 'commite_review', 'commitee_review2', 'commitee_review') THEN 1 ELSE 0 END) as cra_range,
                 SUM(CASE WHEN housing_units.unit_damage_status IS NULL OR TRIM(housing_units.unit_damage_status) = '' THEN 1 ELSE 0 END) as unclassified_count,
-                SUM(CASE
-                    WHEN housing_units.unit_damage_status IN ('".implode("', '", self::HOUSING_UNIT_PRODUCTIVITY_STATUSES)."')
-                        OR housing_units.unit_damage_status IS NULL
-                        OR TRIM(housing_units.unit_damage_status) = ''
-                    THEN 1
-                    ELSE 0
-                END) as total_count
+                COUNT(*) as total_count
             ")
             ->groupByRaw($groupKey)
             ->orderByDesc('total_count');
@@ -227,7 +199,7 @@ class AreaProductivityReportService
         app(PhaseContext::class)->applyToEloquent($query, 'buildings.phase_number');
 
         $this->applyFilters($query, $filters, [
-            'governorate' => 'buildings.governorate',
+            'governorate' => 'housing_units.governorate',
             'municipalitie' => 'buildings.municipalitie',
             'neighborhood' => 'buildings.neighborhood',
             'zone_code' => 'buildings.zone_code',
@@ -253,17 +225,12 @@ class AreaProductivityReportService
                 {$this->preferredValueExpression('buildings.municipalitie')} as municipalitie,
                 {$this->preferredValueExpression('buildings.neighborhood')} as neighborhood,
                 COUNT(DISTINCT buildings.assignedto) as no_eng,
-                SUM(CASE WHEN buildings.building_damage_status = 'fully_damaged' THEN 1 ELSE 0 END) as tda_range,
-                SUM(CASE WHEN buildings.building_damage_status = 'partially_damaged' THEN 1 ELSE 0 END) as pda_range,
-                SUM(CASE WHEN buildings.building_damage_status IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
+                SUM(CASE WHEN LOWER(TRIM(COALESCE(buildings.building_damage_status, ''))) IN ('".implode("', '", self::BUILDING_FULL_DAMAGE_STATUSES)."') THEN 1 ELSE 0 END) as tda_range,
+                SUM(CASE WHEN LOWER(TRIM(COALESCE(buildings.building_damage_status, ''))) IN ('".implode("', '", self::BUILDING_PARTIAL_DAMAGE_STATUSES)."') THEN 1 ELSE 0 END) as pda_range,
+                SUM(CASE WHEN LOWER(TRIM(COALESCE(buildings.building_damage_status, ''))) IN ('".implode("', '", self::BUILDING_NO_DAMAGE_STATUSES)."') THEN 1 ELSE 0 END) as no_damage_count,
+                SUM(CASE WHEN LOWER(TRIM(COALESCE(buildings.building_damage_status, ''))) IN ('committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2') THEN 1 ELSE 0 END) as cra_range,
                 SUM(CASE WHEN buildings.building_damage_status IS NULL OR TRIM(buildings.building_damage_status) = '' THEN 1 ELSE 0 END) as unclassified_count,
-                SUM(CASE
-                    WHEN buildings.building_damage_status IN ('fully_damaged', 'partially_damaged', 'committee_review', 'commite_review', 'commitee_review', 'committee_review2', 'commitee_review2')
-                        OR buildings.building_damage_status IS NULL
-                        OR TRIM(buildings.building_damage_status) = ''
-                    THEN 1
-                    ELSE 0
-                END) as total_count,
+                COUNT(*) as total_count,
                 COALESCE(MAX(filtered_housing_units.housing_units_count), 0) as housing_units_count
             ")
             ->groupByRaw($groupKey)
@@ -277,7 +244,7 @@ class AreaProductivityReportService
             'neighborhood' => 'buildings.neighborhood',
             'zone_code' => 'buildings.zone_code',
             'assignedto' => 'buildings.assignedto',
-        ], 'buildings.end', $fromDate, $toDate);
+        ], 'buildings.submission_date', $fromDate, $toDate);
 
         return $query;
     }
@@ -565,175 +532,6 @@ class AreaProductivityReportService
             'cso_units_count' => (int) $rows->sum('cso_units_count'),
             'engineers' => (int) $rows->sum('no_eng'),
         ];
-    }
-
-    /**
-     * @param  Collection<int, object>  $rows
-     * @return Collection<int, object>
-     */
-    private function withArchivedCommitteeProductivity(string $type, Collection $rows, array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
-    {
-        if (! in_array($type, [self::TYPE_BUILDINGS, self::TYPE_HOUSING_UNITS], true) || ! Schema::hasTable('building_survey_archive_objects')) {
-            return $rows;
-        }
-
-        $archiveRows = $type === self::TYPE_BUILDINGS
-            ? $this->archivedCommitteeBuildingRows($filters, $fromDate, $toDate)
-            : $this->archivedCommitteeHousingUnitRows($filters, $fromDate, $toDate);
-
-        foreach ($archiveRows as $archiveRow) {
-            $key = $this->groupKeyFromRow($archiveRow);
-            $row = $rows->first(fn (object $existingRow): bool => $this->groupKeyFromRow($existingRow) === $key);
-
-            if ($row === null) {
-                $row = $this->emptyAreaProductivityRow($archiveRow);
-                $rows->push($row);
-            }
-
-            $archivedCount = (int) ($archiveRow->archived_committee_count ?? 0);
-            $row->cra_range = (int) ($row->cra_range ?? 0) + $archivedCount;
-            $row->total_count = (int) ($row->total_count ?? 0) + $archivedCount;
-            $row->no_eng = max((int) ($row->no_eng ?? 0), (int) ($archiveRow->archived_no_eng ?? 0));
-        }
-
-        return $rows
-            ->sortByDesc(fn (object $row): int => (int) ($row->total_count ?? 0))
-            ->values();
-    }
-
-    /**
-     * @return Collection<int, object>
-     */
-    private function archivedCommitteeBuildingRows(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
-    {
-        $snapshotColumn = 'building_snapshot';
-        $neighborhoodExpression = $this->jsonValueExpression('archive', $snapshotColumn, 'neighborhood');
-        $assignedExpression = $this->jsonValueExpression('archive', $snapshotColumn, 'assignedto');
-        $groupKey = $this->normalizedGroupExpression($neighborhoodExpression);
-
-        $query = DB::table('building_survey_archive_objects as archive')
-            ->whereNull('archive.housing_unit_objectid')
-            ->whereIn('archive.source_type', self::COMMITTEE_ARCHIVE_SOURCE_TYPES)
-            ->whereIn('archive.building_snapshot->building_damage_status', self::BUILDING_COMMITTEE_STATUSES)
-            ->selectRaw("
-                {$this->preferredValueExpression($this->jsonValueExpression('archive', $snapshotColumn, 'governorate'))} as governorate,
-                {$this->preferredValueExpression($this->jsonValueExpression('archive', $snapshotColumn, 'municipalitie'))} as municipalitie,
-                {$this->preferredValueExpression($neighborhoodExpression)} as neighborhood,
-                COUNT(DISTINCT NULLIF(TRIM({$assignedExpression}), '')) as archived_no_eng,
-                COUNT(DISTINCT archive.building_objectid) as archived_committee_count
-            ")
-            ->groupByRaw($groupKey);
-
-        $this->applyArchiveFilters($query, $filters, $snapshotColumn, ['building_snapshot->end', 'building_snapshot->submission_date'], $fromDate, $toDate);
-
-        return $query->get();
-    }
-
-    /**
-     * @return Collection<int, object>
-     */
-    private function archivedCommitteeHousingUnitRows(array $filters, ?Carbon $fromDate, ?Carbon $toDate): Collection
-    {
-        $buildingSnapshotColumn = 'building_snapshot';
-        $unitSnapshotColumn = 'housing_unit_snapshot';
-        $neighborhoodExpression = $this->jsonValueExpression('archive', $buildingSnapshotColumn, 'neighborhood');
-        $assignedExpression = $this->jsonValueExpression('archive', $buildingSnapshotColumn, 'assignedto');
-        $groupKey = $this->normalizedGroupExpression($neighborhoodExpression);
-
-        $query = DB::table('building_survey_archive_objects as archive')
-            ->whereNotNull('archive.housing_unit_objectid')
-            ->whereIn('archive.source_type', self::COMMITTEE_ARCHIVE_SOURCE_TYPES)
-            ->whereIn('archive.housing_unit_snapshot->unit_damage_status', self::UNIT_COMMITTEE_STATUSES)
-            ->selectRaw("
-                {$this->preferredValueExpression($this->jsonValueExpression('archive', $buildingSnapshotColumn, 'governorate'))} as governorate,
-                {$this->preferredValueExpression($this->jsonValueExpression('archive', $buildingSnapshotColumn, 'municipalitie'))} as municipalitie,
-                {$this->preferredValueExpression($neighborhoodExpression)} as neighborhood,
-                COUNT(DISTINCT NULLIF(TRIM({$assignedExpression}), '')) as archived_no_eng,
-                COUNT(DISTINCT archive.housing_unit_objectid) as archived_committee_count
-            ")
-            ->groupByRaw($groupKey);
-
-        $this->applyArchiveFilters($query, $filters, $buildingSnapshotColumn, ["{$unitSnapshotColumn}->building_submit_date"], $fromDate, $toDate);
-
-        return $query->get();
-    }
-
-    /**
-     * @param  array<int, string>  $datePaths
-     */
-    private function applyArchiveFilters(\Illuminate\Database\Query\Builder $query, array $filters, string $snapshotColumn, array $datePaths, ?Carbon $fromDate, ?Carbon $toDate): void
-    {
-        foreach ([
-            'governorate' => 'governorate',
-            'municipalitie' => 'municipalitie',
-            'neighborhood' => 'neighborhood',
-            'zone_code' => 'zone_code',
-            'assignedto' => 'assignedto',
-        ] as $filterKey => $snapshotKey) {
-            $values = $this->filterValues($filters[$filterKey] ?? null);
-
-            if ($values === []) {
-                continue;
-            }
-
-            $query->whereIn("archive.{$snapshotColumn}->{$snapshotKey}", $values);
-        }
-
-        $phase = app(PhaseContext::class)->selected();
-
-        if ($phase !== null) {
-            $query->where("archive.{$snapshotColumn}->phase_number", $phase);
-        }
-
-        if ($fromDate && $toDate) {
-            $query->where(function (\Illuminate\Database\Query\Builder $dateQuery) use ($datePaths, $fromDate, $toDate): void {
-                foreach ($datePaths as $index => $datePath) {
-                    $method = $index === 0 ? 'where' : 'orWhere';
-
-                    $dateQuery->{$method}(function (\Illuminate\Database\Query\Builder $pathQuery) use ($datePath, $fromDate, $toDate): void {
-                        $pathQuery->whereBetween("archive.{$datePath}", [$fromDate->copy()->startOfDay(), $toDate->copy()->endOfDay()]);
-                    });
-                }
-            });
-        }
-    }
-
-    private function emptyAreaProductivityRow(object $source): object
-    {
-        return (object) [
-            'governorate' => $source->governorate ?? '',
-            'municipalitie' => $source->municipalitie ?? '',
-            'neighborhood' => $source->neighborhood ?? '',
-            'no_eng' => 0,
-            'tda_range' => 0,
-            'pda_range' => 0,
-            'cra_range' => 0,
-            'destroyed_count' => 0,
-            'severe_count' => 0,
-            'moderate_count' => 0,
-            'minor_count' => 0,
-            'no_damage_count' => 0,
-            'unclassified_count' => 0,
-            'total_count' => 0,
-            'total_road_length_km' => 0.0,
-            'housing_units_count' => 0,
-        ];
-    }
-
-    private function groupKeyFromRow(object $row): string
-    {
-        return mb_strtolower(trim((string) ($row->neighborhood ?? '')));
-    }
-
-    private function jsonValueExpression(string $tableAlias, string $jsonColumn, string $key): string
-    {
-        $path = '$."'.str_replace('"', '\"', $key).'"';
-
-        if (DB::connection()->getDriverName() === 'sqlite') {
-            return "json_extract({$tableAlias}.{$jsonColumn}, '{$path}')";
-        }
-
-        return "JSON_UNQUOTE(JSON_EXTRACT({$tableAlias}.{$jsonColumn}, '{$path}'))";
     }
 
     private function resolveDateRange(array $filters): array

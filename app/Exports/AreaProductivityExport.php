@@ -103,7 +103,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                     ? [
                         __('multilingual.area_productivity_reports.columns.tda'),
                         __('multilingual.area_productivity_reports.columns.pda'),
-                        ...($this->isCsoSurveysReport() ? [__('multilingual.area_productivity_reports.columns.no_damage')] : []),
+                        __('multilingual.area_productivity_reports.columns.no_damage'),
                         __('multilingual.area_productivity_reports.columns.cra'),
                         __('multilingual.area_productivity_reports.columns.unclassified'),
                     ]
@@ -166,7 +166,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
                     ? [
                         $row->tda_range ?? 0,
                         $row->pda_range ?? 0,
-                        ...($this->isCsoSurveysReport() ? [$row->no_damage_count ?? 0] : []),
+                        $row->no_damage_count ?? 0,
                         $row->cra_range ?? 0,
                         $row->unclassified_count ?? 0,
                     ]
@@ -295,7 +295,7 @@ class AreaProductivityExport implements FromCollection, ShouldAutoSize, WithColu
         }
 
         if ($this->isBuildingsReport()) {
-            return 'K';
+            return 'L';
         }
 
         if ($this->isCsoSurveysReport()) {

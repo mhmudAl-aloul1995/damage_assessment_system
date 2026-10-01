@@ -60,7 +60,7 @@
         $hasAdvancedFilters = collect($filters)->flatten()->filter()->isNotEmpty();
         $showMainLocationTab = $showLocationPies && ! $showCsoSurveyColumns;
         $showTabbedContent = $showMainLocationTab || $showCsoSurveyColumns;
-        $emptyTableColspan = ($showRoadDamageColumns || $showCsoSurveyColumns) ? 13 : (($showAuditedBuildingColumns || $showAuditedHousingUnitColumns) ? 11 : 9);
+        $emptyTableColspan = ($showRoadDamageColumns || $showCsoSurveyColumns) ? 13 : ($showAuditedBuildingColumns ? 12 : ($showAuditedHousingUnitColumns ? 11 : 9));
     @endphp
 
     <style>
@@ -714,6 +714,7 @@
                                     @elseif ($showAuditedBuildingColumns)
                                         <th>{{ __('multilingual.area_productivity_reports.columns.tda') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.pda') }}</th>
+                                        <th>{{ __('multilingual.area_productivity_reports.columns.no_damage') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.cra') }}</th>
                                         <th>{{ __('multilingual.area_productivity_reports.columns.unclassified') }}</th>
                                     @else
@@ -764,6 +765,7 @@
                                         @elseif ($showAuditedBuildingColumns)
                                             <td>{{ $row->tda_range }}</td>
                                             <td>{{ $row->pda_range }}</td>
+                                            <td>{{ $row->no_damage_count ?? 0 }}</td>
                                             <td>{{ $row->cra_range }}</td>
                                             <td>{{ $row->unclassified_count ?? 0 }}</td>
                                         @else
@@ -814,6 +816,7 @@
                                     @elseif ($showAuditedBuildingColumns)
                                         <td class="text-danger">{{ $summary['tda'] }}</td>
                                         <td class="text-warning">{{ $summary['pda'] }}</td>
+                                        <td class="text-success">{{ $summary['no_damage'] }}</td>
                                         <td class="text-primary">{{ $summary['cra'] }}</td>
                                         <td>{{ $summary['unclassified'] }}</td>
                                     @else
@@ -1156,6 +1159,7 @@
                     cells.push(numberFormat(row.housing_units_count));
                     cells.push(numberFormat(row.tda_range));
                     cells.push(numberFormat(row.pda_range));
+                    cells.push(numberFormat(row.no_damage_count));
                     cells.push(numberFormat(row.cra_range));
                     cells.push(numberFormat(row.unclassified_count));
                 } else if (isHousingUnitsReport) {
@@ -1205,6 +1209,7 @@
                     footerCells.eq(index++).text(numberFormat(summary.housing_units_count));
                     footerCells.eq(index++).text(numberFormat(summary.tda));
                     footerCells.eq(index++).text(numberFormat(summary.pda));
+                    footerCells.eq(index++).text(numberFormat(summary.no_damage));
                     footerCells.eq(index++).text(numberFormat(summary.cra));
                     footerCells.eq(index++).text(numberFormat(summary.unclassified));
                 } else if (isHousingUnitsReport) {
