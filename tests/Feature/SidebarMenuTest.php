@@ -143,7 +143,6 @@ it('groups visible sidebar sections by module', function () {
     expect($damageAssessmentModule['sections']->pluck('title')->all())
         ->toContain(
             'menu.damage_assessment.dashboard',
-            'menu.hud.title',
             'menu.damage_assessment.buildings',
             'menu.damage_assessment.housing_units',
             'menu.damage_assessment.public_buildings',
@@ -173,7 +172,6 @@ it('orders damage assessment sidebar sections by sector first', function () {
 
     expect($sectionTitles)->toMatchArray([
         'menu.damage_assessment.dashboard',
-        'menu.hud.title',
         'menu.damage_assessment.buildings',
         'menu.damage_assessment.housing_units',
         'menu.damage_assessment.public_buildings',
@@ -197,7 +195,7 @@ it('groups damage assessment navigation into clear ux sections', function () {
         ->all();
 
     expect($navigationGroups)->toBe([
-        'menu.navigation_groups.overview',
+        null,
         'menu.navigation_groups.sectors',
         'menu.navigation_groups.operations',
     ]);
@@ -284,27 +282,21 @@ it('opens sector links on the first tool available to specialist roles', functio
         ->toContain('damage-assessment/inf-audit/public-buildings');
 });
 
-it('places the main page and hud above damage assessment sectors', function () {
+it('places the main page alone above damage assessment sectors', function () {
     $role = Role::findOrCreate('Area Manager', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
     $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
     $mainSection = $damageAssessmentModule['sections']->firstWhere('title', 'menu.damage_assessment.dashboard');
-    $hudSection = $damageAssessmentModule['sections']->firstWhere('title', 'menu.hud.title');
     $sectionTitles = $damageAssessmentModule['sections']->pluck('title')->all();
 
     expect($sectionTitles[0])->toBe('menu.damage_assessment.dashboard')
-        ->and($sectionTitles[1])->toBe('menu.hud.title')
+        ->and($sectionTitles)->not->toContain('menu.hud.title')
         ->and($sectionTitles)->toContain('menu.damage_assessment.buildings')
         ->and($mainSection['is_direct'])->toBeTrue()
         ->and($mainSection['url'])->toBe('damage-assessment/damageAssessment')
-        ->and(array_search('menu.hud.title', $sectionTitles, true))
-        ->toBeLessThan(array_search('menu.damage_assessment.buildings', $sectionTitles, true))
-        ->and($hudSection['is_direct'])->toBeTrue()
-        ->and($hudSection['variant'])->toBe('hud')
-        ->and($hudSection['url'])->toBe('damage-assessment/damageAssessment/hud')
-        ->and($hudSection['items'])->toBeEmpty();
+        ->and($mainSection['items'])->toBeEmpty();
 });
 
 it('hides hud from auditors and field engineers', function (string $roleName) {

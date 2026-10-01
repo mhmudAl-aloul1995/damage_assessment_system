@@ -3,7 +3,6 @@
 return [
     [
         'module' => 'damage_assessment',
-        'navigation_group' => 'menu.navigation_groups.overview',
         'title' => 'menu.damage_assessment.dashboard',
         'icon' => 'ki-element-11',
         'url' => 'damage-assessment/damageAssessment',
@@ -11,19 +10,6 @@ return [
         'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'],
         'active_patterns' => [
             'damage-assessment/damageAssessment',
-        ],
-    ],
-    [
-        'module' => 'damage_assessment',
-        'navigation_group' => 'menu.navigation_groups.overview',
-        'title' => 'menu.hud.title',
-        'icon' => 'ki-chart-pie-4',
-        'variant' => 'hud',
-        'url' => 'damage-assessment/damageAssessment/hud',
-        'pattern' => 'damage-assessment/damageAssessment/hud*',
-        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager'],
-        'active_patterns' => [
-            'damage-assessment/damageAssessment/hud*',
         ],
     ],
     [
