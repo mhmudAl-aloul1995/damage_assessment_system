@@ -13,7 +13,9 @@ use App\Models\RoadFacilitySurvey;
 use App\Models\User;
 use App\Support\Navigation\SectorNavigation;
 use App\Support\Navigation\Sidebar;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -78,7 +80,7 @@ it('counts current building and unit approvals and locates units at their parent
     $filters = ['sector' => 'housing-units', 'municipality' => 'Gaza'];
     $this->getJson(route('sector-overview.stats', $filters))->assertJsonPath('summary.total', 1)
         ->assertJsonPath('summary.completed', 1)->assertJsonPath('summary.approved', 1)->assertJsonPath('damage.fully_damaged', 1);
-    $this->getJson(route('sector-overview.map', $filters))->assertJsonPath('features.0.geometry.x', 34.4)
+    $this->getJson(route('sector-overview.map', $filters))->assertOk()->assertJsonPath('features.0.geometry.x', 34.4)
         ->assertJsonPath('features.0.attributes.municipality', 'Gaza');
 });
 
@@ -112,6 +114,37 @@ it('paginates map records without losing or duplicating a record', function (): 
     expect($last->json('features.0.attributes.objectid'))->toBe(501);
 });
 
+it('maps buildings and their housing units when the legacy buildings table has no location column', function (): void {
+    if (Schema::hasColumn('buildings', 'location')) {
+        Schema::table('buildings', fn (Blueprint $table) => $table->dropColumn('location'));
+    }
+    Building::query()->forceCreate(['objectid' => 1101, 'globalid' => 'legacy-building', 'latitude' => 31.5, 'longitude' => 34.4]);
+    HousingUnit::query()->forceCreate(['objectid' => 1102, 'globalid' => 'legacy-unit', 'parentglobalid' => 'legacy-building']);
+
+    foreach (['buildings', 'housing-units'] as $sector) {
+        $this->getJson(route('sector-overview.map', $sector))->assertOk()->assertJsonCount(1, 'features')
+            ->assertJsonPath('features.0.geometry.x', 34.4)->assertJsonPath('features.0.geometry.y', 31.5)
+            ->assertJsonPath('features.0.geometry.spatialReference.wkid', 4326);
+    }
+});
+
+it('maps stored geometries when latitude and longitude columns are absent', function (): void {
+    Schema::table('cso_surveys', fn (Blueprint $table) => $table->dropColumn(['latitude', 'longitude']));
+    CsoSurvey::query()->create(['objectid' => 1201, 'location' => json_encode(['x' => 34.4, 'y' => 31.5, 'spatialReference' => ['wkid' => 4326]])]);
+
+    $this->getJson(route('sector-overview.map', 'cso-surveys'))->assertOk()->assertJsonCount(1, 'features')
+        ->assertJsonPath('features.0.geometry.x', 34.4);
+});
+
+it('returns an empty map rather than an error when a legacy table has no geographic columns', function (): void {
+    $geographicColumns = array_values(array_intersect(['location', 'latitude', 'longitude'], Schema::getColumnListing('buildings')));
+    Schema::table('buildings', fn (Blueprint $table) => $table->dropColumn($geographicColumns));
+    Building::query()->forceCreate(['objectid' => 1301, 'globalid' => 'unlocated-building']);
+
+    $this->getJson(route('sector-overview.map', 'buildings'))->assertOk()->assertJsonCount(0, 'features')
+        ->assertJsonPath('scanned', 1)->assertJsonPath('next_cursor', null);
+});
+
 it('respects the selected phase for stats maps and municipality options', function (): void {
     Building::query()->forceCreate(['objectid' => 801, 'globalid' => 'phase-one', 'phase_number' => 1, 'municipalitie' => 'phase-one', 'field_status' => 'COMPLETED', 'latitude' => 31.5, 'longitude' => 34.4]);
     Building::query()->forceCreate(['objectid' => 802, 'globalid' => 'phase-two', 'phase_number' => 2, 'municipalitie' => 'phase-two', 'field_status' => 'COMPLETED', 'latitude' => 31.5, 'longitude' => 34.4]);
@@ -120,7 +153,7 @@ it('respects the selected phase for stats maps and municipality options', functi
     }
     $this->withSession(['selected_phase_number' => 1]);
     $this->getJson(route('sector-overview.stats', 'housing-units'))->assertJsonPath('summary.total', 1);
-    $this->getJson(route('sector-overview.map', 'housing-units'))->assertJsonCount(1, 'features')->assertJsonPath('features.0.attributes.objectid', 901);
+    $this->getJson(route('sector-overview.map', 'housing-units'))->assertOk()->assertJsonCount(1, 'features')->assertJsonPath('features.0.attributes.objectid', 901);
     $this->get(route('sector-overview.show', 'housing-units'))->assertViewHas('municipalities', ['phase-one']);
 });
 

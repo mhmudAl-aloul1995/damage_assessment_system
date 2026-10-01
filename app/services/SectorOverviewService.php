@@ -191,12 +191,10 @@ class SectorOverviewService
 
         if ($sector === 'housing-units') {
             $columns[] = 'parentglobalid';
-            $query->with('building:id,globalid,location,latitude,longitude,municipalitie,neighborhood');
+            $buildingColumns = ['id', 'globalid', 'municipalitie', 'neighborhood', ...$this->geometryColumns(new Building)];
+            $query->with('building:'.implode(',', $buildingColumns));
         } else {
-            $columns[] = 'location';
-            if (in_array($sector, ['buildings', 'cso-surveys'], true)) {
-                $columns = [...$columns, 'latitude', 'longitude'];
-            }
+            $columns = [...$columns, ...$this->geometryColumns($query->getModel())];
         }
 
         $rows = $query->limit(501)->get($columns);
@@ -227,10 +225,19 @@ class SectorOverviewService
         return ['features' => $features, 'next_cursor' => $hasMore ? (int) $rows->last()->id : null, 'scanned' => $rows->count()];
     }
 
+    /** @return list<string> */
+    private function geometryColumns(Model $model): array
+    {
+        $availableColumns = $model->getConnection()->getSchemaBuilder()->getColumnListing($model->getTable());
+
+        return array_values(array_intersect(['location', 'latitude', 'longitude'], $availableColumns));
+    }
+
     /** @return array<string, mixed>|null */
     private function geometry(Model $record): ?array
     {
-        $location = $record->getAttribute('location');
+        $attributes = $record->getAttributes();
+        $location = $attributes['location'] ?? null;
         $geometry = is_array($location) ? $location : json_decode((string) $location, true);
 
         if (is_array($geometry)) {
@@ -245,8 +252,8 @@ class SectorOverviewService
             }
         }
 
-        $latitude = $record->getAttribute('latitude');
-        $longitude = $record->getAttribute('longitude');
+        $latitude = $attributes['latitude'] ?? null;
+        $longitude = $attributes['longitude'] ?? null;
 
         if (is_numeric($latitude) && is_numeric($longitude) && abs((float) $latitude) <= 90 && abs((float) $longitude) <= 180) {
             return ['x' => (float) $longitude, 'y' => (float) $latitude, 'spatialReference' => ['wkid' => 4326]];
