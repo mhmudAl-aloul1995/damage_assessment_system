@@ -12,6 +12,7 @@ return [
         'title' => ':sector Workspace',
         'aria_label' => ':sector sector navigation',
         'records' => 'Records',
+        'hud' => 'LIVE GIS HUD',
         'audit' => 'Audit',
         'decisions' => 'Decisions',
         'reports' => 'Reports',

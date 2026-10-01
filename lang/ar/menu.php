@@ -12,6 +12,7 @@ return [
         'title' => 'مساحة قطاع :sector',
         'aria_label' => 'التنقل داخل قطاع :sector',
         'records' => 'السجلات',
+        'hud' => 'لوحة GIS المباشرة',
         'audit' => 'التدقيق',
         'decisions' => 'القرارات',
         'reports' => 'التقارير',

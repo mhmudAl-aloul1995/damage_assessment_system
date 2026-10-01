@@ -276,6 +276,7 @@ it('opens sector links on the first tool available to specialist roles', functio
 
     expect(sidebarUrlsFor($mopwh))
         ->toContain('damage-assessment/damageAssessment')
+        ->toContain('damage-assessment/damageAssessment/hud')
         ->and(sidebarUrlsFor($fieldEngineer))
         ->toContain('damage-assessment/field-engineer-audit?sector=buildings')
         ->and(sidebarUrlsFor($infrastructureAuditor))

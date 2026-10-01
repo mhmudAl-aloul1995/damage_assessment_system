@@ -66,6 +66,28 @@
                 color: var(--bs-primary);
             }
 
+            .sector-workspace-navigation .sector-workspace-tab--hud {
+                border: 1px solid rgba(var(--bs-warning-rgb), .45);
+                background: var(--bs-warning-light);
+                color: var(--bs-gray-900);
+            }
+
+            .sector-workspace-navigation .sector-workspace-tab--hud:hover,
+            .sector-workspace-navigation .sector-workspace-tab--hud.active {
+                border-color: var(--bs-warning);
+                background: var(--bs-warning);
+                color: var(--bs-gray-900);
+                box-shadow: 0 .35rem 1rem rgba(var(--bs-warning-rgb), .22);
+            }
+
+            .sector-workspace-navigation .sector-workspace-live-dot {
+                width: .5rem;
+                height: .5rem;
+                border-radius: 50%;
+                background: #16a34a;
+                box-shadow: 0 0 0 .2rem rgba(22, 163, 74, .16);
+            }
+
             .sector-workspace-navigation button.sector-workspace-tab {
                 border: 0;
                 background-color: transparent;
@@ -134,7 +156,11 @@
                             </ul>
                         </div>
                     @else
-                        <a class="sector-workspace-tab {{ $tab['is_active'] ? 'active' : '' }}"
+                        <a @class([
+                            'sector-workspace-tab',
+                            'active' => $tab['is_active'],
+                            'sector-workspace-tab--hud' => ($tab['variant'] ?? null) === 'hud',
+                        ])
                             href="{{ $tab['url'] }}"
                             @if ($tab['is_active']) aria-current="page" @endif>
                             <i class="ki-duotone {{ $tab['icon'] }} fs-3" aria-hidden="true">
@@ -142,6 +168,9 @@
                                 <span class="path2"></span>
                             </i>
                             <span>{{ __($tab['title']) }}</span>
+                            @if (($tab['variant'] ?? null) === 'hud')
+                                <span class="sector-workspace-live-dot" aria-hidden="true"></span>
+                            @endif
                         </a>
                     @endif
                 </li>

@@ -13,6 +13,7 @@ it('builds sector workspaces around review decisions reports and exports', funct
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
         'records',
+        'hud',
         'audit',
         'decisions',
         'reports',
@@ -32,11 +33,31 @@ it('only shows sector tools available to the user role', function () {
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
         'records',
+        'hud',
         'audit',
         'decisions',
         'reports',
         'export',
     ]);
+});
+
+it('shows hud as a distinctive buildings-only tab', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $this->actingAs($user);
+    app()->setLocale('ar');
+
+    $buildingTabs = collect(SectorNavigation::forUser('buildings', $user))->keyBy('key');
+    $housingTabs = collect(SectorNavigation::forUser('housing-units', $user))->keyBy('key');
+    $html = Blade::render("@include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])");
+
+    expect($buildingTabs['hud']['url'])->toBe(route('damageAssessment.hud'))
+        ->and($buildingTabs['hud']['variant'])->toBe('hud')
+        ->and($housingTabs->has('hud'))->toBeFalse()
+        ->and($html)->toContain('لوحة GIS المباشرة')
+        ->toContain('sector-workspace-tab--hud')
+        ->toContain('sector-workspace-live-dot');
 });
 
 it('distributes review and committee links into damage sector tabs', function () {

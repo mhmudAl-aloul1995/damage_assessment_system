@@ -104,6 +104,7 @@ class SectorNavigation
                 'key' => $tab['key'],
                 'title' => $tab['title'],
                 'icon' => $tab['icon'],
+                'variant' => $tab['variant'] ?? null,
                 'url' => $items->first()['url'],
                 'is_active' => $items->contains('is_active', true),
                 'items' => $items->all(),
@@ -119,6 +120,7 @@ class SectorNavigation
             'key' => $tab['key'],
             'title' => $tab['title'],
             'icon' => $tab['icon'],
+            'variant' => $tab['variant'] ?? null,
             'items' => [],
         ];
     }
@@ -146,6 +148,7 @@ class SectorNavigation
             'reports.building-productivity.' => 'buildings',
             'reports.productivity' => 'buildings',
             'reports.area-productivity.buildings' => 'buildings',
+            'damageAssessment.hud' => 'buildings',
             'housing.' => 'housing-units',
             'reports.area-productivity.housing-units' => 'housing-units',
             'reports.hlp-audit' => 'housing-units',
@@ -173,6 +176,7 @@ class SectorNavigation
     private static function sectors(): array
     {
         $damageRecordRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'];
+        $hudRoles = ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager'];
         $infrastructureRecordRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'];
         $infrastructureAuditRoles = ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Inf - QC/QA Engineer'];
         $reportRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager'];
@@ -188,6 +192,7 @@ class SectorNavigation
                 'title' => 'menu.damage_assessment.buildings',
                 'tabs' => [
                     self::tab('records', 'building.index', ['building.*'], $damageRecordRoles),
+                    self::tab('hud', 'damageAssessment.hud', ['damageAssessment.hud'], $hudRoles, variant: 'hud'),
                     self::damageAuditTab('buildings'),
                     self::decisionsTab('buildings'),
                     self::reportTab([
@@ -401,12 +406,14 @@ class SectorNavigation
         array $roles = [],
         array $permissions = [],
         array $parameters = [],
+        ?string $variant = null,
     ): array {
         return [
             'key' => $key,
             'title' => "menu.sector_navigation.{$key}",
             'icon' => match ($key) {
                 'records' => 'ki-document',
+                'hud' => 'ki-chart-pie-4',
                 'audit' => 'ki-shield-tick',
                 'reports' => 'ki-chart-simple',
                 'productivity' => 'ki-graph-up',
@@ -417,6 +424,7 @@ class SectorNavigation
             'roles' => $roles,
             'permissions' => $permissions,
             'parameters' => $parameters,
+            'variant' => $variant,
         ];
     }
 }

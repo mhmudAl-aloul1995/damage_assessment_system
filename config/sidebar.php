@@ -20,7 +20,7 @@ return [
         'icon' => 'ki-home-2',
         'url' => 'damage-assessment/building',
         'pattern' => 'damage-assessment/building*',
-        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Audit Reviewer', 'Field Engineer'],
+        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Audit Reviewer', 'Field Engineer'],
         'active_patterns' => [
             'damage-assessment/building',
             'damage-assessment/building/*',
