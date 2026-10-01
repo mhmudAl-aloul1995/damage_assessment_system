@@ -273,12 +273,8 @@ class SectorNavigation
     private static function monitoringTab(string $sector): array
     {
         $monitoringRoles = ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'];
-        $auditDashboardRoles = ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'];
 
-        return self::dropdownTab('monitoring', 'ki-element-11', [
-            self::item('menu.sector_navigation.monitoring_items.dashboard', 'damageAssessment.index', ['damageAssessment.index'], $monitoringRoles, ['sector' => $sector]),
-            self::item('menu.sector_navigation.monitoring_items.audit_dashboard', 'audit.dashboard', ['audit.dashboard'], $auditDashboardRoles, ['sector' => $sector]),
-        ]);
+        return self::tab('monitoring', 'damageAssessment.index', ['damageAssessment.index'], $monitoringRoles, parameters: ['sector' => $sector]);
     }
 
     /**
@@ -288,7 +284,9 @@ class SectorNavigation
     {
         $auditHomeRoles = ['Database Officer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'];
         $damageAuditRoles = ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'];
+        $auditDashboardRoles = ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'];
         $items = [
+            self::item('menu.audit.dashboard', 'audit.dashboard', ['audit.dashboard'], $auditDashboardRoles, ['sector' => $sector]),
             self::item('menu.sector_navigation.audit_items.overview', 'audit.index', ['audit.index'], $auditHomeRoles, ['sector' => $sector], url: 'damage-assessment/audit'),
             self::item('menu.sector_navigation.audit_items.building_audit', 'audit.auditBuilding', ['audit.auditBuilding'], $damageAuditRoles, ['sector' => $sector]),
         ];
@@ -422,6 +420,7 @@ class SectorNavigation
             'title' => "menu.sector_navigation.{$key}",
             'icon' => match ($key) {
                 'records' => 'ki-document',
+                'monitoring' => 'ki-element-11',
                 'audit' => 'ki-shield-tick',
                 'reports' => 'ki-chart-simple',
                 'productivity' => 'ki-graph-up',

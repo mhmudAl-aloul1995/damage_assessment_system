@@ -28,10 +28,6 @@ return [
             'engineer_audit' => 'تقييم المهندسين',
             'sector_report' => 'التقرير التفصيلي للقطاع',
         ],
-        'monitoring_items' => [
-            'dashboard' => 'لوحة متابعة الأضرار',
-            'audit_dashboard' => 'لوحة متابعة التدقيق',
-        ],
         'audit_items' => [
             'overview' => 'مركز المراجعة',
             'building_audit' => 'تدقيق المباني والوحدات',
