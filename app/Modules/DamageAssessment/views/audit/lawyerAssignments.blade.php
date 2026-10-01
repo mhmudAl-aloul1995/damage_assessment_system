@@ -4,6 +4,8 @@
 @section('pageName', 'تأهيل وحدات - تدقيق قانوني')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'housing-units'])
+
     <div class="row mb-5">
         <div class="col-12">
             <div class="card card-flush">

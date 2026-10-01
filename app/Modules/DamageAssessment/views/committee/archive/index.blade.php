@@ -4,6 +4,8 @@
 @section('pageName', 'أرشيف قرارات اللجنة الفنية')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     <div class="card card-flush shadow-sm mb-5">
         <div class="card-header pt-6">
             <div class="card-title">
@@ -12,6 +14,7 @@
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('committee-archive.index') }}" class="row g-4 align-items-end mb-6">
+                <input type="hidden" name="sector" value="{{ request('sector', 'buildings') }}">
                 <div class="col-md-2">
                     <label class="form-label">ObjectID</label>
                     <input type="text" name="objectid" value="{{ $filters['objectid'] ?? '' }}" class="form-control form-control-solid">
@@ -96,7 +99,7 @@
 
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary flex-grow-1">بحث</button>
-                    <a href="{{ route('committee-archive.index') }}" class="btn btn-light">تصفير</a>
+                    <a href="{{ route('committee-archive.index', ['sector' => request('sector', 'buildings')]) }}" class="btn btn-light">تصفير</a>
                 </div>
             </form>
 

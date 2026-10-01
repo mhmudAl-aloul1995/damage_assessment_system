@@ -12,7 +12,9 @@ return [
         'title' => ':sector Workspace',
         'aria_label' => ':sector sector navigation',
         'records' => 'Records',
+        'monitoring' => 'Monitoring',
         'audit' => 'Audit',
+        'decisions' => 'Decisions',
         'reports' => 'Reports',
         'productivity' => 'Productivity',
         'export' => 'Export Data',
@@ -25,6 +27,17 @@ return [
             'hlp' => 'HLP Audit Report',
             'engineer_audit' => 'Engineer Evaluation',
             'sector_report' => 'Detailed Sector Report',
+        ],
+        'monitoring_items' => [
+            'dashboard' => 'Damage Monitoring Dashboard',
+            'audit_dashboard' => 'Audit Monitoring Dashboard',
+        ],
+        'audit_items' => [
+            'overview' => 'Review Center',
+            'building_audit' => 'Building and Unit Audit',
+            'legal_units' => 'Unit Eligibility - Legal Audit',
+            'field_engineer_buildings' => 'Field Engineer Buildings',
+            'area_manager_review' => 'Area Manager Review',
         ],
     ],
     'modules' => [

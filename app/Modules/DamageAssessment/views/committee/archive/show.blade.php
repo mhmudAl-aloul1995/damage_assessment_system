@@ -29,6 +29,8 @@
 @section('pageName', 'مقارنة سجل اللجنة الفنية')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => filled($archiveObject->housing_unit_objectid) ? 'housing-units' : 'buildings'])
+
     <div class="card card-flush border border-gray-200 mb-5"><div class="card-body py-6"><div class="d-flex flex-wrap justify-content-between align-items-start gap-4"><div><div class="d-flex align-items-center gap-3 mb-2"><span class="badge badge-light-primary">{{ $recordType }}</span><span class="text-muted fs-7">أرشفة بتاريخ {{ optional($archiveObject->archived_at)->format('Y-m-d H:i') ?? '-' }}</span></div><h2 class="fw-bold mb-1">مراجعة التغييرات</h2><div class="text-muted">رقم السجل <span class="fw-semibold text-gray-800">{{ $recordId }}</span> · {{ $sourceLabel }}</div><div class="d-flex flex-wrap gap-4 mt-4"><div><div class="text-muted fs-8">اسم المبنى</div><div class="fw-semibold">{{ $buildingName ?: '-' }}</div></div><div><div class="text-muted fs-8">المهندس المكلّف</div><div class="fw-semibold">{{ $assignedEngineer ?: '-' }}</div></div></div></div><a href="{{ route('committee-archive.index') }}" class="btn btn-light btn-sm">رجوع إلى الأرشيف</a></div></div></div>
 
     @if (! $archiveObject->building_snapshot)

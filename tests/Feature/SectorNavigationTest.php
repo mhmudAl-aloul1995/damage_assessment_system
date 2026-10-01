@@ -6,14 +6,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Spatie\Permission\Models\Role;
 
-it('builds sector workspaces around records audit reports and exports', function () {
+it('builds sector workspaces around monitoring review decisions reports and exports', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
         'records',
+        'monitoring',
         'audit',
+        'decisions',
         'reports',
         'export',
     ])->and(collect(SectorNavigation::forUser('public-buildings', $user))->pluck('key')->all())->toBe([
@@ -31,9 +33,57 @@ it('only shows sector tools available to the user role', function () {
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
         'records',
+        'monitoring',
+        'audit',
+        'decisions',
         'reports',
         'export',
     ]);
+});
+
+it('distributes monitoring review and committee links into damage sector tabs', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $tabs = collect(SectorNavigation::forUser('buildings', $user))->keyBy('key');
+    $pathsFor = fn (string $key): array => collect($tabs[$key]['items'])
+        ->pluck('url')
+        ->map(fn (string $url): string => (string) parse_url($url, PHP_URL_PATH))
+        ->all();
+
+    expect($pathsFor('monitoring'))
+        ->toContain((string) parse_url(route('damageAssessment.index'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('audit.dashboard'), PHP_URL_PATH))
+        ->and($pathsFor('audit'))
+        ->toContain((string) parse_url(route('audit.index'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('audit.auditBuilding'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('audit.fieldEngineer'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('area-manager-review.index'), PHP_URL_PATH))
+        ->and($pathsFor('decisions'))
+        ->toContain((string) parse_url(route('committee-decisions.index'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('committee-decisions.higher-committee-reassessments.index'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('committee-members.index'), PHP_URL_PATH))
+        ->toContain((string) parse_url(route('committee-archive.index'), PHP_URL_PATH));
+});
+
+it('shows legal unit review only to authorized housing sector users', function () {
+    $legalAuditorRole = Role::findOrCreate('Legal Auditor', 'web');
+    $auditingSupervisorRole = Role::findOrCreate('Auditing Supervisor', 'web');
+    $legalAuditor = User::factory()->create([
+        'name' => \App\Support\Audit\RestrictedLawyerAuditAccess::ALAA_KATOU,
+    ]);
+    $legalAuditor->assignRole($legalAuditorRole);
+    $auditingSupervisor = User::factory()->create();
+    $auditingSupervisor->assignRole($auditingSupervisorRole);
+
+    $auditTitlesFor = fn (User $user): array => collect(SectorNavigation::forUser('housing-units', $user))
+        ->firstWhere('key', 'audit')['items'];
+
+    expect(collect($auditTitlesFor($legalAuditor))->pluck('title')->all())
+        ->toContain('menu.sector_navigation.audit_items.legal_units')
+        ->and(collect($auditTitlesFor($auditingSupervisor))->pluck('title')->all())
+        ->not->toContain('menu.sector_navigation.audit_items.legal_units');
 });
 
 it('preserves report visibility rules while moving reports into sectors', function () {

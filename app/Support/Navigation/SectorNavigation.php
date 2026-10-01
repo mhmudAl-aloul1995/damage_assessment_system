@@ -38,11 +38,19 @@ class SectorNavigation
         }
 
         if (in_array($routeName, [
+            'damageAssessment.index',
+            'audit.index',
+            'audit.dashboard',
+            'audit.fieldEngineer',
             'audit.auditBuilding',
             'export.data.index',
             'reports.field-engineer.index',
             'reports.daily-achievement',
             'reports.engineer-audit',
+            'committee-decisions.index',
+            'committee-decisions.higher-committee-reassessments.index',
+            'committee-members.index',
+            'committee-archive.index',
         ], true)) {
             $requestedSector = request()->string('sector')->toString();
 
@@ -65,11 +73,11 @@ class SectorNavigation
      */
     private static function isVisible(array $tab, User $user): bool
     {
-        if (($tab['roles'] ?? []) === [] && ($tab['permissions'] ?? []) === []) {
+        if (($tab['roles'] ?? []) === [] && ($tab['permissions'] ?? []) === [] && ! isset($tab['visible_when'])) {
             return true;
         }
 
-        if ($user->hasAnyRole($tab['roles'] ?? [])) {
+        if (Sidebar::isItemVisibleToUser($tab, $user)) {
             return true;
         }
 
@@ -142,6 +150,7 @@ class SectorNavigation
             'housing.' => 'housing-units',
             'reports.area-productivity.housing-units' => 'housing-units',
             'reports.hlp-audit' => 'housing-units',
+            'audit.lawyer-assignments' => 'housing-units',
             'public-buildings.' => 'public-buildings',
             'inf-audit.public-buildings.' => 'public-buildings',
             'reports.public-buildings' => 'public-buildings',
@@ -153,6 +162,9 @@ class SectorNavigation
             'cso-surveys.' => 'cso-surveys',
             'inf-audit.cso.' => 'cso-surveys',
             'reports.area-productivity.cso-surveys' => 'cso-surveys',
+            'area-manager-review.' => 'buildings',
+            'committee-decisions.buildings.' => 'buildings',
+            'committee-decisions.housing-units.' => 'housing-units',
         ];
     }
 
@@ -161,7 +173,8 @@ class SectorNavigation
      */
     private static function sectors(): array
     {
-        $damageAuditRoles = ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'];
+        $damageRecordRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'];
+        $infrastructureRecordRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'];
         $infrastructureAuditRoles = ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Inf - QC/QA Engineer'];
         $reportRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager'];
         $exportRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'QC/QA Engineer', 'Team Leader -INF', 'Area Manager'];
@@ -175,8 +188,10 @@ class SectorNavigation
             'buildings' => [
                 'title' => 'menu.damage_assessment.buildings',
                 'tabs' => [
-                    self::tab('records', 'building.index', ['building.*']),
-                    self::tab('audit', 'audit.auditBuilding', ['audit.auditBuilding'], $damageAuditRoles, parameters: ['sector' => 'buildings']),
+                    self::tab('records', 'building.index', ['building.*'], $damageRecordRoles),
+                    self::monitoringTab('buildings'),
+                    self::damageAuditTab('buildings'),
+                    self::decisionsTab('buildings'),
                     self::reportTab([
                         self::report('area_productivity', 'reports.area-productivity.buildings', ['reports.area-productivity.buildings'], $reportRoles),
                         self::report('building_productivity', 'reports.building-productivity.index', ['reports.building-productivity.*'], $buildingProductivityRoles),
@@ -191,8 +206,10 @@ class SectorNavigation
             'housing-units' => [
                 'title' => 'menu.damage_assessment.housing_units',
                 'tabs' => [
-                    self::tab('records', 'housing.index', ['housing.*']),
-                    self::tab('audit', 'audit.auditBuilding', ['audit.auditBuilding'], $damageAuditRoles, parameters: ['sector' => 'housing-units']),
+                    self::tab('records', 'housing.index', ['housing.*'], $damageRecordRoles),
+                    self::monitoringTab('housing-units'),
+                    self::damageAuditTab('housing-units'),
+                    self::decisionsTab('housing-units'),
                     self::reportTab([
                         self::report('area_productivity', 'reports.area-productivity.housing-units', ['reports.area-productivity.housing-units'], $reportRoles),
                         self::report('field_engineer', 'reports.field-engineer.index', ['reports.field-engineer.*'], $fieldReportRoles, ['sector' => 'housing-units']),
@@ -206,7 +223,7 @@ class SectorNavigation
             'public-buildings' => [
                 'title' => 'menu.damage_assessment.public_buildings',
                 'tabs' => [
-                    self::tab('records', 'public-buildings.index', ['public-buildings.index', 'public-buildings.show']),
+                    self::tab('records', 'public-buildings.index', ['public-buildings.index', 'public-buildings.show'], $infrastructureRecordRoles),
                     self::tab('audit', 'inf-audit.public-buildings.index', ['inf-audit.public-buildings.*'], $infrastructureAuditRoles),
                     self::reportTab([
                         self::report('sector_report', 'reports.public-buildings', ['reports.public-buildings'], $reportRoles),
@@ -218,7 +235,7 @@ class SectorNavigation
             'road-facilities' => [
                 'title' => 'menu.damage_assessment.road_facilities',
                 'tabs' => [
-                    self::tab('records', 'road-facilities.index', ['road-facilities.index', 'road-facilities.show']),
+                    self::tab('records', 'road-facilities.index', ['road-facilities.index', 'road-facilities.show'], $infrastructureRecordRoles),
                     self::tab('audit', 'inf-audit.roads.index', ['inf-audit.roads.*'], $infrastructureAuditRoles),
                     self::reportTab([
                         self::report('sector_report', 'reports.road-facilities', ['reports.road-facilities'], $reportRoles),
@@ -230,7 +247,7 @@ class SectorNavigation
             'cso-surveys' => [
                 'title' => 'menu.damage_assessment.cso_surveys',
                 'tabs' => [
-                    self::tab('records', 'cso-surveys.index', ['cso-surveys.index', 'cso-surveys.show']),
+                    self::tab('records', 'cso-surveys.index', ['cso-surveys.index', 'cso-surveys.show'], [...$infrastructureRecordRoles, 'CSO Officer']),
                     self::tab('audit', 'inf-audit.cso.index', ['inf-audit.cso.*'], [...$infrastructureAuditRoles, 'CSO Officer']),
                     self::reportTab([
                         self::report('area_productivity', 'reports.area-productivity.cso-surveys', ['reports.area-productivity.cso-surveys'], [...$reportRoles, 'Team Leader -INF', 'CSO Officer'], permissions: ['reports.area-productivity.cso-surveys.view']),
@@ -247,10 +264,86 @@ class SectorNavigation
      */
     private static function reportTab(array $items): array
     {
+        return self::dropdownTab('reports', 'ki-chart-simple', $items);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function monitoringTab(string $sector): array
+    {
+        $monitoringRoles = ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'];
+        $auditDashboardRoles = ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'];
+
+        return self::dropdownTab('monitoring', 'ki-element-11', [
+            self::item('menu.sector_navigation.monitoring_items.dashboard', 'damageAssessment.index', ['damageAssessment.index'], $monitoringRoles, ['sector' => $sector]),
+            self::item('menu.sector_navigation.monitoring_items.audit_dashboard', 'audit.dashboard', ['audit.dashboard'], $auditDashboardRoles, ['sector' => $sector]),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function damageAuditTab(string $sector): array
+    {
+        $auditHomeRoles = ['Database Officer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Team Leader'];
+        $damageAuditRoles = ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Auditing Supervisor', 'Project Officer', 'undp-Project Manager'];
+        $items = [
+            self::item('menu.sector_navigation.audit_items.overview', 'audit.index', ['audit.index'], $auditHomeRoles, ['sector' => $sector], url: 'damage-assessment/audit'),
+            self::item('menu.sector_navigation.audit_items.building_audit', 'audit.auditBuilding', ['audit.auditBuilding'], $damageAuditRoles, ['sector' => $sector]),
+        ];
+
+        if ($sector === 'buildings') {
+            $items[] = self::item('menu.sector_navigation.audit_items.field_engineer_buildings', 'audit.fieldEngineer', ['audit.fieldEngineer'], ['Field Engineer', 'Database Officer'], ['sector' => $sector]);
+            $items[] = self::item('menu.sector_navigation.audit_items.area_manager_review', 'area-manager-review.index', ['area-manager-review.*'], ['Database Officer']);
+        }
+
+        if ($sector === 'housing-units') {
+            $items[] = self::item(
+                'menu.sector_navigation.audit_items.legal_units',
+                'audit.lawyer-assignments',
+                ['audit.lawyer-assignments'],
+                ['Database Officer'],
+                ['sector' => $sector],
+                visibleWhen: 'restricted_lawyer_audit_assignments',
+            );
+        }
+
+        return self::dropdownTab('audit', 'ki-shield-tick', $items);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function decisionsTab(string $sector): array
+    {
+        $decisionRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Legal Auditor', 'Area Manager'];
+        $committeeRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Area Manager'];
+        $memberRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'Area Manager'];
+
+        return self::dropdownTab('decisions', 'ki-shield-search', [
+            self::item('menu.committee.decisions', 'committee-decisions.index', [
+                'committee-decisions.index',
+                'committee-decisions.buildings.*',
+                'committee-decisions.housing-units.*',
+                'committee-decisions.reassessments.*',
+            ], $decisionRoles, ['sector' => $sector]),
+            self::item('menu.committee.higher_committee_reassessments', 'committee-decisions.higher-committee-reassessments.index', ['committee-decisions.higher-committee-reassessments.*'], $committeeRoles, ['sector' => $sector]),
+            self::item('menu.committee.members', 'committee-members.index', ['committee-members.*'], $memberRoles, ['sector' => $sector]),
+            self::item('menu.committee.archive', 'committee-archive.index', ['committee-archive.*'], $committeeRoles, ['sector' => $sector]),
+        ]);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<string, mixed>
+     */
+    private static function dropdownTab(string $key, string $icon, array $items): array
+    {
         return [
-            'key' => 'reports',
-            'title' => 'menu.sector_navigation.reports',
-            'icon' => 'ki-chart-simple',
+            'key' => $key,
+            'title' => "menu.sector_navigation.{$key}",
+            'icon' => $icon,
             'items' => $items,
         ];
     }
@@ -270,14 +363,43 @@ class SectorNavigation
         array $parameters = [],
         array $permissions = [],
     ): array {
-        return [
-            'title' => "menu.sector_navigation.report_items.{$key}",
+        return self::item(
+            "menu.sector_navigation.report_items.{$key}",
+            $route,
+            $activeRoutes,
+            $roles,
+            $parameters,
+            $permissions,
+        );
+    }
+
+    /**
+     * @param  array<int, string>  $activeRoutes
+     * @param  array<int, string>  $roles
+     * @param  array<string, string>  $parameters
+     * @param  array<int, string>  $permissions
+     * @return array<string, mixed>
+     */
+    private static function item(
+        string $title,
+        string $route,
+        array $activeRoutes,
+        array $roles = [],
+        array $parameters = [],
+        array $permissions = [],
+        ?string $visibleWhen = null,
+        ?string $url = null,
+    ): array {
+        return array_filter([
+            'title' => $title,
             'route' => $route,
             'active_routes' => $activeRoutes,
             'roles' => $roles,
             'permissions' => $permissions,
             'parameters' => $parameters,
-        ];
+            'visible_when' => $visibleWhen,
+            'url' => $url,
+        ], fn (mixed $value): bool => $value !== null);
     }
 
     /**

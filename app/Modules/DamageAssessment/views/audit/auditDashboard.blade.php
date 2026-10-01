@@ -3,6 +3,8 @@
 @section('pageName', __('ui.audit_dashboard.title'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card card-flush shadow-sm">
@@ -12,6 +14,7 @@
                     </div>
                     <div class="card-toolbar">
                         <form action="{{ route('audit.dashboard') }}" method="GET" id="audit_dashboard_filter_form">
+                            <input type="hidden" name="sector" value="{{ request('sector', 'buildings') }}">
                             <input type="hidden" name="start_date" id="start_date" value="{{ $startDateValue }}">
                             <input type="hidden" name="end_date" id="end_date" value="{{ $endDateValue }}">
                             <div class="d-flex align-items-center gap-3">
@@ -343,5 +346,3 @@
         });
     </script>
 @endsection
-
-

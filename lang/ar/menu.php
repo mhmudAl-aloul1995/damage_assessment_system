@@ -12,7 +12,9 @@ return [
         'title' => 'مساحة قطاع :sector',
         'aria_label' => 'التنقل داخل قطاع :sector',
         'records' => 'السجلات',
+        'monitoring' => 'المتابعة',
         'audit' => 'التدقيق',
+        'decisions' => 'القرارات',
         'reports' => 'التقارير',
         'productivity' => 'الإنتاجية',
         'export' => 'تصدير البيانات',
@@ -25,6 +27,17 @@ return [
             'hlp' => 'تقرير تدقيق HLP',
             'engineer_audit' => 'تقييم المهندسين',
             'sector_report' => 'التقرير التفصيلي للقطاع',
+        ],
+        'monitoring_items' => [
+            'dashboard' => 'لوحة متابعة الأضرار',
+            'audit_dashboard' => 'لوحة متابعة التدقيق',
+        ],
+        'audit_items' => [
+            'overview' => 'مركز المراجعة',
+            'building_audit' => 'تدقيق المباني والوحدات',
+            'legal_units' => 'تأهيل الوحدات - التدقيق القانوني',
+            'field_engineer_buildings' => 'مباني المهندس الميداني',
+            'area_manager_review' => 'مراجعة مدير المنطقة',
         ],
     ],
     'modules' => [

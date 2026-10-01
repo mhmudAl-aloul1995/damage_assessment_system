@@ -5,6 +5,7 @@ namespace App\Support\Navigation;
 use App\Models\User;
 use App\Support\Audit\RestrictedLawyerAuditAccess;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class Sidebar
 {
@@ -70,6 +71,14 @@ class Sidebar
     }
 
     /**
+     * @param  array<string, mixed>  $item
+     */
+    public static function isItemVisibleToUser(array $item, User $user): bool
+    {
+        return self::isItemVisible($item, $user);
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private static function visibleSection(array $section, User $user): ?array
@@ -83,9 +92,20 @@ class Sidebar
         }
 
         if (isset($section['url'])) {
+            if (isset($section['sector'])) {
+                $firstVisibleSectorTab = collect(SectorNavigation::forUser($section['sector'], $user))->first();
+
+                if ($firstVisibleSectorTab === null) {
+                    return null;
+                }
+
+                $section['url'] = Str::after($firstVisibleSectorTab['url'], url('/').'/');
+            }
+
             $section['items'] = collect();
             $section['visible_item_count'] = 0;
-            $section['is_active'] = self::isActive($section);
+            $section['is_active'] = self::isActive($section)
+                || (isset($section['sector']) && $section['sector'] === SectorNavigation::sectorForCurrentRoute());
             $section['is_direct'] = true;
 
             return $section;

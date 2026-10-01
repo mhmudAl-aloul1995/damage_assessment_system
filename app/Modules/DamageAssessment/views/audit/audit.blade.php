@@ -40,6 +40,8 @@
 
 
 @section('content')
+	@include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
 	<style>
 		table.dataTable thead th.sorting,
 		table.dataTable thead th.sorting_asc,

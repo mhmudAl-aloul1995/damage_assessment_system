@@ -3,6 +3,8 @@
 @section('pageName', __('multilingual.area_manager_review.page_name'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])
+
     <div class="row mb-5">
         <div class="col-md-12">
             <div class="card card-flush shadow-sm">

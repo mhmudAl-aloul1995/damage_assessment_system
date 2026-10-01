@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use App\Support\Audit\RestrictedLawyerAuditAccess;
+use App\Support\Navigation\SectorNavigation;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -46,7 +46,7 @@ it('shows the sidebar menu for infrastructure Team Leaders', function () {
         ->toContain('menu.damage_assessment.public_buildings')
         ->toContain('menu.damage_assessment.road_facilities')
         ->toContain('menu.damage_assessment.operations')
-        ->toContain('menu.committee.title');
+        ->not->toContain('menu.committee.title');
 });
 
 it('shows building survey return requests in the damage assessment sidebar', function () {
@@ -97,7 +97,7 @@ it('shows missing citizen identities sidebar link to auditing supervisor and pro
     'project officer' => 'Project Officer',
 ]);
 
-it('shows infrastructure audit links to project officers', function () {
+it('removes infrastructure audit links from the standalone sidebar', function () {
     $role = Role::findOrCreate('Project Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
@@ -105,8 +105,10 @@ it('shows infrastructure audit links to project officers', function () {
     $urls = sidebarUrlsFor($user);
 
     expect($urls)
-        ->toContain('damage-assessment/inf-audit/public-buildings')
-        ->toContain('damage-assessment/inf-audit/roads');
+        ->not->toContain('damage-assessment/inf-audit/public-buildings')
+        ->not->toContain('damage-assessment/inf-audit/roads')
+        ->toContain('damage-assessment/public-buildings')
+        ->toContain('damage-assessment/road-facilities');
 });
 
 it('shows all cso links to cso officers', function () {
@@ -118,7 +120,7 @@ it('shows all cso links to cso officers', function () {
 
     expect($urls)
         ->toContain('damage-assessment/cso-surveys')
-        ->toContain('damage-assessment/inf-audit/cso')
+        ->not->toContain('damage-assessment/inf-audit/cso')
         ->not->toContain('damage-assessment/reports/area-productivity/cso-surveys')
         ->not->toContain('damage-assessment/cso-surveys/export-data')
         ->not->toContain('damage-assessment/building-deletions')
@@ -141,14 +143,17 @@ it('groups visible sidebar sections by module', function () {
     expect($damageAssessmentModule['sections']->pluck('title')->all())
         ->toContain(
             'menu.hud.title',
-            'menu.damage_assessment.monitoring',
             'menu.damage_assessment.buildings',
             'menu.damage_assessment.housing_units',
             'menu.damage_assessment.public_buildings',
             'menu.damage_assessment.road_facilities',
             'menu.damage_assessment.cso_surveys',
             'menu.damage_assessment.operations',
+        )
+        ->not->toContain(
+            'menu.damage_assessment.monitoring',
             'menu.audit.title',
+            'menu.committee.title',
         );
 
     expect($administrationModule['sections']->pluck('title')->all())
@@ -167,7 +172,6 @@ it('orders damage assessment sidebar sections by sector first', function () {
 
     expect($sectionTitles)->toMatchArray([
         'menu.hud.title',
-        'menu.damage_assessment.monitoring',
         'menu.damage_assessment.buildings',
         'menu.damage_assessment.housing_units',
         'menu.damage_assessment.public_buildings',
@@ -175,8 +179,6 @@ it('orders damage assessment sidebar sections by sector first', function () {
         'menu.damage_assessment.cso_surveys',
         'menu.damage_assessment.operations',
         'menu.attendance.title',
-        'menu.audit.title',
-        'menu.committee.title',
     ]);
 });
 
@@ -196,7 +198,6 @@ it('groups damage assessment navigation into clear ux sections', function () {
         'menu.navigation_groups.overview',
         'menu.navigation_groups.sectors',
         'menu.navigation_groups.operations',
-        'menu.navigation_groups.review',
     ]);
 });
 
@@ -231,48 +232,54 @@ it('keeps the standalone reports section hidden on sector export pages', functio
     expect($sections->firstWhere('title', 'menu.reports.title'))->toBeNull();
 });
 
-it('shows higher committee reassessments in the committee sidebar', function () {
+it('highlights the selected sector on shared review and decision pages', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+    $request = Request::create('/damage-assessment/committee-decisions?sector=housing-units');
+    $route = app('router')->getRoutes()->getByName('committee-decisions.index');
+    $request->setRouteResolver(fn () => $route);
+    app()->instance('request', $request);
+
+    $sections = Sidebar::forUser($user)
+        ->firstWhere('key', 'damage_assessment')['sections']
+        ->keyBy('sector');
+
+    expect($sections['housing-units']['is_active'])->toBeTrue()
+        ->and($sections['buildings']['is_active'])->toBeFalse();
+});
+
+it('removes standalone monitoring review and committee sections from the sidebar', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $committeeSection = Sidebar::forUser($user)
-        ->firstWhere('key', 'damage_assessment')['sections']
-        ->firstWhere('title', 'menu.committee.title');
+    $sections = Sidebar::forUser($user)
+        ->firstWhere('key', 'damage_assessment')['sections'];
 
-    expect($committeeSection['items'])
-        ->pluck('url')
-        ->toContain('damage-assessment/committee-decisions/higher-committee-reassessments');
+    expect($sections->pluck('title')->all())
+        ->not->toContain('menu.damage_assessment.monitoring')
+        ->not->toContain('menu.audit.title')
+        ->not->toContain('menu.committee.title');
 });
 
-it('shows lawyer legal audit assignments only to authorized sidebar users', function () {
-    $databaseOfficerRole = Role::findOrCreate('Database Officer', 'web');
-    $legalAuditorRole = Role::findOrCreate('Legal Auditor', 'web');
-    $auditingSupervisorRole = Role::findOrCreate('Auditing Supervisor', 'web');
-    $auditReviewerRole = Role::findOrCreate('Audit Reviewer', 'web');
+it('opens sector links on the first tool available to specialist roles', function () {
+    $mopwhRole = Role::findOrCreate('MOPWH', 'web');
+    $fieldEngineerRole = Role::findOrCreate('Field Engineer', 'web');
+    $infrastructureAuditorRole = Role::findOrCreate('Inf - QC/QA Engineer', 'web');
+    $mopwh = User::factory()->create();
+    $fieldEngineer = User::factory()->create();
+    $infrastructureAuditor = User::factory()->create();
+    $mopwh->assignRole($mopwhRole);
+    $fieldEngineer->assignRole($fieldEngineerRole);
+    $infrastructureAuditor->assignRole($infrastructureAuditorRole);
 
-    $databaseOfficer = User::factory()->create();
-    $databaseOfficer->assignRole($databaseOfficerRole);
-
-    $lawyer = User::factory()->create([
-        'name' => RestrictedLawyerAuditAccess::ALAA_KATOU,
-    ]);
-    $lawyer->assignRole($legalAuditorRole);
-
-    $auditingSupervisor = User::factory()->create();
-    $auditingSupervisor->assignRole($auditingSupervisorRole);
-
-    $auditReviewer = User::factory()->create();
-    $auditReviewer->assignRole($auditReviewerRole);
-
-    expect(sidebarUrlsFor($databaseOfficer))
-        ->toContain('damage-assessment/audit/lawyer-assignments')
-        ->and(sidebarUrlsFor($lawyer))
-        ->toContain('damage-assessment/audit/lawyer-assignments')
-        ->and(sidebarUrlsFor($auditingSupervisor))
-        ->not->toContain('damage-assessment/audit/lawyer-assignments')
-        ->and(sidebarUrlsFor($auditReviewer))
-        ->not->toContain('damage-assessment/audit/lawyer-assignments');
+    expect(sidebarUrlsFor($mopwh))
+        ->toContain('damage-assessment/damageAssessment?sector=buildings')
+        ->and(sidebarUrlsFor($fieldEngineer))
+        ->toContain('damage-assessment/field-engineer-audit?sector=buildings')
+        ->and(sidebarUrlsFor($infrastructureAuditor))
+        ->toContain('damage-assessment/inf-audit/public-buildings');
 });
 
 it('places hud above damage assessment sectors for non auditor sidebar roles', function () {
@@ -312,7 +319,7 @@ it('hides hud from auditors and field engineers', function (string $roleName) {
     'field engineer' => 'Field Engineer',
 ]);
 
-it('temporarily shows the audit home sidebar link for selected users only', function () {
+it('temporarily shows the audit home sector item for selected users only', function () {
     $role = Role::findOrCreate('QC/QA Engineer', 'web');
 
     $exceptedUser = User::factory()->create([
@@ -343,29 +350,31 @@ it('temporarily shows the audit home sidebar link for selected users only', func
     ]);
     $regularUser->assignRole($role);
 
-    $exceptedUrls = sidebarUrlsFor($exceptedUser);
-    $regularUrls = sidebarUrlsFor($regularUser);
+    $auditUrlsFor = fn (User $user): array => collect(SectorNavigation::forUser('buildings', $user))
+        ->firstWhere('key', 'audit')['items'];
+    $exceptedUrls = collect($auditUrlsFor($exceptedUser))->pluck('url')->all();
+    $regularUrls = collect($auditUrlsFor($regularUser))->pluck('url')->all();
 
-    expect($exceptedUrls)
-        ->toContain('damage-assessment/audit')
-        ->and($regularUrls)
-        ->not->toContain('damage-assessment/audit');
+    expect(collect($exceptedUrls)->contains(fn (string $url): bool => str_contains($url, '/damage-assessment/audit?')))->toBeTrue()
+        ->and(collect($regularUrls)->contains(fn (string $url): bool => str_contains($url, '/damage-assessment/audit?')))->toBeFalse();
 
-    $identityExceptedUsers->each(function (User $identityExceptedUser): void {
-        $identityExceptedUrls = sidebarUrlsFor($identityExceptedUser);
+    $identityExceptedUsers->each(function (User $identityExceptedUser) use ($auditUrlsFor): void {
+        $identityExceptedUrls = collect($auditUrlsFor($identityExceptedUser))->pluck('url');
 
-        expect($identityExceptedUrls)->toContain('damage-assessment/audit');
+        expect($identityExceptedUrls->contains(fn (string $url): bool => str_contains($url, '/damage-assessment/audit?')))->toBeTrue();
     });
 });
 
-it('shows the read only audit home link for team leaders', function () {
+it('shows the read only audit home item for team leaders', function () {
     $role = Role::findOrCreate('Team Leader', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
-    $urls = sidebarUrlsFor($user);
+    $urls = collect(SectorNavigation::forUser('buildings', $user))
+        ->firstWhere('key', 'audit')['items'];
 
-    expect($urls)->toContain('damage-assessment/audit');
+    expect(collect($urls)->pluck('title')->all())
+        ->toContain('menu.sector_navigation.audit_items.overview');
 });
 
 it('does not duplicate productivity reports in the sidebar for team leaders', function () {

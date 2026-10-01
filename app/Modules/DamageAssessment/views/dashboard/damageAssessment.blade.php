@@ -4,6 +4,8 @@
 
 
 @section('content')
+	@include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
 	@php
 		$housingUnitsTarget = 67500;
 		$housingUnitsTargetReached = (int) ($unitStats['total_units'] ?? 0) >= $housingUnitsTarget;

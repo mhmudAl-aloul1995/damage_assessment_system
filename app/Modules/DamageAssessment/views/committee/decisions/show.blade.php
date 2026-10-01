@@ -25,6 +25,8 @@
 @section('pageName', __('multilingual.committee_decision_show.page_name'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => $recordType === 'housing-unit' ? 'housing-units' : 'buildings'])
+
     @if (session('success'))
         <div class="alert alert-success mb-5">{{ session('success') }}</div>
     @endif

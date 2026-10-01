@@ -4,6 +4,8 @@
 @section('pageName', 'إعادة تقييم قرارات اللجنة العليا')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     @if (session('success'))
         <div class="alert alert-success mb-5">{{ session('success') }}</div>
     @endif
@@ -17,7 +19,7 @@
                 <h3 class="fw-bold m-0">إعادة تقييم قرارات اللجنة العليا</h3>
             </div>
             <div class="card-toolbar">
-                <a href="{{ route('committee-decisions.index') }}" class="btn btn-light btn-sm">رجوع لقرارات اللجنة</a>
+                <a href="{{ route('committee-decisions.index', ['sector' => request('sector', 'buildings')]) }}" class="btn btn-light btn-sm">رجوع لقرارات اللجنة</a>
             </div>
         </div>
         <div class="card-body">

@@ -4,6 +4,9 @@
 @section('pageName', __('multilingual.committee_decisions.page_name'))
 
 @section('content')
+    @php($isHousingSector = request('sector') === 'housing-units')
+    @include('damage-assessment::components.sector-navigation', ['sector' => $isHousingSector ? 'housing-units' : 'buildings'])
+
     @if (session('success'))
         <div class="alert alert-success mb-5">{{ session('success') }}</div>
     @endif
@@ -105,7 +108,7 @@
                 <h3 class="fw-bold m-0">{{ __('multilingual.committee_decisions.management_title') }}</h3>
             </div>
             <div class="card-toolbar">
-                <a href="{{ route('committee-decisions.higher-committee-reassessments.index') }}" class="btn btn-light-warning btn-sm">إعادة تقييم اللجنة العليا</a>
+                <a href="{{ route('committee-decisions.higher-committee-reassessments.index', ['sector' => $isHousingSector ? 'housing-units' : 'buildings']) }}" class="btn btn-light-warning btn-sm">إعادة تقييم اللجنة العليا</a>
             </div>
         </div>
         <div class="card-body">
@@ -211,15 +214,15 @@
 
             <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x fs-6 fw-semibold mb-5">
                 <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#committee_buildings_tab">{{ __('multilingual.committee_decisions.tabs.buildings') }}</a>
+                    <a class="nav-link {{ $isHousingSector ? '' : 'active' }}" data-bs-toggle="tab" href="#committee_buildings_tab">{{ __('multilingual.committee_decisions.tabs.buildings') }}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#committee_units_tab">{{ __('multilingual.committee_decisions.tabs.housing_units') }}</a>
+                    <a class="nav-link {{ $isHousingSector ? 'active' : '' }}" data-bs-toggle="tab" href="#committee_units_tab">{{ __('multilingual.committee_decisions.tabs.housing_units') }}</a>
                 </li>
             </ul>
 
             <div class="tab-content">
-                <div class="tab-pane fade show active" id="committee_buildings_tab" role="tabpanel">
+                <div class="tab-pane fade {{ $isHousingSector ? '' : 'show active' }}" id="committee_buildings_tab" role="tabpanel">
                     <div class="table-responsive">
                         <table id="committee_buildings_table" class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3 w-100">
                             <thead>
@@ -240,7 +243,7 @@
                         </table>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="committee_units_tab" role="tabpanel">
+                <div class="tab-pane fade {{ $isHousingSector ? 'show active' : '' }}" id="committee_units_tab" role="tabpanel">
                     <div class="table-responsive">
                         <table id="committee_units_table" class="table table-row-bordered table-row-gray-100 align-middle gs-0 gy-3 w-100">
                             <thead>

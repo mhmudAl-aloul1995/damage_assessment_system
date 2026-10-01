@@ -4,6 +4,8 @@
 @section('pageName', 'أعضاء اللجنة')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     @if (session('success'))
         <div class="alert alert-success mb-5">{{ session('success') }}</div>
     @endif
