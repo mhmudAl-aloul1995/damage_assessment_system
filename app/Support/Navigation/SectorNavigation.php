@@ -38,7 +38,6 @@ class SectorNavigation
         }
 
         if (in_array($routeName, [
-            'damageAssessment.index',
             'audit.index',
             'audit.dashboard',
             'audit.fieldEngineer',
@@ -189,7 +188,6 @@ class SectorNavigation
                 'title' => 'menu.damage_assessment.buildings',
                 'tabs' => [
                     self::tab('records', 'building.index', ['building.*'], $damageRecordRoles),
-                    self::monitoringTab('buildings'),
                     self::damageAuditTab('buildings'),
                     self::decisionsTab('buildings'),
                     self::reportTab([
@@ -207,7 +205,6 @@ class SectorNavigation
                 'title' => 'menu.damage_assessment.housing_units',
                 'tabs' => [
                     self::tab('records', 'housing.index', ['housing.*'], $damageRecordRoles),
-                    self::monitoringTab('housing-units'),
                     self::damageAuditTab('housing-units'),
                     self::decisionsTab('housing-units'),
                     self::reportTab([
@@ -265,16 +262,6 @@ class SectorNavigation
     private static function reportTab(array $items): array
     {
         return self::dropdownTab('reports', 'ki-chart-simple', $items);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private static function monitoringTab(string $sector): array
-    {
-        $monitoringRoles = ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'];
-
-        return self::tab('monitoring', 'damageAssessment.index', ['damageAssessment.index'], $monitoringRoles, parameters: ['sector' => $sector]);
     }
 
     /**
@@ -420,7 +407,6 @@ class SectorNavigation
             'title' => "menu.sector_navigation.{$key}",
             'icon' => match ($key) {
                 'records' => 'ki-document',
-                'monitoring' => 'ki-element-11',
                 'audit' => 'ki-shield-tick',
                 'reports' => 'ki-chart-simple',
                 'productivity' => 'ki-graph-up',

@@ -12,7 +12,6 @@ return [
         'title' => 'مساحة قطاع :sector',
         'aria_label' => 'التنقل داخل قطاع :sector',
         'records' => 'السجلات',
-        'monitoring' => 'المتابعة',
         'audit' => 'التدقيق',
         'decisions' => 'القرارات',
         'reports' => 'التقارير',

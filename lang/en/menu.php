@@ -12,7 +12,6 @@ return [
         'title' => ':sector Workspace',
         'aria_label' => ':sector sector navigation',
         'records' => 'Records',
-        'monitoring' => 'Monitoring',
         'audit' => 'Audit',
         'decisions' => 'Decisions',
         'reports' => 'Reports',

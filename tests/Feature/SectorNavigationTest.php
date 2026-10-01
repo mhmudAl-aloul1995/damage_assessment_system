@@ -6,14 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Spatie\Permission\Models\Role;
 
-it('builds sector workspaces around monitoring review decisions reports and exports', function () {
+it('builds sector workspaces around review decisions reports and exports', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
         'records',
-        'monitoring',
         'audit',
         'decisions',
         'reports',
@@ -33,7 +32,6 @@ it('only shows sector tools available to the user role', function () {
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
         'records',
-        'monitoring',
         'audit',
         'decisions',
         'reports',
@@ -41,7 +39,7 @@ it('only shows sector tools available to the user role', function () {
     ]);
 });
 
-it('distributes monitoring review and committee links into damage sector tabs', function () {
+it('distributes review and committee links into damage sector tabs', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
@@ -52,9 +50,7 @@ it('distributes monitoring review and committee links into damage sector tabs', 
         ->map(fn (string $url): string => (string) parse_url($url, PHP_URL_PATH))
         ->all();
 
-    expect((string) parse_url($tabs['monitoring']['url'], PHP_URL_PATH))
-        ->toBe((string) parse_url(route('damageAssessment.index'), PHP_URL_PATH))
-        ->and($pathsFor('audit'))
+    expect($pathsFor('audit'))
         ->toContain((string) parse_url(route('audit.dashboard'), PHP_URL_PATH))
         ->toContain((string) parse_url(route('audit.index'), PHP_URL_PATH))
         ->toContain((string) parse_url(route('audit.auditBuilding'), PHP_URL_PATH))

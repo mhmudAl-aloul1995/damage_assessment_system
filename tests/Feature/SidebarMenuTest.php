@@ -142,6 +142,7 @@ it('groups visible sidebar sections by module', function () {
 
     expect($damageAssessmentModule['sections']->pluck('title')->all())
         ->toContain(
+            'menu.damage_assessment.dashboard',
             'menu.hud.title',
             'menu.damage_assessment.buildings',
             'menu.damage_assessment.housing_units',
@@ -171,6 +172,7 @@ it('orders damage assessment sidebar sections by sector first', function () {
         ->all();
 
     expect($sectionTitles)->toMatchArray([
+        'menu.damage_assessment.dashboard',
         'menu.hud.title',
         'menu.damage_assessment.buildings',
         'menu.damage_assessment.housing_units',
@@ -275,24 +277,28 @@ it('opens sector links on the first tool available to specialist roles', functio
     $infrastructureAuditor->assignRole($infrastructureAuditorRole);
 
     expect(sidebarUrlsFor($mopwh))
-        ->toContain('damage-assessment/damageAssessment?sector=buildings')
+        ->toContain('damage-assessment/damageAssessment')
         ->and(sidebarUrlsFor($fieldEngineer))
         ->toContain('damage-assessment/field-engineer-audit?sector=buildings')
         ->and(sidebarUrlsFor($infrastructureAuditor))
         ->toContain('damage-assessment/inf-audit/public-buildings');
 });
 
-it('places hud above damage assessment sectors for non auditor sidebar roles', function () {
+it('places the main page and hud above damage assessment sectors', function () {
     $role = Role::findOrCreate('Area Manager', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
     $damageAssessmentModule = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment');
+    $mainSection = $damageAssessmentModule['sections']->firstWhere('title', 'menu.damage_assessment.dashboard');
     $hudSection = $damageAssessmentModule['sections']->firstWhere('title', 'menu.hud.title');
     $sectionTitles = $damageAssessmentModule['sections']->pluck('title')->all();
 
-    expect($sectionTitles[0])->toBe('menu.hud.title')
+    expect($sectionTitles[0])->toBe('menu.damage_assessment.dashboard')
+        ->and($sectionTitles[1])->toBe('menu.hud.title')
         ->and($sectionTitles)->toContain('menu.damage_assessment.buildings')
+        ->and($mainSection['is_direct'])->toBeTrue()
+        ->and($mainSection['url'])->toBe('damage-assessment/damageAssessment')
         ->and(array_search('menu.hud.title', $sectionTitles, true))
         ->toBeLessThan(array_search('menu.damage_assessment.buildings', $sectionTitles, true))
         ->and($hudSection['is_direct'])->toBeTrue()
