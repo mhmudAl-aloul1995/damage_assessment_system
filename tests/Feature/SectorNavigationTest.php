@@ -12,6 +12,7 @@ it('builds sector workspaces around review decisions reports and exports', funct
     $user->assignRole($role);
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
+        'overview',
         'records',
         'hud',
         'audit',
@@ -19,6 +20,7 @@ it('builds sector workspaces around review decisions reports and exports', funct
         'reports',
         'export',
     ])->and(collect(SectorNavigation::forUser('public-buildings', $user))->pluck('key')->all())->toBe([
+        'overview',
         'records',
         'audit',
         'reports',
@@ -32,6 +34,7 @@ it('only shows sector tools available to the user role', function () {
     $user->assignRole($role);
 
     expect(collect(SectorNavigation::forUser('buildings', $user))->pluck('key')->all())->toBe([
+        'overview',
         'records',
         'hud',
         'audit',

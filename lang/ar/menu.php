@@ -9,6 +9,7 @@ return [
         'analysis' => 'التحليل والتقارير',
     ],
     'sector_navigation' => [
+        'overview' => 'نظرة عامة',
         'title' => 'مساحة قطاع :sector',
         'aria_label' => 'التنقل داخل قطاع :sector',
         'records' => 'السجلات',

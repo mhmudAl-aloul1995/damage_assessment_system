@@ -37,6 +37,10 @@ class SectorNavigation
             return null;
         }
 
+        if (str_starts_with($routeName, 'sector-overview.')) {
+            return request()->route('sector');
+        }
+
         if (in_array($routeName, [
             'audit.index',
             'audit.dashboard',
@@ -134,7 +138,9 @@ class SectorNavigation
         return [
             'title' => $item['title'],
             'url' => route($item['route'], $item['parameters'] ?? []),
-            'is_active' => request()->routeIs(...$item['active_routes']),
+            'is_active' => request()->routeIs(...$item['active_routes'])
+                && (($item['parameters']['sector'] ?? null) === null
+                    || self::sectorForCurrentRoute() === $item['parameters']['sector']),
         ];
     }
 
@@ -194,6 +200,7 @@ class SectorNavigation
             'buildings' => [
                 'title' => 'menu.damage_assessment.buildings',
                 'tabs' => [
+                    self::tab('overview', 'sector-overview.show', ['sector-overview.*'], $damageRecordRoles, parameters: ['sector' => 'buildings']),
                     self::dropdownTab('records', 'ki-document', [
                         self::item('menu.sector_navigation.record_items.buildings', 'building.index', ['building.*'], $damageRecordRoles),
                         self::item('menu.damage_assessment.assessments', 'engineers.assessmentAll', ['engineers.assessmentAll'], $damageRecordRoles),
@@ -215,6 +222,7 @@ class SectorNavigation
             'housing-units' => [
                 'title' => 'menu.damage_assessment.housing_units',
                 'tabs' => [
+                    self::tab('overview', 'sector-overview.show', ['sector-overview.*'], $damageRecordRoles, parameters: ['sector' => 'housing-units']),
                     self::dropdownTab('records', 'ki-document', [
                         self::item('menu.sector_navigation.record_items.housing_units', 'housing.index', ['housing.*'], $damageRecordRoles),
                         self::item('menu.damage_assessment.missing_citizen_identities', 'reports.missing-citizen-identities.index', ['reports.missing-citizen-identities.*'], $missingCitizenIdentityRoles),
@@ -234,6 +242,7 @@ class SectorNavigation
             'public-buildings' => [
                 'title' => 'menu.damage_assessment.public_buildings',
                 'tabs' => [
+                    self::tab('overview', 'sector-overview.show', ['sector-overview.*'], $infrastructureRecordRoles, parameters: ['sector' => 'public-buildings']),
                     self::tab('records', 'public-buildings.index', ['public-buildings.index', 'public-buildings.show'], $infrastructureRecordRoles),
                     self::tab('audit', 'inf-audit.public-buildings.index', ['inf-audit.public-buildings.*'], $infrastructureAuditRoles),
                     self::reportTab([
@@ -246,6 +255,7 @@ class SectorNavigation
             'road-facilities' => [
                 'title' => 'menu.damage_assessment.road_facilities',
                 'tabs' => [
+                    self::tab('overview', 'sector-overview.show', ['sector-overview.*'], $infrastructureRecordRoles, parameters: ['sector' => 'road-facilities']),
                     self::tab('records', 'road-facilities.index', ['road-facilities.index', 'road-facilities.show'], $infrastructureRecordRoles),
                     self::tab('audit', 'inf-audit.roads.index', ['inf-audit.roads.*'], $infrastructureAuditRoles),
                     self::reportTab([
@@ -258,6 +268,7 @@ class SectorNavigation
             'cso-surveys' => [
                 'title' => 'menu.damage_assessment.cso_surveys',
                 'tabs' => [
+                    self::tab('overview', 'sector-overview.show', ['sector-overview.*'], [...$infrastructureRecordRoles, 'CSO Officer'], ['cso-surveys.view'], ['sector' => 'cso-surveys']),
                     self::tab('records', 'cso-surveys.index', ['cso-surveys.index', 'cso-surveys.show'], [...$infrastructureRecordRoles, 'CSO Officer']),
                     self::tab('audit', 'inf-audit.cso.index', ['inf-audit.cso.*'], [...$infrastructureAuditRoles, 'CSO Officer']),
                     self::reportTab([
@@ -421,6 +432,7 @@ class SectorNavigation
             'key' => $key,
             'title' => "menu.sector_navigation.{$key}",
             'icon' => match ($key) {
+                'overview' => 'ki-element-11',
                 'records' => 'ki-document',
                 'hud' => 'ki-chart-pie-4',
                 'audit' => 'ki-shield-tick',

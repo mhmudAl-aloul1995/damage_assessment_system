@@ -9,6 +9,7 @@ return [
         'analysis' => 'Analysis and Reports',
     ],
     'sector_navigation' => [
+        'overview' => 'Overview',
         'title' => ':sector Workspace',
         'aria_label' => ':sector sector navigation',
         'records' => 'Records',

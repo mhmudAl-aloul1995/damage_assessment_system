@@ -109,8 +109,8 @@ it('removes infrastructure audit links from the standalone sidebar', function ()
     expect($urls)
         ->not->toContain('damage-assessment/inf-audit/public-buildings')
         ->not->toContain('damage-assessment/inf-audit/roads')
-        ->toContain('damage-assessment/public-buildings')
-        ->toContain('damage-assessment/road-facilities');
+        ->toContain('damage-assessment/sectors/public-buildings')
+        ->toContain('damage-assessment/sectors/road-facilities');
 });
 
 it('shows all cso links to cso officers', function () {
@@ -121,13 +121,13 @@ it('shows all cso links to cso officers', function () {
     $urls = sidebarUrlsFor($user);
 
     expect($urls)
-        ->toContain('damage-assessment/cso-surveys')
+        ->toContain('damage-assessment/sectors/cso-surveys')
         ->not->toContain('damage-assessment/inf-audit/cso')
         ->not->toContain('damage-assessment/reports/area-productivity/cso-surveys')
         ->not->toContain('damage-assessment/cso-surveys/export-data')
         ->not->toContain('damage-assessment/building-deletions')
-        ->not->toContain('damage-assessment/public-buildings')
-        ->not->toContain('damage-assessment/road-facilities');
+        ->not->toContain('damage-assessment/sectors/public-buildings')
+        ->not->toContain('damage-assessment/sectors/road-facilities');
 });
 
 it('groups visible sidebar sections by module', function () {

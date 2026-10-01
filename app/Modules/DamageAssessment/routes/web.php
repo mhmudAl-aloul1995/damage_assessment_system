@@ -17,6 +17,7 @@ use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeArchiveCont
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeDecisionController;
 use App\Modules\DamageAssessment\Http\Controllers\Committee\CommitteeMemberController;
 use App\Modules\DamageAssessment\Http\Controllers\Dashboard\DamageAssessmentController;
+use App\Modules\DamageAssessment\Http\Controllers\Dashboard\SectorOverviewController;
 use App\Modules\DamageAssessment\Http\Controllers\Exports\ExportDataController;
 use App\Modules\DamageAssessment\Http\Controllers\FieldOperations\BuildingSurveyReturnRequestController;
 use App\Modules\DamageAssessment\Http\Controllers\FieldOperations\EngineerController;
@@ -47,6 +48,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::prefix('sectors/{sector}')->name('sector-overview.')
+        ->whereIn('sector', ['buildings', 'housing-units', 'public-buildings', 'road-facilities', 'cso-surveys'])
+        ->group(function (): void {
+            Route::get('/', [SectorOverviewController::class, 'show'])->name('show');
+            Route::get('/stats', [SectorOverviewController::class, 'stats'])->name('stats');
+            Route::get('/map', [SectorOverviewController::class, 'map'])->name('map');
+        });
+
     Route::get('/gitPush', [EngineerController::class, 'gitPush'])
         ->middleware('role_or_permission:Database Officer|system.maintenance');
 
