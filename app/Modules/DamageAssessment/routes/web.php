@@ -288,7 +288,7 @@ Route::middleware('auth')->group(function () {
         ->name('damageAssessment.latest-stats');
     // Reports
 
-    Route::get('reports/productivity', action: [ReportController::class, 'productivity']);
+    Route::get('reports/productivity', action: [ReportController::class, 'productivity'])->name('reports.productivity');
     Route::get('/export_productivity', [ReportController::class, 'export_productivity'])->name('export_productivity');
 
     Route::get('/search-buildings', [DamageAssessmentController::class, 'search'])->name('buildings.search');

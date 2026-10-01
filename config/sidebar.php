@@ -316,6 +316,7 @@ return [
     ],
     [
         'module' => 'damage_assessment',
+        'sidebar_visible' => false,
         'navigation_group' => 'menu.navigation_groups.analysis',
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',

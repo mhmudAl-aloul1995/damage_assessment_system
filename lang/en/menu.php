@@ -16,6 +16,16 @@ return [
         'reports' => 'Reports',
         'productivity' => 'Productivity',
         'export' => 'Export Data',
+        'report_items' => [
+            'area_productivity' => 'Area Productivity',
+            'building_productivity' => 'Building Assessment Productivity',
+            'engineer_productivity' => 'Engineer Productivity',
+            'field_engineer' => 'Field Engineer Report',
+            'daily_audit' => 'Daily Audit Achievement',
+            'hlp' => 'HLP Audit Report',
+            'engineer_audit' => 'Engineer Evaluation',
+            'sector_report' => 'Detailed Sector Report',
+        ],
     ],
     'modules' => [
         'damage_assessment' => 'Damage Assessment Module',

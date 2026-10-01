@@ -4,6 +4,8 @@
 @section('pageName', 'HLP Audit Report')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'housing-units'])
+
     <style>
         #hlp_audit_table th,
         #hlp_audit_table td {

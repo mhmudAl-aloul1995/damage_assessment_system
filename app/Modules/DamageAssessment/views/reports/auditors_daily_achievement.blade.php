@@ -3,6 +3,8 @@
 @section('pageName', 'Auditors Daily Achievement')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     <div class="row">
         <div class="col-md-12">
             <div class="card">

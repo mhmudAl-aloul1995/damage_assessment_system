@@ -3,6 +3,8 @@
 @section('pageName', 'Productivity Rates Report')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])
+
     <style>
         .productivity-report-shell {
             background: #f5f7fb;

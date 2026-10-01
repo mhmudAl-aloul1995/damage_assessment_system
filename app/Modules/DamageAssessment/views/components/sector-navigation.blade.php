@@ -35,12 +35,11 @@
 
             .sector-workspace-navigation .sector-workspace-tabs {
                 display: flex;
+                flex-wrap: wrap;
                 gap: .4rem;
                 margin: 0;
                 padding: 0 1.25rem 1rem;
-                overflow-x: auto;
                 list-style: none;
-                scrollbar-width: thin;
             }
 
             .sector-workspace-navigation .sector-workspace-tab {
@@ -67,12 +66,30 @@
                 color: var(--bs-primary);
             }
 
-            @media (min-width: 992px) {
-                .sector-workspace-navigation .sector-workspace-tabs {
-                    flex-wrap: wrap;
-                    overflow-x: visible;
-                }
+            .sector-workspace-navigation button.sector-workspace-tab {
+                border: 0;
+                background-color: transparent;
             }
+
+            .sector-workspace-navigation button.sector-workspace-tab.active {
+                background: var(--bs-primary-light);
+            }
+
+            .sector-workspace-navigation .sector-report-menu {
+                min-width: 260px;
+                max-height: 360px;
+                overflow-y: auto;
+            }
+
+            .sector-workspace-navigation .sector-report-menu .dropdown-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                padding: .7rem .85rem;
+                border-radius: .5rem;
+            }
+
         </style>
     @endonce
 
@@ -90,15 +107,43 @@
         <ul class="sector-workspace-tabs">
             @foreach ($sectorTabs as $tab)
                 <li>
-                    <a class="sector-workspace-tab {{ $tab['is_active'] ? 'active' : '' }}"
-                        href="{{ $tab['url'] }}"
-                        @if ($tab['is_active']) aria-current="page" @endif>
-                        <i class="ki-duotone {{ $tab['icon'] }} fs-3" aria-hidden="true">
-                            <span class="path1"></span>
-                            <span class="path2"></span>
-                        </i>
-                        <span>{{ __($tab['title']) }}</span>
-                    </a>
+                    @if ($tab['items'] !== [])
+                        <div class="dropdown">
+                            <button type="button"
+                                class="sector-workspace-tab {{ $tab['is_active'] ? 'active' : '' }}"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ki-duotone {{ $tab['icon'] }} fs-3" aria-hidden="true">
+                                    <span class="path1"></span>
+                                    <span class="path2"></span>
+                                </i>
+                                <span>{{ __($tab['title']) }}</span>
+                                <i class="ki-duotone ki-down fs-5" aria-hidden="true"></i>
+                            </button>
+
+                            <ul class="dropdown-menu sector-report-menu">
+                                @foreach ($tab['items'] as $report)
+                                    <li>
+                                        <a class="dropdown-item {{ $report['is_active'] ? 'active' : '' }}"
+                                            href="{{ $report['url'] }}"
+                                            @if ($report['is_active']) aria-current="page" @endif>
+                                            <span>{{ __($report['title']) }}</span>
+                                            <i class="ki-duotone ki-left fs-5" aria-hidden="true"></i>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @else
+                        <a class="sector-workspace-tab {{ $tab['is_active'] ? 'active' : '' }}"
+                            href="{{ $tab['url'] }}"
+                            @if ($tab['is_active']) aria-current="page" @endif>
+                            <i class="ki-duotone {{ $tab['icon'] }} fs-3" aria-hidden="true">
+                                <span class="path1"></span>
+                                <span class="path2"></span>
+                            </i>
+                            <span>{{ __($tab['title']) }}</span>
+                        </a>
+                    @endif
                 </li>
             @endforeach
         </ul>

@@ -4,6 +4,8 @@
 @section('pageName', 'Building Productivity Report')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])
+
     <style>
         .location-pie-tree {
             display: flex;

@@ -16,6 +16,16 @@ return [
         'reports' => 'التقارير',
         'productivity' => 'الإنتاجية',
         'export' => 'تصدير البيانات',
+        'report_items' => [
+            'area_productivity' => 'إنتاجية المناطق',
+            'building_productivity' => 'إنتاجية حصر المباني',
+            'engineer_productivity' => 'إنتاجية المهندسين',
+            'field_engineer' => 'تقرير المهندس الميداني',
+            'daily_audit' => 'إنجاز التدقيق اليومي',
+            'hlp' => 'تقرير تدقيق HLP',
+            'engineer_audit' => 'تقييم المهندسين',
+            'sector_report' => 'التقرير التفصيلي للقطاع',
+        ],
     ],
     'modules' => [
         'damage_assessment' => 'موديول حصر الأضرار',

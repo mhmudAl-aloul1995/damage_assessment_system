@@ -31,6 +31,8 @@
 @endphp
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     <style>
         .field-engineer-report .stats-card {
             border: 1px dashed #d9dee7;

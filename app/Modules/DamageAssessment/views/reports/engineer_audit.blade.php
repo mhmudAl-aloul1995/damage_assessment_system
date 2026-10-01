@@ -4,6 +4,8 @@
 @section('pageName', 'تقرير تقييم المهندسين')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     <style>
         .engineer-audit-toolbar {
             width: 100%;

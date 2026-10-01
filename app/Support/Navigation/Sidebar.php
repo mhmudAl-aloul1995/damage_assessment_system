@@ -74,6 +74,10 @@ class Sidebar
      */
     private static function visibleSection(array $section, User $user): ?array
     {
+        if (! ($section['sidebar_visible'] ?? true)) {
+            return null;
+        }
+
         if (! $user->hasAnyRole($section['roles'] ?? []) && ! self::hasVisibleItem($section, $user)) {
             return null;
         }
