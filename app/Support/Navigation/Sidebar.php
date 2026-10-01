@@ -81,7 +81,7 @@ class Sidebar
         if (isset($section['url'])) {
             $section['items'] = collect();
             $section['visible_item_count'] = 0;
-            $section['is_active'] = request()->is(...($section['active_patterns'] ?? [$section['pattern'] ?? '']));
+            $section['is_active'] = self::isActive($section);
             $section['is_direct'] = true;
 
             return $section;
@@ -100,9 +100,22 @@ class Sidebar
         $section['visible_item_count'] = $visibleItems->sum(
             fn (array $item): int => isset($item['children']) ? $item['children']->count() : 1
         );
-        $section['is_active'] = request()->is(...($section['active_patterns'] ?? []));
+        $section['is_active'] = self::isActive($section);
 
         return $section;
+    }
+
+    private static function isActive(array $section): bool
+    {
+        $activePatterns = $section['active_patterns'] ?? [$section['pattern'] ?? ''];
+
+        if (! request()->is(...$activePatterns)) {
+            return false;
+        }
+
+        $excludedPatterns = $section['exclude_active_patterns'] ?? [];
+
+        return $excludedPatterns === [] || ! request()->is(...$excludedPatterns);
     }
 
     /**

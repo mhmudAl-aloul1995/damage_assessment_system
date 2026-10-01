@@ -337,7 +337,29 @@
 		text-transform: uppercase;
 	}
 
+	#kt_app_sidebar_menu .phc-sidebar-navigation-group {
+		display: flex;
+		align-items: center;
+		gap: .65rem;
+		margin: 1.15rem .65rem .45rem;
+		color: #94a3b8;
+		font-size: .7rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	#kt_app_sidebar_menu .phc-sidebar-navigation-group::after {
+		flex: 1;
+		height: 1px;
+		background: rgba(148, 163, 184, .22);
+		content: "";
+	}
+
 	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-item-count {
+		display: none;
+	}
+
+	body[data-kt-app-sidebar-minimize="on"] #kt_app_sidebar_menu .phc-sidebar-navigation-group {
 		display: none;
 	}
 
@@ -1508,7 +1530,17 @@
 										{{ __($sidebarModule['title']) }}
 									</div>
 
+									@php($currentNavigationGroup = null)
 									@foreach($sidebarModule['sections'] as $menu)
+										@if(($menu['navigation_group'] ?? null) !== $currentNavigationGroup)
+											@if($menu['navigation_group'] ?? null)
+												<div class="phc-sidebar-navigation-group">
+													{{ __($menu['navigation_group']) }}
+												</div>
+											@endif
+											@php($currentNavigationGroup = $menu['navigation_group'] ?? null)
+										@endif
+
 										@if($menu['is_direct'] ?? false)
 											<div
 												class="menu-item phc-sidebar-section {{ ($menu['variant'] ?? null) === 'hud' ? 'phc-sidebar-hud' : '' }} {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">

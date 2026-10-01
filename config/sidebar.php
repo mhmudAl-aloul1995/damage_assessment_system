@@ -3,6 +3,7 @@
 return [
     [
         'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.overview',
         'title' => 'menu.hud.title',
         'icon' => 'ki-chart-pie-4',
         'variant' => 'hud',
@@ -15,6 +16,7 @@ return [
     ],
     [
         'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.overview',
         'title' => 'menu.damage_assessment.monitoring',
         'icon' => 'ki-element-11',
         'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor'],
@@ -39,18 +41,87 @@ return [
     ],
     [
         'module' => 'damage_assessment',
-        'title' => 'menu.damage_assessment.title',
-        'icon' => 'ki-abstract-28',
-        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Legal Auditor', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer', 'CSO Officer'],
+        'navigation_group' => 'menu.navigation_groups.sectors',
+        'title' => 'menu.damage_assessment.buildings',
+        'icon' => 'ki-home-2',
+        'url' => 'damage-assessment/building',
+        'pattern' => 'damage-assessment/building*',
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
         'active_patterns' => [
-            'damage-assessment/building*',
+            'damage-assessment/building',
+            'damage-assessment/building/*',
+        ],
+    ],
+    [
+        'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.sectors',
+        'title' => 'menu.damage_assessment.housing_units',
+        'icon' => 'ki-category',
+        'url' => 'damage-assessment/housing',
+        'pattern' => 'damage-assessment/housing*',
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+        'active_patterns' => [
             'damage-assessment/housing*',
-            'damage-assessment/engineer*',
+        ],
+    ],
+    [
+        'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.sectors',
+        'title' => 'menu.damage_assessment.public_buildings',
+        'icon' => 'ki-bank',
+        'url' => 'damage-assessment/public-buildings',
+        'pattern' => 'damage-assessment/public-buildings*',
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+        'active_patterns' => [
             'damage-assessment/public-buildings*',
+        ],
+        'exclude_active_patterns' => [
+            'damage-assessment/public-buildings/export-data*',
+        ],
+    ],
+    [
+        'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.sectors',
+        'title' => 'menu.damage_assessment.road_facilities',
+        'icon' => 'ki-route',
+        'url' => 'damage-assessment/road-facilities',
+        'pattern' => 'damage-assessment/road-facilities*',
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
+        'active_patterns' => [
             'damage-assessment/road-facilities*',
+        ],
+        'exclude_active_patterns' => [
+            'damage-assessment/road-facilities/export-data*',
+        ],
+    ],
+    [
+        'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.sectors',
+        'title' => 'menu.damage_assessment.cso_surveys',
+        'icon' => 'ki-people',
+        'url' => 'damage-assessment/cso-surveys',
+        'pattern' => 'damage-assessment/cso-surveys*',
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'CSO Officer'],
+        'active_patterns' => [
             'damage-assessment/cso-surveys*',
+        ],
+        'exclude_active_patterns' => [
+            'damage-assessment/cso-surveys/export-data*',
+        ],
+    ],
+    [
+        'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.operations',
+        'title' => 'menu.damage_assessment.operations',
+        'icon' => 'ki-abstract-28',
+        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Legal Auditor', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
+        'active_patterns' => [
+            'damage-assessment/assessmentAll*',
+            'damage-assessment/engineer*',
+            'damage-assessment/building-deletions*',
             'damage-assessment/reports/missing-citizen-identities*',
             'damage-assessment/field-engineer/building-survey-return-requests*',
+            'admin/team-leader-field-engineers*',
         ],
         'items' => [
             [
@@ -63,47 +134,10 @@ return [
                         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
                     ],
                     [
-                        'title' => 'menu.damage_assessment.buildings',
-                        'url' => 'damage-assessment/building',
-                        'pattern' => 'damage-assessment/building*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
-                    ],
-
-                    [
-                        'title' => 'menu.damage_assessment.housing_units',
-                        'url' => 'damage-assessment/housing',
-                        'pattern' => 'damage-assessment/housing*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
-                    ],
-
-                    [
-                        'title' => 'menu.damage_assessment.cso_surveys',
-                        'url' => 'damage-assessment/cso-surveys',
-                        'pattern' => 'damage-assessment/cso-surveys*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'CSO Officer'],
-                    ],
-                    [
                         'title' => 'menu.damage_assessment.missing_citizen_identities',
                         'url' => 'damage-assessment/reports/missing-citizen-identities',
                         'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
                         'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor', 'QC/QA Engineer'],
-                    ],
-                ],
-            ],
-            [
-                'title' => 'menu.damage_assessment.groups.infrastructure',
-                'children' => [
-                    [
-                        'title' => 'menu.damage_assessment.public_buildings',
-                        'url' => 'damage-assessment/public-buildings',
-                        'pattern' => 'damage-assessment/public-buildings*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
-                    ],
-                    [
-                        'title' => 'menu.damage_assessment.road_facilities',
-                        'url' => 'damage-assessment/road-facilities',
-                        'pattern' => 'damage-assessment/road-facilities*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
                     ],
                 ],
             ],
@@ -146,6 +180,7 @@ return [
     ],
     [
         'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.operations',
         'title' => 'menu.attendance.title',
         'icon' => 'ki-calendar-8',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Area Manager'],
@@ -169,6 +204,7 @@ return [
     ],
     [
         'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.review',
         'title' => 'menu.audit.title',
         'icon' => 'ki-medal-star',
         'roles' => ['Database Officer', 'Legal Auditor', 'QC/QA Engineer', 'Inf - QC/QA Engineer', 'Auditing Supervisor', 'Audit Reviewer', 'Project Officer', 'undp-Project Manager', 'Area Manager', 'Field Engineer', 'Team Leader', 'Team Leader -INF', 'CSO Officer'],
@@ -242,6 +278,7 @@ return [
     ],
     [
         'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.review',
         'title' => 'menu.committee.title',
         'icon' => 'ki-shield-search',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Auditing Supervisor', 'QC/QA Engineer', 'Area Manager'],
@@ -279,6 +316,7 @@ return [
     ],
     [
         'module' => 'damage_assessment',
+        'navigation_group' => 'menu.navigation_groups.analysis',
         'title' => 'menu.reports.title',
         'icon' => 'ki-chart-line',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Team Leader', 'Area Manager', 'QC/QA Engineer', 'Auditing Supervisor', 'CSO Officer'],

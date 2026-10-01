@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Support\Audit\RestrictedLawyerAuditAccess;
 use App\Support\Navigation\Sidebar;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
@@ -25,7 +26,7 @@ function sidebarUrlsFor(User $user): array
 {
     return Sidebar::forUser($user)
         ->flatMap(fn (array $module) => $module['sections'])
-        ->flatMap(fn (array $section) => $section['items'])
+        ->flatMap(fn (array $section) => $section['is_direct'] ?? false ? [$section] : $section['items'])
         ->flatMap(fn (array $item) => $item['children'] ?? [$item])
         ->pluck('url')
         ->filter()
@@ -42,7 +43,9 @@ it('shows the sidebar menu for infrastructure Team Leaders', function () {
         ->all();
 
     expect($sectionTitles)
-        ->toContain('menu.damage_assessment.title')
+        ->toContain('menu.damage_assessment.public_buildings')
+        ->toContain('menu.damage_assessment.road_facilities')
+        ->toContain('menu.damage_assessment.operations')
         ->toContain('menu.committee.title');
 });
 
@@ -154,13 +157,24 @@ it('groups visible sidebar sections by module', function () {
     $administrationModule = $modules->firstWhere('key', 'administration');
 
     expect($damageAssessmentModule['sections']->pluck('title')->all())
-        ->toContain('menu.hud.title', 'menu.damage_assessment.monitoring', 'menu.damage_assessment.title', 'menu.reports.title', 'menu.audit.title');
+        ->toContain(
+            'menu.hud.title',
+            'menu.damage_assessment.monitoring',
+            'menu.damage_assessment.buildings',
+            'menu.damage_assessment.housing_units',
+            'menu.damage_assessment.public_buildings',
+            'menu.damage_assessment.road_facilities',
+            'menu.damage_assessment.cso_surveys',
+            'menu.damage_assessment.operations',
+            'menu.reports.title',
+            'menu.audit.title',
+        );
 
     expect($administrationModule['sections']->pluck('title')->all())
         ->toContain('menu.user_management.title');
 });
 
-it('orders damage assessment sidebar sections by the operational workflow', function () {
+it('orders damage assessment sidebar sections by sector first', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
@@ -173,12 +187,70 @@ it('orders damage assessment sidebar sections by the operational workflow', func
     expect($sectionTitles)->toMatchArray([
         'menu.hud.title',
         'menu.damage_assessment.monitoring',
-        'menu.damage_assessment.title',
+        'menu.damage_assessment.buildings',
+        'menu.damage_assessment.housing_units',
+        'menu.damage_assessment.public_buildings',
+        'menu.damage_assessment.road_facilities',
+        'menu.damage_assessment.cso_surveys',
+        'menu.damage_assessment.operations',
         'menu.attendance.title',
         'menu.audit.title',
         'menu.committee.title',
         'menu.reports.title',
     ]);
+});
+
+it('groups damage assessment navigation into clear ux sections', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $navigationGroups = Sidebar::forUser($user)
+        ->firstWhere('key', 'damage_assessment')['sections']
+        ->pluck('navigation_group')
+        ->unique()
+        ->values()
+        ->all();
+
+    expect($navigationGroups)->toBe([
+        'menu.navigation_groups.overview',
+        'menu.navigation_groups.sectors',
+        'menu.navigation_groups.operations',
+        'menu.navigation_groups.review',
+        'menu.navigation_groups.analysis',
+    ]);
+});
+
+it('exposes each damage assessment sector as a direct destination', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $sectorSections = Sidebar::forUser($user)
+        ->firstWhere('key', 'damage_assessment')['sections']
+        ->where('navigation_group', 'menu.navigation_groups.sectors')
+        ->values();
+
+    expect($sectorSections->pluck('title')->all())->toBe([
+        'menu.damage_assessment.buildings',
+        'menu.damage_assessment.housing_units',
+        'menu.damage_assessment.public_buildings',
+        'menu.damage_assessment.road_facilities',
+        'menu.damage_assessment.cso_surveys',
+    ])->and($sectorSections->every(fn (array $section): bool => $section['is_direct']))->toBeTrue();
+});
+
+it('highlights reports instead of a sector on sector export pages', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    app()->instance('request', Request::create('/damage-assessment/public-buildings/export-data'));
+
+    $sections = Sidebar::forUser($user)->firstWhere('key', 'damage_assessment')['sections'];
+
+    expect($sections->firstWhere('title', 'menu.damage_assessment.public_buildings')['is_active'])->toBeFalse()
+        ->and($sections->firstWhere('title', 'menu.reports.title')['is_active'])->toBeTrue();
 });
 
 it('shows higher committee reassessments in the committee sidebar', function () {
@@ -225,7 +297,7 @@ it('shows lawyer legal audit assignments only to authorized sidebar users', func
         ->not->toContain('damage-assessment/audit/lawyer-assignments');
 });
 
-it('places hud above damage assessment for non auditor sidebar roles', function () {
+it('places hud above damage assessment sectors for non auditor sidebar roles', function () {
     $role = Role::findOrCreate('Area Manager', 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
@@ -235,9 +307,9 @@ it('places hud above damage assessment for non auditor sidebar roles', function 
     $sectionTitles = $damageAssessmentModule['sections']->pluck('title')->all();
 
     expect($sectionTitles[0])->toBe('menu.hud.title')
-        ->and($sectionTitles)->toContain('menu.damage_assessment.title')
+        ->and($sectionTitles)->toContain('menu.damage_assessment.buildings')
         ->and(array_search('menu.hud.title', $sectionTitles, true))
-        ->toBeLessThan(array_search('menu.damage_assessment.title', $sectionTitles, true))
+        ->toBeLessThan(array_search('menu.damage_assessment.buildings', $sectionTitles, true))
         ->and($hudSection['is_direct'])->toBeTrue()
         ->and($hudSection['variant'])->toBe('hud')
         ->and($hudSection['url'])->toBe('damage-assessment/damageAssessment/hud')

@@ -1,12 +1,20 @@
 <?php
 
 return [
+    'navigation_groups' => [
+        'overview' => 'المتابعة العامة',
+        'sectors' => 'قطاعات حصر الأضرار',
+        'operations' => 'إدارة العمل',
+        'review' => 'المراجعة والقرارات',
+        'analysis' => 'التحليل والتقارير',
+    ],
     'modules' => [
         'damage_assessment' => 'موديول حصر الأضرار',
         'administration' => 'الإدارة المركزية',
     ],
     'damage_assessment' => [
         'title' => 'حصر الأضرار',
+        'operations' => 'العمليات المشتركة',
         'monitoring' => 'المتابعة',
         'dashboard' => 'الرئيسية',
         'assessments' => 'الاستبيانات',
@@ -19,6 +27,7 @@ return [
         'road_facilities' => 'الطرق',
         'cso_surveys' => 'منظمات المجتمع المدني',
         'engineers' => 'الباحثين',
+        'team_leader_field_engineers' => 'ربط قادة الفرق بالمهندسين',
         'groups' => [
             'records' => 'سجلات الحصر',
             'infrastructure' => 'حصر البنية التحتية',

@@ -1,12 +1,20 @@
 <?php
 
 return [
+    'navigation_groups' => [
+        'overview' => 'Overview',
+        'sectors' => 'Damage Assessment Sectors',
+        'operations' => 'Work Management',
+        'review' => 'Review and Decisions',
+        'analysis' => 'Analysis and Reports',
+    ],
     'modules' => [
         'damage_assessment' => 'Damage Assessment Module',
         'administration' => 'Central Administration',
     ],
     'damage_assessment' => [
         'title' => 'Damage Assessment',
+        'operations' => 'Shared Operations',
         'monitoring' => 'Monitoring',
         'dashboard' => 'Dashboard',
         'assessments' => 'Assessments',
@@ -19,6 +27,7 @@ return [
         'road_facilities' => 'Road Facilities',
         'cso_surveys' => 'Civil Society Organizations',
         'engineers' => 'Researchers',
+        'team_leader_field_engineers' => 'Team Leader Field Engineers',
         'groups' => [
             'records' => 'Survey Records',
             'infrastructure' => 'Infrastructure Surveys',
