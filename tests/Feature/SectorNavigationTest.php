@@ -60,6 +60,32 @@ it('shows hud as a distinctive buildings-only tab', function () {
         ->toContain('sector-workspace-live-dot');
 });
 
+it('places assessments in buildings and missing identities in housing units', function () {
+    $role = Role::findOrCreate('Database Officer', 'web');
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $recordPathsFor = function (string $sector) use ($user): array {
+        $records = collect(SectorNavigation::forUser($sector, $user))->firstWhere('key', 'records');
+
+        return collect($records['items'])
+            ->pluck('url')
+            ->map(fn (string $url): string => (string) parse_url($url, PHP_URL_PATH))
+            ->all();
+    };
+    $buildingRecords = $recordPathsFor('buildings');
+    $housingRecords = $recordPathsFor('housing-units');
+    $assessmentsPath = (string) parse_url(route('engineers.assessmentAll'), PHP_URL_PATH);
+    $missingIdentitiesPath = (string) parse_url(route('reports.missing-citizen-identities.index'), PHP_URL_PATH);
+
+    expect($buildingRecords)
+        ->toContain($assessmentsPath)
+        ->not->toContain($missingIdentitiesPath)
+        ->and($housingRecords)
+        ->toContain($missingIdentitiesPath)
+        ->not->toContain($assessmentsPath);
+});
+
 it('distributes review and committee links into damage sector tabs', function () {
     $role = Role::findOrCreate('Database Officer', 'web');
     $user = User::factory()->create();

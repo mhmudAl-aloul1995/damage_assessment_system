@@ -84,14 +84,16 @@ it('removes the standalone reports section from the sidebar', function () {
         ->not->toContain('damage-assessment/export-data');
 });
 
-it('shows missing citizen identities sidebar link to auditing supervisor and project officer', function (string $roleName) {
+it('removes assessments and missing identities from the standalone sidebar', function (string $roleName) {
     $role = Role::findOrCreate($roleName, 'web');
     $user = User::factory()->create();
     $user->assignRole($role);
 
     $urls = sidebarUrlsFor($user);
 
-    expect($urls)->toContain('damage-assessment/reports/missing-citizen-identities');
+    expect($urls)
+        ->not->toContain('damage-assessment/assessmentAll')
+        ->not->toContain('damage-assessment/reports/missing-citizen-identities');
 })->with([
     'auditing supervisor' => 'Auditing Supervisor',
     'project officer' => 'Project Officer',

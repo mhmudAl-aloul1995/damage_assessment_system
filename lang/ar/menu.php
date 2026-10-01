@@ -35,6 +35,10 @@ return [
             'field_engineer_buildings' => 'مباني المهندس الميداني',
             'area_manager_review' => 'مراجعة مدير المنطقة',
         ],
+        'record_items' => [
+            'buildings' => 'سجلات المباني',
+            'housing_units' => 'سجلات الوحدات السكنية',
+        ],
     ],
     'modules' => [
         'damage_assessment' => 'موديول حصر الأضرار',

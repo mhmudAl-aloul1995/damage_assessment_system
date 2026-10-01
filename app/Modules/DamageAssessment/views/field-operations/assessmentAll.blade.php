@@ -3,6 +3,8 @@
 @section('pageName', '')
 
 @section('content')
+	@include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])
+
 	<style>
 		.small,
 		.text-muted {

@@ -94,31 +94,12 @@ return [
         'icon' => 'ki-abstract-28',
         'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Legal Auditor', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Field Engineer'],
         'active_patterns' => [
-            'damage-assessment/assessmentAll*',
             'damage-assessment/engineer*',
             'damage-assessment/building-deletions*',
-            'damage-assessment/reports/missing-citizen-identities*',
             'damage-assessment/field-engineer/building-survey-return-requests*',
             'admin/team-leader-field-engineers*',
         ],
         'items' => [
-            [
-                'title' => 'menu.damage_assessment.groups.records',
-                'children' => [
-                    [
-                        'title' => 'menu.damage_assessment.assessments',
-                        'url' => 'damage-assessment/assessmentAll',
-                        'pattern' => 'damage-assessment/assessmentAll*',
-                        'roles' => ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'],
-                    ],
-                    [
-                        'title' => 'menu.damage_assessment.missing_citizen_identities',
-                        'url' => 'damage-assessment/reports/missing-citizen-identities',
-                        'pattern' => 'damage-assessment/reports/missing-citizen-identities*',
-                        'roles' => ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor', 'QC/QA Engineer'],
-                    ],
-                ],
-            ],
             [
                 'title' => 'menu.damage_assessment.groups.field_operations',
                 'children' => [

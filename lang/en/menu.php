@@ -35,6 +35,10 @@ return [
             'field_engineer_buildings' => 'Field Engineer Buildings',
             'area_manager_review' => 'Area Manager Review',
         ],
+        'record_items' => [
+            'buildings' => 'Building Records',
+            'housing_units' => 'Housing Unit Records',
+        ],
     ],
     'modules' => [
         'damage_assessment' => 'Damage Assessment Module',

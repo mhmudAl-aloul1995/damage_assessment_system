@@ -145,12 +145,14 @@ class SectorNavigation
     {
         return [
             'building.' => 'buildings',
+            'engineers.assessmentAll' => 'buildings',
             'reports.building-productivity.' => 'buildings',
             'reports.productivity' => 'buildings',
             'reports.area-productivity.buildings' => 'buildings',
             'damageAssessment.hud' => 'buildings',
             'housing.' => 'housing-units',
             'reports.area-productivity.housing-units' => 'housing-units',
+            'reports.missing-citizen-identities.' => 'housing-units',
             'reports.hlp-audit' => 'housing-units',
             'audit.lawyer-assignments' => 'housing-units',
             'public-buildings.' => 'public-buildings',
@@ -176,6 +178,7 @@ class SectorNavigation
     private static function sectors(): array
     {
         $damageRecordRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'];
+        $missingCitizenIdentityRoles = ['Database Officer', 'Auditing Supervisor', 'Project Officer', 'Legal Auditor', 'QC/QA Engineer'];
         $hudRoles = ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager'];
         $infrastructureRecordRoles = ['Database Officer', 'Project Officer', 'undp-Project Manager', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer'];
         $infrastructureAuditRoles = ['Database Officer', 'Project Officer', 'Team Leader -INF', 'Inf - QC/QA Engineer'];
@@ -191,7 +194,10 @@ class SectorNavigation
             'buildings' => [
                 'title' => 'menu.damage_assessment.buildings',
                 'tabs' => [
-                    self::tab('records', 'building.index', ['building.*'], $damageRecordRoles),
+                    self::dropdownTab('records', 'ki-document', [
+                        self::item('menu.sector_navigation.record_items.buildings', 'building.index', ['building.*'], $damageRecordRoles),
+                        self::item('menu.damage_assessment.assessments', 'engineers.assessmentAll', ['engineers.assessmentAll'], $damageRecordRoles),
+                    ]),
                     self::tab('hud', 'damageAssessment.hud', ['damageAssessment.hud'], $hudRoles, variant: 'hud'),
                     self::damageAuditTab('buildings'),
                     self::decisionsTab('buildings'),
@@ -209,7 +215,10 @@ class SectorNavigation
             'housing-units' => [
                 'title' => 'menu.damage_assessment.housing_units',
                 'tabs' => [
-                    self::tab('records', 'housing.index', ['housing.*'], $damageRecordRoles),
+                    self::dropdownTab('records', 'ki-document', [
+                        self::item('menu.sector_navigation.record_items.housing_units', 'housing.index', ['housing.*'], $damageRecordRoles),
+                        self::item('menu.damage_assessment.missing_citizen_identities', 'reports.missing-citizen-identities.index', ['reports.missing-citizen-identities.*'], $missingCitizenIdentityRoles),
+                    ]),
                     self::damageAuditTab('housing-units'),
                     self::decisionsTab('housing-units'),
                     self::reportTab([
