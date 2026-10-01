@@ -8,6 +8,15 @@ return [
         'review' => 'Review and Decisions',
         'analysis' => 'Analysis and Reports',
     ],
+    'sector_navigation' => [
+        'title' => ':sector Workspace',
+        'aria_label' => ':sector sector navigation',
+        'records' => 'Records',
+        'audit' => 'Audit',
+        'reports' => 'Reports',
+        'productivity' => 'Productivity',
+        'export' => 'Export Data',
+    ],
     'modules' => [
         'damage_assessment' => 'Damage Assessment Module',
         'administration' => 'Central Administration',

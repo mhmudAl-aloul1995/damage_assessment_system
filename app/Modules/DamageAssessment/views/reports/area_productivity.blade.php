@@ -4,6 +4,8 @@
 @section('pageName', __($title_key))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation')
+
     @php
         $showHousingUnitsCount = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;
         $showAuditedBuildingColumns = $type === \App\Modules\DamageAssessment\Services\Reports\AreaProductivityReportService::TYPE_BUILDINGS;

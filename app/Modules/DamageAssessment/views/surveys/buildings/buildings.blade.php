@@ -3,6 +3,8 @@
 @section('pageName', __('ui.buildings_page.title'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])
+
     <div class="row g-5 mb-5">
         <div class="col-md-3">
             <div class="card card-flush border border-gray-200 h-100">

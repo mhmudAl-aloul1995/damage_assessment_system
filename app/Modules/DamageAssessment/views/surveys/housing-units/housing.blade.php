@@ -3,6 +3,8 @@
 @section('pageName', __('ui.housing_page.title'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'housing-units'])
+
     <style>
         .housing-export-column-toolbar {
             display: grid;

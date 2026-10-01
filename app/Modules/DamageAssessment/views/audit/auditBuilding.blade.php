@@ -3,6 +3,8 @@
 @section('pageName', __('ui.audit.title'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
     @php
         $authType = auth()->user()->roles->first()->name; // eng | lawyer
         $isEngineer = $authType === 'QC/QA Engineer';

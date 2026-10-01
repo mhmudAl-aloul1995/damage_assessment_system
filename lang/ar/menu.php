@@ -8,6 +8,15 @@ return [
         'review' => 'المراجعة والقرارات',
         'analysis' => 'التحليل والتقارير',
     ],
+    'sector_navigation' => [
+        'title' => 'مساحة قطاع :sector',
+        'aria_label' => 'التنقل داخل قطاع :sector',
+        'records' => 'السجلات',
+        'audit' => 'التدقيق',
+        'reports' => 'التقارير',
+        'productivity' => 'الإنتاجية',
+        'export' => 'تصدير البيانات',
+    ],
     'modules' => [
         'damage_assessment' => 'موديول حصر الأضرار',
         'administration' => 'الإدارة المركزية',

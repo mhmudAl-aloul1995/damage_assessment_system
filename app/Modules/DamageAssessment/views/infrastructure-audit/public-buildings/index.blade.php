@@ -4,6 +4,8 @@
 @section('pageName', 'تدقيق المباني العامة')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'public-buildings'])
+
     <div class="card card-flush">
         <div class="card-header pt-6">
             <div class="card-title">

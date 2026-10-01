@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+	@include('damage-assessment::components.sector-navigation', ['sector' => request('sector', 'buildings')])
+
 	<style>
 		.export-data-page {
 			max-width: 1680px;

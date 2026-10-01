@@ -4,6 +4,8 @@
 @section('pageName', 'تصدير بيانات المباني العامة')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'public-buildings'])
+
     <style>
         .public-building-export-page {
             max-width: 1500px;

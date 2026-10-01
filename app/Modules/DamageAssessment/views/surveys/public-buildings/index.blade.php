@@ -4,6 +4,8 @@
 @section('pageName', __('multilingual.public_buildings_page.title'))
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'public-buildings'])
+
     <div class="row g-5 mb-5">
         <div class="col-md-4">
             <div class="card card-flush border border-gray-200 h-100">

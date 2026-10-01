@@ -4,6 +4,8 @@
 @section('pageName', 'تصدير بيانات CSO')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'cso-surveys'])
+
     <style>
         .cso-export-page {
             max-width: 1500px;

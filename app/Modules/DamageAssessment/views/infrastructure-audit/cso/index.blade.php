@@ -4,6 +4,8 @@
 @section('pageName', 'تدقيق منظمات المجتمع المدني')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'cso-surveys'])
+
     <div class="card card-flush">
         <div class="card-header pt-6">
             <div class="card-title">

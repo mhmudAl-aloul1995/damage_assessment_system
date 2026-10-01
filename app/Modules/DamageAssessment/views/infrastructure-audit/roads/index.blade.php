@@ -4,6 +4,8 @@
 @section('pageName', 'تدقيق الطرق')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'road-facilities'])
+
     <div class="card card-flush">
         <div class="card-header pt-6">
             <div class="card-title">

@@ -4,6 +4,8 @@
 @section('pageName', 'تصدير بيانات الطرق')
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation', ['sector' => 'road-facilities'])
+
     <style>
         .road-export-page {
             max-width: 1500px;

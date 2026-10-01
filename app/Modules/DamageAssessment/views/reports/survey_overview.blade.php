@@ -3,6 +3,8 @@
 @section('pageName', $reportTitle)
 
 @section('content')
+    @include('damage-assessment::components.sector-navigation')
+
     <div class="row">
         <div class="col-md-12">
             <div class="card">
