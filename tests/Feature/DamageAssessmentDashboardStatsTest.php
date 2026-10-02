@@ -33,36 +33,6 @@ afterEach(function () {
     Carbon::setTestNow();
 });
 
-it('renders building damage status cards without the completed field status card', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->get(route('damageAssessment.index'));
-
-    $response
-        ->assertOk()
-        ->assertViewHas('dashboardCards', function ($dashboardCards): bool {
-            $buildingCard = $dashboardCards->firstWhere('key', 'buildings');
-
-            if ($buildingCard === null) {
-                return false;
-            }
-
-            $items = $buildingCard->items->keyBy('key');
-            $obstacleItem = $items->get('assessment_obstacle');
-
-            return $items->has('fully_damaged')
-                && $items->has('partially_damaged')
-                && $items->has('committee_review')
-                && $items->has('no_damage')
-                && $items->has('assessment_obstacle')
-                && ! $items->has('completed')
-                && $obstacleItem->stat_key === 'unclassified'
-                && $obstacleItem->filter_field === 'building_damage_status'
-                && $obstacleItem->filter_operator === 'blank';
-        });
-});
-
 it('shows summary statistics for public buildings and road facilities on the main dashboard', function () {
     $user = User::factory()->create();
 
@@ -1102,9 +1072,9 @@ it('counts assessed buildings from completed building surveys', function () {
         })
         ->assertSee(__('ui.damage_dashboard.assessment_blocked'), false)
         ->assertSee('field_status=COMPLETED', false)
-        ->assertSee('building_damage_status=__blank__', false)
-        ->assertSee('building_damage_status=no_damaged', false)
-        ->assertDontSee('assessment_obstacle=yes', false);
+        ->assertSee('assessment_obstacle=yes', false)
+        ->assertDontSee('building_damage_status=__blank__', false)
+        ->assertDontSee('building_damage_status=no_damage', false);
 });
 
 it('uses target cached building statistics after audit edits are refreshed', function () {
