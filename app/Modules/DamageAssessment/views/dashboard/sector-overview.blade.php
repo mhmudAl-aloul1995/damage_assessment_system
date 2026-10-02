@@ -13,8 +13,15 @@
         .sector-overview-bar { height: 10px; background: var(--bs-gray-100); border-radius: 5px; overflow: hidden; }
         .sector-overview-bar-fill { height: 100%; border-radius: 5px; transition: width .25s; }
         .sector-overview-map-status { background: var(--bs-body-bg, #fff); position: absolute; inset-inline: 16px; bottom: 16px; padding: 10px 16px; border-radius: 8px; z-index: 2; box-shadow: 0 2px 12px #0001; }
-        .sector-overview-summary-row { scrollbar-width: thin; }
-        .sector-overview-summary-card { flex: 1 0 168px; min-width: 168px; }
+        .sector-overview-summary-card { flex: 1 1 0; min-width: 0; }
+        .sector-overview-summary-label { min-height: 2.4em; line-height: 1.2; overflow-wrap: anywhere; }
+        .sector-overview-summary-value { font-size: 1.7rem; line-height: 1.1; overflow-wrap: anywhere; }
+        @media (max-width: 991.98px) {
+            .sector-overview-summary-row { gap: .5rem !important; }
+            .sector-overview-summary-card .card-body { padding: .75rem .35rem !important; }
+            .sector-overview-summary-label { font-size: .7rem; }
+            .sector-overview-summary-value { font-size: 1rem; }
+        }
         @media (max-width: 575px) { .sector-overview-map { height: 340px; } }
     </style>
     @php
@@ -65,13 +72,13 @@
         <div id="sector-data-status" role="status" aria-live="polite" class="text-muted mb-3"></div>
         <div id="sector-data-error" role="alert" class="alert alert-danger d-none"></div>
         <div id="sector-data-content">
-            <div class="sector-overview-summary-row d-flex flex-nowrap gap-4 overflow-auto mb-5 pb-2">
+            <div class="sector-overview-summary-row d-flex flex-nowrap gap-4 mb-5">
                 @foreach($summaryCards as $card)
                     <div class="sector-overview-summary-card">
                         <div class="card border border-gray-200 h-100">
-                            <div class="card-body py-6 px-5">
-                                <div class="text-muted fw-semibold mb-3">{{ $card['label'] }}</div>
-                                <div class="fs-2hx fw-bold text-{{ $card['color'] }}" data-metric="{{ $card['metric'] }}">{{ number_format($statistics['summary'][$card['metric']]) }}</div>
+                            <div class="card-body py-6 px-3 text-center">
+                                <div class="sector-overview-summary-label text-muted fw-semibold mb-3">{{ $card['label'] }}</div>
+                                <div class="sector-overview-summary-value fw-bold text-{{ $card['color'] }}" data-metric="{{ $card['metric'] }}">{{ number_format($statistics['summary'][$card['metric']]) }}</div>
                             </div>
                         </div>
                     </div>

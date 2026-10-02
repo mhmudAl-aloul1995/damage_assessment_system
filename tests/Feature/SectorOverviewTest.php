@@ -98,7 +98,8 @@ it('uses audited building values for overview statistics filters and map records
     $this->get(route('sector-overview.show', 'buildings'))->assertOk()
         ->assertViewHas('municipalities', ['Gaza'])
         ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['summary']['completed'] === 4)
-        ->assertSee('sector-overview-summary-row d-flex flex-nowrap', false)
+        ->assertSee('sector-overview-summary-row d-flex flex-nowrap gap-4 mb-5', false)
+        ->assertDontSee('sector-overview-summary-row d-flex flex-nowrap gap-4 overflow-auto', false)
         ->assertSee('data-metric="assessment_blocked"', false);
     $this->getJson(route('sector-overview.stats', 'buildings'))->assertOk()
         ->assertJsonPath('summary.total', 5)->assertJsonPath('summary.completed', 4)
