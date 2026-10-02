@@ -192,7 +192,7 @@ it('shows housing unit damage summary cards without the fieldwork completed card
         ->assertSee('data-metric="partially_damaged"', false)
         ->assertSee('data-metric="committee_review"', false)
         ->assertSee('data-metric="assessment_blocked"', false)
-        ->assertSee(__('sector-overview.damage.no_damage'))
+        ->assertSee('data-metric="no_damage"', false)
         ->assertDontSee('data-metric="completed"', false)
         ->assertViewHas('statistics', function (array $statistics): bool {
             return $statistics['summary']['total'] === 6
