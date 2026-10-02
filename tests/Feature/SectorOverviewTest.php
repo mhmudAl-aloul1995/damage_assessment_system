@@ -195,7 +195,7 @@ it('shows housing unit damage summary cards without the fieldwork completed card
         ->assertViewHas('statistics', function (array $statistics): bool {
             return $statistics['summary']['total'] === 6
                 && $statistics['summary']['completed'] === 5
-                && $statistics['summary']['fully_damaged'] === 1
+                && $statistics['summary']['fully_damaged'] === 2
                 && $statistics['summary']['partially_damaged'] === 1
                 && $statistics['summary']['committee_review'] === 1
                 && $statistics['summary']['no_damage'] === 1
@@ -206,7 +206,7 @@ it('shows housing unit damage summary cards without the fieldwork completed card
         ->assertOk()
         ->assertJsonPath('summary.total', 6)
         ->assertJsonPath('summary.completed', 5)
-        ->assertJsonPath('summary.fully_damaged', 1)
+        ->assertJsonPath('summary.fully_damaged', 2)
         ->assertJsonPath('summary.partially_damaged', 1)
         ->assertJsonPath('summary.committee_review', 1)
         ->assertJsonPath('summary.no_damage', 1)
