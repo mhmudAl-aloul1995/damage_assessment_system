@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AuditedBuilding;
 use App\Models\Building;
-use App\Models\BuildingSurveyArchiveObject;
 use App\Models\Filter;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,7 +52,6 @@ class BuildingController extends Controller
 
         return View::make('damage-assessment::surveys.buildings.buildings', [
             'buildingFilterSections' => $this->buildingFilterSections($filters->groupBy('list_name')),
-            'buildingSummary' => $this->buildingSummary(),
             'buildingFieldStatuses' => $this->buildingFieldStatuses($filters->where('list_name', 'field_status')),
             'engineers' => $this->auditedBuildingQuery()->distinct()->orderBy('assignedto')->pluck('assignedto')->filter()->values(),
             'owners' => $this->auditedBuildingQuery()->distinct()->orderBy('owner_name')->pluck('owner_name')->filter()->values(),
@@ -558,49 +556,6 @@ class BuildingController extends Controller
         $label = $labels[$normalized] ?? str($value)->replace('_', ' ')->title();
 
         return '<span class="badge badge-light-'.$color.'">'.e($label).'</span>';
-    }
-
-    /**
-     * @return array{total: int, fully_damaged: int, partially_damaged: int, committee_review: int}
-     */
-    private function buildingSummary(): array
-    {
-        $baseQuery = $this->auditedBuildingQuery();
-
-        return [
-            'total' => (clone $baseQuery)->count(),
-            'fully_damaged' => (clone $baseQuery)->where('building_damage_status', 'fully_damaged')->count(),
-            'partially_damaged' => (clone $baseQuery)->where('building_damage_status', 'partially_damaged')->count(),
-            'committee_review' => $this->committeeReviewSummaryCount($baseQuery),
-        ];
-    }
-
-    private function committeeReviewSummaryCount(Builder $baseQuery): int
-    {
-        $currentObjectIds = (clone $baseQuery)
-            ->whereIn('building_damage_status', self::COMMITTEE_REVIEW_STATUSES)
-            ->pluck('objectid');
-
-        if (! Schema::hasTable('building_survey_archive_objects')) {
-            return $currentObjectIds->unique()->count();
-        }
-
-        $archivedObjectIds = BuildingSurveyArchiveObject::query()
-            ->whereNull('housing_unit_objectid')
-            ->whereIn('source_type', ['committee_decision', 'temporary_committee_excel_archive'])
-            ->whereIn('building_snapshot->building_damage_status', self::COMMITTEE_REVIEW_STATUSES)
-            ->where(function (Builder $query): void {
-                $query
-                    ->whereNotNull('building_snapshot->assignedto')
-                    ->where('building_snapshot->assignedto', '!=', '');
-            })
-            ->pluck('building_objectid');
-
-        return $currentObjectIds
-            ->merge($archivedObjectIds)
-            ->filter()
-            ->unique()
-            ->count();
     }
 
     /**

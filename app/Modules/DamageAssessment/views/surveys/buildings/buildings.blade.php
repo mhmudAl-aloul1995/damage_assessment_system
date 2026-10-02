@@ -5,41 +5,6 @@
 @section('content')
     @include('damage-assessment::components.sector-navigation', ['sector' => 'buildings'])
 
-    <div class="row g-5 mb-5">
-        <div class="col-md-3">
-            <div class="card card-flush border border-gray-200 h-100">
-                <div class="card-body">
-                    <div class="text-muted fs-7 mb-2">{{ __('ui.buildings_page.total_buildings') }}</div>
-                    <div class="fs-2x fw-bold text-gray-900">{{ $buildingSummary['total'] }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-flush border border-gray-200 h-100">
-                <div class="card-body">
-                    <div class="text-muted fs-7 mb-2">{{ __('ui.buildings_page.fully_damaged') }}</div>
-                    <div class="fs-2x fw-bold text-danger">{{ $buildingSummary['fully_damaged'] }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-flush border border-gray-200 h-100">
-                <div class="card-body">
-                    <div class="text-muted fs-7 mb-2">{{ __('ui.buildings_page.partially_damaged') }}</div>
-                    <div class="fs-2x fw-bold text-warning">{{ $buildingSummary['partially_damaged'] }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-flush border border-gray-200 h-100">
-                <div class="card-body">
-                    <div class="text-muted fs-7 mb-2">{{ __('ui.buildings_page.committee_review') }}</div>
-                    <div class="fs-2x fw-bold text-primary">{{ $buildingSummary['committee_review'] }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="card card-flush shadow-sm mb-5">
         <div class="card-header pt-6 d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div class="card-title">

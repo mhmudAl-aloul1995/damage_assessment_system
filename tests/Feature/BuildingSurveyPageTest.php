@@ -13,7 +13,7 @@ beforeEach(function (): void {
     ensureAuditedBuildingSurveyColumns();
 });
 
-it('includes buildings without an assignee in summary records and copied object ids', function (): void {
+it('includes buildings without an assignee in records and copied object ids', function (): void {
     $user = User::factory()->create();
 
     foreach ([
@@ -30,13 +30,7 @@ it('includes buildings without an assignee in summary records and copied object 
         ]);
     }
 
-    $this->actingAs($user)->get(route('building.index'))->assertOk()
-        ->assertViewHas('buildingSummary', fn (array $summary): bool => $summary === [
-            'total' => 3,
-            'fully_damaged' => 1,
-            'partially_damaged' => 1,
-            'committee_review' => 1,
-        ]);
+    $this->actingAs($user)->get(route('building.index'))->assertOk();
 
     $response = $this->getJson(route('building.show', ['building' => 'show', 'length' => 10]))
         ->assertOk()->assertJsonPath('recordsTotal', 3)->assertJsonPath('recordsFiltered', 3)
@@ -51,6 +45,46 @@ it('includes buildings without an assignee in summary records and copied object 
         'filters' => ['assignedto' => ['Engineer One']],
     ]))->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonPath('data.0.objectid', 1401);
 });
+
+it('shows building filters and records without summary cards', function (string $locale): void {
+    app()->setLocale($locale);
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 1500,
+        'globalid' => 'source-building-ignored',
+        'field_status' => 'COMPLETED',
+        'building_damage_status' => null,
+    ]);
+
+    foreach ([
+        [1501, 'COMPLETED', null, 'no'],
+        [1502, 'Not_Completed', null, 'no'],
+        [1503, 'COMPLETED', 'fully_damaged', 'yes'],
+        [1504, 'Not_Completed', '', 'yes'],
+        [1505, null, 'null', 'yes'],
+    ] as [$objectId, $fieldStatus, $damageStatus, $obstacle]) {
+        AuditedBuilding::query()->create([
+            'objectid' => $objectId,
+            'globalid' => 'summary-building-'.$objectId,
+            'assignedto' => null,
+            'field_status' => $fieldStatus,
+            'building_damage_status' => $damageStatus,
+            'assessment_obstacle' => $obstacle,
+        ]);
+    }
+
+    $this->actingAs($user)->get(route('building.index'))->assertOk()
+        ->assertViewMissing('buildingSummary')
+        ->assertDontSee('card card-flush border border-gray-200 h-100', false)
+        ->assertDontSeeText(__('ui.buildings_page.total_buildings'))
+        ->assertDontSeeText(__('sector-overview.completed'))
+        ->assertSee('id="filter_buliding_form"', false)
+        ->assertSee('id="kt_table_Building"', false);
+
+    $this->getJson(route('building.show', ['building' => 'show', 'length' => 10]))
+        ->assertOk()->assertJsonPath('recordsTotal', 5)->assertJsonCount(5, 'data');
+})->with(['ar', 'en']);
 
 it('shows grouped building filters based on survey sections', function () {
     $user = User::factory()->create();
@@ -252,7 +286,7 @@ it('filters building datatable records by unclassified damage status', function 
     $response->assertDontSee('Classified Building');
 });
 
-it('uses audited buildings for summary and datatable records', function () {
+it('uses audited buildings for datatable records', function () {
     $user = User::factory()->create();
 
     seedBuildingFilterOptions();
@@ -297,7 +331,6 @@ it('uses audited buildings for summary and datatable records', function () {
 
     $page->assertOk();
     $page->assertSee('Not Completed');
-    $page->assertSee('1');
 
     $query = http_build_query([
         'draw' => 1,
@@ -376,9 +409,6 @@ it('matches archived committee buildings on the building page committee filter',
     $page = $this->actingAs($user)->get('/damage-assessment/building');
 
     $page->assertOk();
-    $page->assertViewHas('buildingSummary', function (array $summary): bool {
-        return $summary['committee_review'] === 2;
-    });
 
     $query = http_build_query([
         'draw' => 1,
