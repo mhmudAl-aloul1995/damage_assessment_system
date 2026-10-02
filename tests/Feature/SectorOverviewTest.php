@@ -2,6 +2,7 @@
 
 use App\Models\AssessmentStatus;
 use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\CsoSurvey;
@@ -171,18 +172,19 @@ it('shows housing unit damage summary cards without the fieldwork completed card
     Building::query()->forceCreate(['objectid' => 232, 'globalid' => 'not-completed-parent-232', 'field_status' => 'Not_Completed', 'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'latitude' => 31.5, 'longitude' => 34.4]);
 
     foreach ([
-        [331, 'unit-fully-damaged', 'completed-parent-231', 'fully_damaged2'],
-        [332, 'unit-partially-damaged', 'completed-parent-231', 'partially_damaged2'],
-        [333, 'unit-committee-review', 'completed-parent-231', 'committee_review2'],
-        [334, 'unit-no-damage', 'completed-parent-231', 'no_damaged'],
-        [335, 'unit-with-obstacle', 'completed-parent-231', null],
-        [336, 'unit-not-completed-parent', 'not-completed-parent-232', 'fully_damaged2'],
-    ] as [$objectid, $globalid, $parentglobalid, $damageStatus]) {
+        [331, 'unit-fully-damaged', 'completed-parent-231', 'fully_damaged2', null],
+        [332, 'unit-partially-damaged', 'completed-parent-231', 'partially_damaged2', null],
+        [333, 'unit-committee-review', 'completed-parent-231', 'committee_review2', null],
+        [334, 'unit-no-damage', 'completed-parent-231', 'no_damaged', null],
+        [335, 'unit-with-obstacle', 'completed-parent-231', null, 'yes'],
+        [336, 'unit-not-completed-parent', 'not-completed-parent-232', 'fully_damaged2', null],
+    ] as [$objectid, $globalid, $parentglobalid, $damageStatus, $securitySituation]) {
         HousingUnit::query()->forceCreate([
             'objectid' => $objectid,
             'globalid' => $globalid,
             'parentglobalid' => $parentglobalid,
             'unit_damage_status' => $damageStatus,
+            'security_situation_unit' => $securitySituation,
         ]);
     }
 
@@ -213,6 +215,48 @@ it('shows housing unit damage summary cards without the fieldwork completed card
         ->assertJsonPath('summary.committee_review', 1)
         ->assertJsonPath('summary.no_damage', 1)
         ->assertJsonPath('summary.assessment_blocked', 1);
+});
+
+it('uses audited housing unit values and dashboard damage criteria when the cache is available', function (): void {
+    Building::query()->forceCreate(['objectid' => 240, 'globalid' => 'base-parent-240', 'field_status' => 'COMPLETED', 'municipalitie' => 'Original', 'neighborhood' => 'Original', 'latitude' => 30.5, 'longitude' => 33.4]);
+    HousingUnit::query()->forceCreate(['objectid' => 340, 'globalid' => 'base-unit-340', 'parentglobalid' => 'base-parent-240', 'unit_damage_status' => 'fully_damaged2']);
+
+    AuditedBuilding::query()->create(['objectid' => 241, 'globalid' => 'audited-parent-241', 'field_status' => 'COMPLETED', 'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'latitude' => 31.5, 'longitude' => 34.4]);
+
+    foreach ([
+        [341, 'audited-unit-full', 'fully_damaged2', null],
+        [342, 'audited-unit-legacy-full', 'fully_damaged', null],
+        [343, 'audited-unit-partial', 'partially_damaged2', null],
+        [344, 'audited-unit-committee', 'committee_review2', null],
+        [345, 'audited-unit-no-damage', 'no_damaged', null],
+        [346, 'audited-unit-obstacle', null, 'yes'],
+    ] as [$objectid, $globalid, $damageStatus, $securitySituation]) {
+        AuditedHousingUnit::query()->create([
+            'objectid' => $objectid,
+            'globalid' => $globalid,
+            'parentglobalid' => 'audited-parent-241',
+            'unit_damage_status' => $damageStatus,
+            'security_situation_unit' => $securitySituation,
+        ]);
+    }
+
+    $this->getJson(route('sector-overview.stats', 'housing-units'))
+        ->assertOk()
+        ->assertJsonPath('summary.total', 6)
+        ->assertJsonPath('summary.fully_damaged', 1)
+        ->assertJsonPath('summary.partially_damaged', 1)
+        ->assertJsonPath('summary.committee_review', 1)
+        ->assertJsonPath('summary.no_damage', 1)
+        ->assertJsonPath('summary.assessment_blocked', 1)
+        ->assertJsonPath('damage.fully_damaged', 1)
+        ->assertJsonPath('damage.unclassified', 2)
+        ->assertJsonPath('neighborhoods', ['Rimal']);
+
+    $this->getJson(route('sector-overview.map', 'housing-units'))
+        ->assertOk()
+        ->assertJsonPath('features.0.attributes.objectid', 341)
+        ->assertJsonPath('features.0.attributes.municipality', 'Gaza')
+        ->assertJsonPath('features.0.geometry.x', 34.4);
 });
 
 it('normalizes road damage and preserves ArcGIS line and polygon geometries', function (): void {

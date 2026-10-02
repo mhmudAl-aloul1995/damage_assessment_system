@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\services;
 
 use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\CsoSurvey;
@@ -16,6 +17,7 @@ use App\Support\CsoDamageStatusMapper;
 use App\Support\Phase\PhaseContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class SectorOverviewService
 {
@@ -24,7 +26,7 @@ class SectorOverviewService
     {
         return match ($sector) {
             'buildings' => ['model' => AuditedBuilding::class, 'damage' => 'building_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
-            'housing-units' => ['model' => HousingUnit::class, 'damage' => 'unit_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
+            'housing-units' => ['model' => $this->housingUnitModelClass(), 'damage' => 'unit_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
             'public-buildings' => ['model' => PublicBuildingSurvey::class, 'damage' => 'building_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
             'road-facilities' => ['model' => RoadFacilitySurvey::class, 'damage' => 'road_damage_level', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
             'cso-surveys' => ['model' => CsoSurvey::class, 'damage' => 'building_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
@@ -50,7 +52,8 @@ class SectorOverviewService
         }
 
         if ($sector === 'housing-units') {
-            app(PhaseContext::class)->applyToParentBuildingPhase($query, 'housing_units.parentglobalid');
+            $buildingTable = $query->getModel() instanceof AuditedHousingUnit ? 'audited_buildings' : 'buildings';
+            app(PhaseContext::class)->applyToParentBuildingPhase($query, $query->getModel()->qualifyColumn('parentglobalid'), $buildingTable);
         }
 
         foreach (['municipality', 'neighborhood'] as $filter) {
@@ -88,6 +91,17 @@ class SectorOverviewService
                 'no_damage' => ['no_damage', 'no_damaged'],
                 'unclassified' => [],
                 default => [$bucket],
+            };
+        }
+
+        if ($sector === 'housing-units') {
+            return match ($bucket) {
+                CsoDamageStatusMapper::FULLY_DAMAGED => ['fully_damaged2'],
+                CsoDamageStatusMapper::PARTIALLY_DAMAGED => ['partially_damaged2'],
+                CsoDamageStatusMapper::COMMITTEE_REVIEW => CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::COMMITTEE_REVIEW),
+                CsoDamageStatusMapper::NO_DAMAGE => ['no_damaged'],
+                'unclassified' => [],
+                default => CsoDamageStatusMapper::valuesFor($bucket),
             };
         }
 
@@ -129,7 +143,7 @@ class SectorOverviewService
 
         if (in_array($sector, ['buildings', 'housing-units'], true)) {
             $damageSummaryQuery = $sector === 'housing-units' ? clone $query : clone $completedQuery;
-            $summary = [...$summary, ...$this->damageSummary($damageSummaryQuery, $damageColumn)];
+            $summary = [...$summary, ...$this->damageSummary($damageSummaryQuery, $damageColumn, $sector)];
         }
 
         return [
@@ -141,9 +155,19 @@ class SectorOverviewService
     }
 
     /** @return array{fully_damaged: int, partially_damaged: int, committee_review: int, no_damage: int, assessment_blocked: int} */
-    private function damageSummary(Builder $query, string $damageColumn): array
+    private function damageSummary(Builder $query, string $damageColumn, string $sector): array
     {
         $normalizedDamage = $query->getQuery()->raw("LOWER(TRIM(COALESCE({$damageColumn}, '')))");
+
+        if ($sector === 'housing-units') {
+            return [
+                'fully_damaged' => (clone $query)->where($damageColumn, 'fully_damaged2')->count(),
+                'partially_damaged' => (clone $query)->where($damageColumn, 'partially_damaged2')->count(),
+                'committee_review' => (clone $query)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::COMMITTEE_REVIEW))->count(),
+                'no_damage' => (clone $query)->where($damageColumn, 'no_damaged')->count(),
+                'assessment_blocked' => $this->housingUnitAssessmentBlockedCount(clone $query),
+            ];
+        }
 
         return [
             'fully_damaged' => (clone $query)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::FULLY_DAMAGED))->count(),
@@ -201,9 +225,12 @@ class SectorOverviewService
     public function options(string $sector, string $filter, array $filters = []): array
     {
         $column = $this->configuration($sector)[$filter];
-        $query = $sector === 'housing-units'
-            ? Building::query()->whereIn('globalid', $this->query($sector, $filters)->select('parentglobalid'))
-            : $this->query($sector, $filters);
+        $query = $this->query($sector, $filters);
+
+        if ($sector === 'housing-units') {
+            $buildingModelClass = $query->getModel() instanceof AuditedHousingUnit ? AuditedBuilding::class : Building::class;
+            $query = $buildingModelClass::query()->whereIn('globalid', $query->select('parentglobalid'));
+        }
 
         return $query->whereNotNull($column)->where($column, '!=', '')
             ->distinct()->orderBy($column)->pluck($column)->all();
@@ -215,18 +242,20 @@ class SectorOverviewService
     public function mapFeatures(string $sector, array $filters): array
     {
         $configuration = $this->configuration($sector);
-        $columns = ['id', 'objectid', $configuration['damage'], $configuration['municipality'], $configuration['neighborhood']];
         $query = $this->query($sector, $filters)->where('id', '>', $filters['after_id'] ?? 0)->orderBy('id');
+        $columns = ['id', 'objectid', $configuration['damage']];
 
         if ($sector === 'housing-units') {
             $columns[] = 'parentglobalid';
-            $buildingColumns = ['id', 'globalid', 'municipalitie', 'neighborhood', ...$this->geometryColumns(new Building)];
+            $relatedBuilding = $query->getModel()->building()->getRelated();
+            $buildingColumns = $this->existingColumns($relatedBuilding, ['id', 'globalid', 'municipalitie', 'neighborhood', ...$this->geometryColumns($relatedBuilding)]);
             $query->with('building:'.implode(',', $buildingColumns));
         } else {
+            $columns = [...$columns, $configuration['municipality'], $configuration['neighborhood']];
             $columns = [...$columns, ...$this->geometryColumns($query->getModel())];
         }
 
-        $rows = $query->limit(501)->get($columns);
+        $rows = $query->limit(501)->get($this->existingColumns($query->getModel(), $columns));
         $hasMore = $rows->count() > 500;
         $rows = $rows->take(500);
         $features = [];
@@ -252,6 +281,36 @@ class SectorOverviewService
         }
 
         return ['features' => $features, 'next_cursor' => $hasMore ? (int) $rows->last()->id : null, 'scanned' => $rows->count()];
+    }
+
+    /** @return class-string<Model> */
+    private function housingUnitModelClass(): string
+    {
+        if (Schema::hasTable('audited_housing_units') && AuditedHousingUnit::query()->exists()) {
+            return AuditedHousingUnit::class;
+        }
+
+        return HousingUnit::class;
+    }
+
+    private function housingUnitAssessmentBlockedCount(Builder $query): int
+    {
+        if (! Schema::hasColumn($query->getModel()->getTable(), 'security_situation_unit')) {
+            return 0;
+        }
+
+        return $query->whereRaw("LOWER(TRIM(COALESCE(security_situation_unit, ''))) = ?", ['yes'])->count();
+    }
+
+    /**
+     * @param  list<string>  $columns
+     * @return list<string>
+     */
+    private function existingColumns(Model $model, array $columns): array
+    {
+        $availableColumns = $model->getConnection()->getSchemaBuilder()->getColumnListing($model->getTable());
+
+        return array_values(array_intersect($columns, $availableColumns));
     }
 
     /** @return list<string> */
