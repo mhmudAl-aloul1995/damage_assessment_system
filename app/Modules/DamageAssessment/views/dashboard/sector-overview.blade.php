@@ -41,7 +41,6 @@
                 ['metric' => 'fully_damaged', 'label' => __('sector-overview.damage.fully_damaged'), 'color' => 'danger'],
                 ['metric' => 'partially_damaged', 'label' => __('sector-overview.damage.partially_damaged'), 'color' => 'warning'],
                 ['metric' => 'committee_review', 'label' => __('sector-overview.technical_committee'), 'color' => 'info'],
-                ['metric' => 'no_damage', 'label' => __('sector-overview.damage.no_damage'), 'color' => 'success'],
                 ['metric' => 'assessment_blocked', 'label' => __('sector-overview.assessment_blocked'), 'color' => 'dark'],
                 ['metric' => 'pending', 'label' => __('sector-overview.pending'), 'color' => 'warning'],
                 ['metric' => 'approved', 'label' => __('sector-overview.approved'), 'color' => 'info'],
