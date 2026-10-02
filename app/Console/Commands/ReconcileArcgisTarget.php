@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Exports\ArcgisBuildingStatusDiffExport;
 use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
 use App\services\ArcgisAuditedCacheService;
 use App\services\ArcgisAuditedUploadService;
 use Illuminate\Console\Command;
@@ -20,7 +21,9 @@ class ReconcileArcgisTarget extends Command
         {--run : Apply changes. Without this option the command only reports what would happen.}
         {--delete-extra : With --run, delete target rows whose old object id no longer exists in source.}
         {--sync-objectids : Copy old object id values into the target objectid attribute for existing target rows.}
+        {--sync-building-fields : With --run, copy all existing target building fields from audited_buildings.}
         {--sync-building-summary-fields : With --run, copy existing target building field_status and building_damage_status values from audited_buildings.}
+        {--sync-housing-summary-fields : With --run, copy existing target housing unit unit_damage_status and building_field_status values from audited_housing_units.}
         {--only= : Reconcile only buildings or units.}
         {--skip-cache-refresh : Do not rebuild audited cache tables before uploading missing rows.}
         {--without-attachments : Upload missing features without copying attachments.}
@@ -37,7 +40,9 @@ class ReconcileArcgisTarget extends Command
         $applyChanges = (bool) $this->option('run');
         $deleteExtra = (bool) $this->option('delete-extra');
         $syncObjectIds = (bool) $this->option('sync-objectids');
+        $syncBuildingFields = (bool) $this->option('sync-building-fields');
         $syncBuildingSummaryFields = (bool) $this->option('sync-building-summary-fields');
+        $syncHousingSummaryFields = (bool) $this->option('sync-housing-summary-fields');
         $only = $this->option('only');
 
         if (! in_array($only, [null, '', 'buildings', 'units'], true)) {
@@ -49,7 +54,9 @@ class ReconcileArcgisTarget extends Command
         $this->line('Mode: '.($applyChanges ? 'RUN' : 'DRY-RUN'));
         $this->line('Delete extra target rows: '.($applyChanges && $deleteExtra ? 'yes' : 'no'));
         $this->line('Sync target objectid values: '.($syncObjectIds ? 'yes' : 'no'));
+        $this->line('Sync all target building fields: '.($syncBuildingFields ? 'yes' : 'no'));
         $this->line('Sync target building summary fields: '.($syncBuildingSummaryFields ? 'yes' : 'no'));
+        $this->line('Sync target housing summary fields: '.($syncHousingSummaryFields ? 'yes' : 'no'));
 
         $token = $this->generateToken();
         $jobs = $this->jobs($only);
@@ -89,6 +96,17 @@ class ReconcileArcgisTarget extends Command
                     $summary[$job['name']],
                     $this->buildingStatusSummary($sourceRows, $targetRows, $missing, $extraRows, $statusMismatches),
                     $this->buildingSummaryFieldSyncSummary($summaryFieldMismatches),
+                    [
+                        'building_field_rows_available_for_sync' => count($this->existingAuditedBuildingObjectIds($targetRows)),
+                    ],
+                );
+            }
+
+            if ($job['name'] === 'units') {
+                $housingSummaryFieldMismatches = $this->housingSummaryFieldMismatches($targetRows);
+                $summary[$job['name']] = array_merge(
+                    $summary[$job['name']],
+                    $this->housingSummaryFieldSyncSummary($housingSummaryFieldMismatches),
                 );
             }
 
@@ -111,6 +129,10 @@ class ReconcileArcgisTarget extends Command
 
             if (($summaryFieldMismatches ?? []) !== []) {
                 $this->line('Building summary field mismatch examples: '.$this->formatSummaryFieldMismatchExamples($summaryFieldMismatches));
+            }
+
+            if (($housingSummaryFieldMismatches ?? []) !== []) {
+                $this->line('Housing summary field mismatch examples: '.$this->formatSummaryFieldMismatchExamples($housingSummaryFieldMismatches));
             }
 
             if ($job['name'] === 'buildings' && (bool) $this->option('export-status-diff')) {
@@ -146,12 +168,30 @@ class ReconcileArcgisTarget extends Command
             $this->line('Cached units: '.$cacheSummary['housing_units_cached']);
         }
 
+        if ($syncBuildingFields && in_array('buildings', array_column($jobs, 'name'), true)) {
+            $this->newLine();
+            $this->info('Syncing all existing target building fields from audited_buildings...');
+            $fieldSyncSummary = $this->syncExistingBuildingFields($token, $uploadService);
+            $this->table(['Metric', 'Value'], collect($fieldSyncSummary)
+                ->map(fn (mixed $value, string $metric): array => [$metric, is_scalar($value) ? (string) $value : json_encode($value)])
+                ->values()
+                ->all());
+        }
+
         if ($syncBuildingSummaryFields && in_array('buildings', array_column($jobs, 'name'), true)) {
             $this->newLine();
             $this->info('Syncing existing target building summary fields from audited_buildings...');
             $synced = $this->syncExistingBuildingSummaryFields($token);
             $this->line('Updated building summary field rows: '.$synced);
             $summary['buildings']['building_summary_field_rows_synced'] = $synced;
+        }
+
+        if ($syncHousingSummaryFields && in_array('units', array_column($jobs, 'name'), true)) {
+            $this->newLine();
+            $this->info('Syncing existing target housing summary fields from audited_housing_units...');
+            $synced = $this->syncExistingHousingSummaryFields($token);
+            $this->line('Updated housing summary field rows: '.$synced);
+            $summary['units']['housing_summary_field_rows_synced'] = $synced;
         }
 
         if ($deleteExtra) {
@@ -253,7 +293,7 @@ class ReconcileArcgisTarget extends Command
 
     /**
      * @param  array{name: string, source_layer: int|string, target_layer: int|string, old_field: string, cache_table: string}  $job
-     * @return array<int, array{objectid: int, old_objectid: string, field_status: string|null, building_damage_status?: string|null}>
+     * @return array<int, array{objectid: int, old_objectid: string, field_status: string|null, building_damage_status?: string|null, unit_damage_status?: string|null, building_field_status?: string|null}>
      */
     private function targetRows(array $job, string $token): array
     {
@@ -261,6 +301,10 @@ class ReconcileArcgisTarget extends Command
         $outFields = 'objectid,'.$job['old_field'];
 
         if ($job['name'] === 'buildings') {
+            $outFields = '*';
+        }
+
+        if ($job['name'] === 'units') {
             $outFields = '*';
         }
 
@@ -277,10 +321,98 @@ class ReconcileArcgisTarget extends Command
                 'old_objectid' => (string) $oldObjectId,
                 'field_status' => $this->attributeValue($attributes, 'field_status'),
                 'building_damage_status' => $this->attributeValue($attributes, 'building_damage_status'),
+                'unit_damage_status' => $this->attributeValue($attributes, 'unit_damage_status'),
+                'building_field_status' => $this->attributeValue($attributes, 'building_field_status'),
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<int, array{objectid: int, old_objectid: string, unit_damage_status?: string|null, building_field_status?: string|null}>  $targetRows
+     * @return array<int, array{objectid: string, target_objectid: int, fields: array<string, array{source: string|null, target: string|null}>}>
+     */
+    private function housingSummaryFieldMismatches(array $targetRows): array
+    {
+        $auditedRows = $this->auditedHousingSummaryRows(array_column($targetRows, 'old_objectid'));
+        $mismatches = [];
+
+        foreach ($targetRows as $targetRow) {
+            $auditedRow = $auditedRows[$targetRow['old_objectid']] ?? null;
+
+            if ($auditedRow === null) {
+                continue;
+            }
+
+            $fields = [];
+
+            foreach (['unit_damage_status', 'building_field_status'] as $field) {
+                $source = $auditedRow[$field];
+                $target = $targetRow[$field] ?? null;
+
+                if ($this->sameArcgisAttributeValue($source, $target)) {
+                    continue;
+                }
+
+                $fields[$field] = [
+                    'source' => $source,
+                    'target' => $target,
+                ];
+            }
+
+            if ($fields === []) {
+                continue;
+            }
+
+            $mismatches[] = [
+                'objectid' => $targetRow['old_objectid'],
+                'target_objectid' => $targetRow['objectid'],
+                'fields' => $fields,
+            ];
+        }
+
+        return $mismatches;
+    }
+
+    /**
+     * @param  array<int, string>  $objectIds
+     * @return array<string, array{unit_damage_status: string|null, building_field_status: string|null}>
+     */
+    private function auditedHousingSummaryRows(array $objectIds): array
+    {
+        $rows = [];
+
+        collect($objectIds)
+            ->filter(fn (mixed $objectId): bool => $objectId !== null && $objectId !== '')
+            ->unique()
+            ->chunk(1000)
+            ->each(function ($chunk) use (&$rows): void {
+                AuditedHousingUnit::query()
+                    ->whereIn('objectid', $chunk->all())
+                    ->get(['objectid', 'unit_damage_status', 'building_field_status'])
+                    ->each(function (AuditedHousingUnit $unit) use (&$rows): void {
+                        $rows[(string) $unit->getAttribute('objectid')] = [
+                            'unit_damage_status' => $this->stringAttributeValue($unit->getAttribute('unit_damage_status')),
+                            'building_field_status' => $this->stringAttributeValue($unit->getAttribute('building_field_status')),
+                        ];
+                    });
+            });
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, array{objectid: string, target_objectid: int, fields: array<string, array{source: string|null, target: string|null}>}>  $mismatches
+     * @return array<string, int>
+     */
+    private function housingSummaryFieldSyncSummary(array $mismatches): array
+    {
+        return [
+            'housing_summary_field_rows_to_sync' => count($mismatches),
+            'unit_damage_status_values_to_sync' => collect($mismatches)->filter(fn (array $row): bool => isset($row['fields']['unit_damage_status']))->count(),
+            'building_field_status_values_to_sync' => collect($mismatches)->filter(fn (array $row): bool => isset($row['fields']['building_field_status']))->count(),
+        ];
     }
 
     /**
@@ -473,6 +605,130 @@ class ReconcileArcgisTarget extends Command
         }
 
         return $updated;
+    }
+
+    private function syncExistingHousingSummaryFields(string $token): int
+    {
+        $job = $this->jobs('units')[0];
+        $targetRows = $this->targetRows($job, $token);
+        $mismatches = $this->housingSummaryFieldMismatches($targetRows);
+
+        if ($mismatches === []) {
+            return 0;
+        }
+
+        $metadata = $this->targetLayerMetadata($job, $token);
+        $objectIdField = $metadata['object_id_field'];
+        $targetFields = array_intersect_key($metadata['fields'], array_flip(['unit_damage_status', 'building_field_status']));
+
+        if ($objectIdField === null || $targetFields === []) {
+            $this->warn('Skipping housing summary field sync: target layer is missing required fields.');
+
+            return 0;
+        }
+
+        $updated = 0;
+
+        foreach (array_chunk($mismatches, 200) as $chunk) {
+            $features = [];
+
+            foreach ($chunk as $row) {
+                $attributes = [$objectIdField => $row['target_objectid']];
+
+                foreach ($row['fields'] as $field => $values) {
+                    $targetField = $targetFields[$field] ?? null;
+
+                    if ($targetField === null) {
+                        continue;
+                    }
+
+                    $attributes[$targetField] = $values['source'];
+                }
+
+                if (count($attributes) === 1) {
+                    continue;
+                }
+
+                $features[] = ['attributes' => $attributes];
+            }
+
+            if ($features === []) {
+                continue;
+            }
+
+            $response = $this->http()
+                ->asForm()
+                ->post($this->targetLayerUrl($job['target_layer']).'/updateFeatures', [
+                    'f' => 'json',
+                    'token' => $token,
+                    'features' => json_encode($features, JSON_THROW_ON_ERROR),
+                ]);
+
+            $data = $response->json();
+            $this->throwIfArcgisError($data, 'ArcGIS housing summary field sync failed');
+
+            if (! $response->successful()) {
+                throw new RuntimeException('ArcGIS housing summary field sync failed: '.$response->body());
+            }
+
+            foreach (($data['updateResults'] ?? []) as $result) {
+                if (($result['success'] ?? false) === true) {
+                    $updated++;
+                }
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function syncExistingBuildingFields(string $token, ArcgisAuditedUploadService $uploadService): array
+    {
+        $job = $this->jobs('buildings')[0];
+        $buildingObjectIds = $this->existingAuditedBuildingObjectIds($this->targetRows($job, $token));
+
+        if ($buildingObjectIds === []) {
+            return [
+                'building_field_rows_to_sync' => 0,
+                ...$uploadService->uploadObjectIds(withoutAttachments: true, dryRun: true),
+            ];
+        }
+
+        return [
+            'building_field_rows_to_sync' => count($buildingObjectIds),
+            ...$uploadService->uploadObjectIds(
+                buildingObjectIds: $buildingObjectIds,
+                withoutAttachments: true,
+            ),
+        ];
+    }
+
+    /**
+     * @param  array<int, array{objectid: int, old_objectid: string, field_status: string|null, building_damage_status?: string|null}>  $targetRows
+     * @return array<int, int|string>
+     */
+    private function existingAuditedBuildingObjectIds(array $targetRows): array
+    {
+        $objectIds = collect($targetRows)
+            ->pluck('old_objectid')
+            ->filter(fn (mixed $objectId): bool => $objectId !== null && $objectId !== '')
+            ->unique()
+            ->values();
+
+        if ($objectIds->isEmpty()) {
+            return [];
+        }
+
+        return $objectIds
+            ->chunk(1000)
+            ->flatMap(fn ($chunk) => AuditedBuilding::query()
+                ->whereIn('objectid', $chunk->all())
+                ->orderBy('objectid')
+                ->pluck('objectid'))
+            ->values()
+            ->all();
     }
 
     /**
