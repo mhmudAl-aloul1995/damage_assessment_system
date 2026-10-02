@@ -13,6 +13,45 @@ beforeEach(function (): void {
     ensureAuditedBuildingSurveyColumns();
 });
 
+it('includes buildings without an assignee in summary records and copied object ids', function (): void {
+    $user = User::factory()->create();
+
+    foreach ([
+        [1401, 'Engineer One', 'fully_damaged'],
+        [1402, '', 'partially_damaged'],
+        [1403, null, 'committee_review'],
+    ] as [$objectId, $assignee, $damageStatus]) {
+        AuditedBuilding::query()->create([
+            'objectid' => $objectId,
+            'globalid' => 'assignment-building-'.$objectId,
+            'assignedto' => $assignee,
+            'field_status' => 'Not_Completed',
+            'building_damage_status' => $damageStatus,
+        ]);
+    }
+
+    $this->actingAs($user)->get(route('building.index'))->assertOk()
+        ->assertViewHas('buildingSummary', fn (array $summary): bool => $summary === [
+            'total' => 3,
+            'fully_damaged' => 1,
+            'partially_damaged' => 1,
+            'committee_review' => 1,
+        ]);
+
+    $response = $this->getJson(route('building.show', ['building' => 'show', 'length' => 10]))
+        ->assertOk()->assertJsonPath('recordsTotal', 3)->assertJsonPath('recordsFiltered', 3)
+        ->assertJsonCount(3, 'data');
+    expect(collect($response->json('data'))->pluck('objectid')->sort()->values()->all())->toBe([1401, 1402, 1403]);
+
+    $this->getJson(route('building.objectids'))->assertOk()
+        ->assertJsonPath('count', 3)->assertJsonPath('objectids', ['1401', '1402', '1403']);
+
+    $this->getJson(route('building.show', [
+        'building' => 'show',
+        'filters' => ['assignedto' => ['Engineer One']],
+    ]))->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonPath('data.0.objectid', 1401);
+});
+
 it('shows grouped building filters based on survey sections', function () {
     $user = User::factory()->create();
 

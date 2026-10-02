@@ -674,8 +674,7 @@ class BuildingController extends Controller
 
     private function auditedBuildingQuery(): Builder
     {
-        return AuditedBuilding::query()
-            ->where('assignedto', '!=', '');
+        return AuditedBuilding::query();
     }
 
     public function update(Request $request)
