@@ -121,16 +121,34 @@ class SectorOverviewService
         $pending = $completed - $reviewed;
         $damageColumn = $this->configuration($sector)['damage'];
         $damageCounts = array_fill_keys($this->damageBuckets($sector), 0);
+        $summary = compact('total', 'completed', 'pending', 'approved');
 
         foreach ((clone $query)->select($damageColumn)->selectRaw('COUNT(*) as aggregate')->groupBy($damageColumn)->get() as $row) {
             $damageCounts[$this->damageBucket($sector, $row->{$damageColumn})] += (int) $row->aggregate;
         }
 
+        if ($sector === 'buildings') {
+            $summary = [...$summary, ...$this->completedBuildingDamageSummary(clone $completedQuery, $damageColumn)];
+        }
+
         return [
-            'summary' => compact('total', 'completed', 'pending', 'approved'),
+            'summary' => $summary,
             'damage' => $damageCounts,
             'progress' => ['not_completed' => $total - $completed, 'pending' => $pending, 'in_review' => $reviewed - $approved, 'approved' => $approved],
             'neighborhoods' => $this->options($sector, 'neighborhood', array_intersect_key($filters, ['municipality' => true])),
+        ];
+    }
+
+    /** @return array{fully_damaged: int, partially_damaged: int, committee_review: int, assessment_blocked: int} */
+    private function completedBuildingDamageSummary(Builder $completedQuery, string $damageColumn): array
+    {
+        $normalizedDamage = $completedQuery->getQuery()->raw("LOWER(TRIM(COALESCE({$damageColumn}, '')))");
+
+        return [
+            'fully_damaged' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::FULLY_DAMAGED))->count(),
+            'partially_damaged' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::PARTIALLY_DAMAGED))->count(),
+            'committee_review' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::COMMITTEE_REVIEW))->count(),
+            'assessment_blocked' => (clone $completedQuery)->whereNull($damageColumn)->count(),
         ];
     }
 

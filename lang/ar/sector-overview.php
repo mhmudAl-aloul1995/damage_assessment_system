@@ -6,6 +6,8 @@ return [
     'completed' => 'مكتملة ميدانيًا',
     'pending' => 'بانتظار التدقيق',
     'approved' => 'معتمدة نهائيًا',
+    'technical_committee' => 'لجنة فنية',
+    'assessment_blocked' => 'يوجد عائق',
     'completion_rate' => 'نسبة الإنجاز الميداني',
     'municipality' => 'البلدية',
     'neighborhood' => 'الحي',

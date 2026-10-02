@@ -13,8 +13,29 @@
         .sector-overview-bar { height: 10px; background: var(--bs-gray-100); border-radius: 5px; overflow: hidden; }
         .sector-overview-bar-fill { height: 100%; border-radius: 5px; transition: width .25s; }
         .sector-overview-map-status { background: var(--bs-body-bg, #fff); position: absolute; inset-inline: 16px; bottom: 16px; padding: 10px 16px; border-radius: 8px; z-index: 2; box-shadow: 0 2px 12px #0001; }
+        .sector-overview-summary-row { scrollbar-width: thin; }
+        .sector-overview-summary-card { flex: 1 0 168px; min-width: 168px; }
         @media (max-width: 575px) { .sector-overview-map { height: 340px; } }
     </style>
+    @php
+        $summaryCards = $sector === 'buildings'
+            ? [
+                ['metric' => 'total', 'label' => __('sector-overview.total'), 'color' => 'primary'],
+                ['metric' => 'completed', 'label' => __('sector-overview.completed'), 'color' => 'success'],
+                ['metric' => 'fully_damaged', 'label' => __('sector-overview.damage.fully_damaged'), 'color' => 'danger'],
+                ['metric' => 'partially_damaged', 'label' => __('sector-overview.damage.partially_damaged'), 'color' => 'warning'],
+                ['metric' => 'committee_review', 'label' => __('sector-overview.technical_committee'), 'color' => 'info'],
+                ['metric' => 'assessment_blocked', 'label' => __('sector-overview.assessment_blocked'), 'color' => 'dark'],
+                ['metric' => 'pending', 'label' => __('sector-overview.pending'), 'color' => 'warning'],
+                ['metric' => 'approved', 'label' => __('sector-overview.approved'), 'color' => 'info'],
+            ]
+            : [
+                ['metric' => 'total', 'label' => __('sector-overview.total'), 'color' => 'primary'],
+                ['metric' => 'completed', 'label' => __('sector-overview.completed'), 'color' => 'success'],
+                ['metric' => 'pending', 'label' => __('sector-overview.pending'), 'color' => 'warning'],
+                ['metric' => 'approved', 'label' => __('sector-overview.approved'), 'color' => 'info'],
+            ];
+    @endphp
     <div id="sector-overview" data-stats-url="{{ route('sector-overview.stats', $sector) }}" data-map-url="{{ route('sector-overview.map', $sector) }}">
         <div class="mb-5">
             <h2 class="fs-2 fw-bold text-gray-900 mb-2">{{ $sectorTitle }}</h2>
@@ -44,13 +65,13 @@
         <div id="sector-data-status" role="status" aria-live="polite" class="text-muted mb-3"></div>
         <div id="sector-data-error" role="alert" class="alert alert-danger d-none"></div>
         <div id="sector-data-content">
-            <div class="row g-4 mb-5">
-                @foreach(['total' => 'primary', 'completed' => 'success', 'pending' => 'warning', 'approved' => 'info'] as $metric => $color)
-                    <div class="col-6 col-xl-3">
+            <div class="sector-overview-summary-row d-flex flex-nowrap gap-4 overflow-auto mb-5 pb-2">
+                @foreach($summaryCards as $card)
+                    <div class="sector-overview-summary-card">
                         <div class="card border border-gray-200 h-100">
-                            <div class="card-body py-6">
-                                <div class="text-muted fw-semibold mb-3">{{ __('sector-overview.'.$metric) }}</div>
-                                <div class="fs-2hx fw-bold text-{{ $color }}" data-metric="{{ $metric }}">{{ number_format($statistics['summary'][$metric]) }}</div>
+                            <div class="card-body py-6 px-5">
+                                <div class="text-muted fw-semibold mb-3">{{ $card['label'] }}</div>
+                                <div class="fs-2hx fw-bold text-{{ $card['color'] }}" data-metric="{{ $card['metric'] }}">{{ number_format($statistics['summary'][$card['metric']]) }}</div>
                             </div>
                         </div>
                     </div>

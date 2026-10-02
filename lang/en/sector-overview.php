@@ -4,6 +4,8 @@ return [
     'subtitle' => 'Damage assessment and progress at a glance',
     'total' => 'Total records', 'completed' => 'Fieldwork completed',
     'pending' => 'Awaiting audit', 'approved' => 'Final approval',
+    'technical_committee' => 'Technical committee',
+    'assessment_blocked' => 'Obstacle exists',
     'completion_rate' => 'Fieldwork completion rate',
     'municipality' => 'Municipality', 'neighborhood' => 'Neighborhood',
     'damage_status' => 'Damage status', 'all' => 'All',

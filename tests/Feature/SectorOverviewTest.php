@@ -82,13 +82,30 @@ it('uses audited building values for overview statistics filters and map records
     AuditedBuilding::query()->create(['objectid' => 1401, 'globalid' => 'building-1401', 'field_status' => 'COMPLETED',
         'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'building_damage_status' => 'partially_damaged',
         'latitude' => 31.5, 'longitude' => 34.4]);
+    AuditedBuilding::query()->create(['objectid' => 1402, 'globalid' => 'building-1402', 'field_status' => 'COMPLETED',
+        'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'building_damage_status' => 'fully_damaged',
+        'latitude' => 31.5, 'longitude' => 34.4]);
+    AuditedBuilding::query()->create(['objectid' => 1403, 'globalid' => 'building-1403', 'field_status' => 'COMPLETED',
+        'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'building_damage_status' => 'committee_review',
+        'latitude' => 31.5, 'longitude' => 34.4]);
+    AuditedBuilding::query()->create(['objectid' => 1404, 'globalid' => 'building-1404', 'field_status' => 'COMPLETED',
+        'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'building_damage_status' => null,
+        'latitude' => 31.5, 'longitude' => 34.4]);
+    AuditedBuilding::query()->create(['objectid' => 1405, 'globalid' => 'building-1405', 'field_status' => 'Not_Completed',
+        'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'building_damage_status' => null,
+        'latitude' => 31.5, 'longitude' => 34.4]);
 
     $this->get(route('sector-overview.show', 'buildings'))->assertOk()
         ->assertViewHas('municipalities', ['Gaza'])
-        ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['summary']['completed'] === 1);
+        ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['summary']['completed'] === 4)
+        ->assertSee('sector-overview-summary-row d-flex flex-nowrap', false)
+        ->assertSee('data-metric="assessment_blocked"', false);
     $this->getJson(route('sector-overview.stats', 'buildings'))->assertOk()
-        ->assertJsonPath('summary.total', 1)->assertJsonPath('summary.completed', 1)
-        ->assertJsonPath('summary.pending', 1)->assertJsonPath('damage.fully_damaged', 0);
+        ->assertJsonPath('summary.total', 5)->assertJsonPath('summary.completed', 4)
+        ->assertJsonPath('summary.pending', 4)->assertJsonPath('summary.fully_damaged', 1)
+        ->assertJsonPath('summary.partially_damaged', 1)->assertJsonPath('summary.committee_review', 1)
+        ->assertJsonPath('summary.assessment_blocked', 1)->assertJsonPath('damage.fully_damaged', 1)
+        ->assertJsonPath('damage.unclassified', 2);
 
     $filters = ['sector' => 'buildings', 'municipality' => 'Gaza', 'neighborhood' => 'Rimal', 'damage_status' => 'partially_damaged'];
     $this->getJson(route('sector-overview.stats', $filters))->assertOk()
