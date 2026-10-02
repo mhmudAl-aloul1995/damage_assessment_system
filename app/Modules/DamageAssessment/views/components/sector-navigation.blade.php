@@ -12,33 +12,12 @@
                 background: var(--bs-body-bg);
             }
 
-            .sector-workspace-navigation .sector-workspace-title {
-                display: flex;
-                align-items: center;
-                gap: .75rem;
-                padding: 1.15rem 1.5rem .85rem;
-                color: var(--bs-gray-900);
-                font-size: 1.05rem;
-                font-weight: 700;
-            }
-
-            .sector-workspace-navigation .sector-workspace-title-icon {
-                display: inline-flex;
-                width: 34px;
-                height: 34px;
-                align-items: center;
-                justify-content: center;
-                border-radius: .6rem;
-                background: var(--bs-primary-light);
-                color: var(--bs-primary);
-            }
-
             .sector-workspace-navigation .sector-workspace-tabs {
                 display: flex;
                 flex-wrap: wrap;
                 gap: .4rem;
                 margin: 0;
-                padding: 0 1.25rem 1rem;
+                padding: 1rem 1.25rem;
                 list-style: none;
             }
 
@@ -116,16 +95,6 @@
     @endonce
 
     <nav class="card card-flush sector-workspace-navigation mb-6" aria-label="{{ __('menu.sector_navigation.aria_label', ['sector' => __($sectorTitle)]) }}">
-        <div class="sector-workspace-title">
-            <span class="sector-workspace-title-icon" aria-hidden="true">
-                <i class="ki-duotone ki-category fs-2">
-                    <span class="path1"></span>
-                    <span class="path2"></span>
-                </i>
-            </span>
-            <span>{{ __('menu.sector_navigation.title', ['sector' => __($sectorTitle)]) }}</span>
-        </div>
-
         <ul class="sector-workspace-tabs">
             @foreach ($sectorTabs as $tab)
                 <li>
