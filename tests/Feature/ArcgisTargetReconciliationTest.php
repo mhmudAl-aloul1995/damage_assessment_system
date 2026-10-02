@@ -210,6 +210,91 @@ it('syncs existing target objectid values from old object ids when requested', f
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures');
 });
 
+it('syncs existing target building summary fields from audited buildings when requested', function (): void {
+    DB::table('audited_buildings')->insert([
+        'objectid' => 123,
+        'globalid' => 'audited-building-123',
+        'field_status' => 'Not_Completed',
+        'building_damage_status' => 'partially_damaged',
+    ]);
+
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'field_status'],
+                ['name' => 'building_damage_status'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => function ($request) {
+            if ((int) ($request['resultOffset'] ?? 0) > 0) {
+                return Http::response(['features' => []]);
+            }
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => ['objectid' => 123, 'Field_status' => 'Not_Completed']],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            if ((int) ($request['resultOffset'] ?? 0) > 0) {
+                return Http::response(['features' => []]);
+            }
+
+            return Http::response([
+                'features' => [
+                    ['attributes' => [
+                        'objectid' => 9001,
+                        'old_objectid_B' => 123,
+                        'field_status' => 'COMPLETED',
+                        'building_damage_status' => 'fully_damaged',
+                    ]],
+                ],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures' => function ($request) {
+            $features = json_decode($request['features'], true);
+
+            expect($features)->toBe([
+                [
+                    'attributes' => [
+                        'objectid' => 9001,
+                        'field_status' => 'Not_Completed',
+                        'building_damage_status' => 'partially_damaged',
+                    ],
+                ],
+            ]);
+
+            return Http::response([
+                'updateResults' => [
+                    ['success' => true, 'objectId' => 9001],
+                ],
+            ]);
+        },
+    ]);
+
+    $exitCode = Artisan::call('arcgis:reconcile-target', [
+        '--only' => 'buildings',
+        '--sync-building-summary-fields' => true,
+        '--run' => true,
+        '--skip-cache-refresh' => true,
+        '--without-attachments' => true,
+    ]);
+    $output = Artisan::output();
+
+    expect($exitCode)->toBe(0)
+        ->and($output)->toContain('building_summary_field_rows_to_sync')
+        ->and($output)->toContain('field_status_values_to_sync')
+        ->and($output)->toContain('building_damage_status_values_to_sync')
+        ->and($output)->toContain('Updated building summary field rows: 1');
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures');
+});
+
 it('exports building status differences to Excel when requested', function (): void {
     Excel::fake();
 
