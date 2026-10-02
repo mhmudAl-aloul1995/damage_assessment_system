@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\services;
 
+use App\Models\AuditedBuilding;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\CsoSurvey;
@@ -22,7 +23,7 @@ class SectorOverviewService
     private function configuration(string $sector): array
     {
         return match ($sector) {
-            'buildings' => ['model' => Building::class, 'damage' => 'building_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
+            'buildings' => ['model' => AuditedBuilding::class, 'damage' => 'building_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
             'housing-units' => ['model' => HousingUnit::class, 'damage' => 'unit_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
             'public-buildings' => ['model' => PublicBuildingSurvey::class, 'damage' => 'building_damage_status', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
             'road-facilities' => ['model' => RoadFacilitySurvey::class, 'damage' => 'road_damage_level', 'municipality' => 'municipalitie', 'neighborhood' => 'neighborhood'],
@@ -43,6 +44,10 @@ class SectorOverviewService
     {
         $configuration = $this->configuration($sector);
         $query = $configuration['model']::query();
+
+        if ($sector === 'buildings') {
+            app(PhaseContext::class)->applyToEloquent($query);
+        }
 
         if ($sector === 'housing-units') {
             app(PhaseContext::class)->applyToParentBuildingPhase($query, 'housing_units.parentglobalid');

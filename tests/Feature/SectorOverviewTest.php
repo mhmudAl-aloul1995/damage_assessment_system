@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AssessmentStatus;
+use App\Models\AuditedBuilding;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\CsoSurvey;
@@ -20,6 +21,12 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
+    foreach (['municipalitie', 'latitude', 'longitude', 'location'] as $column) {
+        if (! Schema::hasColumn('audited_buildings', $column)) {
+            Schema::table('audited_buildings', fn (Blueprint $table) => $table->text($column)->nullable());
+        }
+    }
+
     $this->overviewUser = User::factory()->create();
     $this->overviewUser->assignRole(Role::findOrCreate('Database Officer', 'web'));
     $this->actingAs($this->overviewUser);
@@ -67,10 +74,65 @@ it('uses the latest infrastructure audit state rather than an old approval', fun
         ->assertJsonPath('summary.pending', 0)->assertJsonPath('progress.in_review', 1);
 });
 
+it('uses audited building values for overview statistics filters and map records', function (): void {
+    Building::query()->forceCreate(['objectid' => 1401, 'globalid' => 'building-1401', 'field_status' => 'Not_Completed',
+        'municipalitie' => 'Original municipality', 'neighborhood' => 'Original neighborhood', 'building_damage_status' => 'fully_damaged',
+        'latitude' => 30.5, 'longitude' => 33.4]);
+    Building::query()->forceCreate(['objectid' => 1402, 'globalid' => 'base-only', 'field_status' => 'COMPLETED']);
+    AuditedBuilding::query()->create(['objectid' => 1401, 'globalid' => 'building-1401', 'field_status' => 'COMPLETED',
+        'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'building_damage_status' => 'partially_damaged',
+        'latitude' => 31.5, 'longitude' => 34.4]);
+
+    $this->get(route('sector-overview.show', 'buildings'))->assertOk()
+        ->assertViewHas('municipalities', ['Gaza'])
+        ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['summary']['completed'] === 1);
+    $this->getJson(route('sector-overview.stats', 'buildings'))->assertOk()
+        ->assertJsonPath('summary.total', 1)->assertJsonPath('summary.completed', 1)
+        ->assertJsonPath('summary.pending', 1)->assertJsonPath('damage.fully_damaged', 0);
+
+    $filters = ['sector' => 'buildings', 'municipality' => 'Gaza', 'neighborhood' => 'Rimal', 'damage_status' => 'partially_damaged'];
+    $this->getJson(route('sector-overview.stats', $filters))->assertOk()
+        ->assertJsonPath('summary.total', 1)->assertJsonPath('summary.completed', 1)
+        ->assertJsonPath('damage.partially_damaged', 1)->assertJsonPath('neighborhoods', ['Rimal']);
+    $this->getJson(route('sector-overview.map', $filters))->assertOk()->assertJsonCount(1, 'features')
+        ->assertJsonPath('features.0.attributes.objectid', 1401)
+        ->assertJsonPath('features.0.attributes.municipality', 'Gaza')
+        ->assertJsonPath('features.0.geometry.x', 34.4);
+    $this->getJson(route('sector-overview.stats', ['sector' => 'buildings', 'municipality' => 'Original municipality']))
+        ->assertOk()->assertJsonPath('summary.total', 0);
+});
+
+it('does not fall back to original buildings when the audited cache is empty', function (): void {
+    Building::query()->forceCreate(['objectid' => 1501, 'globalid' => 'base-only', 'field_status' => 'COMPLETED',
+        'municipalitie' => 'Gaza', 'latitude' => 31.5, 'longitude' => 34.4]);
+
+    $this->getJson(route('sector-overview.stats', 'buildings'))->assertOk()
+        ->assertJsonPath('summary.total', 0)->assertJsonPath('summary.completed', 0);
+    $this->getJson(route('sector-overview.map', 'buildings'))->assertOk()->assertJsonCount(0, 'features');
+    $this->get(route('sector-overview.show', 'buildings'))->assertOk()->assertViewHas('municipalities', []);
+});
+
+it('preserves the selected phase across audited building statistics maps and filter options', function (): void {
+    foreach ([1, 2] as $phase) {
+        AuditedBuilding::query()->create(['objectid' => 1600 + $phase, 'globalid' => 'audited-phase-'.$phase,
+            'phase_number' => $phase, 'municipalitie' => 'municipality-'.$phase, 'neighborhood' => 'neighborhood-'.$phase,
+            'field_status' => 'COMPLETED', 'latitude' => 31.5, 'longitude' => 34.4]);
+    }
+
+    $this->withSession(['selected_phase_number' => 1]);
+    $this->getJson(route('sector-overview.stats', 'buildings'))->assertOk()
+        ->assertJsonPath('summary.total', 1)->assertJsonPath('summary.completed', 1)
+        ->assertJsonPath('neighborhoods', ['neighborhood-1']);
+    $this->getJson(route('sector-overview.map', 'buildings'))->assertOk()->assertJsonCount(1, 'features')
+        ->assertJsonPath('features.0.attributes.objectid', 1601);
+    $this->get(route('sector-overview.show', 'buildings'))->assertOk()->assertViewHas('municipalities', ['municipality-1']);
+});
+
 it('counts current building and unit approvals and locates units at their parent building', function (): void {
     $approved = AssessmentStatus::query()->create(['name' => 'final_approval', 'label_en' => 'Final Approval', 'label_ar' => 'اعتماد نهائي', 'stage' => 'team_leader', 'order_step' => 9]);
     $review = AssessmentStatus::query()->create(['name' => 'need_review', 'label_en' => 'Needs Review', 'label_ar' => 'بحاجة لمراجعة', 'stage' => 'engineer', 'order_step' => 5]);
     Building::query()->forceCreate(['objectid' => 201, 'globalid' => 'parent-201', 'field_status' => 'COMPLETED', 'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'latitude' => 31.5, 'longitude' => 34.4]);
+    AuditedBuilding::query()->create(['objectid' => 201, 'globalid' => 'parent-201', 'field_status' => 'COMPLETED', 'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'latitude' => 31.5, 'longitude' => 34.4]);
     HousingUnit::query()->forceCreate(['objectid' => 301, 'globalid' => 'unit-301', 'parentglobalid' => 'parent-201', 'unit_municipalitie' => 'Gaza', 'unit_neighborhood' => 'Rimal', 'municipalitie' => 'Displaced residence', 'unit_damage_status' => 'fully_damaged2']);
     BuildingStatus::query()->create(['building_id' => 201, 'status_id' => $approved->id, 'type' => 'Team Leader']);
     HousingStatus::query()->create(['housing_id' => 301, 'status_id' => $approved->id, 'type' => 'Team Leader']);
@@ -105,20 +167,25 @@ it('handles missing locations unknown damage and empty filtered results without 
         ->assertJsonPath('summary.total', 0)->assertJsonPath('summary.completed', 0);
 });
 
-it('paginates map records without losing or duplicating a record', function (): void {
+it('paginates map records without losing or duplicating a record', function (string $sector, string $model): void {
     $rows = collect(range(1, 501))->map(fn (int $id): array => ['objectid' => $id, 'latitude' => 31.5, 'longitude' => 34.4])->all();
-    CsoSurvey::query()->insert($rows);
-    $first = $this->getJson(route('sector-overview.map', 'cso-surveys'))->assertJsonCount(500, 'features')->assertJsonPath('scanned', 500);
-    $last = $this->getJson(route('sector-overview.map', ['sector' => 'cso-surveys', 'after_id' => $first->json('next_cursor')]))
+    $model::query()->insert($rows);
+    $first = $this->getJson(route('sector-overview.map', $sector))->assertJsonCount(500, 'features')->assertJsonPath('scanned', 500);
+    $last = $this->getJson(route('sector-overview.map', ['sector' => $sector, 'after_id' => $first->json('next_cursor')]))
         ->assertJsonCount(1, 'features')->assertJsonPath('next_cursor', null);
     expect($last->json('features.0.attributes.objectid'))->toBe(501);
-});
+})->with([
+    'cso surveys' => ['cso-surveys', CsoSurvey::class],
+    'audited buildings' => ['buildings', AuditedBuilding::class],
+]);
 
 it('maps buildings and their housing units when the legacy buildings table has no location column', function (): void {
     if (Schema::hasColumn('buildings', 'location')) {
         Schema::table('buildings', fn (Blueprint $table) => $table->dropColumn('location'));
     }
     Building::query()->forceCreate(['objectid' => 1101, 'globalid' => 'legacy-building', 'latitude' => 31.5, 'longitude' => 34.4]);
+    Schema::table('audited_buildings', fn (Blueprint $table) => $table->dropColumn('location'));
+    AuditedBuilding::query()->create(['objectid' => 1101, 'globalid' => 'legacy-building', 'latitude' => 31.5, 'longitude' => 34.4]);
     HousingUnit::query()->forceCreate(['objectid' => 1102, 'globalid' => 'legacy-unit', 'parentglobalid' => 'legacy-building']);
 
     foreach (['buildings', 'housing-units'] as $sector) {
@@ -137,9 +204,9 @@ it('maps stored geometries when latitude and longitude columns are absent', func
 });
 
 it('returns an empty map rather than an error when a legacy table has no geographic columns', function (): void {
-    $geographicColumns = array_values(array_intersect(['location', 'latitude', 'longitude'], Schema::getColumnListing('buildings')));
-    Schema::table('buildings', fn (Blueprint $table) => $table->dropColumn($geographicColumns));
-    Building::query()->forceCreate(['objectid' => 1301, 'globalid' => 'unlocated-building']);
+    $geographicColumns = array_values(array_intersect(['location', 'latitude', 'longitude'], Schema::getColumnListing('audited_buildings')));
+    Schema::table('audited_buildings', fn (Blueprint $table) => $table->dropColumn($geographicColumns));
+    AuditedBuilding::query()->create(['objectid' => 1301, 'globalid' => 'unlocated-building']);
 
     $this->getJson(route('sector-overview.map', 'buildings'))->assertOk()->assertJsonCount(0, 'features')
         ->assertJsonPath('scanned', 1)->assertJsonPath('next_cursor', null);
