@@ -36,7 +36,8 @@ it('renders a simple overview as the first tab and sidebar destination for each 
     app()->setLocale('ar');
     $this->get(route('sector-overview.show', $sector))->assertOk()
         ->assertSee('نظرة عامة')->assertSee('التوزيع الجغرافي')->assertSee('توزيع حالات الضرر')
-        ->assertSee('sector-progress-chart')->assertSee('https://js.arcgis.com/4.22/', false);
+        ->assertSee('sector-progress-chart')->assertSee('https://js.arcgis.com/4.22/', false)
+        ->assertDontSee('مساحة قطاع');
     $tabs = SectorNavigation::forUser($sector, $this->overviewUser);
     expect($tabs[0]['key'])->toBe('overview')->and($tabs[0]['url'])->toBe(route('sector-overview.show', $sector));
     $section = Sidebar::forUser($this->overviewUser)->firstWhere('key', 'damage_assessment')['sections']->firstWhere('sector', $sector);
