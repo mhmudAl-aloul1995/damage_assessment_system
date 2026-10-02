@@ -36,6 +36,13 @@ class DashboardCardSeeder extends Seeder
                     ]
                 );
             });
+
+            if ($card->key === 'buildings') {
+                DashboardCardItem::query()
+                    ->where('dashboard_card_id', $card->id)
+                    ->where('key', 'completed')
+                    ->update(['is_active' => false]);
+            }
         });
     }
 
@@ -59,11 +66,11 @@ class DashboardCardSeeder extends Seeder
                     $this->item('partially_damaged', 'ui.damage_dashboard.partially_damaged', 'buildingStats', 'partially_damaged', 'ki-rescue', 'buildings', 'partially_damaged', 2, 'building_damage_status', '=', 'partially_damaged'),
                     $this->item('committee_review', 'ui.damage_dashboard.current_committee_review', 'buildingStats', 'committee_review', 'ki-questionnaire-tablet', 'buildings', 'committee_review', 3, 'building_damage_status', '=', 'committee_review'),
                     $this->item('archived_committee_review', 'ui.damage_dashboard.archived_committee_review', 'buildingStats', 'archived_committee_review', 'ki-archive', 'buildings', 'archived_committee_review', 4),
-                    $this->item('assessment_obstacle', 'ui.damage_dashboard.assessment_blocked', 'buildingStats', 'assessment_obstacle', 'ki-check-circle', 'buildings', 'assessment_blocked', 5, 'assessment_obstacle', '=', 'yes'),
-                    $this->item('bodies', 'ui.damage_dashboard.bodies_present', 'buildingStats', 'bodies', 'ki-people', 'buildings', 'bodies_present', 6, 'bodies_present', '=', 'yes3'),
-                    $this->item('uxo', 'ui.damage_dashboard.uxo_present', 'buildingStats', 'uxo', 'ki-cross-circle', 'buildings', 'uxo_present', 7, 'uxo_present', '=', 'yes3'),
-                    $this->item('debris', 'ui.damage_dashboard.debris_blocking', 'buildingStats', 'debris', 'ki-route', 'buildings', 'debris_blocking', 8, 'building_debris_blocking', '=', 'yes'),
-                    $this->item('completed', 'ui.damage_dashboard.completed', 'buildingStats', 'completed', 'ki-check-circle', 'buildings', 'completed', 9, 'field_status', '=', 'COMPLETED'),
+                    $this->item('no_damage', 'ui.damage_dashboard.no_damage', 'buildingStats', 'no_damage', 'ki-check-circle', 'buildings', 'no_damage', 5, 'building_damage_status', '=', 'no_damaged'),
+                    $this->item('assessment_obstacle', 'ui.damage_dashboard.assessment_blocked', 'buildingStats', 'unclassified', 'ki-question-2', 'buildings', 'assessment_blocked', 6, 'building_damage_status', 'blank'),
+                    $this->item('bodies', 'ui.damage_dashboard.bodies_present', 'buildingStats', 'bodies', 'ki-people', 'buildings', 'bodies_present', 7, 'bodies_present', '=', 'yes3'),
+                    $this->item('uxo', 'ui.damage_dashboard.uxo_present', 'buildingStats', 'uxo', 'ki-cross-circle', 'buildings', 'uxo_present', 8, 'uxo_present', '=', 'yes3'),
+                    $this->item('debris', 'ui.damage_dashboard.debris_blocking', 'buildingStats', 'debris', 'ki-route', 'buildings', 'debris_blocking', 9, 'building_debris_blocking', '=', 'yes'),
                 ],
             ],
             [
