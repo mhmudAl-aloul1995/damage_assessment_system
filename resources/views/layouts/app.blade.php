@@ -48,6 +48,7 @@
 	];
 	$user = auth()->user();
 	$sidebarModules = \App\Support\Navigation\Sidebar::forUser($user);
+	$currentSidebarModule = \App\Support\Navigation\Sidebar::currentModule($sidebarModules);
 	$headerNotifications = collect();
 	$headerUnreadNotificationsCount = 0;
 
@@ -96,6 +97,7 @@
 	<!--end::Global Stylesheets Bundle-->
 	<script>// Frame-busting to prevent site from being loaded within a frame without permission (click-jacking) if (window.top != window.self) { window.top.location.replace(window.self.location.href); }</script>
 	@include('pwa.head')
+	@include('layouts.partials.module-switcher-styles')
 </head>
 <!--end::Head-->
 <!--begin::Body-->
@@ -1513,109 +1515,20 @@
 					<!--end::Sidebar toggle-->
 				</div>
 				<!--end::Logo-->
+				@include('layouts.partials.module-switcher')
 				<!--begin::sidebar menu-->
 				<div class="app-sidebar-menu overflow-hidden flex-column-fluid">
 					<div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper">
 
 						<div id="kt_app_sidebar_menu_scroll" class="scroll-y my-5 mx-3" data-kt-scroll="true"
 							data-kt-scroll-activate="true" data-kt-scroll-height="auto"
-							data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer"
+							data-kt-scroll-dependencies="#kt_app_sidebar_logo, #phc_module_switcher, #kt_app_sidebar_footer"
 							data-kt-scroll-offset="5px" data-kt-scroll-save-state="true">
 
 							<div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6"
 								id="kt_app_sidebar_menu" data-kt-menu="true" data-kt-menu-expand="false">
 
-								@foreach($sidebarModules as $sidebarModule)
-									<div class="phc-sidebar-module-label" data-module="{{ $sidebarModule['key'] }}">
-										{{ __($sidebarModule['title']) }}
-									</div>
-
-									@php($currentNavigationGroup = null)
-									@foreach($sidebarModule['sections'] as $menu)
-										@if(($menu['navigation_group'] ?? null) !== $currentNavigationGroup)
-											@if($menu['navigation_group'] ?? null)
-												<div class="phc-sidebar-navigation-group">
-													{{ __($menu['navigation_group']) }}
-												</div>
-											@endif
-											@php($currentNavigationGroup = $menu['navigation_group'] ?? null)
-										@endif
-
-										@if($menu['is_direct'] ?? false)
-											<div
-												class="menu-item phc-sidebar-section {{ ($menu['variant'] ?? null) === 'hud' ? 'phc-sidebar-hud' : '' }} {{ $menu['is_active'] ? 'phc-sidebar-section-active' : '' }}">
-												<a class="menu-link" href="{{ url($menu['url']) }}">
-													@if(($menu['variant'] ?? null) === 'hud')
-														<span class="menu-title">{{ __($menu['title']) }}</span>
-														<span class="phc-sidebar-hud-live-dot" aria-hidden="true"></span>
-													@else
-														<span class="menu-icon">
-															<span class="phc-sidebar-icon">
-																<i class="ki-duotone {{ $menu['icon'] }} fs-2">
-																	<span class="path1"></span>
-																	<span class="path2"></span>
-																</i>
-															</span>
-														</span>
-
-														<span class="menu-title">{{ __($menu['title']) }}</span>
-													@endif
-												</a>
-											</div>
-										@else
-											<div data-kt-menu-trigger="click"
-												class="menu-item menu-accordion phc-sidebar-section {{ $menu['is_active'] ? 'show phc-sidebar-section-active' : '' }}">
-
-												<span class="menu-link">
-													<span class="menu-icon">
-														<span class="phc-sidebar-icon">
-															<i class="ki-duotone {{ $menu['icon'] }} fs-2">
-																<span class="path1"></span>
-																<span class="path2"></span>
-															</i>
-														</span>
-													</span>
-
-													<span class="menu-title">{{ __($menu['title']) }}</span>
-													<span class="phc-sidebar-item-count">{{ $menu['visible_item_count'] }}</span>
-													<span class="menu-arrow"></span>
-												</span>
-
-												<div class="menu-sub menu-sub-accordion">
-													@foreach($menu['items'] as $item)
-														@if(isset($item['children']))
-															<div class="menu-item phc-sidebar-group">
-																<div class="phc-sidebar-group-label">{{ __($item['title']) }}</div>
-
-																@foreach($item['children'] as $child)
-																	<div class="menu-item">
-																		<a class="menu-link phc-sidebar-link {{ request()->is($child['pattern']) ? 'active' : '' }}"
-																			href="{{ url($child['url']) }}">
-																			<span class="menu-bullet">
-																				<span class="bullet bullet-dot"></span>
-																			</span>
-																			<span class="menu-title">{{ __($child['title']) }}</span>
-																		</a>
-																	</div>
-																@endforeach
-															</div>
-														@else
-															<div class="menu-item">
-																<a class="menu-link phc-sidebar-link {{ request()->is($item['pattern']) ? 'active' : '' }}"
-																	href="{{ url($item['url']) }}">
-																	<span class="menu-bullet">
-																		<span class="bullet bullet-dot"></span>
-																	</span>
-																	<span class="menu-title">{{ __($item['title']) }}</span>
-																</a>
-															</div>
-														@endif
-													@endforeach
-												</div>
-											</div>
-										@endif
-									@endforeach
-								@endforeach
+								@include('layouts.partials.sidebar-module-menu')
 							</div>
 						</div>
 					</div>

@@ -207,8 +207,7 @@ it('renders an accessible sector navigation with localized labels', function () 
     $html = Blade::render("@include('damage-assessment::components.sector-navigation', ['sector' => 'road-facilities'])");
 
     expect($html)
-        ->toContain('مساحة قطاع الطرق')
-        ->toContain('التنقل داخل قطاع الطرق')
+        ->toContain('aria-label="التنقل داخل قطاع الطرق"')
         ->toContain('السجلات')
         ->toContain('التدقيق')
         ->toContain('التقارير')

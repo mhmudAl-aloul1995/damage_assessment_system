@@ -1,6 +1,24 @@
 <?php
 
 return [
+    'module_switcher' => [
+        'workspace' => 'Workspace',
+        'switch' => 'Switch module',
+        'choose' => 'Choose a workspace',
+        'hint' => 'Open the module you want to work in',
+        'work_modules' => 'Work modules',
+        'administration' => 'System administration',
+        'current' => 'Current',
+        'available' => 'Modules are available according to your permissions',
+        'borrowers' => 'Islamic Development Bank borrowers',
+        'heks' => 'Shelter repairs · HEKS',
+        'descriptions' => [
+            'damage_assessment' => 'Sectors, records, audits and reports',
+            'borrowers' => 'Borrower surveys and data follow-up',
+            'heks' => 'Cash assistance for emergency shelter repairs',
+            'administration' => 'Users, permissions and system settings',
+        ],
+    ],
     'navigation_groups' => [
         'overview' => 'Overview',
         'sectors' => 'Damage Assessment Sectors',

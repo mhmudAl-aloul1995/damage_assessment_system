@@ -63,11 +63,27 @@ class Sidebar
 
                 $module['key'] = $moduleKey;
                 $module['sections'] = $sections;
+                $module['is_active'] = request()->is(...($module['active_patterns'] ?? []))
+                    || $sections->contains(fn (array $section): bool => $section['is_active']);
+                $module['url'] = $sections
+                    ->flatMap(fn (array $section) => $section['is_direct'] ?? false ? [$section] : $section['items'])
+                    ->flatMap(fn (array $item) => $item['children'] ?? [$item])
+                    ->pluck('url')
+                    ->first();
 
                 return $module;
             })
             ->filter()
             ->values();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $modules
+     * @return array<string, mixed>|null
+     */
+    public static function currentModule(Collection $modules): ?array
+    {
+        return $modules->firstWhere('is_active', true) ?? $modules->first();
     }
 
     /**
