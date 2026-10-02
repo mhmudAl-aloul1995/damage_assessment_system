@@ -164,6 +164,55 @@ it('counts current building and unit approvals and locates units at their parent
         ->assertJsonPath('features.0.attributes.municipality', 'Gaza');
 });
 
+it('shows housing unit damage summary cards without the fieldwork completed card', function (): void {
+    Building::query()->forceCreate(['objectid' => 231, 'globalid' => 'completed-parent-231', 'field_status' => 'COMPLETED', 'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'latitude' => 31.5, 'longitude' => 34.4]);
+    Building::query()->forceCreate(['objectid' => 232, 'globalid' => 'not-completed-parent-232', 'field_status' => 'Not_Completed', 'municipalitie' => 'Gaza', 'neighborhood' => 'Rimal', 'latitude' => 31.5, 'longitude' => 34.4]);
+
+    foreach ([
+        [331, 'unit-fully-damaged', 'completed-parent-231', 'fully_damaged2'],
+        [332, 'unit-partially-damaged', 'completed-parent-231', 'partially_damaged2'],
+        [333, 'unit-committee-review', 'completed-parent-231', 'committee_review2'],
+        [334, 'unit-no-damage', 'completed-parent-231', 'no_damaged'],
+        [335, 'unit-with-obstacle', 'completed-parent-231', null],
+        [336, 'unit-not-completed-parent', 'not-completed-parent-232', 'fully_damaged2'],
+    ] as [$objectid, $globalid, $parentglobalid, $damageStatus]) {
+        HousingUnit::query()->forceCreate([
+            'objectid' => $objectid,
+            'globalid' => $globalid,
+            'parentglobalid' => $parentglobalid,
+            'unit_damage_status' => $damageStatus,
+        ]);
+    }
+
+    $this->get(route('sector-overview.show', 'housing-units'))
+        ->assertOk()
+        ->assertSee('data-metric="fully_damaged"', false)
+        ->assertSee('data-metric="partially_damaged"', false)
+        ->assertSee('data-metric="committee_review"', false)
+        ->assertSee('data-metric="no_damage"', false)
+        ->assertSee('data-metric="assessment_blocked"', false)
+        ->assertDontSee('data-metric="completed"', false)
+        ->assertViewHas('statistics', function (array $statistics): bool {
+            return $statistics['summary']['total'] === 6
+                && $statistics['summary']['completed'] === 5
+                && $statistics['summary']['fully_damaged'] === 1
+                && $statistics['summary']['partially_damaged'] === 1
+                && $statistics['summary']['committee_review'] === 1
+                && $statistics['summary']['no_damage'] === 1
+                && $statistics['summary']['assessment_blocked'] === 1;
+        });
+
+    $this->getJson(route('sector-overview.stats', 'housing-units'))
+        ->assertOk()
+        ->assertJsonPath('summary.total', 6)
+        ->assertJsonPath('summary.completed', 5)
+        ->assertJsonPath('summary.fully_damaged', 1)
+        ->assertJsonPath('summary.partially_damaged', 1)
+        ->assertJsonPath('summary.committee_review', 1)
+        ->assertJsonPath('summary.no_damage', 1)
+        ->assertJsonPath('summary.assessment_blocked', 1);
+});
+
 it('normalizes road damage and preserves ArcGIS line and polygon geometries', function (): void {
     RoadFacilitySurvey::query()->create(['objectid' => 501, 'field_status' => 'COMPLETED', 'road_damage_level' => 'No_Damage',
         'location' => json_encode(['paths' => [[[3830000, 3690000], [3830100, 3690100]]]])]);

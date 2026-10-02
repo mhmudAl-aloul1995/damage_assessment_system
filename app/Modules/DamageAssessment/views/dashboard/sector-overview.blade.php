@@ -25,8 +25,8 @@
         @media (max-width: 575px) { .sector-overview-map { height: 340px; } }
     </style>
     @php
-        $summaryCards = $sector === 'buildings'
-            ? [
+        $summaryCards = match ($sector) {
+            'buildings' => [
                 ['metric' => 'total', 'label' => __('sector-overview.total'), 'color' => 'primary'],
                 ['metric' => 'completed', 'label' => __('sector-overview.completed'), 'color' => 'success'],
                 ['metric' => 'fully_damaged', 'label' => __('sector-overview.damage.fully_damaged'), 'color' => 'danger'],
@@ -35,13 +35,24 @@
                 ['metric' => 'assessment_blocked', 'label' => __('sector-overview.assessment_blocked'), 'color' => 'dark'],
                 ['metric' => 'pending', 'label' => __('sector-overview.pending'), 'color' => 'warning'],
                 ['metric' => 'approved', 'label' => __('sector-overview.approved'), 'color' => 'info'],
-            ]
-            : [
+            ],
+            'housing-units' => [
+                ['metric' => 'total', 'label' => __('sector-overview.total'), 'color' => 'primary'],
+                ['metric' => 'fully_damaged', 'label' => __('sector-overview.damage.fully_damaged'), 'color' => 'danger'],
+                ['metric' => 'partially_damaged', 'label' => __('sector-overview.damage.partially_damaged'), 'color' => 'warning'],
+                ['metric' => 'committee_review', 'label' => __('sector-overview.technical_committee'), 'color' => 'info'],
+                ['metric' => 'no_damage', 'label' => __('sector-overview.damage.no_damage'), 'color' => 'success'],
+                ['metric' => 'assessment_blocked', 'label' => __('sector-overview.assessment_blocked'), 'color' => 'dark'],
+                ['metric' => 'pending', 'label' => __('sector-overview.pending'), 'color' => 'warning'],
+                ['metric' => 'approved', 'label' => __('sector-overview.approved'), 'color' => 'info'],
+            ],
+            default => [
                 ['metric' => 'total', 'label' => __('sector-overview.total'), 'color' => 'primary'],
                 ['metric' => 'completed', 'label' => __('sector-overview.completed'), 'color' => 'success'],
                 ['metric' => 'pending', 'label' => __('sector-overview.pending'), 'color' => 'warning'],
                 ['metric' => 'approved', 'label' => __('sector-overview.approved'), 'color' => 'info'],
-            ];
+            ],
+        };
     @endphp
     <div id="sector-overview" data-stats-url="{{ route('sector-overview.stats', $sector) }}" data-map-url="{{ route('sector-overview.map', $sector) }}">
         <div class="mb-5">

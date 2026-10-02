@@ -127,8 +127,8 @@ class SectorOverviewService
             $damageCounts[$this->damageBucket($sector, $row->{$damageColumn})] += (int) $row->aggregate;
         }
 
-        if ($sector === 'buildings') {
-            $summary = [...$summary, ...$this->completedBuildingDamageSummary(clone $completedQuery, $damageColumn)];
+        if (in_array($sector, ['buildings', 'housing-units'], true)) {
+            $summary = [...$summary, ...$this->completedDamageSummary(clone $completedQuery, $damageColumn)];
         }
 
         return [
@@ -139,8 +139,8 @@ class SectorOverviewService
         ];
     }
 
-    /** @return array{fully_damaged: int, partially_damaged: int, committee_review: int, assessment_blocked: int} */
-    private function completedBuildingDamageSummary(Builder $completedQuery, string $damageColumn): array
+    /** @return array{fully_damaged: int, partially_damaged: int, committee_review: int, no_damage: int, assessment_blocked: int} */
+    private function completedDamageSummary(Builder $completedQuery, string $damageColumn): array
     {
         $normalizedDamage = $completedQuery->getQuery()->raw("LOWER(TRIM(COALESCE({$damageColumn}, '')))");
 
@@ -148,7 +148,12 @@ class SectorOverviewService
             'fully_damaged' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::FULLY_DAMAGED))->count(),
             'partially_damaged' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::PARTIALLY_DAMAGED))->count(),
             'committee_review' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::COMMITTEE_REVIEW))->count(),
-            'assessment_blocked' => (clone $completedQuery)->whereNull($damageColumn)->count(),
+            'no_damage' => (clone $completedQuery)->whereIn($normalizedDamage, CsoDamageStatusMapper::valuesFor(CsoDamageStatusMapper::NO_DAMAGE))->count(),
+            'assessment_blocked' => (clone $completedQuery)
+                ->where(fn (Builder $query): Builder => $query
+                    ->whereNull($damageColumn)
+                    ->orWhereRaw("TRIM(COALESCE({$damageColumn}, '')) = ''"))
+                ->count(),
         ];
     }
 
