@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 it('includes the housing units status progress in the audit table response', function () {
@@ -1284,6 +1285,8 @@ it('filters audit buildings by field status and completes field status on arcgis
         'building_name' => 'Already Completed Audit Building',
         'field_status' => 'COMPLETED',
     ]);
+
+    $user->givePermissionTo(Permission::findOrCreate('audit.actions', 'web'));
 
     $notCompletedBuilding = Building::query()->create([
         'objectid' => 7302,

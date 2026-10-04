@@ -189,6 +189,7 @@ class Sidebar
     private static function isItemVisible(array $item, User $user): bool
     {
         return $user->hasAnyRole($item['roles'] ?? [])
+            || collect($item['permissions'] ?? [])->contains(fn (string $permission): bool => $user->can($permission))
             || self::isCustomVisibleItem($item, $user)
             || self::isTemporaryAuditHomeItem($item, $user);
     }

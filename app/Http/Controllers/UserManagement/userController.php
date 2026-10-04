@@ -77,6 +77,9 @@ class userController extends Controller
             })
             ->editColumn('created_at', fn ($user) => optional($user->created_at)->format('Y-m-d h:i A'))
             ->addColumn('action', function ($user) {
+                $accessAction = Auth::user()->hasRole('Database Officer') || Auth::user()->can('users.view')
+                    ? '<div class="menu-item px-3"><a href="'.e(route('users.access', $user)).'" class="menu-link px-3">'.e(__('access.view_access')).'</a></div>'
+                    : '';
                 $statusAction = $user->is_active
                     ? '<a href="javascript:;" onclick="updateUserStatus(['.$user->id.'], false)" class="menu-link px-3 text-danger">'.e(__('ui.users.deactivate')).'</a>'
                     : '<a href="javascript:;" onclick="updateUserStatus(['.$user->id.'], true)" class="menu-link px-3 text-success">'.e(__('ui.users.activate')).'</a>';
@@ -87,6 +90,7 @@ class userController extends Controller
             <i class="ki-duotone ki-down fs-5 ms-1"></i>
         </a>
         <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-600 menu-state-bg-light-primary fw-semibold fs-7 w-150px py-4" data-kt-menu="true">
+            '.$accessAction.'
             <div class="menu-item px-3">
                 <a href="javascript:;" onclick="showUser('.$user->id.')" class="menu-link px-3">'.e(__('ui.buttons.edit')).'</a>
             </div>

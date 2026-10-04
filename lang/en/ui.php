@@ -612,6 +612,7 @@ return [
         'delete_confirm' => 'Are you sure you want to delete role: :name?',
     ],
     'permissions' => [
+        'audit_actions' => 'Audit actions (audit.actions)',
         'title' => 'Permissions',
         'search_placeholder' => 'Search permissions',
         'name' => 'Name',

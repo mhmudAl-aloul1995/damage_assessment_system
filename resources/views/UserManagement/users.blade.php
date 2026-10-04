@@ -263,7 +263,7 @@
                                     data-control="select2" data-placeholder="{{ __('ui.users.select_permissions') }}" multiple>
                                     @foreach($permissions as $permission)
                                         <option value="{{ $permission->name }}">
-                                            {{ $permission->name }}
+                                            {{ $permission->name === 'audit.actions' ? __('ui.permissions.audit_actions') : $permission->name }}
                                         </option>
                                     @endforeach
                                 </select>

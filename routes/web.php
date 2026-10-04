@@ -13,7 +13,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\UserActivityLogController;
 use App\Http\Controllers\UserManagement\PermissionController;
-use App\Http\Controllers\UserManagement\roleController;
+use App\Http\Controllers\UserManagement\RoleController;
+use App\Http\Controllers\UserManagement\UserAccessController;
 use App\Http\Controllers\UserManagement\userController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -375,6 +376,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/bulk-status', [userController::class, 'bulkUpdateStatus'])->name('users.bulk-status');
 
         Route::get('/{user}/edit', [userController::class, 'edit'])->name('users.edit');
+        Route::get('/{user}/access', [UserAccessController::class, 'show'])->name('users.access');
         Route::put('/{user}', [userController::class, 'update'])->name('users.update');
 
         Route::delete('/{user}', [userController::class, 'destroy'])->name('users.destroy');
@@ -386,6 +388,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
 
         Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+        Route::get('/roles/{role}/members', [RoleController::class, 'members'])->name('roles.members');
 
         Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
 

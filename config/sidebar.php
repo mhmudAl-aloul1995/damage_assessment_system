@@ -467,6 +467,7 @@ return [
             [
                 'title' => 'menu.user_management.users',
                 'url' => 'user-management/user',
+                'permissions' => ['users.view'],
                 'pattern' => 'user',
                 'roles' => ['Database Officer'],
             ],
@@ -479,12 +480,14 @@ return [
             [
                 'title' => 'menu.user_management.roles',
                 'url' => 'user-management/roles',
+                'permissions' => ['roles.view'],
                 'pattern' => 'user',
                 'roles' => ['Database Officer'],
             ],
             [
                 'title' => 'menu.user_management.permissions',
                 'url' => 'user-management/permissions',
+                'permissions' => ['permissions.view'],
                 'pattern' => 'user',
                 'roles' => ['Database Officer'],
             ],

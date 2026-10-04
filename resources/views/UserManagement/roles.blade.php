@@ -1,474 +1,157 @@
 @extends('layouts.app')
-
-@section('title', __('ui.roles.title'))
-@section('pageName', __('ui.roles.title'))
+@section('title', __('access.title'))
+@section('pageName', __('access.title'))
 
 @section('content')
-<div id="kt_app_content_container" class="app-container container-xxl">
-    <div id="roles_cards_wrapper" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-5 g-xl-9">
-        @foreach($roles as $role)
-            @php
-                $rolePermissions = $role->permissions->pluck('name');
-                $visiblePermissions = $rolePermissions->take(5);
-                $remainingCount = $rolePermissions->count() - $visiblePermissions->count();
-            @endphp
+<style>
+    .access-center .access-stat { border-inline-start: 3px solid var(--bs-primary); }
+    .access-center .access-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:1.5rem; }
+    .access-center .access-workspace { display:grid; grid-template-columns:250px minmax(0,1fr); gap:1.5rem; }
+    .access-center .access-group { text-align:start; width:100%; border:0; border-radius:.65rem; padding:1rem; background:transparent; color:var(--bs-gray-700); }
+    .access-center .access-group[aria-pressed="true"] { background:var(--bs-primary-light); color:var(--bs-primary); font-weight:700; }
+    .access-center .permission-cell { display:flex; gap:.65rem; align-items:flex-start; padding:.65rem; border-radius:.5rem; cursor:pointer; }
+    .access-center .permission-cell:has(input:checked) { background:var(--bs-primary-light); }
+    .access-center .permission-code { display:none; font-size:.75rem; overflow-wrap:anywhere; }
+    .access-center.show-codes .permission-code { display:block; }
+    .access-center .access-savebar { position:sticky; bottom:1rem; z-index:10; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); box-shadow:0 4px 24px #00000012; }
+    .access-center .permission-matrix { min-width:900px; }
+    .access-center .permission-matrix th { white-space:nowrap; }
+    .access-center .permission-matrix td:last-child { min-width:250px; }
+    .access-center [hidden] { display:none !important; }
+    @media(max-width:991px) { .access-center .access-workspace { grid-template-columns:1fr; } .access-center .access-navigation { max-height:220px; overflow:auto; } }
+    @media(max-width:767px) {
+        .access-center .permission-matrix { min-width:0; }
+        .access-center .permission-matrix thead { display:none; }
+        .access-center .permission-matrix tbody { display:block; }
+        .access-center .permission-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; padding-block:1rem; }
+        .access-center .permission-row th { grid-column:1 / -1; }
+        .access-center .permission-row td { padding:0; border:0; }
+        .access-center .permission-row td:not(:has(.permission-cell)) { display:none; }
+        .access-center .permission-row td:last-child { min-width:0; grid-column:1 / -1; }
+    }
+</style>
+<div class="app-container container-fluid access-center" id="access-center">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-4 mb-7">
+        <div><h2 class="fs-2x fw-bold mb-2">{{ __('access.title') }}</h2><p class="text-muted mb-0">{{ __('access.subtitle') }}</p></div>
+        @if($canViewUsers)<a href="{{ route('users.index') }}" class="btn btn-light">{{ __('access.users') }}</a>@endif
+    </div>
+    <div id="access-feedback" role="alert" tabindex="-1" class="alert" hidden></div>
+    <div class="row g-4 mb-7">
+        <div class="col-sm-4"><div class="card access-stat"><div class="card-body py-5"><div class="text-muted">{{ __('access.roles') }}</div><strong class="fs-2x" id="role-count">{{ $roles->count() }}</strong></div></div></div>
+        <div class="col-sm-4"><div class="card access-stat"><div class="card-body py-5"><div class="text-muted">{{ __('access.permissions') }}</div><strong class="fs-2x">{{ $permissionGroups->sum(fn ($group) => $group['permissions']->count()) }}</strong></div></div></div>
+        <div class="col-sm-4"><div class="card access-stat"><div class="card-body py-5"><div class="text-muted">{{ __('access.modules') }}</div><strong class="fs-2x">{{ $permissionGroups->count() }}</strong></div></div></div>
+    </div>
+    <div class="alert alert-light border text-gray-700 mb-6">{{ __('access.legacy_notice') }}</div>
 
-            <div class="col-md-4 role-card-item" id="role-card-{{ $role->id }}" data-role-id="{{ $role->id }}">
-                <div class="card card-flush h-md-100">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <h2>{{ $role->name }}</h2>
-                        </div>
-                    </div>
+    <section id="role-list" aria-label="{{ __('access.roles') }}">
+        <div class="d-flex flex-wrap gap-3 mb-6">
+            <input id="role-search" type="search" class="form-control form-control-solid mw-350px" aria-label="{{ __('access.search_roles') }}" placeholder="{{ __('access.search_roles') }}">
+            <select id="role-filter" class="form-select form-select-solid w-auto" aria-label="{{ __('access.roles') }}">
+                <option value="all">{{ __('access.all_roles') }}</option><option value="system">{{ __('access.system_roles') }}</option><option value="custom">{{ __('access.custom_roles') }}</option>
+            </select>
+            @if($can['create'])<button type="button" id="create-role" class="btn btn-primary ms-auto">{{ __('access.new_role') }}</button>@endif
+        </div>
+        <div class="access-grid" id="role-cards"></div>
+        <div id="roles-empty" class="card card-body text-center py-15" hidden><h3>{{ __('access.no_roles') }}</h3><p class="text-muted">{{ __('access.empty_roles') }}</p></div>
+    </section>
 
-                    <div class="card-body pt-1">
-                        <div class="fw-bold text-gray-600 mb-5">
-                            {{ __('ui.roles.users_count', ['count' => $role->users_count]) }}
-                        </div>
-
-                        <div class="d-flex flex-column text-gray-600">
-                            @forelse($visiblePermissions as $permission)
-                                <div class="d-flex align-items-center py-2">
-                                    <span class="bullet bg-primary me-3"></span>
-                                    {{ $permission }}
-                                </div>
-                            @empty
-                                <div class="d-flex align-items-center py-2">
-                                    <span class="bullet bg-secondary me-3"></span>
-                                    <em>{{ __('ui.roles.no_permissions') }}</em>
-                                </div>
-                            @endforelse
-
-                            @if($remainingCount > 0)
-                                <div class="d-flex align-items-center py-2">
-                                    <span class="bullet bg-primary me-3"></span>
-                                    <em>{{ __('ui.roles.and_more', ['count' => $remainingCount]) }}</em>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="card-footer flex-wrap pt-0">
-                        <button type="button" class="btn btn-light btn-active-light-primary my-1 me-2 btn-edit-role"
-                            data-id="{{ $role->id }}" data-bs-toggle="modal" data-bs-target="#kt_modal_update_role">
-                            {{ __('ui.buttons.edit') }}
-                        </button>
-
-                        <button type="button" class="btn btn-light btn-active-danger my-1 btn-delete-role"
-                            data-id="{{ $role->id }}" data-name="{{ $role->name }}">
-                            {{ __('ui.buttons.delete') }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        @endforeach
-
-        <div class="col-md-4" id="add-role-card">
-            <div class="card h-md-100">
-                <div class="card-body d-flex flex-center">
-                    <button type="button" class="btn btn-clear d-flex flex-column flex-center"
-                        data-bs-toggle="modal" data-bs-target="#kt_modal_add_role">
-                        <img src="{{ asset('assets/media/illustrations/sketchy-1/4.png') }}" alt="" class="mw-100 mh-150px mb-7" />
-                        <div class="fw-bold fs-3 text-gray-600 text-hover-primary">{{ __('ui.roles.add_new') }}</div>
+    <section id="role-editor" hidden aria-labelledby="editor-heading">
+        <button type="button" id="back-to-roles" class="btn btn-light mb-5">{{ __('access.back') }}</button>
+        <div class="card mb-6"><div class="card-body">
+            <h3 id="editor-heading" class="mb-5"></h3>
+            <div id="role-notice" class="alert alert-warning" hidden></div>
+            <label for="role-name" class="form-label fw-bold">{{ __('access.name') }}</label>
+            <input id="role-name" maxlength="255" required class="form-control mw-500px" autocomplete="off">
+        </div></div>
+        <div class="access-workspace">
+            <nav class="card align-self-start access-navigation" aria-label="{{ __('access.modules') }}"><div class="card-body p-3">
+                @foreach($permissionGroups as $group)
+                    <button type="button" class="access-group d-flex justify-content-between gap-3" data-group="{{ $group['key'] }}" aria-pressed="false" aria-controls="group-{{ $group['key'] }}">
+                        <span>{{ $group['label'] }}</span><span class="badge badge-light text-nowrap group-count" dir="ltr">0 / {{ $group['permissions']->count() }}</span>
                     </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="kt_modal_add_role" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-750px">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="fw-bold">{{ __('ui.roles.add_title') }}</h2>
-                    <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
+                @endforeach
+            </div></nav>
+            <div class="card min-w-0">
+                <div class="card-header flex-column align-items-stretch gap-4 py-5">
+                    <input type="search" id="permission-search" class="form-control form-control-solid" aria-label="{{ __('access.search_permissions') }}" placeholder="{{ __('access.search_permissions') }}">
+                    <div class="d-flex flex-wrap gap-5">
+                        <label class="form-check form-check-custom form-check-solid gap-2"><input type="checkbox" id="selected-only" class="form-check-input"><span>{{ __('access.selected_only') }}</span></label>
+                        <label class="form-check form-check-custom form-check-solid gap-2"><input type="checkbox" id="show-codes" class="form-check-input"><span>{{ __('access.show_codes') }}</span></label>
                     </div>
+                    <span class="text-muted fs-7">{{ __('access.filter_hint') }}</span>
                 </div>
-
-                <div class="modal-body scroll-y mx-lg-5 my-7">
-                    <form id="kt_modal_add_role_form" class="form">
-                        @csrf
-
-                        <div class="d-flex flex-column scroll-y me-n7 pe-7">
-                            <div class="fv-row mb-10">
-                                <label class="fs-5 fw-bold form-label mb-2">
-                                    <span class="required">{{ __('ui.roles.role_name') }}</span>
-                                </label>
-                                <input class="form-control form-control-solid" placeholder="{{ __('ui.roles.role_name_placeholder') }}" name="name" />
+                <div class="card-body p-5">
+                    @foreach($permissionGroups as $group)
+                        <section id="group-{{ $group['key'] }}" class="permission-group" data-group="{{ $group['key'] }}" hidden>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5">
+                                <h3 class="mb-0">{{ $group['label'] }}</h3>
+                                @if($group['permissions']->isNotEmpty())
+                                    <label class="form-check form-check-custom form-check-solid gap-2"><input type="checkbox" class="form-check-input select-visible"><span>{{ __('access.select_visible') }}</span></label>
+                                @endif
                             </div>
-
-                            <div class="fv-row">
-                                <label class="fs-5 fw-bold form-label mb-2">{{ __('ui.roles.permissions') }}</label>
-
-                                <label class="form-check form-check-custom form-check-solid mb-5">
-                                    <input class="form-check-input select-all-permissions" type="checkbox" />
-                                    <span class="form-check-label fw-semibold text-gray-800">{{ __('ui.roles.all_permissions') }}</span>
-                                </label>
-
-                                <div class="accordion" id="add_role_permissions_accordion">
-                                    @foreach($permissionGroups as $group)
-                                        <div class="accordion-item">
-                                            <h2 class="accordion-header" id="add-role-permission-heading-{{ $group['key'] }}">
-                                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse"
-                                                    data-bs-target="#add-role-permission-collapse-{{ $group['key'] }}" aria-expanded="false"
-                                                    aria-controls="add-role-permission-collapse-{{ $group['key'] }}">
-                                                    {{ $group['label'] }}
-                                                    <span class="badge badge-light-primary ms-3">{{ $group['permissions']->count() }}</span>
-                                                </button>
-                                            </h2>
-
-                                            <div id="add-role-permission-collapse-{{ $group['key'] }}" class="accordion-collapse collapse"
-                                                aria-labelledby="add-role-permission-heading-{{ $group['key'] }}" data-bs-parent="#add_role_permissions_accordion">
-                                                <div class="accordion-body">
-                                                    <label class="form-check form-check-custom form-check-solid mb-4">
-                                                        <input class="form-check-input select-permission-group" type="checkbox" />
-                                                        <span class="form-check-label">{{ __('ui.roles.select_group') }}</span>
-                                                    </label>
-
-                                                    <div class="row g-3">
-                                                        @foreach($group['permissions'] as $permission)
-                                                            <div class="col-md-6">
-                                                                <label class="form-check form-check-sm form-check-custom form-check-solid">
-                                                                    <input class="form-check-input permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
-                                                                    <span class="form-check-label text-gray-800">{{ $permission->name }}</span>
-                                                                </label>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
+                            @if($group['permissions']->isEmpty())
+                                <div class="text-center py-12 text-muted"><p>{{ __('access.no_permissions') }}</p>
+                                    @if(in_array($group['key'], ['heks', 'borrowers']))<p>{{ __('access.legacy_empty') }}</p>@endif
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="text-center pt-15">
-                            <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.discard') }}</button>
-                            <button type="submit" class="btn btn-primary" id="add_role_submit_btn">
-                                <span class="indicator-label">{{ __('ui.buttons.submit') }}</span>
-                            </button>
-                        </div>
-                    </form>
+                            @else
+                                <div class="table-responsive">
+                                    <table class="table table-row-dashed align-middle permission-matrix">
+                                        <thead><tr class="text-gray-600 fw-bold"><th>{{ __('access.resource') }}</th>
+                                            @foreach(['view', 'create', 'update', 'delete', 'export', 'advanced'] as $column)<th>{{ $column === 'advanced' ? __('access.advanced') : __('access.actions.'.$column) }}</th>@endforeach
+                                        </tr></thead>
+                                        <tbody>
+                                            @foreach($group['rows'] as $resource => $row)
+                                                <tr class="permission-row" data-resource="{{ $row['label'] }}">
+                                                    <th scope="row" class="fw-semibold">{{ $row['label'] }}</th>
+                                                    @foreach(['view', 'create', 'update', 'delete', 'export', 'advanced'] as $column)
+                                                        <td>
+                                                            @forelse($row['cells']->get($column, collect()) as $permission)
+                                                                <label class="permission-cell" data-search="{{ mb_strtolower($group['label'].' '.$row['label'].' '.$permission['label'].' '.$permission['name']) }}">
+                                                                    <input type="checkbox" class="form-check-input permission-toggle flex-shrink-0" value="{{ $permission['name'] }}" data-group="{{ $group['key'] }}" data-label="{{ $row['label'].' — '.$permission['label'] }}" aria-label="{{ $row['label'].' — '.$permission['label'] }}">
+                                                                    <span><span>{{ $permission['label'] }}</span>
+                                                                        @if($permission['sensitive'])<span class="text-warning" title="{{ __('access.sensitive') }}" aria-label="{{ __('access.sensitive') }}">●</span>@endif
+                                                                        <code class="permission-code text-muted" dir="ltr">{{ $permission['name'] }}</code>
+                                                                    </span>
+                                                                </label>
+                                                            @empty
+                                                                <span class="text-muted" title="{{ __('access.unavailable') }}" aria-label="{{ __('access.unavailable') }}">—</span>
+                                                            @endforelse
+                                                        </td>
+                                                    @endforeach
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="permission-empty text-muted text-center py-8" hidden>{{ __('access.no_permissions') }}</p>
+                            @endif
+                        </section>
+                    @endforeach
                 </div>
             </div>
         </div>
+        <div class="access-savebar rounded p-5 mt-6 d-flex flex-wrap align-items-center justify-content-between gap-4">
+            <div><strong id="selection-summary"></strong><div id="changes-summary" class="text-muted fs-7" aria-live="polite"></div></div>
+            <div class="d-flex gap-3"><button type="button" id="discard-role" class="btn btn-light">{{ __('access.cancel') }}</button><button type="button" id="review-role" class="btn btn-primary">{{ __('access.save') }}</button></div>
+        </div>
+    </section>
+    <div class="modal fade" id="role-review" tabindex="-1" aria-labelledby="review-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+            <div class="modal-header"><h3 id="review-title">{{ __('access.review') }}</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('access.close') }}"></button></div>
+            <div class="modal-body"><div id="review-error" class="alert alert-danger" role="alert" hidden></div><p id="review-impact" class="alert alert-light-primary"></p><p id="review-name"></p><div class="row g-5"><div class="col-md-6"><h4 class="text-success">{{ __('access.added') }}</h4><ul id="review-added" class="ps-5"></ul></div><div class="col-md-6"><h4 class="text-danger">{{ __('access.removed') }}</h4><ul id="review-removed" class="ps-5"></ul></div></div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('access.close') }}</button><button type="button" id="confirm-role" class="btn btn-primary">{{ __('access.confirm') }}</button></div>
+        </div></div>
     </div>
-
-    <div class="modal fade" id="kt_modal_update_role" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered mw-750px">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="fw-bold">{{ __('ui.roles.update_title') }}</h2>
-                    <div class="btn btn-icon btn-sm btn-active-icon-primary" data-bs-dismiss="modal">
-                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
-                    </div>
-                </div>
-
-                <div class="modal-body scroll-y mx-5 my-7">
-                    <form id="kt_modal_update_role_form" class="form">
-                        @csrf
-                        <input type="hidden" id="edit_role_id">
-
-                        <div class="d-flex flex-column scroll-y me-n7 pe-7">
-                            <div class="fv-row mb-10">
-                                <label class="fs-5 fw-bold form-label mb-2">
-                                    <span class="required">{{ __('ui.roles.role_name') }}</span>
-                                </label>
-                                <input class="form-control form-control-solid" placeholder="{{ __('ui.roles.role_name_placeholder') }}" name="name" id="edit_role_name" />
-                            </div>
-
-                            <div class="fv-row">
-                                <label class="fs-5 fw-bold form-label mb-2">{{ __('ui.roles.permissions') }}</label>
-
-                                <label class="form-check form-check-custom form-check-solid mb-5">
-                                    <input class="form-check-input select-all-permissions-edit" type="checkbox" />
-                                    <span class="form-check-label fw-semibold text-gray-800">{{ __('ui.roles.all_permissions') }}</span>
-                                </label>
-
-                                <div class="accordion" id="edit_role_permissions_accordion">
-                                    @foreach($permissionGroups as $group)
-                                        <div class="accordion-item">
-                                            <h2 class="accordion-header" id="edit-role-permission-heading-{{ $group['key'] }}">
-                                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse"
-                                                    data-bs-target="#edit-role-permission-collapse-{{ $group['key'] }}" aria-expanded="false"
-                                                    aria-controls="edit-role-permission-collapse-{{ $group['key'] }}">
-                                                    {{ $group['label'] }}
-                                                    <span class="badge badge-light-primary ms-3">{{ $group['permissions']->count() }}</span>
-                                                </button>
-                                            </h2>
-
-                                            <div id="edit-role-permission-collapse-{{ $group['key'] }}" class="accordion-collapse collapse"
-                                                aria-labelledby="edit-role-permission-heading-{{ $group['key'] }}" data-bs-parent="#edit_role_permissions_accordion">
-                                                <div class="accordion-body">
-                                                    <label class="form-check form-check-custom form-check-solid mb-4">
-                                                        <input class="form-check-input select-permission-group-edit" type="checkbox" />
-                                                        <span class="form-check-label">{{ __('ui.roles.select_group') }}</span>
-                                                    </label>
-
-                                                    <div class="row g-3">
-                                                        @foreach($group['permissions'] as $permission)
-                                                            <div class="col-md-6">
-                                                                <label class="form-check form-check-sm form-check-custom form-check-solid">
-                                                                    <input class="form-check-input edit-permission-checkbox" type="checkbox" name="permissions[]" value="{{ $permission->name }}" />
-                                                                    <span class="form-check-label text-gray-800">{{ $permission->name }}</span>
-                                                                </label>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="text-center pt-15">
-                            <button type="reset" class="btn btn-light me-3" data-bs-dismiss="modal">{{ __('ui.buttons.discard') }}</button>
-                            <button type="submit" class="btn btn-primary" id="update_role_submit_btn">
-                                <span class="indicator-label">{{ __('ui.buttons.update') }}</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <div class="modal fade" id="role-members" tabindex="-1" aria-labelledby="members-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+            <div class="modal-header"><h3 id="members-title">{{ __('access.members') }}</h3><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('access.close') }}"></button></div>
+            <div class="modal-body" id="members-body"></div>
+            <div class="modal-footer"><button type="button" id="members-previous" class="btn btn-light">{{ __('access.previous') }}</button><button type="button" id="members-next" class="btn btn-light">{{ __('access.next') }}</button></div>
+        </div></div>
     </div>
 </div>
 @endsection
 
 @section('script')
-<script>
-$(document).ready(function () {
-    const roleTranslations = {
-        error: @json(__('ui.messages.unexpected_error')),
-        noPermissions: @json(__('ui.roles.no_permissions')),
-        andMore: @json(__('ui.roles.and_more', ['count' => '__COUNT__'])),
-        usersCount: @json(__('ui.roles.users_count', ['count' => '__COUNT__'])),
-        edit: @json(__('ui.buttons.edit')),
-        delete: @json(__('ui.buttons.delete')),
-        deleteConfirm: @json(__('ui.roles.delete_confirm', ['name' => '__NAME__'])),
-    };
-
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        }
-    });
-
-    function showErrors(xhr) {
-        if (xhr.responseJSON && xhr.responseJSON.errors) {
-            alert(Object.values(xhr.responseJSON.errors).flat().join('\n'));
-            return;
-        }
-
-        alert(xhr.responseJSON?.message ?? roleTranslations.error);
-    }
-
-    function escapeHtml(text) {
-        return $('<div>').text(text ?? '').html();
-    }
-
-    function syncPermissionGroupState(modalSelector, permissionSelector, groupSelector, allSelector) {
-        $(modalSelector + ' .accordion-body').each(function() {
-            let permissions = $(this).find(permissionSelector);
-            let checkedPermissions = permissions.filter(':checked');
-
-            $(this).find(groupSelector).prop(
-                'checked',
-                permissions.length > 0 && permissions.length === checkedPermissions.length
-            );
-        });
-
-        let allPermissions = $(modalSelector + ' ' + permissionSelector);
-        $(modalSelector + ' ' + allSelector).prop(
-            'checked',
-            allPermissions.length > 0 && allPermissions.length === allPermissions.filter(':checked').length
-        );
-    }
-
-    function buildRoleCard(role) {
-        let permissionsHtml = '';
-
-        if (role.permissions && role.permissions.length > 0) {
-            let visiblePermissions = role.permissions.slice(0, 5);
-            let remainingCount = role.permissions.length - visiblePermissions.length;
-
-            visiblePermissions.forEach(function(permission) {
-                permissionsHtml += `<div class="d-flex align-items-center py-2"><span class="bullet bg-primary me-3"></span>${escapeHtml(permission)}</div>`;
-            });
-
-            if (remainingCount > 0) {
-                permissionsHtml += `<div class="d-flex align-items-center py-2"><span class="bullet bg-primary me-3"></span><em>${roleTranslations.andMore.replace('__COUNT__', remainingCount)}</em></div>`;
-            }
-        } else {
-            permissionsHtml = `<div class="d-flex align-items-center py-2"><span class="bullet bg-secondary me-3"></span><em>${roleTranslations.noPermissions}</em></div>`;
-        }
-
-        return `<div class="col-md-4 role-card-item" id="role-card-${role.id}" data-role-id="${role.id}">
-            <div class="card card-flush h-md-100">
-                <div class="card-header"><div class="card-title"><h2>${escapeHtml(role.name)}</h2></div></div>
-                <div class="card-body pt-1">
-                    <div class="fw-bold text-gray-600 mb-5">${roleTranslations.usersCount.replace('__COUNT__', role.users_count ?? 0)}</div>
-                    <div class="d-flex flex-column text-gray-600">${permissionsHtml}</div>
-                </div>
-                <div class="card-footer flex-wrap pt-0">
-                    <button type="button" class="btn btn-light btn-active-light-primary my-1 me-2 btn-edit-role" data-id="${role.id}" data-bs-toggle="modal" data-bs-target="#kt_modal_update_role">${roleTranslations.edit}</button>
-                    <button type="button" class="btn btn-light btn-active-danger my-1 btn-delete-role" data-id="${role.id}" data-name="${escapeHtml(role.name)}">${roleTranslations.delete}</button>
-                </div>
-            </div>
-        </div>`;
-    }
-
-    $('#kt_modal_add_role_form').on('submit', function(e) {
-        e.preventDefault();
-        let form = $(this);
-        let btn = $('#add_role_submit_btn');
-        btn.prop('disabled', true);
-
-        $.ajax({
-            url: "{{ route('roles.store') }}",
-            type: "POST",
-            data: form.serialize(),
-            success: function(response) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_add_role')).hide();
-                form[0].reset();
-                $('.select-all-permissions').prop('checked', false);
-                $('.select-permission-group').prop('checked', false);
-                $('#add-role-card').before(buildRoleCard(response.role));
-            },
-            error: function(xhr) {
-                showErrors(xhr);
-            },
-            complete: function() {
-                btn.prop('disabled', false);
-            }
-        });
-    });
-
-    $(document).on('click', '.btn-edit-role', function() {
-        let roleId = $(this).data('id');
-        $('#kt_modal_update_role_form')[0].reset();
-        $('.edit-permission-checkbox').prop('checked', false);
-        $('.select-all-permissions-edit').prop('checked', false);
-        $('.select-permission-group-edit').prop('checked', false);
-
-        $.ajax({
-            url: "{{ url('/user-management/roles') }}/" + roleId + "/edit",
-            type: 'GET',
-            success: function(response) {
-                $('#edit_role_id').val(response.role.id);
-                $('#edit_role_name').val(response.role.name);
-                $('.edit-permission-checkbox').each(function() {
-                    $(this).prop('checked', (response.role.permissions ?? []).includes($(this).val()));
-                });
-
-                syncPermissionGroupState(
-                    '#kt_modal_update_role',
-                    '.edit-permission-checkbox',
-                    '.select-permission-group-edit',
-                    '.select-all-permissions-edit'
-                );
-            },
-            error: function(xhr) {
-                showErrors(xhr);
-            }
-        });
-    });
-
-    $('#kt_modal_update_role_form').on('submit', function(e) {
-        e.preventDefault();
-        let roleId = $('#edit_role_id').val();
-        let btn = $('#update_role_submit_btn');
-        btn.prop('disabled', true);
-
-        $.ajax({
-            url: "{{ url('/user-management/roles') }}/" + roleId,
-            type: 'POST',
-            data: $(this).serialize() + '&_method=PUT',
-            success: function(response) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('kt_modal_update_role')).hide();
-                $('#role-card-' + response.role.id).replaceWith(buildRoleCard(response.role));
-            },
-            error: function(xhr) {
-                showErrors(xhr);
-            },
-            complete: function() {
-                btn.prop('disabled', false);
-            }
-        });
-    });
-
-    $(document).on('click', '.btn-delete-role', function() {
-        let roleId = $(this).data('id');
-        let roleName = $(this).data('name');
-
-        if (!confirm(roleTranslations.deleteConfirm.replace('__NAME__', roleName))) {
-            return;
-        }
-
-        $.ajax({
-            url: "{{ url('/user-management/roles') }}/" + roleId,
-            type: 'POST',
-            data: { _method: 'DELETE' },
-            success: function() {
-                $('#role-card-' + roleId).remove();
-            },
-            error: function(xhr) {
-                showErrors(xhr);
-            }
-        });
-    });
-
-    $(document).on('change', '.select-all-permissions', function() {
-        $('#kt_modal_add_role .permission-checkbox').prop('checked', $(this).is(':checked'));
-        $('#kt_modal_add_role .select-permission-group').prop('checked', $(this).is(':checked'));
-    });
-
-    $(document).on('change', '.select-all-permissions-edit', function() {
-        $('#kt_modal_update_role .edit-permission-checkbox').prop('checked', $(this).is(':checked'));
-        $('#kt_modal_update_role .select-permission-group-edit').prop('checked', $(this).is(':checked'));
-    });
-
-    $(document).on('change', '.select-permission-group', function() {
-        $(this).closest('.accordion-body').find('.permission-checkbox').prop('checked', $(this).is(':checked'));
-        syncPermissionGroupState(
-            '#kt_modal_add_role',
-            '.permission-checkbox',
-            '.select-permission-group',
-            '.select-all-permissions'
-        );
-    });
-
-    $(document).on('change', '.select-permission-group-edit', function() {
-        $(this).closest('.accordion-body').find('.edit-permission-checkbox').prop('checked', $(this).is(':checked'));
-        syncPermissionGroupState(
-            '#kt_modal_update_role',
-            '.edit-permission-checkbox',
-            '.select-permission-group-edit',
-            '.select-all-permissions-edit'
-        );
-    });
-
-    $(document).on('change', '.permission-checkbox', function() {
-        syncPermissionGroupState(
-            '#kt_modal_add_role',
-            '.permission-checkbox',
-            '.select-permission-group',
-            '.select-all-permissions'
-        );
-    });
-
-    $(document).on('change', '.edit-permission-checkbox', function() {
-        syncPermissionGroupState(
-            '#kt_modal_update_role',
-            '.edit-permission-checkbox',
-            '.select-permission-group-edit',
-            '.select-all-permissions-edit'
-        );
-    });
-});
-</script>
+@include('UserManagement.roles-script')
 @endsection

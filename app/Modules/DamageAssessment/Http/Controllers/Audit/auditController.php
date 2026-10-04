@@ -2943,6 +2943,9 @@ class auditController extends Controller
                         ?? AssessmentStatus::badgeHtmlFor('pending', 'Pending');
                 })
                 ->addColumn('actions', function ($row) {
+                    if (! Auth::user()?->hasRole('Database Officer') && ! Auth::user()?->can('audit.actions')) {
+                        return '';
+                    }
 
                     $assessmentUrl = url("/damage-assessment/showAssessmentAudit/{$row->globalid}");
                     $completeFieldStatusUrl = route('audit.building.field-status.completed', $row->globalid);

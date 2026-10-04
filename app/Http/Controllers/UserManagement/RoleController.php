@@ -3,193 +3,153 @@
 namespace App\Http\Controllers\UserManagement;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UserManagement\SaveRoleRequest;
+use App\Models\User;
+use App\Models\UserActivityLog;
+use App\Support\Access\PermissionCatalog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
-    public function __construct()
+    public function __construct(private PermissionCatalog $catalog)
     {
         $this->middleware('role_or_permission:Database Officer|roles.view')->only(['index', 'edit']);
         $this->middleware('role_or_permission:Database Officer|roles.create')->only('store');
         $this->middleware('role_or_permission:Database Officer|roles.update')->only('update');
         $this->middleware('role_or_permission:Database Officer|roles.delete')->only('destroy');
+        $this->middleware('role_or_permission:Database Officer|users.view')->only('members');
     }
 
-    public function index()
+    public function index(Request $request): View
     {
-        $roles = Role::with('permissions')
-            ->orderBy('id')
-            ->get()
-            ->map(function ($role) {
-                $role->users_count = $role->users()->count();
+        $roles = Role::query()->where('guard_name', 'web')->with('permissions')->withCount('users')->orderBy('name')->get();
+        $permissionGroups = $this->catalog->groups();
+        $roleData = $roles->map(fn (Role $role): array => $this->roleData($role));
+        $can = collect(['view', 'create', 'update', 'delete'])->mapWithKeys(fn (string $action): array => [
+            $action => $request->user()->hasRole('Database Officer') || $request->user()->can('roles.'.$action),
+        ])->all();
+        $canViewUsers = $request->user()->hasRole('Database Officer') || $request->user()->can('users.view');
+        $grantablePermissions = $request->user()->hasRole('Database Officer') ? null : $request->user()->getAllPermissions()->pluck('name');
 
-                return $role;
-            });
-
-        $permissionGroups = $this->permissionGroups();
-
-        return view('UserManagement.roles', compact('roles', 'permissionGroups'));
+        return view('UserManagement.roles', compact('roles', 'permissionGroups', 'roleData', 'can', 'canViewUsers', 'grantablePermissions'));
     }
 
-    public function store(Request $request)
+    public function store(SaveRoleRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'exists:permissions,name',
-        ]);
+        $data = $request->validated();
+        abort_if($this->catalog->isSystemRole($data['name']) && ! $request->user()->hasRole('Database Officer'), 403);
+        $this->authorizePermissions($request, $data['permissions']);
+        $role = (new Role)->getConnection()->transaction(function () use ($data, $request): Role {
+            $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+            $role->syncPermissions($data['permissions']);
+            $this->recordChange($request, $role, null);
 
-        $role = Role::create([
-            'name' => $request->name,
-            'guard_name' => 'web',
-        ]);
+            return $role;
+        });
 
-        $role->syncPermissions($request->permissions ?? []);
-        $role->load('permissions');
-        $role->users_count = $role->users()->count();
-
-        return response()->json([
-            'message' => __('ui.roles.saved'),
-            'role' => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'permissions' => $role->permissions->pluck('name')->values(),
-                'users_count' => $role->users_count,
-            ],
-        ]);
+        return response()->json(['message' => __('ui.roles.saved'), 'role' => $this->roleData($role->load('permissions')->loadCount('users'))]);
     }
 
-    public function edit(Role $role)
+    public function edit(Role $role): JsonResponse
     {
-        $role->load('permissions');
+        abort_unless($role->guard_name === 'web', 404);
 
-        return response()->json([
-            'role' => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'permissions' => $role->permissions->pluck('name')->values(),
-            ],
-        ]);
+        return response()->json(['role' => $this->roleData($role->load('permissions')->loadCount('users'))]);
     }
 
-    public function update(Request $request, Role $role)
+    public function update(SaveRoleRequest $request, Role $role): JsonResponse
     {
-        $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('roles', 'name')->ignore($role->id),
-            ],
-            'permissions' => 'nullable|array',
-            'permissions.*' => 'exists:permissions,name',
-        ]);
+        abort_unless($role->guard_name === 'web', 404);
+        $data = $request->validated();
+        $role = $role->getConnection()->transaction(function () use ($request, $role, $data): Role {
+            $lockedRole = Role::query()->lockForUpdate()->findOrFail($role->id)->load('permissions');
+            abort_unless(hash_equals($this->catalog->revision($lockedRole), $data['revision']), 409, __('access.conflict'));
+            abort_if($lockedRole->name === 'Database Officer', 403, __('access.admin_protected'));
 
-        $role->update([
-            'name' => $request->name,
-        ]);
+            if (($this->catalog->isSystemRole($lockedRole->name) || $this->catalog->isSystemRole($data['name'])) && $data['name'] !== $lockedRole->name) {
+                throw ValidationException::withMessages(['name' => __('access.system_role_name')]);
+            }
 
-        $role->syncPermissions($request->permissions ?? []);
-        $role->load('permissions');
-        $role->users_count = $role->users()->count();
+            $this->authorizePermissions($request, array_merge($lockedRole->permissions->pluck('name')->all(), $data['permissions']));
+            $before = ['name' => $lockedRole->name, 'permissions' => $lockedRole->permissions->pluck('name')->all()];
+            $lockedRole->update(['name' => $data['name']]);
+            $lockedRole->syncPermissions($data['permissions']);
+            $this->recordChange($request, $lockedRole, $before);
 
-        return response()->json([
-            'message' => __('ui.roles.updated'),
-            'role' => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'permissions' => $role->permissions->pluck('name')->values(),
-                'users_count' => $role->users_count,
-            ],
-        ]);
+            return $lockedRole;
+        });
+
+        return response()->json(['message' => __('ui.roles.updated'), 'role' => $this->roleData($role->load('permissions')->loadCount('users'))]);
     }
 
-    public function destroy(Role $role)
+    public function destroy(Request $request, Role $role): JsonResponse
     {
-        $role->delete();
+        abort_unless($role->guard_name === 'web', 404);
+        $role->getConnection()->transaction(function () use ($request, $role): void {
+            $lockedRole = Role::query()->lockForUpdate()->findOrFail($role->id)->load('permissions');
+            abort_if($this->catalog->isSystemRole($lockedRole->name), 403, __('access.system_role_name'));
+            abort_if($lockedRole->users()->exists(), 422, __('access.assigned_role'));
+            $this->authorizePermissions($request, $lockedRole->permissions->pluck('name')->all());
+            $this->recordChange($request, $lockedRole, ['name' => $lockedRole->name, 'permissions' => $lockedRole->permissions->pluck('name')->all()], true);
+            $lockedRole->delete();
+        });
 
-        return response()->json([
-            'message' => __('ui.roles.deleted'),
-        ]);
+        return response()->json(['message' => __('ui.roles.deleted')]);
     }
 
-    private function permissionGroups(): Collection
+    public function members(Role $role): JsonResponse
     {
-        $groups = [
-            'user_management' => [
-                'label' => __('ui.permission_groups.user_management'),
-                'prefixes' => ['users.', 'roles.', 'permissions.'],
-            ],
-            'cso' => [
-                'label' => __('ui.permission_groups.cso'),
-                'prefixes' => ['cso-surveys.', 'inf-audit.cso.', 'reports.area-productivity.cso-surveys.'],
-            ],
-            'reports' => [
-                'label' => __('ui.permission_groups.reports'),
-                'prefixes' => ['reports.'],
-            ],
-            'audit' => [
-                'label' => __('ui.permission_groups.audit'),
-                'prefixes' => ['audit.'],
-            ],
-            'committee' => [
-                'label' => __('ui.permission_groups.committee'),
-                'prefixes' => ['committee-', 'view committee', 'create committee', 'edit committee', 'sign committee', 'manage committee', 'sync committee'],
-            ],
-            'attendance' => [
-                'label' => __('ui.permission_groups.attendance'),
-                'prefixes' => ['attendance.'],
-            ],
-            'exports' => [
-                'label' => __('ui.permission_groups.exports'),
-                'prefixes' => ['exports.'],
-            ],
-            'inf_audit' => [
-                'label' => __('ui.permission_groups.inf_audit'),
-                'prefixes' => ['inf-audit.'],
-            ],
-            'system' => [
-                'label' => __('ui.permission_groups.system'),
-                'prefixes' => ['system.', 'system-', 'login-logs.', 'arcgis.'],
-            ],
-            'team_leader_assignments' => [
-                'label' => __('ui.permission_groups.team_leader_assignments'),
-                'prefixes' => ['team-leader-field-engineers.'],
-            ],
-            'building_survey_return_requests' => [
-                'label' => __('ui.permission_groups.building_survey_return_requests'),
-                'prefixes' => ['building-survey-return-requests.'],
-            ],
-            'damage_assessment' => [
-                'label' => __('ui.permission_groups.damage_assessment'),
-                'prefixes' => ['damage-assessments.', 'buildings.', 'housing-units.'],
-            ],
+        abort_unless($role->guard_name === 'web', 404);
+        $members = $role->users()->orderBy('name')->paginate(25, ['users.id', 'users.name', 'users.email']);
+        $members->through(fn (User $user): array => ['name' => $user->name, 'email' => $user->email, 'url' => route('users.access', $user->id)]);
+
+        return response()->json($members);
+    }
+
+    private function roleData(Role $role): array
+    {
+        return [
+            'id' => $role->id,
+            'name' => $role->name,
+            'permissions' => $role->permissions->pluck('name')->values(),
+            'users_count' => $role->users_count ?? 0,
+            'system' => $this->catalog->isSystemRole($role->name),
+            'protected' => $role->name === 'Database Officer',
+            'revision' => $this->catalog->revision($role),
+            'edit_url' => route('roles.edit', $role),
+            'update_url' => route('roles.update', $role),
+            'delete_url' => route('roles.destroy', $role),
+            'members_url' => route('roles.members', $role),
         ];
+    }
 
-        return Permission::orderBy('name')
-            ->get()
-            ->groupBy(function (Permission $permission) use ($groups): string {
-                foreach ($groups as $key => $group) {
-                    foreach ($group['prefixes'] as $prefix) {
-                        if (str_starts_with($permission->name, $prefix)) {
-                            return $key;
-                        }
-                    }
-                }
+    private function authorizePermissions(Request $request, array $permissions): void
+    {
+        if (! $request->user()->hasRole('Database Officer')) {
+            abort_unless(collect($permissions)->every(fn (string $permission): bool => $request->user()->can($permission)), 403, __('access.grant_limit'));
+        }
+    }
 
-                return 'other';
-            })
-            ->map(function (Collection $permissions, string $key) use ($groups): array {
-                return [
-                    'key' => $key,
-                    'label' => $groups[$key]['label'] ?? __('ui.permission_groups.other'),
-                    'permissions' => $permissions,
-                ];
-            })
-            ->sortBy(fn (array $group): string => $group['label']);
+    private function recordChange(Request $request, Role $role, ?array $before, bool $deleted = false): void
+    {
+        UserActivityLog::query()->create([
+            'user_id' => $request->user()->id,
+            'user_name' => $request->user()->name,
+            'user_email' => $request->user()->email,
+            'action_type' => 'action',
+            'method' => $request->method(),
+            'url' => '/'.$request->path(),
+            'route_name' => $request->route()->getName(),
+            'description' => __('access.role_changed', ['name' => $role->name]),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'status_code' => 200,
+            'metadata' => ['access_control' => true, 'role_id' => $role->id, 'before' => $before, 'after' => $deleted ? null : ['name' => $role->name, 'permissions' => $role->permissions()->pluck('name')->all()]],
+            'occurred_at' => now(),
+        ]);
     }
 }

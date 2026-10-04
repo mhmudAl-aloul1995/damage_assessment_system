@@ -612,6 +612,7 @@ return [
         'delete_confirm' => 'هل أنت متأكد من حذف الدور: :name؟',
     ],
     'permissions' => [
+        'audit_actions' => 'إجراءات التدقيق (audit.actions)',
         'title' => 'الصلاحيات',
         'search_placeholder' => 'بحث الصلاحيات',
         'name' => 'الاسم',

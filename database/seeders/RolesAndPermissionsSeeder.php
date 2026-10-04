@@ -57,6 +57,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'housing-units.update',
             'housing-units.delete',
             'audit.view',
+            'audit.actions',
             'audit.assign',
             'audit.update-assessment',
             'audit.update-status',

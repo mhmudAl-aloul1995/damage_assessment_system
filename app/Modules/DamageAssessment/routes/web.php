@@ -366,8 +366,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/audit/buildings/{building:globalid}/housing-unit-attachments', [auditController::class, 'buildingHousingUnitAttachments'])
         ->name('audit.building.housing-unit-attachments.index');
     Route::post('/audit/buildings/{building:globalid}/field-status-completed', [auditController::class, 'completeBuildingFieldStatus'])
+        ->middleware('role_or_permission:Database Officer|audit.actions')
         ->name('audit.building.field-status.completed');
     Route::post('/audit/buildings/{building:globalid}/restore-audited-to-normal', [auditController::class, 'restoreAuditedToNormal'])
+        ->middleware('role_or_permission:Database Officer|audit.actions')
         ->name('audit.building.restore-audited-to-normal');
     Route::post('/audit/buildings/{building:globalid}/attachments', [auditController::class, 'storeBuildingAttachment'])
         ->name('audit.building.attachments.store');
