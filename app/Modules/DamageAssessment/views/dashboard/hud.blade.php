@@ -1820,6 +1820,71 @@
                 return clauses.length ? clauses.join(' AND ') : '1=1';
             }
 
+            let hudNeighborhoodFilterVersion = 0;
+
+            function clearHudNeighborhoodHighlight() {
+                hudNeighborhoodFilterVersion += 1;
+                filteredNeighborhoodsLayer.definitionExpression = '1=0';
+            }
+
+            async function updateHudNeighborhoodHighlight(whereExpression) {
+                clearHudNeighborhoodHighlight();
+                const filterVersion = hudNeighborhoodFilterVersion;
+                const searchValues = (document.getElementById('hud_filter_search')?.value || '')
+                    .split(/[\s,;،؛]+/u).filter(Boolean);
+
+                if (!neighborhoodsBoundaryLayerUrl || !searchValues.length ||
+                    !searchValues.every(function (value) { return /^\d+$/.test(value); })) {
+                    return;
+                }
+
+                try {
+                    await neighborhoodsBoundaryLayer.load();
+                    const query = buildingsLayer.createQuery();
+                    query.where = whereExpression;
+                    const objectIds = await buildingsLayer.queryObjectIds(query) || [];
+                    const neighborhoodIds = new Set();
+
+                    for (let offset = 0; offset < objectIds.length; offset += 100) {
+                        if (filterVersion !== hudNeighborhoodFilterVersion) {
+                            return;
+                        }
+
+                        const buildingQuery = buildingsLayer.createQuery();
+                        buildingQuery.where = whereExpression;
+                        buildingQuery.objectIds = objectIds.slice(offset, offset + 100);
+                        buildingQuery.outFields = [buildingsLayer.objectIdField];
+                        buildingQuery.returnGeometry = true;
+                        buildingQuery.outSpatialReference = neighborhoodsBoundaryLayer.spatialReference;
+                        const result = await buildingsLayer.queryFeatures(buildingQuery);
+                        const geometries = result.features.map(function (feature) {
+                            return feature.geometry;
+                        }).filter(Boolean);
+
+                        if (!geometries.length || filterVersion !== hudNeighborhoodFilterVersion) {
+                            continue;
+                        }
+
+                        const neighborhoodQuery = neighborhoodsBoundaryLayer.createQuery();
+                        neighborhoodQuery.geometry = geometries.length === 1 ? geometries[0] : geometryEngine.union(geometries);
+                        neighborhoodQuery.spatialRelationship = 'intersects';
+                        const matchingIds = await neighborhoodsBoundaryLayer.queryObjectIds(neighborhoodQuery) || [];
+                        matchingIds.forEach(function (objectId) {
+                            neighborhoodIds.add(objectId);
+                        });
+                    }
+
+                    if (filterVersion === hudNeighborhoodFilterVersion && neighborhoodIds.size) {
+                        filteredNeighborhoodsLayer.definitionExpression = neighborhoodsBoundaryLayer.objectIdField +
+                            ' IN (' + Array.from(neighborhoodIds).join(', ') + ')';
+                    }
+                } catch (error) {
+                    if (filterVersion === hudNeighborhoodFilterVersion) {
+                        console.error('HUD neighborhood highlight failed:', error);
+                    }
+                }
+            }
+
             function updateHudFilterCount(whereExpression) {
                 const countElement = document.getElementById('hudMapFilterCount');
                 const query = buildingsLayer.createQuery();
@@ -1846,12 +1911,18 @@
                 query.where = whereExpression;
                 query.returnGeometry = true;
                 buildingsLayer.definitionExpression = whereExpression;
+                updateHudNeighborhoodHighlight(whereExpression);
+                const filterVersion = hudNeighborhoodFilterVersion;
                 refreshHudDashboardData();
 
                 Promise.all([
                     buildingsLayer.queryFeatureCount(query),
                     buildingsLayer.queryExtent(query)
                 ]).then(function (results) {
+                    if (filterVersion !== hudNeighborhoodFilterVersion) {
+                        return;
+                    }
+
                     const count = results[0];
                     const extentResult = results[1];
 
@@ -1865,12 +1936,17 @@
                         });
                     }
                 }).catch(function (error) {
+                    if (filterVersion !== hudNeighborhoodFilterVersion) {
+                        return;
+                    }
+
                     console.error('HUD ArcGIS filter failed:', error);
                     document.getElementById('hudMapFilterCount').textContent = '0';
                 });
             }
 
             function resetHudMapFilters() {
+                clearHudNeighborhoodHighlight();
                 document.querySelectorAll('#hudMapFilterPanel select').forEach(function (select) {
                     if (select.multiple) {
                         Array.from(select.options).forEach(function (option) {
@@ -2012,6 +2088,18 @@
                 'حدود المناطق',
                 false
             );
+            const filteredNeighborhoodsLayer = new FeatureLayer({
+                url: neighborhoodsBoundaryLayerUrl,
+                title: 'أحياء المباني المحددة',
+                definitionExpression: '1=0',
+                popupEnabled: false,
+                minScale: 0,
+                maxScale: 0,
+                renderer: {
+                    type: 'simple',
+                    symbol: boundaryDefaultSymbol([250, 232, 19, 0.30])
+                }
+            });
             const gazaStripExtent = new Extent({
                 xmin: 34.18,
                 ymin: 31.20,
@@ -2027,6 +2115,7 @@
                 layers: [
                     governoratesBoundaryLayer,
                     neighborhoodsBoundaryLayer,
+                    filteredNeighborhoodsLayer,
                     buildingsLayer
                 ]
             });
