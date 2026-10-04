@@ -1036,9 +1036,12 @@ class DamageAssessmentController extends Controller
         if ($request->filled('search')) {
             $search = trim((string) $request->string('search'));
 
-            $query->where(function (Builder $searchQuery) use ($search) {
-                if (ctype_digit($search)) {
-                    $searchQuery->where('objectid', (int) $search);
+            $query->where(function (Builder $searchQuery) use ($search): void {
+                $searchValues = preg_split('/[\s,;،؛]+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+                if ($searchValues !== [] && collect($searchValues)->every(fn (string $value): bool => ctype_digit($value))) {
+                    $objectIds = array_unique(array_map(fn (string $value): string => ltrim($value, '0') ?: '0', $searchValues));
+                    $searchQuery->whereIn('objectid', $objectIds);
 
                     return;
                 }

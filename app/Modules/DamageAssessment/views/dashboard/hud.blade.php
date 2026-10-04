@@ -806,8 +806,10 @@
 
                         <div class="hud-map-filter-field">
                             <label for="hud_filter_search">بحث ObjectID / GlobalID</label>
-                            <input type="text" id="hud_filter_search" class="form-control"
-                                placeholder="ObjectID / GlobalID">
+                            <textarea id="hud_filter_search" class="form-control" rows="3"
+                                aria-describedby="hud_filter_search_help"
+                                placeholder="123, 456, 789"></textarea>
+                            <small id="hud_filter_search_help">ألصق أرقام ObjectID مفصولة بفواصل أو مسافات أو كل رقم في سطر، أو أدخل GlobalID.</small>
                         </div>
 
                         <input type="hidden" id="hud_filter_from_date">
@@ -1783,8 +1785,13 @@
                 const searchValue = (document.getElementById('hud_filter_search')?.value || '').trim();
 
                 if (searchValue !== '') {
-                    if (/^\d+$/.test(searchValue)) {
-                        clauses.push(hudArcgisFieldName('objectid') + ' = ' + parseInt(searchValue, 10));
+                    const searchValues = searchValue.split(/[\s,;،؛]+/u).filter(Boolean);
+
+                    if (searchValues.length && searchValues.every(function (value) { return /^\d+$/.test(value); })) {
+                        const objectIds = [...new Set(searchValues.map(function (value) {
+                            return value.replace(/^0+(?=\d)/, '');
+                        }))];
+                        clauses.push(hudArcgisFieldName('objectid') + ' IN (' + objectIds.join(', ') + ')');
                     } else {
                         clauses.push(hudArcgisFieldName('globalid') + " LIKE '%" + escapeArcgisValue(searchValue) + "%'");
                     }

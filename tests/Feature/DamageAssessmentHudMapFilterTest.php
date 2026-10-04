@@ -69,6 +69,8 @@ it('renders the hud arcgis map filter controls', function () {
         ->assertSee('id="hudMapFilterCount"', false)
         ->assertSee('data-field="assignedto"', false)
         ->assertSee('id="hud_filter_building_name"', false)
+        ->assertSee('<textarea id="hud_filter_search"', false)
+        ->assertSee('id="hud_filter_search_help"', false)
         ->assertSee('data-field="field_status"', false)
         ->assertSee('data-field="building_damage_status"', false)
         ->assertSee('id="hud_filter_security_priority"', false)
@@ -240,6 +242,56 @@ it('opens the housing tab by default on assessment audit when a housing global i
         ->assertSee('tab-pane fade show active" id="tab_housing"', false)
         ->assertSee('let urlHousingGlobalId = "audit-tab-unit-global-id"', false);
 });
+
+it('filters hud building and housing statistics by pasted object ids', function (string $search, int $expectedCount): void {
+    $user = User::factory()->create();
+
+    foreach ([123, 456, 789] as $objectId) {
+        Building::query()->create([
+            'objectid' => $objectId,
+            'globalid' => 'building-'.$objectId,
+            'building_name' => 'Building '.$objectId,
+            'field_status' => 'COMPLETED',
+            'building_damage_status' => 'fully_damaged',
+            'municipalitie' => 'Gaza',
+        ]);
+
+        HousingUnit::query()->create([
+            'objectid' => $objectId + 1000,
+            'globalid' => 'unit-'.$objectId,
+            'parentglobalid' => 'building-'.$objectId,
+            'unit_damage_status' => 'fully_damaged2',
+            'municipalitie' => 'Gaza',
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->getJson(route('damageAssessment.hud.stats', ['search' => $search]))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', $expectedCount)
+        ->assertJsonPath('summaryStats.fully_damaged_units', $expectedCount)
+        ->assertJsonPath('assessedUnitsTotal', $expectedCount);
+
+    $this->getJson(route('damageAssessment.hud.stats', [
+        'search' => $search,
+        'municipalitie' => 'North Gaza',
+    ]))
+        ->assertOk()
+        ->assertJsonPath('summaryStats.total_buildings', 0)
+        ->assertJsonPath('assessedUnitsTotal', 0);
+})->with([
+    'single id' => ['123', 1],
+    'commas' => ['123,456', 2],
+    'Excel rows' => ["123\r\n456", 2],
+    'Excel cells and spaces' => ["123\t456 999", 2],
+    'Arabic separators' => ['123،456؛999', 2],
+    'duplicates and leading zeroes' => [", 00123;456\n123, ", 2],
+    'unknown ids' => ['888,999', 0],
+    'global id' => ['building-123', 1],
+    'invalid mixed input' => ['123,invalid', 0],
+    'SQL characters' => ["123,456') OR 1=1--", 0],
+    'empty search' => ['', 3],
+]);
 
 it('returns hud stats for all data by default and filtered data when filters are present', function () {
     $user = User::factory()->create();
