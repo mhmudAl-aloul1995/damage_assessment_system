@@ -2097,7 +2097,14 @@
                 maxScale: 0,
                 renderer: {
                     type: 'simple',
-                    symbol: boundaryDefaultSymbol([250, 232, 19, 0.30])
+                    symbol: {
+                        type: 'simple-fill',
+                        color: [0, 229, 255, 0.16],
+                        outline: {
+                            color: [0, 229, 255, 0.95],
+                            width: 2
+                        }
+                    }
                 }
             });
             const gazaStripExtent = new Extent({
