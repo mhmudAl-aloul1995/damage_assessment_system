@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [SectorOverviewController::class, 'show'])->name('show');
             Route::get('/stats', [SectorOverviewController::class, 'stats'])->name('stats');
             Route::get('/map', [SectorOverviewController::class, 'map'])->name('map');
+            Route::get('/records', [SectorOverviewController::class, 'records'])->name('records');
         });
 
     Route::get('/gitPush', [EngineerController::class, 'gitPush'])

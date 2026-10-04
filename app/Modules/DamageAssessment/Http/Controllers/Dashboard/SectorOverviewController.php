@@ -24,6 +24,7 @@ class SectorOverviewController extends Controller
             'statistics' => $this->overview->statistics($sector, $request->validated()),
             'municipalities' => $this->overview->options($sector, 'municipality'),
             'damageBuckets' => $this->overview->damageBuckets($sector),
+            'auditBuckets' => $this->overview->auditBuckets($sector),
         ]);
     }
 
@@ -35,5 +36,10 @@ class SectorOverviewController extends Controller
     public function map(SectorOverviewRequest $request, string $sector): JsonResponse
     {
         return response()->json($this->overview->mapFeatures($sector, $request->validated()))->header('Cache-Control', 'private, no-store');
+    }
+
+    public function records(SectorOverviewRequest $request, string $sector): JsonResponse
+    {
+        return response()->json($this->overview->records($sector, $request->validated()))->header('Cache-Control', 'private, no-store');
     }
 }

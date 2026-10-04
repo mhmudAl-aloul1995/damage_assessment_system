@@ -9,9 +9,12 @@ use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
 use App\Models\CsoSurvey;
+use App\Models\CsoSurveyAuditStatus;
 use App\Models\HousingStatus;
 use App\Models\HousingUnit;
+use App\Models\PublicBuildingAuditStatus;
 use App\Models\PublicBuildingSurvey;
+use App\Models\RoadFacilityAuditStatus;
 use App\Models\RoadFacilitySurvey;
 use App\Support\CsoDamageStatusMapper;
 use App\Support\Phase\PhaseContext;
@@ -80,7 +83,107 @@ class SectorOverviewService
             }
         }
 
+        if (filled($filters['field_completion'] ?? null)) {
+            $query = $this->fieldQuery($query, $sector, $filters['field_completion'] === 'completed');
+        }
+
+        if (filled($filters['audit_status'] ?? null)) {
+            $query = $this->auditFilter($query, $sector, $filters['audit_status']);
+        }
+        if (($filters['metric'] ?? null) === 'completed') {
+            $query = $this->completedQuery($query, $sector);
+        } elseif (in_array($filters['metric'] ?? null, ['action_required', 'approved'], true)) {
+            $query = $this->auditFilter($query, $sector, $filters['metric']);
+        }
+        if (isset($filters['west'], $filters['south'], $filters['east'], $filters['north'])) {
+            $query = $this->withinExtent($query, $sector, $filters);
+        }
+
         return $query;
+    }
+
+    private function auditFilter(Builder $query, string $sector, string $bucket): Builder
+    {
+        $query = $this->completedQuery($query, $sector);
+        $table = $query->getModel()->getTable();
+        $columns = array_map(fn (string $column): string => $query->getModel()->qualifyColumn($column),
+            $query->getModel()->getConnection()->getSchemaBuilder()->getColumnListing($table));
+        $query = $query->getModel()->newQueryWithoutScopes()
+            ->fromSub($this->withLatestAudit($query->select($columns))->toBase(), $table)->select($table.'.*');
+        if ($bucket === 'pending') {
+            return $query->where(fn (Builder $query): Builder => $query->whereNull('overview_audit_name')->orWhere('overview_audit_name', 'pending'));
+        }
+        if ($bucket === 'unclassified') {
+            $knownNames = collect($this->auditBuckets($sector))->flatMap(fn (string $key): array => $this->auditNames($sector, $key))->all();
+
+            return $query->whereNotNull('overview_audit_name')->whereNotIn('overview_audit_name', $knownNames);
+        }
+
+        return $query->whereIn('overview_audit_name', $this->auditNames($sector, $bucket));
+    }
+
+    /** @return list<string> */
+    public function auditBuckets(string $sector): array
+    {
+        return in_array($sector, ['buildings', 'housing-units'], true)
+            ? ['pending', 'assigned_engineer', 'accepted_engineer', 'assigned_lawyer', 'accepted_lawyer', 'needs_action', 'rejected', 'team_approved', 'undp_approved', 'unclassified']
+            : ['pending', 'assigned', 'accepted', 'needs_action', 'rejected', 'approved', 'unclassified'];
+    }
+
+    /** @return list<string> */
+    private function auditNames(string $sector, string $bucket): array
+    {
+        return match ($bucket) {
+            'pending' => ['pending'],
+            'assigned_engineer' => ['assigned', 'assigned_to_engineer'],
+            'assigned_lawyer' => ['assigned_to_lawyer'],
+            'accepted_engineer' => ['accepted_by_engineer'],
+            'accepted_lawyer' => ['accepted_by_lawyer'],
+            'assigned' => ['assigned'], 'accepted' => ['accepted'],
+            'needs_action' => ['need_review', 'legal_notes'],
+            'rejected' => ['rejected', 'rejected_by_engineer', 'final_reject'],
+            'team_approved' => ['final_approval'], 'undp_approved' => ['undp_final_approve'],
+            'approved' => in_array($sector, ['buildings', 'housing-units'], true) ? ['final_approval', 'undp_final_approve'] : ['final_approval'],
+            'action_required' => ['need_review', 'legal_notes', 'rejected', 'rejected_by_engineer', 'final_reject'],
+            default => [],
+        };
+    }
+
+    private function auditBucket(string $sector, ?string $name): string
+    {
+        if ($name === null || $name === 'pending') {
+            return 'pending';
+        }
+
+        foreach ($this->auditBuckets($sector) as $bucket) {
+            if (in_array($name, $this->auditNames($sector, $bucket), true)) {
+                return $bucket;
+            }
+        }
+
+        return 'unclassified';
+    }
+
+    private function withLatestAudit(Builder $query): Builder
+    {
+        [$statusClass, $foreignKey, $localKey, $lookupTable] = match (true) {
+            $query->getModel() instanceof AuditedBuilding => [BuildingStatus::class, 'building_id', 'objectid', 'assessment_statuses'],
+            $query->getModel() instanceof HousingUnit, $query->getModel() instanceof AuditedHousingUnit => [HousingStatus::class, 'housing_id', 'objectid', 'assessment_statuses'],
+            $query->getModel() instanceof PublicBuildingSurvey => [PublicBuildingAuditStatus::class, 'public_building_survey_id', 'id', 'inf_audit_statuses'],
+            $query->getModel() instanceof RoadFacilitySurvey => [RoadFacilityAuditStatus::class, 'globalid', 'globalid', 'inf_audit_statuses'],
+            default => [CsoSurveyAuditStatus::class, 'cso_survey_id', 'id', 'inf_audit_statuses'],
+        };
+        $statusTable = (new $statusClass)->getTable();
+        $latest = $statusClass::query()->leftJoin($lookupTable, $lookupTable.'.id', '=', $statusTable.'.status_id')
+            ->selectRaw("COALESCE(LOWER(TRIM({$lookupTable}.name)), '__unknown__')")
+            ->whereColumn($statusTable.'.'.$foreignKey, $query->getModel()->qualifyColumn($localKey))
+            ->orderByDesc($statusTable.'.id')->limit(1);
+
+        if ($query->getQuery()->columns === null) {
+            $query->select($query->getModel()->getTable().'.*');
+        }
+
+        return $query->addSelect(['overview_audit_name' => $latest]);
     }
 
     /** @return list<string> */
@@ -130,12 +233,19 @@ class SectorOverviewService
         $total = (clone $query)->count();
         $completedQuery = $this->completedQuery(clone $query, $sector);
         $completed = (clone $completedQuery)->count();
-        $reviewed = $this->reviewedQuery(clone $completedQuery, $sector)->count();
-        $approved = $this->reviewedQuery(clone $completedQuery, $sector, true)->count();
-        $pending = $completed - $reviewed;
+        $auditQuery = $this->withLatestAudit((clone $completedQuery)->select($query->getModel()->getTable().'.id'));
+        $audit = array_fill_keys($this->auditBuckets($sector), 0);
+        $auditGroups = $query->getQuery()->newQuery()->fromSub($auditQuery->toBase(), 'overview_audits')
+            ->select('overview_audit_name')->selectRaw('COUNT(*) as aggregate')->groupBy('overview_audit_name')->get();
+        foreach ($auditGroups as $group) {
+            $audit[$this->auditBucket($sector, $group->overview_audit_name)] += (int) $group->aggregate;
+        }
+        $approved = ($audit['approved'] ?? 0) + ($audit['team_approved'] ?? 0) + ($audit['undp_approved'] ?? 0);
+        $pending = $audit['pending'];
+        $actionRequired = $audit['needs_action'] + $audit['rejected'];
         $damageColumn = $this->configuration($sector)['damage'];
         $damageCounts = array_fill_keys($this->damageBuckets($sector), 0);
-        $summary = compact('total', 'completed', 'pending', 'approved');
+        $summary = [...compact('total', 'completed', 'pending', 'approved'), 'action_required' => $actionRequired];
 
         foreach ((clone $query)->select($damageColumn)->selectRaw('COUNT(*) as aggregate')->groupBy($damageColumn)->get() as $row) {
             $damageCounts[$this->damageBucket($sector, $row->{$damageColumn})] += (int) $row->aggregate;
@@ -149,8 +259,12 @@ class SectorOverviewService
         return [
             'summary' => $summary,
             'damage' => $damageCounts,
-            'progress' => ['not_completed' => $total - $completed, 'pending' => $pending, 'in_review' => $reviewed - $approved, 'approved' => $approved],
+            'fieldwork' => ['completed' => $completed, 'not_completed' => $total - $completed],
+            'audit' => $audit,
+            'chart' => $this->sectorChart(clone $query, $sector),
+            'progress' => ['not_completed' => $total - $completed, 'pending' => $pending, 'in_review' => ($audit['accepted_engineer'] ?? 0) + ($audit['accepted_lawyer'] ?? 0) + ($audit['accepted'] ?? 0), 'approved' => $approved],
             'neighborhoods' => $this->options($sector, 'neighborhood', array_intersect_key($filters, ['municipality' => true])),
+            'calculated_at' => now()->toIso8601String(),
         ];
     }
 
@@ -184,39 +298,159 @@ class SectorOverviewService
 
     private function completedQuery(Builder $query, string $sector): Builder
     {
-        if ($sector === 'housing-units') {
-            return $query->whereHas('building', fn (Builder $building): Builder => $building->whereRaw("LOWER(TRIM(field_status)) = 'completed'"));
-        }
-
-        return $query->whereRaw("LOWER(TRIM(field_status)) = 'completed'");
+        return $this->fieldQuery($query, $sector, true);
     }
 
-    private function reviewedQuery(Builder $query, string $sector, bool $approvedOnly = false): Builder
+    private function fieldQuery(Builder $query, string $sector, bool $completed): Builder
     {
-        if (in_array($sector, ['buildings', 'housing-units'], true)) {
-            $isBuilding = $sector === 'buildings';
-            $statusModel = $isBuilding ? BuildingStatus::class : HousingStatus::class;
-            $foreignKey = $isBuilding ? 'building_id' : 'housing_id';
-            $relation = $isBuilding ? 'status' : 'assessment_status';
-            $statuses = $statusModel::query()->select($foreignKey)
-                ->whereIn('id', $statusModel::query()->selectRaw('MAX(id)')->groupBy($foreignKey));
+        if ($sector === 'housing-units') {
+            $condition = fn (Builder $building): Builder => $building->whereRaw("LOWER(TRIM(COALESCE(field_status, ''))) = 'completed'");
 
-            if ($approvedOnly) {
-                $statuses->whereHas($relation, fn (Builder $status): Builder => $status->whereIn('name', ['final_approval', 'undp_final_approve']));
-            } else {
-                $statuses->whereHas($relation, fn (Builder $status): Builder => $status->whereNotIn('name', ['pending', 'assigned', 'assigned_to_engineer', 'assigned_to_lawyer']));
-            }
-
-            return $query->whereIn('objectid', $statuses);
+            return $completed ? $query->whereHas('building', $condition) : $query->whereDoesntHave('building', $condition);
         }
 
-        return $query->whereHas('infAuditStatus.status', function (Builder $status) use ($approvedOnly): void {
-            if ($approvedOnly) {
-                $status->where('name', 'final_approval');
-            } else {
-                $status->where('name', '!=', 'assigned');
+        return $query->whereRaw("LOWER(TRIM(COALESCE(field_status, ''))) ".($completed ? '=' : '!=')." 'completed'");
+    }
+
+    /** @return array{title: string, note: string, rows: list<array<string, mixed>>} */
+    private function sectorChart(Builder $query, string $sector): array
+    {
+        $column = match ($sector) {
+            'public-buildings' => 'building_use', 'road-facilities' => 'road_type',
+            'cso-surveys' => 'operational_status', 'housing-units' => 'security_situation_unit',
+            default => 'neighborhood',
+        };
+        if (! in_array($column, $this->existingColumns($query->getModel(), [$column]), true)) {
+            return ['title' => __('sector-overview.charts.'.$sector), 'note' => __('sector-overview.chart_unavailable'), 'rows' => []];
+        }
+        $choiceClass = match ($sector) {
+            'public-buildings' => \App\Models\PublicBuildingFilter::class,
+            'road-facilities' => \App\Models\RoadFacilityFilter::class,
+            'cso-surveys' => \App\Models\CsoSurveyFilter::class,
+            default => null,
+        };
+        $choices = $choiceClass ? $choiceClass::query()->where('list_name', $column)->pluck('label', 'name')->all() : [];
+        $fallback = match ($sector) {
+            'public-buildings' => \App\Support\Forms\PublicBuildingSurveyLayout::choices(),
+            'road-facilities' => \App\Support\Forms\RoadFacilitySurveyLayout::choices(),
+            'cso-surveys' => \App\Support\Forms\CsoSurveyLayout::choices(),
+            default => [],
+        };
+        $choices = array_replace($fallback[$column] ?? [], $choices);
+        $counts = [];
+        foreach ((clone $query)->select($column)->selectRaw('COUNT(*) as aggregate')->groupBy($column)->get() as $row) {
+            $raw = (string) $row->getRawOriginal($column);
+            $values = $sector === 'road-facilities' ? json_decode($raw, true) : null;
+            $values = is_array($values) ? array_values(array_unique(array_filter($values, 'is_string'))) : [trim($raw)];
+            foreach ($values ?: [''] as $value) {
+                $counts[$value] = ($counts[$value] ?? 0) + (int) $row->aggregate;
+            }
+        }
+        arsort($counts);
+        $rows = [];
+        foreach ($counts as $value => $count) {
+            $label = $value === '' ? __('sector-overview.not_recorded') : ($choices[$value] ?? $value);
+            if ($sector === 'housing-units' && in_array(strtolower((string) $value), ['yes', 'no'], true)) {
+                $label = __('sector-overview.obstacle_'.strtolower((string) $value));
+            }
+            $rows[] = ['label' => $label, 'count' => $count, 'filter' => $sector === 'buildings' && $value !== '' ? ['neighborhood' => $value] : null];
+        }
+
+        return ['title' => __('sector-overview.charts.'.$sector), 'note' => __('sector-overview.chart_notes.'.$sector), 'rows' => $rows];
+    }
+
+    /** @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    public function records(string $sector, array $filters): array
+    {
+        $query = $this->geographicQuery($this->query($sector, $filters), $sector);
+        $page = $this->withLatestAudit($query)->orderBy('id')->paginate(20, ['*'], 'page', $filters['page'] ?? 1);
+
+        return ['data' => $page->getCollection()->map(fn (Model $row): array => $this->recordAttributes($row, $sector))->all(),
+            'total' => $page->total(), 'current_page' => $page->currentPage(), 'last_page' => $page->lastPage()];
+    }
+
+    private function geographicQuery(Builder $query, string $sector): Builder
+    {
+        $configuration = $this->configuration($sector);
+        $columns = ['id', 'objectid', $configuration['damage'], 'field_status'];
+        if ($sector === 'housing-units') {
+            $columns[] = 'parentglobalid';
+            $building = $query->getModel()->building()->getRelated();
+            $buildingColumns = $this->existingColumns($building, ['id', 'globalid', 'field_status', 'municipalitie', 'neighborhood', ...$this->geometryColumns($building)]);
+            $query->with('building:'.implode(',', $buildingColumns));
+        } else {
+            $columns = [...$columns, 'globalid', $configuration['municipality'], $configuration['neighborhood'], ...$this->geometryColumns($query->getModel())];
+        }
+
+        return $query->select($this->existingColumns($query->getModel(), $columns));
+    }
+
+    /** @return array<string, mixed> */
+    private function recordAttributes(Model $row, string $sector): array
+    {
+        $source = $sector === 'housing-units' ? $row->building : $row;
+        $completed = strtolower(trim((string) ($source?->getRawOriginal('field_status') ?? ''))) === 'completed';
+
+        return [
+            'record_id' => (int) $row->id, 'objectid' => $row->objectid,
+            'parentglobalid' => $row->getRawOriginal('parentglobalid'),
+            'municipality' => $source?->getRawOriginal('municipalitie'), 'neighborhood' => $source?->getRawOriginal('neighborhood'),
+            'damage_status' => $this->damageBucket($sector, $row->getRawOriginal($this->configuration($sector)['damage'])),
+            'field_completed' => $completed,
+            'audit_status' => $completed ? $this->auditBucket($sector, $row->getRawOriginal('overview_audit_name')) : 'not_completed',
+        ];
+    }
+
+    /** @param array<string, mixed> $bounds */
+    private function withinExtent(Builder $query, string $sector, array $bounds): Builder
+    {
+        $ids = [];
+        $this->geographicQuery(clone $query, $sector)->chunkById(500, function ($rows) use (&$ids, $sector, $bounds): void {
+            foreach ($rows as $row) {
+                $source = $sector === 'housing-units' ? $row->building : $row;
+                $geometry = $source ? $this->geometry($source) : null;
+                if ($geometry !== null && $this->intersectsExtent($geometry, $bounds)) {
+                    $ids[] = (int) $row->id;
+                }
             }
         });
+
+        return $query->whereIntegerInRaw($query->getModel()->qualifyColumn('id'), $ids);
+    }
+
+    /** @param array<string, mixed> $geometry
+     * @param  array<string, mixed>  $bounds
+     */
+    private function intersectsExtent(array $geometry, array $bounds): bool
+    {
+        $wkid = (int) ($geometry['spatialReference']['latestWkid'] ?? $geometry['spatialReference']['wkid'] ?? 4326);
+        if (! in_array($wkid, [4326, 3857, 102100, 102113], true)) {
+            return false;
+        }
+        $coordinates = isset($geometry['x'], $geometry['y']) ? [[$geometry['x'], $geometry['y']]]
+            : array_merge(...($geometry['rings'] ?? $geometry['paths'] ?? [[]]));
+        $points = [];
+        foreach ($coordinates as $coordinate) {
+            if (! isset($coordinate[0], $coordinate[1]) || ! is_numeric($coordinate[0]) || ! is_numeric($coordinate[1])) {
+                continue;
+            }
+            [$x, $y] = [(float) $coordinate[0], (float) $coordinate[1]];
+            if ($wkid !== 4326) {
+                $x = rad2deg($x / 6378137);
+                $y = rad2deg(atan(sinh(max(-20037508.35, min(20037508.35, $y)) / 6378137)));
+            }
+            $points[] = [$x, $y];
+        }
+        if ($points === []) {
+            return false;
+        }
+        $longitudes = array_column($points, 0);
+        $latitudes = array_column($points, 1);
+
+        return max($longitudes) >= (float) $bounds['west'] && min($longitudes) <= (float) $bounds['east']
+            && max($latitudes) >= (float) $bounds['south'] && min($latitudes) <= (float) $bounds['north'];
     }
 
     /** @param array<string, mixed> $filters
@@ -241,21 +475,8 @@ class SectorOverviewService
      */
     public function mapFeatures(string $sector, array $filters): array
     {
-        $configuration = $this->configuration($sector);
         $query = $this->query($sector, $filters)->where('id', '>', $filters['after_id'] ?? 0)->orderBy('id');
-        $columns = ['id', 'objectid', $configuration['damage']];
-
-        if ($sector === 'housing-units') {
-            $columns[] = 'parentglobalid';
-            $relatedBuilding = $query->getModel()->building()->getRelated();
-            $buildingColumns = $this->existingColumns($relatedBuilding, ['id', 'globalid', 'municipalitie', 'neighborhood', ...$this->geometryColumns($relatedBuilding)]);
-            $query->with('building:'.implode(',', $buildingColumns));
-        } else {
-            $columns = [...$columns, $configuration['municipality'], $configuration['neighborhood']];
-            $columns = [...$columns, ...$this->geometryColumns($query->getModel())];
-        }
-
-        $rows = $query->limit(501)->get($this->existingColumns($query->getModel(), $columns));
+        $rows = $this->withLatestAudit($this->geographicQuery($query, $sector))->limit(501)->get();
         $hasMore = $rows->count() > 500;
         $rows = $rows->take(500);
         $features = [];
@@ -270,13 +491,7 @@ class SectorOverviewService
 
             $features[] = [
                 'geometry' => $geometry,
-                'attributes' => [
-                    'record_id' => (int) $row->id,
-                    'objectid' => $row->objectid,
-                    'municipality' => $source->{$configuration['municipality']},
-                    'neighborhood' => $source->{$configuration['neighborhood']},
-                    'damage_status' => $this->damageBucket($sector, $row->{$configuration['damage']}),
-                ],
+                'attributes' => $this->recordAttributes($row, $sector),
             ];
         }
 
