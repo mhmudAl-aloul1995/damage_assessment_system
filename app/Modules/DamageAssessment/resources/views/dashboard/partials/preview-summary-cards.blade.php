@@ -3,22 +3,14 @@
         #preview-live-cards {
             display: flex;
             flex-wrap: nowrap;
-            overflow-x: auto;
+            gap: clamp(.5rem, .85vw, 1rem);
+            overflow-x: hidden;
             overflow-y: visible;
-            padding-bottom: .75rem;
-            scroll-snap-type: x proximity;
         }
 
         #preview-live-cards > [data-dashboard-card] {
-            flex: 0 0 clamp(270px, 19vw, 340px);
-            max-width: 340px;
-            scroll-snap-align: start;
-        }
-
-        @media (max-width: 991.98px) {
-            #preview-live-cards > [data-dashboard-card] {
-                flex-basis: min(86vw, 340px);
-            }
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         #preview-live-cards .preview-summary-card {
@@ -30,6 +22,28 @@
             border-color: color-mix(in srgb, var(--preview-card-color) 22%, #ffffff) !important;
             box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
             font-family: inherit;
+        }
+
+        #preview-live-cards .preview-summary-card .card-body {
+            padding: clamp(1rem, 1.15vw, 1.5rem) !important;
+        }
+
+        #preview-live-cards .preview-summary-card h3 {
+            font-size: clamp(.78rem, .82vw, 1rem) !important;
+            line-height: 1.65;
+        }
+
+        #preview-live-cards .preview-summary-card [data-dashboard-total] {
+            font-size: clamp(1.6rem, 2.15vw, 2.65rem) !important;
+        }
+
+        #preview-live-cards .preview-summary-card [data-dashboard-item] {
+            gap: clamp(.35rem, .6vw, .75rem) !important;
+            padding-block: clamp(.45rem, .72vw, .75rem) !important;
+        }
+
+        #preview-live-cards .preview-summary-card [data-dashboard-item] .flex-grow-1 {
+            min-width: 0;
         }
 
         #preview-live-cards .preview-summary-card .symbol-label,
@@ -44,7 +58,7 @@
     </style>
 @endonce
 
-<section class="row g-3 flex-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards" data-card-theme="soft">
+<section class="d-flex flex-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards" data-card-theme="soft">
     @forelse ($dashboardCards as $dashboardCard)
         <div data-dashboard-card="{{ $dashboardCard->key }}">
             <article class="card card-flush h-100 preview-summary-card border-top border-3" style="--preview-card-color: {{ $dashboardCard->color }}; border-top-color: {{ $dashboardCard->color }} !important;">

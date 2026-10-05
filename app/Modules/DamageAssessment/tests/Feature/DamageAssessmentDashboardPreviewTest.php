@@ -101,6 +101,7 @@ it('uses the managed cards with live counts ordering links and expandable items'
     $cardsRow = $xpath->query('//*[@id="preview-live-cards"]')->item(0);
     expect($cardsRow->getAttribute('data-card-theme'))->toBe('soft');
     expect($cardsRow->getAttribute('class'))->toContain('flex-nowrap');
+    expect($cardsRow->getAttribute('class'))->not->toContain('row');
     $previewCard = $xpath->query('//*[@data-dashboard-card="public_buildings"]//article[contains(concat(" ", normalize-space(@class), " "), " preview-summary-card ")]')->item(0);
     $previewCardWrapper = $xpath->query('//*[@data-dashboard-card="public_buildings"]')->item(0);
     expect($previewCard)->not->toBeNull();
