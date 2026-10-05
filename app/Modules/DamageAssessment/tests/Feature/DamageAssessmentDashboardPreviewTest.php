@@ -33,6 +33,8 @@ it('renders the damage assessment dashboard preview page with live GIS layers', 
     libxml_clear_errors();
     libxml_use_internal_errors($previousErrorHandling);
     $xpath = new DOMXPath($document);
+    expect($xpath->query('//*[@aria-label="خيارات خلفية البطاقات"]//a'))->toHaveCount(3);
+    expect($xpath->query('//*[@aria-label="خيارات خلفية البطاقات"]//a[@aria-current="page"]')->item(0)->textContent)->toContain('تدرج ناعم');
     expect($xpath->query('//*[@data-gis-sector]'))->toHaveCount(5);
     expect($xpath->query('//*[@data-gis-sector and @aria-pressed="true"]'))->toHaveCount(1);
     expect($xpath->query('//*[@id="dashboard_preview_gis_map"]/ancestor::details'))->toHaveCount(0);
@@ -75,7 +77,7 @@ it('uses the managed cards with live counts ordering links and expandable items'
     });
     $this->actingAs(User::factory()->create());
     $filters = ['governorate' => 'Gaza', 'neighborhood' => 'Rimal', 'from_date' => '2026-09-21', 'to_date' => '2026-09-21'];
-    $response = $this->get(route($routeName, $filters))->assertOk();
+    $response = $this->get(route($routeName, [...$filters, 'card_theme' => 'soft']))->assertOk();
     $original = $this->get(route('damageAssessment.index', $filters))->assertOk();
     expect($response['publicBuildingStats'])->toBe($original['publicBuildingStats']);
     expect($response['dashboardCardItemValues'])->toBe($original['dashboardCardItemValues']);
@@ -92,6 +94,7 @@ it('uses the managed cards with live counts ordering links and expandable items'
     libxml_clear_errors();
     libxml_use_internal_errors($previousErrorHandling);
     $xpath = new DOMXPath($document);
+    expect($xpath->query('//*[@id="preview-live-cards"]')->item(0)->getAttribute('data-card-theme'))->toBe('soft');
     $previewCard = $xpath->query('//*[@data-dashboard-card="public_buildings"]//article[contains(concat(" ", normalize-space(@class), " "), " preview-summary-card ")]')->item(0);
     expect($previewCard)->not->toBeNull();
     expect($previewCard->getAttribute('style'))->toContain('--preview-card-color: '.$card->color);

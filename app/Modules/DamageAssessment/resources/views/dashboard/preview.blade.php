@@ -15,13 +15,37 @@
             <a href="{{ route('damageAssessment.index') }}" class="btn btn-sm btn-light-primary">العودة للصفحة الحالية <i class="ki-outline ki-arrow-left fs-5 ms-2" aria-hidden="true"></i></a>
         </header>
         <section aria-labelledby="preview-live-heading">
+            @php
+                $previewCardThemes = [
+                    'gradient' => 'تدرج ناعم',
+                    'soft' => 'لون فاتح',
+                    'rail' => 'شريط جانبي',
+                ];
+                $previewCardTheme = request()->query('card_theme', 'gradient');
+
+                if (! array_key_exists($previewCardTheme, $previewCardThemes)) {
+                    $previewCardTheme = 'gradient';
+                }
+
+                $previewCardThemeUrl = fn (string $theme): string => route(request()->route()->getName(), array_merge(request()->query(), ['card_theme' => $theme]));
+            @endphp
+
             <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
                 <h2 id="preview-live-heading" class="fs-4 fw-bold mb-0">بطاقات لوحة التحكم</h2>
                 <span class="badge badge-light-success">بيانات فعلية</span>
             </div>
             <p class="text-muted fs-7 mb-5">البطاقات والبنود المفعّلة حسب إعدادات الإدارة، وتُحسب أرقامها وفق الفلاتر التالية.</p>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5">
+                <span class="fs-7 fw-bold text-gray-700">خلفية البطاقات</span>
+                <div class="nav nav-pills gap-2" role="group" aria-label="خيارات خلفية البطاقات">
+                    @foreach ($previewCardThemes as $theme => $label)
+                        <a href="{{ $previewCardThemeUrl($theme) }}" class="btn btn-sm {{ $previewCardTheme === $theme ? 'btn-primary' : 'btn-light' }}" @if ($previewCardTheme === $theme) aria-current="page" @endif>{{ $label }}</a>
+                    @endforeach
+                </div>
+            </div>
             <form method="GET" action="{{ route(request()->route()->getName()) }}" class="card mb-5" aria-label="فلاتر البطاقات الفعلية">
                 <input type="hidden" name="period" value="all">
+                <input type="hidden" name="card_theme" value="{{ $previewCardTheme }}">
                 <div class="card-body p-5">
                     <div class="row g-4 align-items-end">
                         <div class="col-sm-6 col-lg-3">
@@ -48,7 +72,7 @@
                     </div>
                 </div>
             </form>
-            @include('damage-assessment::dashboard.partials.summary-cards', ['compactDashboardCards' => true])
+            @include('damage-assessment::dashboard.partials.summary-cards', ['compactDashboardCards' => true, 'previewCardTheme' => $previewCardTheme])
         </section>
 
         <section class="card mb-6" aria-labelledby="preview-maps-heading">

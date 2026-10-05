@@ -5,11 +5,26 @@
             --preview-card-tint: color-mix(in srgb, var(--preview-card-color) 13%, #ffffff);
             --preview-card-soft: color-mix(in srgb, var(--preview-card-color) 8%, #ffffff);
             background: #ffffff;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+        }
+
+        #preview-live-cards[data-card-theme="gradient"] .preview-summary-card {
             background:
                 linear-gradient(135deg, var(--preview-card-tint) 0%, #ffffff 58%),
                 radial-gradient(circle at 12% 12%, var(--preview-card-soft) 0%, transparent 38%);
             border-inline-start: 4px solid var(--preview-card-color);
-            box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+        }
+
+        #preview-live-cards[data-card-theme="soft"] .preview-summary-card {
+            background: var(--preview-card-tint);
+            border-color: color-mix(in srgb, var(--preview-card-color) 22%, #ffffff) !important;
+        }
+
+        #preview-live-cards[data-card-theme="rail"] .preview-summary-card {
+            background:
+                linear-gradient(90deg, color-mix(in srgb, var(--preview-card-color) 8%, transparent), transparent 32%),
+                #ffffff;
+            border-inline-start: 7px solid var(--preview-card-color);
         }
 
         #preview-live-cards .preview-summary-card .symbol-label,
@@ -24,7 +39,11 @@
     </style>
 @endonce
 
-<section class="row g-3 flex-xl-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards">
+@php
+    $previewCardTheme = in_array($previewCardTheme ?? 'gradient', ['gradient', 'soft', 'rail'], true) ? $previewCardTheme : 'gradient';
+@endphp
+
+<section class="row g-3 flex-xl-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards" data-card-theme="{{ $previewCardTheme }}">
     @forelse ($dashboardCards as $dashboardCard)
         <div class="col-12 col-md-6 col-xl" data-dashboard-card="{{ $dashboardCard->key }}">
             <article class="card card-flush h-100 preview-summary-card border-top border-3" style="--preview-card-color: {{ $dashboardCard->color }}; border-top-color: {{ $dashboardCard->color }} !important;">
