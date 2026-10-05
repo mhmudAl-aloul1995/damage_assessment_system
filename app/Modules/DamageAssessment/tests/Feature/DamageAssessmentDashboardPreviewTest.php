@@ -19,22 +19,23 @@ beforeEach(function (): void {
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
 });
 
-it('renders the damage assessment dashboard preview page with live GIS layers', function (string $routeName): void {
+it('renders the official damage assessment dashboard with live GIS layers', function (string $routeName): void {
     Http::fake();
     config()->set('services.arcgis.public_building_survey_layer_url', 'https://example.com/ArcGIS/rest/services/public/FeatureServer');
     $response = $this->actingAs(User::factory()->create())->get(route($routeName));
     $response->assertOk()->assertViewIs('damage-assessment::dashboard.preview')
-        ->assertSee('معاينة Metronic')->assertSee('خرائط GIS للقطاعات')
-        ->assertSee('طبقات النظام الفعلية')->assertSee('dashboard-preview.js')
-        ->assertDontSee('DEMO-')->assertDontSee('مواقع افتراضية');
+        ->assertSee('لوحة متابعة تقييم الأضرار')->assertSee('خرائط GIS للقطاعات')
+        ->assertSee('dashboard-preview.js')
+        ->assertDontSee('معاينة Metronic')->assertDontSee('بيانات فعلية')
+        ->assertDontSee('خلفية البطاقات')->assertDontSee('DEMO-')->assertDontSee('مواقع افتراضية');
     $document = new DOMDocument;
     $previousErrorHandling = libxml_use_internal_errors(true);
     $document->loadHTML($response->getContent());
     libxml_clear_errors();
     libxml_use_internal_errors($previousErrorHandling);
     $xpath = new DOMXPath($document);
-    expect($xpath->query('//*[@aria-label="خيارات خلفية البطاقات"]//a'))->toHaveCount(3);
-    expect($xpath->query('//*[@aria-label="خيارات خلفية البطاقات"]//a[@aria-current="page"]')->item(0)->textContent)->toContain('تدرج ناعم');
+    expect($xpath->query('//*[@id="preview-live-cards"]')->item(0)->getAttribute('data-card-theme'))->toBe('soft');
+    expect($xpath->query('//*[@aria-label="خيارات خلفية البطاقات"]//a'))->toHaveCount(0);
     expect($xpath->query('//*[@data-gis-sector]'))->toHaveCount(5);
     expect($xpath->query('//*[@data-gis-sector and @aria-pressed="true"]'))->toHaveCount(1);
     expect($xpath->query('//*[@id="dashboard_preview_gis_map"]/ancestor::details'))->toHaveCount(0);
@@ -45,7 +46,7 @@ it('renders the damage assessment dashboard preview page with live GIS layers', 
     expect($data['sectors']['buildings']['scopeObjectIds'])->toBeNull();
     expect($data)->not->toHaveKey('records');
     Http::assertNothingSent();
-})->with(['damageAssessment.preview', 'damageAssessment.dashboard-preview']);
+})->with(['damageAssessment.index', 'damageAssessment.preview', 'damageAssessment.dashboard-preview']);
 
 it('uses the managed cards with live counts ordering links and expandable items', function (string $routeName): void {
     Http::fake();
@@ -77,7 +78,7 @@ it('uses the managed cards with live counts ordering links and expandable items'
     });
     $this->actingAs(User::factory()->create());
     $filters = ['governorate' => 'Gaza', 'neighborhood' => 'Rimal', 'from_date' => '2026-09-21', 'to_date' => '2026-09-21'];
-    $response = $this->get(route($routeName, [...$filters, 'card_theme' => 'soft']))->assertOk();
+    $response = $this->get(route($routeName, $filters))->assertOk();
     $original = $this->get(route('damageAssessment.index', $filters))->assertOk();
     expect($response['publicBuildingStats'])->toBe($original['publicBuildingStats']);
     expect($response['dashboardCardItemValues'])->toBe($original['dashboardCardItemValues']);
@@ -105,7 +106,7 @@ it('uses the managed cards with live counts ordering links and expandable items'
     expect($empty['publicBuildingStats']['total_surveys'])->toBe(0);
     expect($empty['dashboardCardItemValues'][$customItem->id])->toBe(0);
     Http::assertNothingSent();
-})->with(['damageAssessment.preview', 'damageAssessment.dashboard-preview']);
+})->with(['damageAssessment.index', 'damageAssessment.preview', 'damageAssessment.dashboard-preview']);
 
 it('limits preview cards to the same sectors allowed on the dashboard', function (): void {
     $this->seed(DashboardCardSeeder::class);
@@ -126,9 +127,9 @@ it('shows an empty state when no dashboard cards are active', function (): void 
         ->assertOk()->assertSee('لا توجد بطاقات مفعّلة لعرضها.');
 });
 
-it('requires authentication to view the dashboard design preview', function (string $routeName): void {
+it('requires authentication to view the dashboard', function (string $routeName): void {
     $this->get(route($routeName))->assertRedirect(route('login'));
-})->with(['damageAssessment.preview', 'damageAssessment.dashboard-preview']);
+})->with(['damageAssessment.index', 'damageAssessment.preview', 'damageAssessment.dashboard-preview']);
 
 it('keeps dashboard cards available when GIS authentication fails', function (): void {
     $this->mock(ArcgisService::class)->shouldReceive('getToken')->andThrow(new RuntimeException('Unavailable'));

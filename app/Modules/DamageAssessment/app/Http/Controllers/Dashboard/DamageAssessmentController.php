@@ -83,6 +83,16 @@ class DamageAssessmentController extends Controller
 
     public function preview(Request $request): ViewResponse|RedirectResponse
     {
+        return $this->dashboard($request);
+    }
+
+    public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
+    {
+        return $this->dashboard($request);
+    }
+
+    private function dashboard(Request $request): ViewResponse|RedirectResponse
+    {
         if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
             return redirect()->to(app_route('audit.fieldEngineer'));
         }
@@ -140,24 +150,6 @@ class DamageAssessmentController extends Controller
                 'to' => $to,
             ],
         ];
-    }
-
-    public function index(Request $request, $objectid = null): ViewResponse|RedirectResponse
-    {
-        if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
-            return redirect()->to(app_route('audit.fieldEngineer'));
-        }
-
-        $arcgis = app(ArcgisService::class);
-        $token = $arcgis->getToken();
-
-        $publicBuildingLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.public_building_survey_layer_url'));
-        $roadFacilityLayerUrl = $this->normalizeFeatureLayerUrl((string) config('services.arcgis.road_facility_survey_layer_url'));
-
-        return View::make('damage-assessment::dashboard.damageAssessment', [
-            ...$this->dashboardViewData($request),
-            ...compact('token', 'publicBuildingLayerUrl', 'roadFacilityLayerUrl'),
-        ]);
     }
 
     /** @return array<string, mixed> */

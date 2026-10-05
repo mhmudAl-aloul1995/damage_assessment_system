@@ -19,7 +19,7 @@ beforeEach(function () {
     Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
 });
 
-it('shows the homepage public building and road maps', function () {
+it('shows the official homepage GIS layers and keeps map endpoints available', function () {
     $this->mock(ArcgisService::class, function ($mock) {
         $mock->shouldReceive('getToken')->andReturn('fake-token');
     });
@@ -72,12 +72,12 @@ it('shows the homepage public building and road maps', function () {
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
-        ->assertSee('Public Buildings')
-        ->assertSee('Road Facilities')
-        ->assertSee('Public Buildings Map')
-        ->assertSee('Road Facilities Map')
-        ->assertSee('publicBuildingViewDiv', false)
-        ->assertSee('roadFacilityViewDiv', false);
+        ->assertSee('خرائط GIS للقطاعات')
+        ->assertSee('data-gis-sector="public"', false)
+        ->assertSee('data-gis-sector="roads"', false)
+        ->assertSee('dashboard_preview_gis_map', false)
+        ->assertDontSee('publicBuildingViewDiv', false)
+        ->assertDontSee('roadFacilityViewDiv', false);
 
     $this->actingAs($user)
         ->getJson(route('public-buildings-map'))
@@ -117,7 +117,7 @@ it('shows buildings on the homepage map table even without housing units', funct
         ->assertSee('No Units');
 });
 
-it('hides the homepage map assessment link for mopwh users', function () {
+it('renders the official GIS homepage for mopwh users without legacy map flags', function () {
     $this->mock(ArcgisService::class, function ($mock) {
         $mock->shouldReceive('getToken')->andReturn('fake-token');
     });
@@ -129,10 +129,12 @@ it('hides the homepage map assessment link for mopwh users', function () {
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
-        ->assertSee('const canViewAssessmentLink = false;', false);
+        ->assertSee('dashboard-preview.js')
+        ->assertSee('dashboard_preview_gis_map', false)
+        ->assertDontSee('const canViewAssessmentLink', false);
 });
 
-it('shows the homepage map assessment link flag for non mopwh users', function () {
+it('renders the official GIS homepage for non mopwh users without legacy map flags', function () {
     $this->mock(ArcgisService::class, function ($mock) {
         $mock->shouldReceive('getToken')->andReturn('fake-token');
     });
@@ -142,10 +144,12 @@ it('shows the homepage map assessment link flag for non mopwh users', function (
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
-        ->assertSee('const canViewAssessmentLink = true;', false);
+        ->assertSee('dashboard-preview.js')
+        ->assertSee('dashboard_preview_gis_map', false)
+        ->assertDontSee('const canViewAssessmentLink', false);
 });
 
-it('wires the homepage map assessment status filter and reset extent', function () {
+it('wires the homepage GIS sector controls and reset extent button', function () {
     $this->mock(ArcgisService::class, function ($mock) {
         $mock->shouldReceive('getToken')->andReturn('fake-token');
     });
@@ -155,14 +159,13 @@ it('wires the homepage map assessment status filter and reset extent', function 
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
-        ->assertSee('data-field="field_status"', false)
-        ->assertSee('<option value="Not_Completed">', false)
-        ->assertSee("'field_status'", false)
-        ->assertSee('const gazaStripExtent = new Extent({', false)
-        ->assertSee('view.goTo(gazaStripExtent)', false);
+        ->assertSee('data-gis-sector="buildings"', false)
+        ->assertSee('data-gis-sector="public"', false)
+        ->assertSee('id="preview-gis-fit"', false)
+        ->assertSee('id="preview-gis-records"', false);
 });
 
-it('wires the homepage building map date filters to the buildings end field', function () {
+it('wires the homepage building GIS date filters to the buildings end field', function () {
     $this->mock(ArcgisService::class, function ($mock) {
         $mock->shouldReceive('getToken')->andReturn('fake-token');
     });
@@ -172,8 +175,7 @@ it('wires the homepage building map date filters to the buildings end field', fu
     $this->actingAs($user)
         ->get(route('damageAssessment.index'))
         ->assertOk()
-        ->assertSee("definitionExpression: '1=1'", false)
-        ->assertSee("arcgisDateField = getArcgisField('end')", false)
-        ->assertSee('function dashboardArcgisLayerDefinition(filters)', false)
-        ->assertSee("String(fieldName).toLowerCase() === 'end'", false);
+        ->assertSee('"dateField":"end"', false)
+        ->assertSee('"filters":', false)
+        ->assertSee('dashboard-preview.js', false);
 });
