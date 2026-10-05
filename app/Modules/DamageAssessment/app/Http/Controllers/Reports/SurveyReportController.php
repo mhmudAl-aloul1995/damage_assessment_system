@@ -16,7 +16,7 @@ class SurveyReportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager');
+        $this->middleware('role_or_permission:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|reports.public-buildings.view|reports.road-facilities.view');
     }
 
     public function publicBuildings(Request $request): View

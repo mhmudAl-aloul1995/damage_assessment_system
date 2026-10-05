@@ -40,7 +40,7 @@ class InfAuditPublicBuildingController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Inf - QC/QA Engineer|Team Leader -INF|Database Officer|Project Officer');
+        $this->middleware('role_or_permission:Inf - QC/QA Engineer|Team Leader -INF|Database Officer|Project Officer|inf-audit.public-buildings.view');
     }
 
     public function index(): View

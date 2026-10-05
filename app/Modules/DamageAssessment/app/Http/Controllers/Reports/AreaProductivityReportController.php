@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AreaProductivityReportController extends Controller
 {
-    private const DEFAULT_REPORT_MIDDLEWARE = 'role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager';
+    private const DEFAULT_REPORT_MIDDLEWARE = 'role_or_permission:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|reports.area-productivity.view';
 
     private const CSO_REPORT_VIEW_MIDDLEWARE = 'role_or_permission:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|CSO Officer|reports.area-productivity.cso-surveys.view';
 

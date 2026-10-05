@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Yajra\DataTables\DataTables;
@@ -225,6 +226,7 @@ class userController extends Controller
             'allowed_phase_numbers.*' => 'integer|min:1',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
+        $this->validateUndpAssignment($request);
 
         $avatarPath = null;
         $user = null;
@@ -290,6 +292,7 @@ class userController extends Controller
             'allowed_phase_numbers.*' => 'integer|min:1',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
+        $this->validateUndpAssignment($request);
 
         $data = [
             'name' => $request->name,
@@ -365,6 +368,21 @@ class userController extends Controller
             'default_phase_number' => $defaultPhase,
             'allowed_phase_numbers' => $allowedPhases->isEmpty() ? null : $allowedPhases->all(),
         ];
+    }
+
+    private function validateUndpAssignment(Request $request): void
+    {
+        $roles = collect($request->input('roles', []));
+
+        if (! $roles->contains('UNDP')) {
+            return;
+        }
+
+        if ($roles->count() !== 1 || collect($request->input('permissions', []))->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'roles' => __('access.undp_assignment_exclusive'),
+            ]);
+        }
     }
 
     private function processAvatar($file, $userId = null)

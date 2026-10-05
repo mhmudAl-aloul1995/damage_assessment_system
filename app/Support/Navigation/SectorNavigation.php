@@ -76,6 +76,12 @@ class SectorNavigation
      */
     private static function isVisible(array $tab, User $user): bool
     {
+        if ($user->hasRole('UNDP')) {
+            $permission = self::undpPermissionForRoute($tab);
+
+            return $permission !== null && $user->can($permission);
+        }
+
         if (($tab['roles'] ?? []) === [] && ($tab['permissions'] ?? []) === [] && ! isset($tab['visible_when'])) {
             return true;
         }
@@ -86,6 +92,49 @@ class SectorNavigation
 
         return collect($tab['permissions'] ?? [])
             ->contains(fn (string $permission): bool => $user->can($permission));
+    }
+
+    /** @param array<string, mixed> $item */
+    private static function undpPermissionForRoute(array $item): ?string
+    {
+        $route = $item['route'] ?? null;
+
+        if ($route === null || str_contains($route, 'export')) {
+            return null;
+        }
+
+        if (str_starts_with($route, 'sector-overview.')) {
+            return match ($item['parameters']['sector'] ?? null) {
+                'public-buildings' => 'inf-audit.public-buildings.view',
+                'road-facilities' => 'inf-audit.roads.view',
+                'cso-surveys' => 'cso-surveys.view',
+                'housing-units' => 'housing-units.view',
+                default => 'damage-assessments.view',
+            };
+        }
+
+        return match (true) {
+            str_starts_with($route, 'inf-audit.public-buildings'), str_starts_with($route, 'public-buildings') => 'inf-audit.public-buildings.view',
+            str_starts_with($route, 'inf-audit.roads'), str_starts_with($route, 'road-facilities') => 'inf-audit.roads.view',
+            str_starts_with($route, 'inf-audit.cso') => 'inf-audit.cso.view',
+            str_starts_with($route, 'cso-surveys') => 'cso-surveys.view',
+            str_starts_with($route, 'committee-members') => 'committee-members.view',
+            str_starts_with($route, 'committee-'), str_starts_with($route, 'committee-decisions') => 'committee-decisions.view',
+            str_contains($route, 'reports.damage-statistics') => 'reports.damage-statistics.view',
+            str_contains($route, 'reports.building-productivity'), $route === 'reports.productivity' => 'reports.productivity.view',
+            str_contains($route, 'reports.area-productivity.cso-surveys') => 'reports.area-productivity.cso-surveys.view',
+            str_contains($route, 'reports.area-productivity') => 'reports.area-productivity.view',
+            str_contains($route, 'reports.field-engineer') => 'reports.field-engineer.view',
+            str_contains($route, 'reports.daily-achievement'), str_contains($route, 'reports.auditors-daily'), str_contains($route, 'reports.lawyers-daily') => 'reports.daily-achievement.view',
+            str_contains($route, 'reports.hlp-audit') => 'reports.hlp-audit.view',
+            str_contains($route, 'reports.public-buildings') => 'reports.public-buildings.view',
+            str_contains($route, 'reports.road-facilities') => 'reports.road-facilities.view',
+            str_starts_with($route, 'reports.') => 'reports.view',
+            str_starts_with($route, 'audit.'), str_starts_with($route, 'area-manager-review.') => 'audit.view',
+            str_starts_with($route, 'housing.') => 'housing-units.view',
+            str_starts_with($route, 'building.'), str_starts_with($route, 'engineers.'), str_starts_with($route, 'damageAssessment.') => 'damage-assessments.view',
+            default => null,
+        };
     }
 
     /**

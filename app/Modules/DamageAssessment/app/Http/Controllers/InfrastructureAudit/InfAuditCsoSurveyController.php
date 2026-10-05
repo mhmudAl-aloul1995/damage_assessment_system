@@ -41,7 +41,7 @@ class InfAuditCsoSurveyController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Inf - QC/QA Engineer|Team Leader -INF|Database Officer|Project Officer|CSO Officer');
+        $this->middleware('role_or_permission:Inf - QC/QA Engineer|Team Leader -INF|Database Officer|Project Officer|CSO Officer|inf-audit.cso.view');
     }
 
     public function index(): View

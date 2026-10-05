@@ -103,7 +103,9 @@ class Sidebar
             return null;
         }
 
-        if (! $user->hasAnyRole($section['roles'] ?? []) && ! self::hasVisibleItem($section, $user)) {
+        if (! $user->hasAnyRole($section['roles'] ?? [])
+            && ! self::isItemVisible($section, $user)
+            && ! self::hasVisibleItem($section, $user)) {
             return null;
         }
 
@@ -183,15 +185,47 @@ class Sidebar
     private static function hasVisibleItem(array $section, User $user): bool
     {
         return collect($section['items'] ?? [])
-            ->contains(fn (array $item): bool => self::isItemVisible($item, $user));
+            ->contains(fn (array $item): bool => self::visibleItem($item, $user) !== null);
     }
 
     private static function isItemVisible(array $item, User $user): bool
     {
+        if ($user->hasRole('UNDP')) {
+            $permission = self::undpPermissionForUrl($item['url'] ?? null);
+
+            if ($permission !== null) {
+                return $user->can($permission);
+            }
+        }
+
         return $user->hasAnyRole($item['roles'] ?? [])
             || collect($item['permissions'] ?? [])->contains(fn (string $permission): bool => $user->can($permission))
             || self::isCustomVisibleItem($item, $user)
             || self::isTemporaryAuditHomeItem($item, $user);
+    }
+
+    private static function undpPermissionForUrl(?string $url): ?string
+    {
+        if ($url === null || ! str_starts_with($url, 'damage-assessment/')) {
+            return null;
+        }
+
+        if (preg_match('/(^|[\/_-])(export|create|edit|import|sync|delete|approve|reject|reset|cancel|process|sign|assign|retry)([\/_-]|$)/i', $url) === 1) {
+            return null;
+        }
+
+        return match (true) {
+            str_contains($url, 'building-deletions') => 'damage-assessment.building-deletion.view',
+            str_contains($url, 'building-survey-return-requests') => 'building-survey-return-requests.view',
+            str_contains($url, '/attendance/dashboard') => 'attendance.reports.view',
+            str_contains($url, '/attendance') => 'attendance.view',
+            str_contains($url, '/public-buildings') => 'inf-audit.public-buildings.view',
+            str_contains($url, '/road-facilities') => 'inf-audit.roads.view',
+            str_contains($url, '/cso-surveys') => 'cso-surveys.view',
+            str_contains($url, '/housing') => 'housing-units.view',
+            str_contains($url, '/building'), str_contains($url, '/engineer'), str_contains($url, '/damageAssessment') => 'damage-assessments.view',
+            default => null,
+        };
     }
 
     private static function isCustomVisibleItem(array $item, User $user): bool

@@ -14,7 +14,7 @@ class AuditReviewerController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Auditing Supervisor|Database Officer');
+        $this->middleware('role_or_permission:Auditing Supervisor|Database Officer|audit.view');
     }
 
     public function index(): RedirectResponse

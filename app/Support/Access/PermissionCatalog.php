@@ -89,7 +89,10 @@ class PermissionCatalog
 
     public function isSystemRole(string $name): bool
     {
-        $names = ['Database Officer', 'Manager', 'auditing', 'Gis Officer', 'Audit Reviewer'];
+        $names = array_merge(
+            ['Database Officer', 'Manager', 'auditing', 'Gis Officer', 'Audit Reviewer'],
+            array_keys(config('access.role_profiles', [])),
+        );
         $collectRoles = function (array $items) use (&$collectRoles, &$names): void {
             foreach ($items as $item) {
                 $names = array_merge($names, $item['roles'] ?? []);
@@ -99,6 +102,31 @@ class PermissionCatalog
         $collectRoles(config('sidebar', []));
 
         return in_array($name, $names, true);
+    }
+
+    /** @return array{module: string, read_only: bool, allowed_permissions: array<int, string>}|null */
+    public function roleProfile(string $name): ?array
+    {
+        $profile = config('access.role_profiles.'.$name);
+
+        return is_array($profile) ? $profile : null;
+    }
+
+    /** @return array<int, string>|null */
+    public function allowedPermissionsForRole(string $name): ?array
+    {
+        $profile = $this->roleProfile($name);
+
+        return $profile === null ? null : array_values($profile['allowed_permissions'] ?? []);
+    }
+
+    /** @param array<int, string> $permissions */
+    public function permissionsAreAllowedForRole(string $name, array $permissions): bool
+    {
+        $allowedPermissions = $this->allowedPermissionsForRole($name);
+
+        return $allowedPermissions === null
+            || collect($permissions)->every(fn (string $permission): bool => in_array($permission, $allowedPermissions, true));
     }
 
     public function revision(Role $role): string

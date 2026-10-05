@@ -34,7 +34,7 @@ class MissingCitizenIdentityController extends Controller
 
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Auditing Supervisor|Project Officer|Legal Auditor|QC/QA Engineer');
+        $this->middleware('role_or_permission:Database Officer|Auditing Supervisor|Project Officer|Legal Auditor|QC/QA Engineer|reports.view');
     }
 
     public function index(): ViewContract

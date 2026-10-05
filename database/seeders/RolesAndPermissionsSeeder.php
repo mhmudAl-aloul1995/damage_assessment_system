@@ -192,6 +192,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'name' => 'CSO Officer',
             'guard_name' => 'web',
         ]);
+        $undpReadOnly = Role::firstOrCreate([
+            'name' => 'UNDP',
+            'guard_name' => 'web',
+        ]);
 
         $systemManager->givePermissionTo($permissions);
         $areaManager->givePermissionTo([
@@ -366,6 +370,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.area-productivity.cso-surveys.view',
             'reports.area-productivity.cso-surveys.export',
         ]);
+        $undpReadOnly->syncPermissions(config('access.role_profiles.UNDP.allowed_permissions', []));
         /*
         $systemManager->syncPermissions($permissions);
 

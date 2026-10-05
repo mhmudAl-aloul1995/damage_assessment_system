@@ -42,6 +42,7 @@ class RoleController extends Controller
     {
         $data = $request->validated();
         abort_if($this->catalog->isSystemRole($data['name']) && ! $request->user()->hasRole('Database Officer'), 403);
+        $this->validateRoleProfilePermissions($data['name'], $data['permissions']);
         $this->authorizePermissions($request, $data['permissions']);
         $role = (new Role)->getConnection()->transaction(function () use ($data, $request): Role {
             $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
@@ -74,6 +75,7 @@ class RoleController extends Controller
                 throw ValidationException::withMessages(['name' => __('access.system_role_name')]);
             }
 
+            $this->validateRoleProfilePermissions($lockedRole->name, $data['permissions']);
             $this->authorizePermissions($request, array_merge($lockedRole->permissions->pluck('name')->all(), $data['permissions']));
             $before = ['name' => $lockedRole->name, 'permissions' => $lockedRole->permissions->pluck('name')->all()];
             $lockedRole->update(['name' => $data['name']]);
@@ -112,6 +114,8 @@ class RoleController extends Controller
 
     private function roleData(Role $role): array
     {
+        $profile = $this->catalog->roleProfile($role->name);
+
         return [
             'id' => $role->id,
             'name' => $role->name,
@@ -119,12 +123,23 @@ class RoleController extends Controller
             'users_count' => $role->users_count ?? 0,
             'system' => $this->catalog->isSystemRole($role->name),
             'protected' => $role->name === 'Database Officer',
+            'profile' => $profile,
             'revision' => $this->catalog->revision($role),
             'edit_url' => route('roles.edit', $role),
             'update_url' => route('roles.update', $role),
             'delete_url' => route('roles.destroy', $role),
             'members_url' => route('roles.members', $role),
         ];
+    }
+
+    /** @param array<int, string> $permissions */
+    private function validateRoleProfilePermissions(string $roleName, array $permissions): void
+    {
+        if (! $this->catalog->permissionsAreAllowedForRole($roleName, $permissions)) {
+            throw ValidationException::withMessages([
+                'permissions' => __('access.role_profile_permissions'),
+            ]);
+        }
     }
 
     private function authorizePermissions(Request $request, array $permissions): void

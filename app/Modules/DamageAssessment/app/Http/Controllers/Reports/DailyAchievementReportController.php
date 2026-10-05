@@ -24,7 +24,7 @@ class DailyAchievementReportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager');
+        $this->middleware('role_or_permission:Database Officer|Project Officer|undp-Project Manager|Auditing Supervisor|Area Manager|reports.daily-achievement.view');
     }
 
     public function dailyAchievement(Request $request): ViewContract

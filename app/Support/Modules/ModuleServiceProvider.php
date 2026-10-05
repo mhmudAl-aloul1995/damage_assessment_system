@@ -2,6 +2,7 @@
 
 namespace App\Support\Modules;
 
+use App\Http\Middleware\EnforceDamageAssessmentReadOnly;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use ReflectionClass;
@@ -53,7 +54,11 @@ abstract class ModuleServiceProvider extends ServiceProvider
         $path = $this->modulePath('routes/'.$middleware.'.php');
 
         if (is_file($path)) {
-            Route::middleware($middleware)->prefix($prefix)->group($path);
+            $middlewareStack = $middleware === 'web' && $this->module === 'damage-assessment'
+                ? [$middleware, EnforceDamageAssessmentReadOnly::class]
+                : [$middleware];
+
+            Route::middleware($middlewareStack)->prefix($prefix)->group($path);
         }
     }
 }

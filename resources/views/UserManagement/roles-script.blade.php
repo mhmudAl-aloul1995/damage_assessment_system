@@ -181,16 +181,27 @@ document.addEventListener('DOMContentLoaded', () => {
             originalPermissions = copy ? [] : (role?.permissions || []);
             originalName = copy ? '' : (role?.name || '');
             const chosen = role?.permissions || [];
+            const profilePermissions = currentRole?.profile?.allowed_permissions || null;
             toggles.forEach(input => {
                 input.checked = chosen.includes(input.value);
-                input.disabled = !writable || (grantable !== null && !grantable.includes(input.value));
+                input.disabled = !writable
+                    || (grantable !== null && !grantable.includes(input.value))
+                    || (profilePermissions !== null && !profilePermissions.includes(input.value));
             });
             find('#role-name').value = copy ? role.name + ' — ' + translations.copy_suffix : originalName;
             find('#role-name').readOnly = !writable || Boolean(currentRole?.system);
             find('#editor-heading').textContent = currentRole ? currentRole.name : translations.new_role;
             const notice = find('#role-notice');
             notice.hidden = false;
-            notice.textContent = currentRole?.protected ? translations.admin_protected : !writable ? translations.read_only : currentRole?.system ? translations.system_notice : copy && role.system ? translations.copy_notice : '';
+            notice.textContent = currentRole?.protected
+                ? translations.admin_protected
+                : !writable
+                    ? translations.read_only
+                    : currentRole?.profile?.read_only
+                        ? translations.role_profile_notice
+                        : currentRole?.system
+                            ? translations.system_notice
+                            : copy && role.system ? translations.copy_notice : '';
             if (!notice.textContent) notice.hidden = true;
             find('#permission-search').value = '';
             find('#selected-only').checked = false;
