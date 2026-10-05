@@ -1,5 +1,26 @@
 @once
     <style>
+        #preview-live-cards {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: visible;
+            padding-bottom: .75rem;
+            scroll-snap-type: x proximity;
+        }
+
+        #preview-live-cards > [data-dashboard-card] {
+            flex: 0 0 clamp(270px, 19vw, 340px);
+            max-width: 340px;
+            scroll-snap-align: start;
+        }
+
+        @media (max-width: 991.98px) {
+            #preview-live-cards > [data-dashboard-card] {
+                flex-basis: min(86vw, 340px);
+            }
+        }
+
         #preview-live-cards .preview-summary-card {
             --preview-card-color: #315f72;
             --preview-card-tint: color-mix(in srgb, var(--preview-card-color) 13%, #ffffff);
@@ -8,6 +29,7 @@
             background: var(--preview-card-tint);
             border-color: color-mix(in srgb, var(--preview-card-color) 22%, #ffffff) !important;
             box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+            font-family: inherit;
         }
 
         #preview-live-cards .preview-summary-card .symbol-label,
@@ -22,9 +44,9 @@
     </style>
 @endonce
 
-<section class="row g-3 flex-xl-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards" data-card-theme="soft">
+<section class="row g-3 flex-nowrap mb-8" aria-label="بطاقات لوحة التحكم الفعلية" id="preview-live-cards" data-card-theme="soft">
     @forelse ($dashboardCards as $dashboardCard)
-        <div class="col-12 col-md-6 col-xl" data-dashboard-card="{{ $dashboardCard->key }}">
+        <div data-dashboard-card="{{ $dashboardCard->key }}">
             <article class="card card-flush h-100 preview-summary-card border-top border-3" style="--preview-card-color: {{ $dashboardCard->color }}; border-top-color: {{ $dashboardCard->color }} !important;">
                 <div class="card-body p-4 p-xxl-5">
                     <div class="d-flex align-items-center gap-2 mb-5">

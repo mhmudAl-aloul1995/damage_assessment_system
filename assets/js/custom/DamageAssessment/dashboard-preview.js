@@ -168,11 +168,13 @@ function buildDashboardCardsImage(root, now = new Date()) {
     const cards = collectExportCards(root);
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    const width = 1600;
+    const fontFamily = window.getComputedStyle(root).fontFamily || 'Arial, sans-serif';
+    const canvasFont = (weight, size) => weight + ' ' + size + 'px ' + fontFamily;
     const padding = 64;
     const gap = 24;
-    const columns = cards.length <= 2 ? Math.max(cards.length, 1) : 3;
-    const cardWidth = (width - (padding * 2) - (gap * (columns - 1))) / columns;
+    const columns = Math.max(cards.length, 1);
+    const cardWidth = 330;
+    const width = Math.max(1600, (padding * 2) + (columns * cardWidth) + (gap * (columns - 1)));
     const cardHeights = cards.map(card => Math.max(285, 188 + (card.items.length * 42)));
     const rowHeights = [];
     for (let index = 0; index < cards.length; index += columns) {
@@ -191,17 +193,17 @@ function buildDashboardCardsImage(root, now = new Date()) {
     context.fillRect(0, 0, width, height);
     drawRoundRect(context, padding - 18, 44, width - ((padding - 18) * 2), height - 88, 18, '#ffffff', '#e4e6ef');
     context.fillStyle = '#1f2937';
-    context.font = '700 34px Arial, sans-serif';
+    context.font = canvasFont(700, 34);
     context.fillText('لوحة متابعة تقييم الأضرار', width - padding, 104);
-    context.font = '600 19px Arial, sans-serif';
+    context.font = canvasFont(600, 19);
     context.fillStyle = '#5e6278';
     context.fillText('المجلس الفلسطيني للإسكان | تصدير بطاقات لوحة التحكم', width - padding, 140);
     context.textAlign = 'left';
-    context.font = '500 17px Arial, sans-serif';
+    context.font = canvasFont(500, 17);
     context.fillStyle = '#7e8299';
     context.fillText(now.toLocaleString('ar', {dateStyle: 'medium', timeStyle: 'short'}), padding, 114);
     context.textAlign = 'right';
-    context.font = '600 18px Arial, sans-serif';
+    context.font = canvasFont(600, 18);
     const filters = pageFilterSummary(root);
     filters.forEach((filter, index) => {
         const chipWidth = Math.max(245, context.measureText(filter).width + 42);
@@ -211,7 +213,7 @@ function buildDashboardCardsImage(root, now = new Date()) {
         context.fillText(filter, x - 20, 193);
     });
     if (!cards.length) {
-        context.font = '700 26px Arial, sans-serif';
+        context.font = canvasFont(700, 26);
         context.fillStyle = '#7e8299';
         context.textAlign = 'center';
         context.fillText('لا توجد بطاقات مفعّلة لعرضها.', width / 2, 310);
@@ -228,16 +230,16 @@ function buildDashboardCardsImage(root, now = new Date()) {
         drawRoundRect(context, x, y, cardWidth, cardHeight, 14, mixWithWhite(color, 0.87), mixWithWhite(color, 0.76));
         drawRoundRect(context, x + cardWidth - 14, y, 14, cardHeight, 7, color);
         context.fillStyle = color;
-        context.font = '700 22px Arial, sans-serif';
+        context.font = canvasFont(700, 22);
         wrapRtlText(context, card.title, x + cardWidth - 34, y + 42, cardWidth - 68, 28, 2);
-        context.font = '800 46px Arial, sans-serif';
+        context.font = canvasFont(800, 46);
         context.fillStyle = '#1f2937';
         context.fillText(card.total, x + cardWidth - 34, y + 118);
-        context.font = '500 17px Arial, sans-serif';
+        context.font = canvasFont(500, 17);
         context.fillStyle = '#6b7280';
         wrapRtlText(context, card.subtitle, x + cardWidth - 34, y + 151, cardWidth - 68, 23, 2);
         let itemY = y + 202;
-        context.font = '600 16px Arial, sans-serif';
+        context.font = canvasFont(600, 16);
         card.items.forEach(item => {
             context.strokeStyle = 'rgba(126, 130, 153, .23)';
             context.beginPath();
@@ -255,7 +257,7 @@ function buildDashboardCardsImage(root, now = new Date()) {
     });
     context.textAlign = 'center';
     context.fillStyle = '#a1a5b7';
-    context.font = '500 15px Arial, sans-serif';
+    context.font = canvasFont(500, 15);
     context.fillText('Damage Assessment System', width / 2, height - 42);
     return {dataUrl: canvas.toDataURL('image/png'), fileName: exportFilename(now)};
 }

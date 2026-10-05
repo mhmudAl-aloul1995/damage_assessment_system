@@ -98,9 +98,13 @@ it('uses the managed cards with live counts ordering links and expandable items'
     libxml_clear_errors();
     libxml_use_internal_errors($previousErrorHandling);
     $xpath = new DOMXPath($document);
-    expect($xpath->query('//*[@id="preview-live-cards"]')->item(0)->getAttribute('data-card-theme'))->toBe('soft');
+    $cardsRow = $xpath->query('//*[@id="preview-live-cards"]')->item(0);
+    expect($cardsRow->getAttribute('data-card-theme'))->toBe('soft');
+    expect($cardsRow->getAttribute('class'))->toContain('flex-nowrap');
     $previewCard = $xpath->query('//*[@data-dashboard-card="public_buildings"]//article[contains(concat(" ", normalize-space(@class), " "), " preview-summary-card ")]')->item(0);
+    $previewCardWrapper = $xpath->query('//*[@data-dashboard-card="public_buildings"]')->item(0);
     expect($previewCard)->not->toBeNull();
+    expect($previewCardWrapper->getAttribute('class'))->not->toContain('col-');
     expect($previewCard->getAttribute('style'))->toContain('--preview-card-color: '.$card->color);
 
     $card->update(['title' => 'عنوان محدث من الإدارة']);
