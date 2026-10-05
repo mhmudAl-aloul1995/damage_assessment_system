@@ -1358,7 +1358,7 @@
                 labelExpressionInfo: {
                     expression: `
                         var buildingName = Trim(DefaultValue($feature.building_name, ''));
-                        var objectId = Text($feature.objectid, '0');
+                        var objectId = Text($feature.objectid);
 
                         if (IsEmpty(buildingName)) {
                             return objectId;
