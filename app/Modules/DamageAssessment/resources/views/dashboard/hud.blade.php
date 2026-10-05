@@ -1353,10 +1353,19 @@
                     }
                 ]
             };
-            const buildingNameLabelingInfo = [{
+            const buildingLabelingInfo = [{
                 minScale: 3500,
                 labelExpressionInfo: {
-                    expression: "DefaultValue($feature.building_name, '')"
+                    expression: `
+                        var buildingName = Trim(DefaultValue($feature.building_name, ''));
+                        var objectId = Text($feature.objectid, '0');
+
+                        if (IsEmpty(buildingName)) {
+                            return objectId;
+                        }
+
+                        return buildingName + TextFormatting.NewLine + objectId;
+                    `
                 },
                 labelPlacement: 'always-horizontal',
                 symbol: {
@@ -1369,8 +1378,7 @@
                         size: 10,
                         weight: 'bold'
                     }
-                },
-                where: "building_name IS NOT NULL AND building_name <> ''"
+                }
             }];
 
             function value(attributes, ...keys) {
@@ -2068,7 +2076,7 @@
             const buildingsLayer = new FeatureLayer({
                 url: buildingLayerUrl,
                 renderer: damageRenderer,
-                labelingInfo: buildingNameLabelingInfo,
+                labelingInfo: buildingLabelingInfo,
                 labelsVisible: true,
                 outFields: ['*'],
                 minScale: 0,
