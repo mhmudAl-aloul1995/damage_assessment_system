@@ -56,7 +56,7 @@ it('seeds dashboard card labels as translation keys available in arabic and engl
 });
 
 it('keeps legacy arabic dashboard card labels translatable', function (): void {
-    $summaryCardsView = file_get_contents(base_path('app/Modules/DamageAssessment/views/dashboard/partials/summary-cards.blade.php'));
+    $summaryCardsView = file_get_contents(base_path('app/Modules/DamageAssessment/resources/views/dashboard/partials/summary-cards.blade.php'));
     $legacyAliases = [
         'مدمر' => 'ui.damage_dashboard.destroyed',
         'أضرار جسيمة' => 'ui.damage_dashboard.severe_damage',

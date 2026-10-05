@@ -145,5 +145,8 @@ return array(
     'Brick\\Math\\' => array($vendorDir . '/brick/math/src'),
     'Barryvdh\\LaravelIdeHelper\\' => array($vendorDir . '/barryvdh/laravel-ide-helper/src'),
     'Barryvdh\\DomPDF\\' => array($vendorDir . '/barryvdh/laravel-dompdf/src'),
+    'App\\Modules\\Heks\\' => array($baseDir . '/app/Modules/Heks/app'),
+    'App\\Modules\\DamageAssessment\\' => array($baseDir . '/app/Modules/DamageAssessment/app'),
+    'App\\Modules\\DamageAssessmentBorrowers\\' => array($baseDir . '/app/Modules/DamageAssessmentBorrowers/app'),
     'App\\' => array($baseDir . '/app', $vendorDir . '/laravel/pint/app'),
 );

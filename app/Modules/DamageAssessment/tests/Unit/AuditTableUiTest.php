@@ -1,0 +1,326 @@
+<?php
+
+test('engineer audit report leaves empty table messaging to datatables', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/reports/engineer_audit.blade.php');
+
+    expect($view)
+        ->toContain('id="engineer_audit_table"')
+        ->toContain('@foreach ($rows as $row)')
+        ->toContain("emptyTable: 'لا توجد بيانات ضمن الفلاتر المحددة.'")
+        ->not->toContain('@forelse ($rows as $row)')
+        ->not->toContain('@empty')
+        ->not->toContain('<td colspan="6" class="text-center text-muted">');
+});
+
+test('assessment audit hides obstacle details when assessment has no obstacle', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('function removeInactiveDependentRows')
+        ->toContain("normalizeSurveyName(row.name) === 'assessment_obstacle'")
+        ->toContain("return answer === 'yes' || answer === 'نعم'")
+        ->toContain("return !['obstacle_type', 'assessment_obstacle_info'].includes(normalizeSurveyName(row.name))")
+        ->toContain('rows = removeInactiveDependentRows(rows, prefix)');
+});
+
+test('assessment audit shows housing unit security obstacle fields in unit introduction', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/assessmentAudit.blade.php');
+    $migration = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/database/migrations/2026_08_28_152447_add_security_situation_unit_assessment_question.php');
+
+    expect($view)
+        ->toContain("security_situation_unit: ['7. Unit Introduction', 704]")
+        ->toContain("security_unit_info: ['7. Unit Introduction', 705]")
+        ->toContain('function housingUnitHasSecurityObstacle')
+        ->toContain("normalizeSurveyName(row.name) === 'security_situation_unit'")
+        ->toContain("answer === 'yes' || answer === 'نعم' || answer === 'unsafe'")
+        ->toContain("normalizeSurveyName(row.name) !== 'security_unit_info'");
+
+    expect($migration)
+        ->toContain("'name' => 'security_situation_unit'")
+        ->toContain("'hint' => 'هل يوجد عائق يمنع عملية الحصر'")
+        ->toContain("'name' => 'security_unit_info'")
+        ->toContain("'hint' => 'ما هو العائق'")
+        ->toContain("DB::table('assessments')->updateOrInsert");
+});
+
+test('housing audit detail card fills the row beside the summary card', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('housing-summary-row')
+        ->toContain('housing-summary-column')
+        ->toContain('housing-summary-card')
+        ->toContain('#tab_housing .housing-summary-card')
+        ->toContain('align-items-stretch')
+        ->toContain('align-items: stretch')
+        ->toContain('position: relative')
+        ->toContain('top: 110px')
+        ->toContain('max-height: calc(100vh - 140px) !important')
+        ->toContain('overflow-y: auto !important')
+        ->toContain('@media(max-width:991px)')
+        ->toContain('col-12 col-lg-3 col-xl-2')
+        ->toContain('col-12 col-lg-9 col-xl-10')
+        ->not->toContain('function updateHousingSummaryPosition')
+        ->not->toContain('is-anchored-bottom')
+        ->not->toContain('col-12 col-lg-8 col-xl-9');
+});
+
+test('housing units table groups audit statuses into one visual column', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('function (row) {')
+        ->toContain('renderHousingStatusStack')
+        ->toContain('housing-status-stack')
+        ->toContain('housing-status-item')
+        ->toContain('#housing_table .badge')
+        ->toContain('padding: .48rem .65rem !important')
+        ->toContain('font-size: .86rem')
+        ->toContain('min-height: 26px')
+        ->toContain('font-size: .74rem')
+        ->toContain('display: none')
+        ->toContain('{ targets: [4, 9, 10], visible: false, searchable: false }')
+        ->toContain("data: 'legal_challenge_label'")
+        ->toContain("return $('<div>').text(data || '-').html()")
+        ->toContain("$(table).find('thead th').eq(3).text('الطابق / الوحدة')")
+        ->toContain("let unitNumber = $('<div>').text(row.housing_unit_number || '-').html()")
+        ->toContain('<div class="housing-unit-subtitle">الطابق ${floorNumber}</div>')
+        ->toContain("$(table).find('thead th').eq(8).text('التواقيع')")
+        ->toContain('#housing_table.dataTable tbody tr.selected>*')
+        ->toContain('#housing_table.dataTable tbody tr.selected>td:first-child')
+        ->toContain('box-shadow: none !important')
+        ->toContain('autoWidth: false')
+        ->toContain('scrollX: false')
+        ->toContain('assessment-audit-page')
+        ->toContain('body:has(.assessment-audit-page) #kt_app_content_container')
+        ->toContain('max-width: 100vw')
+        ->toContain('#tab_housing .table-responsive')
+        ->toContain('max-height: 440px')
+        ->toContain('overflow-x: auto')
+        ->toContain('overflow-y: auto')
+        ->toContain('#tab_housing #housing_table thead th')
+        ->toContain('position: sticky')
+        ->toContain('#tab_housing #housing_table_wrapper')
+        ->toContain('#tab_housing .dt-scroll-body')
+        ->toContain('#tab_housing .dataTables_scrollBody')
+        ->toContain('datatable.columns.adjust()');
+});
+
+test('audit table keeps all columns with responsive text cells', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/audit.blade.php');
+    $controller = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/app/Http/Controllers/Audit/auditController.php');
+    $dashboardController = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/app/Http/Controllers/Dashboard/DamageAssessmentController.php');
+    $exportService = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/app/Services/Audit/AuditExportService.php');
+
+    expect($view)
+        ->toContain('audit-table-wrapper')
+        ->toContain('audit-cell-text')
+        ->toContain('renderAuditTextCell')
+        ->toContain('renderAuditLtrCell')
+        ->toContain('audit-cell-date')
+        ->toContain('autoWidth: false')
+        ->toContain('scrollX: true')
+        ->toContain('responsive: false')
+        ->toContain('ordering: false')
+        ->toContain("targets: '_all'")
+        ->toContain('width: 100% !important')
+        ->toContain('min-width: 940px')
+        ->toContain('table-layout: fixed')
+        ->toContain('padding: 0.45rem 0.35rem')
+        ->toContain('#kt_datatable_audits_wrapper table.dataTable thead th.sorting::before')
+        ->toContain('background-image: none !important')
+        ->toContain('.dt-column-order')
+        ->toContain('font-size: 0.74rem')
+        ->toContain("#kt_datatable_audits tbody td {\n\t\t\tfont-size: 1rem;")
+        ->not->toContain('font-size: .1rem')
+        ->toContain('audit-select-cell')
+        ->toContain('audit-actions-cell')
+        ->toContain('float: none !important')
+        ->toContain('#kt_datatable_audits_wrapper table.dataTable .audit-select-cell')
+        ->toContain('position: absolute')
+        ->toContain('left: 50%')
+        ->toContain('top: 50%')
+        ->toContain('transform: translate(-50%, -50%) !important')
+        ->toContain("width: '64px'")
+        ->toContain("width: '16%'")
+        ->toContain("width: '8%'")
+        ->toContain("width: '12%'")
+        ->toContain("width: '9%'")
+        ->toContain("width: '11%'")
+        ->toContain("width: '10%'")
+        ->toContain('table.columns.adjust()')
+        ->toContain('overflow-x: auto')
+        ->toContain('auditExportModal')
+        ->toContain('auditExportForm')
+        ->toContain("route('audit.export')")
+        ->toContain('notes_history')
+        ->toContain('no_notes_history')
+        ->toContain('notesHistory')
+        ->toContain('escapeAuditCell(item.notes)')
+        ->toContain('btn-building-attachments')
+        ->toContain('buildingAttachmentsModal')
+        ->toContain('معاينة')
+        ->toContain('renderAttachmentPreview')
+        ->toContain('isImageAttachment')
+        ->toContain('object-fit-cover')
+        ->toContain('housing_unit_attachments_tab_pane')
+        ->toContain('housing_unit_attachment_select')
+        ->toContain('housingUnitAttachmentForm')
+        ->toContain('housing_unit_attachment_file')
+        ->toContain('housingUnitAttachmentSubmit')
+        ->toContain('housingUnitAttachmentsTableBody')
+        ->toContain('resetHousingUnitAttachmentSelect')
+        ->toContain('selectedHousingUnitAttachmentUnit')
+        ->toContain('resetHousingUnitAttachmentForm')
+        ->toContain('renderSelectedHousingUnitAttachments')
+        ->toContain('loadHousingUnitAttachments')
+        ->toContain('btn-replace-housing-unit-attachment')
+        ->toContain('btn-delete-housing-unit-attachment')
+        ->toContain("route('audit.building.housing-unit-attachments.index'")
+        ->toContain("route('audit.building.attachments.index'")
+        ->toContain("route('audit.building.attachments.store'")
+        ->toContain("route('audit.building.attachments.replace'")
+        ->toContain("route('audit.building.attachments.destroy'")
+        ->toContain("route('audit.housing-unit.attachments.store'")
+        ->toContain("route('audit.housing-unit.attachments.replace'")
+        ->toContain("route('audit.housing-unit.attachments.destroy'")
+        ->toContain('building_columns[]')
+        ->toContain('housing_columns[]')
+        ->toContain('toggle_select_column')
+        ->toContain('const selectColumn = table.column(0)')
+        ->toContain('visible: false')
+        ->toContain('$isFieldEngineerAudit')
+        ->toContain("route('audit.fieldEngineer')");
+
+    expect($controller)
+        ->toContain('show_all_notes')
+        ->toContain('buildingAttachments')
+        ->toContain('buildingHousingUnitAttachments')
+        ->toContain('housingUnitAttachmentTitle')
+        ->toContain('storeBuildingAttachment')
+        ->toContain('replaceBuildingAttachment')
+        ->toContain('destroyBuildingAttachment')
+        ->toContain('storeHousingUnitAttachment')
+        ->toContain('replaceHousingUnitAttachment')
+        ->toContain('destroyHousingUnitAttachment')
+        ->toContain('ArcgisAttachmentBackupService')
+        ->toContain('backupBuildingAttachment($building, $attachmentId, \'replace\'')
+        ->toContain('backupBuildingAttachment($building, $attachmentId, \'delete\'')
+        ->toContain('backupHousingUnitAttachment($housingUnit, $attachmentId, \'replace\'')
+        ->toContain('backupHousingUnitAttachment($housingUnit, $attachmentId, \'delete\'');
+
+    expect($dashboardController)
+        ->toContain("\$record['submission_date'] = \$model->end")
+        ->toContain("\$record['submition_date'] = \$model->end")
+        ->toContain("'building_name' => 'اسم المبنى'")
+        ->toContain("'scorite_area' => 'مساحة الصاج'")
+        ->toContain("'comments_recommendations' => 'ملاحظات المهندس'");
+
+    expect($exportService)
+        ->toContain('public function buildingColumns(): array')
+        ->toContain('public function housingColumns(): array')
+        ->toContain("'governorate' =>")
+        ->toContain("'municipality' =>")
+        ->toContain("'neighborhood' =>")
+        ->toContain('building_status_notes')
+        ->toContain('housing_status_notes');
+});
+
+test('dashboard primary building and housing cards show obstacles without duplicate assessment blocked rows', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/dashboard/damageAssessment.blade.php');
+
+    $assessedBuildingCard = substr(
+        $view,
+        strpos($view, "__('ui.damage_dashboard.assessed_buildings')"),
+        strpos($view, "__('ui.damage_dashboard.buildings_not_assessed')") - strpos($view, "__('ui.damage_dashboard.assessed_buildings')")
+    );
+
+    $firstHousingTotal = strpos($view, "__('ui.damage_dashboard.total_housing_units')");
+    $secondHousingTotal = strpos($view, "__('ui.damage_dashboard.total_housing_units')", $firstHousingTotal + 1);
+    $housingCard = substr($view, $firstHousingTotal, $secondHousingTotal - $firstHousingTotal);
+
+    expect($assessedBuildingCard)
+        ->toContain("\$dashboardStatLinks['buildings']['assessment_blocked']")
+        ->toContain("\$buildingStats['assessment_obstacle'] ?? 0")
+        ->not->toContain("\$dashboardStatLinks['buildings']['unclassified']")
+        ->not->toContain("\$buildingStats['unclassified'] ?? 0");
+
+    expect($housingCard)
+        ->toContain("\$dashboardStatLinks['housing']['assessment_blocked']")
+        ->toContain("\$unitStats['security_unsafe'] ?? 0")
+        ->not->toContain("\$dashboardStatLinks['housing']['unclassified']")
+        ->not->toContain("\$unitStats['unclassified']");
+
+    $arabicUi = require dirname(__DIR__, 5).'/lang/ar/ui.php';
+
+    expect($arabicUi['damage_dashboard']['assessment_blocked'])->toBe('يوجد عائق');
+});
+
+test('assessment status actions are limited to the matching audit role', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/assessmentAudit.blade.php');
+    $controller = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/app/Http/Controllers/Audit/auditController.php');
+
+    expect($view)
+        ->toContain('function setAssessmentActiveStatusButtons')
+        ->toContain("let currentHousingFilter = 'answered';")
+        ->toContain("let currentBuildingFilter = 'answered';")
+        ->toContain('function syncDefaultAuditFilters')
+        ->toContain("\$('.building-filter-btn[data-filter=\"answered\"]').addClass('is-active')")
+        ->toContain("\$('.housing-filter-btn[data-filter=\"answered\"]').addClass('is-active')")
+        ->toContain("button.hasClass('is-active')")
+        ->toContain("setAssessmentActiveStatusButtons('.building-status-btn', buildingEngineeringStatus, buildingLegalStatus, buildingCurrentStatus)")
+        ->toContain("setAssessmentActiveStatusButtons('.housing-status-btn', row.current_engineering_status, row.current_legal_status, row.current_status)")
+        ->toContain('function keepAttachmentRowsVisible')
+        ->toContain("return name === 'attachments' || section === 'المرفقات' || section === 'attachments'")
+        ->not->toContain("name.includes('photo')")
+        ->not->toContain("name.includes('image')")
+        ->not->toContain("name.includes('attachment')")
+        ->not->toContain("name.includes('comments')")
+        ->toContain('return pinnedAttachmentRows.concat(filteredRows.filter(row => !pinnedRows.has(row)))')
+        ->toContain('rows = keepAttachmentRowsVisible(lastBuildingRows, rows)')
+        ->toContain('rows = keepAttachmentRowsVisible(lastHousingRows, rows)')
+        ->not->toContain('$canSetLegalStatus')
+        ->not->toContain('$canSetEngineeringStatus')
+        ->not->toContain('@disabled(! $canSetLegalStatus)')
+        ->not->toContain('@disabled(! $canSetEngineeringStatus)')
+        ->not->toContain('@elseif($canViewStatusButtons)')
+        ->not->toContain('canEnableStatusButton')
+        ->not->toContain("@hasanyrole('Legal Auditor|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')")
+        ->not->toContain("@hasanyrole('QC/QA Engineer|Database Officer|Auditing Supervisor|Team Leader|Field Engineer|field Engineer')");
+
+    expect($controller)
+        ->toContain("\$request->audit_type === 'Legal Auditor' && \$user->hasRole('Legal Auditor')")
+        ->toContain("\$request->audit_type === 'QC/QA Engineer' && \$user->hasAnyRole(['QC/QA Engineer', 'Engineering Auditor'])")
+        ->toContain('private function auditTypeCanSetStatus(string $type, string $status): bool')
+        ->toContain('private function canSetAssessmentStatusForBuilding(?User $user, ?Building $building, string $type): bool')
+        ->toContain('You cannot set this status unless this assessment type is assigned to you.')
+        ->toContain("->where('type', \$type)")
+        ->toContain("'fully_damaged2'")
+        ->toContain("'floor_number',\n            'objectid',\n            'external_finishing_of_the_unit'")
+        ->toContain("'is_the_housing_unit_or_living_habitable' => 'هل الوحدة مناسبة للسكن'")
+        ->toContain("'Legal Auditor' => in_array(\$status, ['accepted', 'legal_notes'], true)")
+        ->toContain("'QC/QA Engineer' => in_array(\$status, ['accepted', 'rejected', 'need_review'], true)");
+});
+
+test('assessment audit inline edits resolve missing global ids before saving', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/assessmentAudit.blade.php');
+
+    expect($view)
+        ->toContain('overflow: visible')
+        ->not->toContain('audit-sticky-menu .audit-sticky-menu')
+        ->toContain('function resolveInlineGlobalId')
+        ->toContain("type === 'building_table'")
+        ->toContain("type === 'housing_table'")
+        ->toContain('let isAssessmentReadOnly')
+        ->toContain('!isAreaManager && !isAssessmentReadOnly')
+        ->toContain("'building_name'")
+        ->toContain("'scorite_area'")
+        ->toContain("'comments_recommendations'")
+        ->toContain("comments_recommendations: 'ملاحظات المهندس'")
+        ->toContain('renderHousingSummaryItems(res.summary_items || [])')
+        ->not->toContain('function housingSummaryTitle(summaryMode)')
+        ->not->toContain('ملخص الوحدة في حالة نوع الضرر Partially')
+        ->not->toContain('ملخص الوحدة في حالة نوع الضرر Totally')
+        ->toContain('summary-value-long')
+        ->toContain('يرجى اختيار الوحدة أولاً');
+});

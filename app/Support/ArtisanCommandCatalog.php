@@ -133,7 +133,7 @@ class ArtisanCommandCatalog
         $fileName = $reflection->getFileName();
         $isAllowedRouteConsoleCommand = in_array($command->getName(), self::ALLOWED_ROUTE_CONSOLE_COMMANDS, true);
 
-        if (! $isAllowedRouteConsoleCommand && (! is_string($fileName) || ! str_starts_with($this->normalizePath($fileName), $this->commandsPath()))) {
+        if (! $isAllowedRouteConsoleCommand && (! is_string($fileName) || ! $this->isApplicationCommand($fileName))) {
             return null;
         }
 
@@ -374,9 +374,17 @@ class ArtisanCommandCatalog
         return '%DATE% %TIME%';
     }
 
-    private function commandsPath(): string
+    private function isApplicationCommand(string $fileName): bool
     {
-        return $this->normalizePath(app_path('Console/Commands')).'/';
+        $paths = [app_path('Console/Commands'), ...(glob(app_path('Modules/*/app/Console/Commands'), GLOB_ONLYDIR) ?: [])];
+
+        foreach ($paths as $path) {
+            if (str_starts_with($this->normalizePath($fileName), $this->normalizePath($path).'/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function normalizePath(string $path): string
