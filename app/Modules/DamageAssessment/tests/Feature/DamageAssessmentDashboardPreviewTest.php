@@ -86,6 +86,15 @@ it('uses the managed cards with live counts ordering links and expandable items'
     $response->assertSee('href="'.route('public-buildings.index').'?filters%5Bis_building_occupied%5D[]=yes"', false);
     $response->assertSee('href="'.route('public-buildings.index').'?with_units=1"', false);
     $response->assertSeeInOrder(['data-dashboard-item="custom_occupied"', '<details class="mt-3">', 'data-dashboard-item="occupied_buildings"'], false);
+    $document = new DOMDocument;
+    $previousErrorHandling = libxml_use_internal_errors(true);
+    $document->loadHTML($response->getContent());
+    libxml_clear_errors();
+    libxml_use_internal_errors($previousErrorHandling);
+    $xpath = new DOMXPath($document);
+    $previewCard = $xpath->query('//*[@data-dashboard-card="public_buildings"]//article[contains(concat(" ", normalize-space(@class), " "), " preview-summary-card ")]')->item(0);
+    expect($previewCard)->not->toBeNull();
+    expect($previewCard->getAttribute('style'))->toContain('--preview-card-color: '.$card->color);
 
     $card->update(['title' => 'عنوان محدث من الإدارة']);
     $this->get(route($routeName, $filters))->assertOk()->assertSee('عنوان محدث من الإدارة');
