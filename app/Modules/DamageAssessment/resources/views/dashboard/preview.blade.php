@@ -13,11 +13,7 @@
                 <span class="text-muted fs-7">مؤشرات القطاعات وبنودها، حسب إعدادات الإدارة والفلاتر المختارة.</span>
             </div>
         </header>
-        <section aria-labelledby="preview-live-heading">
-            <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-                <h2 id="preview-live-heading" class="fs-4 fw-bold mb-0">بطاقات لوحة التحكم</h2>
-            </div>
-            <p class="text-muted fs-7 mb-5">البطاقات والبنود المفعّلة حسب إعدادات الإدارة، وتُحسب أرقامها وفق الفلاتر التالية.</p>
+        <section aria-label="بطاقات لوحة التحكم">
             <form method="GET" action="{{ route(request()->route()->getName()) }}" class="card mb-5" aria-label="فلاتر البطاقات الفعلية">
                 <input type="hidden" name="period" value="all">
                 <div class="card-body p-5">

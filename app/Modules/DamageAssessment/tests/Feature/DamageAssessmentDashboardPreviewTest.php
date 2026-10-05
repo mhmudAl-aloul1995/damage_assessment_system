@@ -27,7 +27,8 @@ it('renders the official damage assessment dashboard with live GIS layers', func
         ->assertSee('لوحة متابعة تقييم الأضرار')->assertSee('خرائط GIS للقطاعات')
         ->assertSee('dashboard-preview.js')
         ->assertDontSee('معاينة Metronic')->assertDontSee('بيانات فعلية')
-        ->assertDontSee('خلفية البطاقات')->assertDontSee('DEMO-')->assertDontSee('مواقع افتراضية');
+        ->assertDontSee('خلفية البطاقات')->assertDontSee('البطاقات والبنود المفعّلة حسب إعدادات الإدارة')
+        ->assertDontSee('DEMO-')->assertDontSee('مواقع افتراضية');
     $document = new DOMDocument;
     $previousErrorHandling = libxml_use_internal_errors(true);
     $document->loadHTML($response->getContent());
