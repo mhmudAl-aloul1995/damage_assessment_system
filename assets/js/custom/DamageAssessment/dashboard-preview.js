@@ -67,6 +67,235 @@ export function createDamageRenderer(geometryType, field) {
     };
 }
 
+function hexToRgb(color) {
+    const value = String(color || '').trim();
+    const hex = value.match(/^#?([0-9a-f]{6})$/i);
+    if (hex) {
+        const number = Number.parseInt(hex[1], 16);
+        return [(number >> 16) & 255, (number >> 8) & 255, number & 255];
+    }
+    const rgb = value.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/i);
+    return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : [49, 95, 114];
+}
+
+function rgbToCss(rgb) {
+    return 'rgb(' + rgb.map(value => Math.max(0, Math.min(255, Math.round(value)))).join(', ') + ')';
+}
+
+function mixWithWhite(color, amount) {
+    const rgb = hexToRgb(color);
+    return rgbToCss(rgb.map(value => value + ((255 - value) * amount)));
+}
+
+function drawRoundRect(context, x, y, width, height, radius, fillStyle, strokeStyle = null) {
+    context.beginPath();
+    context.moveTo(x + radius, y);
+    context.arcTo(x + width, y, x + width, y + height, radius);
+    context.arcTo(x + width, y + height, x, y + height, radius);
+    context.arcTo(x, y + height, x, y, radius);
+    context.arcTo(x, y, x + width, y, radius);
+    context.closePath();
+    context.fillStyle = fillStyle;
+    context.fill();
+    if (strokeStyle) {
+        context.strokeStyle = strokeStyle;
+        context.lineWidth = 2;
+        context.stroke();
+    }
+}
+
+function wrapRtlText(context, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return y;
+    let line = '';
+    let lines = 0;
+    for (let index = 0; index < words.length; index += 1) {
+        const testLine = line ? line + ' ' + words[index] : words[index];
+        if (context.measureText(testLine).width > maxWidth && line) {
+            lines += 1;
+            context.fillText(lines === maxLines && index < words.length ? line + '…' : line, x, y);
+            y += lineHeight;
+            line = words[index];
+            if (lines >= maxLines) return y;
+        } else {
+            line = testLine;
+        }
+    }
+    if (line && lines < maxLines) {
+        context.fillText(line, x, y);
+        y += lineHeight;
+    }
+    return y;
+}
+
+function pageFilterSummary(root) {
+    const selectedText = selector => {
+        const select = root.querySelector(selector);
+        return select?.selectedOptions?.[0]?.textContent?.trim() || '';
+    };
+    const inputValue = selector => root.querySelector(selector)?.value || '';
+    const from = inputValue('#cards-from-date');
+    const to = inputValue('#cards-to-date');
+    return [
+        'المحافظة: ' + (selectedText('#cards-governorate') || 'كل المحافظات'),
+        'الحي: ' + (selectedText('#cards-neighborhood') || 'كل الأحياء'),
+        'الفترة: ' + (from || to ? [from || 'البداية', to || 'اليوم'].join(' إلى ') : 'كل الفترات'),
+    ];
+}
+
+function collectExportCards(root) {
+    return [...root.querySelectorAll('[data-dashboard-card]')].map(wrapper => {
+        const article = wrapper.querySelector('.preview-summary-card');
+        const itemNodes = [...wrapper.querySelectorAll('[data-dashboard-item]')];
+        return {
+            color: article?.style.getPropertyValue('--preview-card-color') || '#315f72',
+            title: wrapper.querySelector('h3')?.textContent?.trim() || '',
+            total: wrapper.querySelector('[data-dashboard-total]')?.textContent?.trim() || '0',
+            subtitle: wrapper.querySelector('.card-body > p')?.textContent?.trim() || '',
+            items: itemNodes.map(item => ({
+                title: item.querySelector('.flex-grow-1')?.textContent?.trim() || '',
+                value: item.querySelector('[data-dashboard-item-value]')?.textContent?.trim() || '',
+            })).filter(item => item.title || item.value),
+        };
+    });
+}
+
+function exportFilename(now) {
+    return 'damage-assessment-dashboard-cards-' + now.toISOString().slice(0, 10) + '.png';
+}
+
+function buildDashboardCardsImage(root, now = new Date()) {
+    const cards = collectExportCards(root);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    const width = 1600;
+    const padding = 64;
+    const gap = 24;
+    const columns = cards.length <= 2 ? Math.max(cards.length, 1) : 3;
+    const cardWidth = (width - (padding * 2) - (gap * (columns - 1))) / columns;
+    const cardHeights = cards.map(card => Math.max(285, 188 + (card.items.length * 42)));
+    const rowHeights = [];
+    for (let index = 0; index < cards.length; index += columns) {
+        rowHeights.push(Math.max(...cardHeights.slice(index, index + columns)));
+    }
+    const height = Math.max(520, 250 + rowHeights.reduce((sum, rowHeight) => sum + rowHeight + gap, 0) + padding);
+    const scale = 2;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    context.scale(scale, scale);
+    context.direction = 'rtl';
+    context.textAlign = 'right';
+    context.fillStyle = '#f5f8fa';
+    context.fillRect(0, 0, width, height);
+    drawRoundRect(context, padding - 18, 44, width - ((padding - 18) * 2), height - 88, 18, '#ffffff', '#e4e6ef');
+    context.fillStyle = '#1f2937';
+    context.font = '700 34px Arial, sans-serif';
+    context.fillText('لوحة متابعة تقييم الأضرار', width - padding, 104);
+    context.font = '600 19px Arial, sans-serif';
+    context.fillStyle = '#5e6278';
+    context.fillText('المجلس الفلسطيني للإسكان | تصدير بطاقات لوحة التحكم', width - padding, 140);
+    context.textAlign = 'left';
+    context.font = '500 17px Arial, sans-serif';
+    context.fillStyle = '#7e8299';
+    context.fillText(now.toLocaleString('ar', {dateStyle: 'medium', timeStyle: 'short'}), padding, 114);
+    context.textAlign = 'right';
+    context.font = '600 18px Arial, sans-serif';
+    const filters = pageFilterSummary(root);
+    filters.forEach((filter, index) => {
+        const chipWidth = Math.max(245, context.measureText(filter).width + 42);
+        const x = width - padding - (index * 285);
+        drawRoundRect(context, x - chipWidth, 166, chipWidth, 42, 21, '#f1f4f7', '#e4e6ef');
+        context.fillStyle = '#3f4254';
+        context.fillText(filter, x - 20, 193);
+    });
+    if (!cards.length) {
+        context.font = '700 26px Arial, sans-serif';
+        context.fillStyle = '#7e8299';
+        context.textAlign = 'center';
+        context.fillText('لا توجد بطاقات مفعّلة لعرضها.', width / 2, 310);
+        return {dataUrl: canvas.toDataURL('image/png'), fileName: exportFilename(now)};
+    }
+    let y = 236;
+    cards.forEach((card, index) => {
+        const row = Math.floor(index / columns);
+        const column = index % columns;
+        if (column === 0 && index > 0) y += rowHeights[row - 1] + gap;
+        const x = width - padding - ((column + 1) * cardWidth) - (column * gap);
+        const cardHeight = rowHeights[row];
+        const color = card.color || '#315f72';
+        drawRoundRect(context, x, y, cardWidth, cardHeight, 14, mixWithWhite(color, 0.87), mixWithWhite(color, 0.76));
+        drawRoundRect(context, x + cardWidth - 14, y, 14, cardHeight, 7, color);
+        context.fillStyle = color;
+        context.font = '700 22px Arial, sans-serif';
+        wrapRtlText(context, card.title, x + cardWidth - 34, y + 42, cardWidth - 68, 28, 2);
+        context.font = '800 46px Arial, sans-serif';
+        context.fillStyle = '#1f2937';
+        context.fillText(card.total, x + cardWidth - 34, y + 118);
+        context.font = '500 17px Arial, sans-serif';
+        context.fillStyle = '#6b7280';
+        wrapRtlText(context, card.subtitle, x + cardWidth - 34, y + 151, cardWidth - 68, 23, 2);
+        let itemY = y + 202;
+        context.font = '600 16px Arial, sans-serif';
+        card.items.forEach(item => {
+            context.strokeStyle = 'rgba(126, 130, 153, .23)';
+            context.beginPath();
+            context.moveTo(x + 30, itemY - 18);
+            context.lineTo(x + cardWidth - 34, itemY - 18);
+            context.stroke();
+            context.fillStyle = '#4b5563';
+            wrapRtlText(context, item.title, x + cardWidth - 34, itemY + 4, cardWidth - 150, 20, 1);
+            context.textAlign = 'left';
+            context.fillStyle = color;
+            context.fillText(item.value, x + 30, itemY + 4);
+            context.textAlign = 'right';
+            itemY += 42;
+        });
+    });
+    context.textAlign = 'center';
+    context.fillStyle = '#a1a5b7';
+    context.font = '500 15px Arial, sans-serif';
+    context.fillText('Damage Assessment System', width / 2, height - 42);
+    return {dataUrl: canvas.toDataURL('image/png'), fileName: exportFilename(now)};
+}
+
+function initializeCardsExport(root) {
+    const openButton = root.querySelector('[data-dashboard-export-open]');
+    const modalElement = document.getElementById('dashboard_cards_export_modal');
+    if (!openButton || !modalElement) return;
+    const preview = modalElement.querySelector('[data-dashboard-export-preview]');
+    const status = modalElement.querySelector('[data-dashboard-export-status]');
+    const download = modalElement.querySelector('[data-dashboard-export-download]');
+    const refresh = modalElement.querySelector('[data-dashboard-export-refresh]');
+    const modal = window.bootstrap?.Modal ? new window.bootstrap.Modal(modalElement) : null;
+    const render = () => {
+        status.textContent = 'جارٍ إنشاء صورة البطاقات…';
+        preview.classList.add('d-none');
+        download.classList.add('disabled');
+        download.setAttribute('aria-disabled', 'true');
+        window.requestAnimationFrame(() => {
+            try {
+                const image = buildDashboardCardsImage(root);
+                preview.src = image.dataUrl;
+                preview.classList.remove('d-none');
+                download.href = image.dataUrl;
+                download.download = image.fileName;
+                download.classList.remove('disabled');
+                download.setAttribute('aria-disabled', 'false');
+                status.textContent = 'الصورة جاهزة للتنزيل.';
+            } catch (error) {
+                status.textContent = 'تعذّر إنشاء صورة البطاقات. أعد المحاولة بعد تحديث الصفحة.';
+            }
+        });
+    };
+    openButton.addEventListener('click', () => {
+        modal?.show();
+        render();
+    });
+    refresh?.addEventListener('click', render);
+}
+
 let arcgisPromise;
 function loadArcgis() {
     if (arcgisPromise) return arcgisPromise;
@@ -209,5 +438,8 @@ async function initializeGis(root) {
 
 if (typeof document !== 'undefined') {
     const root = document.getElementById('damage-dashboard-preview');
-    if (root && document.getElementById('preview-gis-data')) initializeGis(root);
+    if (root) {
+        initializeCardsExport(root);
+        if (document.getElementById('preview-gis-data')) initializeGis(root);
+    }
 }

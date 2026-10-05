@@ -14,6 +14,12 @@
             </div>
         </header>
         <section aria-label="بطاقات لوحة التحكم">
+            <div class="d-flex justify-content-end mb-4">
+                <button type="button" class="btn btn-sm btn-light-primary" data-dashboard-export-open>
+                    <i class="ki-duotone ki-picture fs-4 me-1" aria-hidden="true"><span class="path1"></span><span class="path2"></span></i>
+                    تصدير البطاقات
+                </button>
+            </div>
             <form method="GET" action="{{ route(request()->route()->getName()) }}" class="card mb-5" aria-label="فلاتر البطاقات الفعلية">
                 <input type="hidden" name="period" value="all">
                 <div class="card-body p-5">
@@ -69,6 +75,29 @@
                 <noscript><div class="alert alert-warning mt-4">فعّل JavaScript لعرض خرائط GIS.</div></noscript>
             </div>
         </section>
+    </div>
+    <div class="modal fade" id="dashboard_cards_export_modal" tabindex="-1" aria-labelledby="dashboard_cards_export_title" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="dashboard_cards_export_title">تصدير البطاقات كصورة</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="bg-light rounded p-4 text-center">
+                        <img src="" alt="معاينة صورة البطاقات" class="img-fluid rounded shadow-sm d-none" data-dashboard-export-preview>
+                        <div class="text-muted fs-7" data-dashboard-export-status>اضغط تصدير البطاقات لإنشاء المعاينة.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">إغلاق</button>
+                    <button type="button" class="btn btn-light-primary" data-dashboard-export-refresh>تحديث المعاينة</button>
+                    <a href="#" class="btn btn-primary disabled" download="damage-assessment-dashboard-cards.png" data-dashboard-export-download aria-disabled="true">
+                        تنزيل PNG
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="application/json" id="preview-gis-data">@json($previewGis)</script>
 @endsection

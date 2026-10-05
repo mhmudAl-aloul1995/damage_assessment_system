@@ -25,6 +25,8 @@ it('renders the official damage assessment dashboard with live GIS layers', func
     $response = $this->actingAs(User::factory()->create())->get(route($routeName));
     $response->assertOk()->assertViewIs('damage-assessment::dashboard.preview')
         ->assertSee('لوحة متابعة تقييم الأضرار')->assertSee('خرائط GIS للقطاعات')
+        ->assertSee('تصدير البطاقات')->assertSee('dashboard_cards_export_modal', false)
+        ->assertSee('data-dashboard-export-download', false)
         ->assertSee('dashboard-preview.js')
         ->assertDontSee('معاينة Metronic')->assertDontSee('بيانات فعلية')
         ->assertDontSee('خلفية البطاقات')->assertDontSee('البطاقات والبنود المفعّلة حسب إعدادات الإدارة')
