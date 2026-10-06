@@ -351,6 +351,58 @@ test('it filters data exports by the selected phase payload', function () {
     }
 });
 
+test('it exports a building once when filtering by a shared building field without housing columns', function () {
+    $user = User::factory()->create();
+
+    Building::query()->create([
+        'objectid' => 2151,
+        'globalid' => 'shared-neighborhood-building',
+        'neighborhood' => 'Rimal',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 2152,
+        'globalid' => 'shared-neighborhood-unit-one',
+        'parentglobalid' => 'shared-neighborhood-building',
+    ]);
+
+    HousingUnit::query()->create([
+        'objectid' => 2153,
+        'globalid' => 'shared-neighborhood-unit-two',
+        'parentglobalid' => 'shared-neighborhood-building',
+    ]);
+
+    $export = Export::query()->create([
+        'status' => 'pending',
+        'filters' => json_encode([
+            'building_columns' => ['objectid', 'neighborhood'],
+            'housing_columns' => [],
+            'filters' => [
+                'neighborhood' => ['Rimal'],
+            ],
+        ], JSON_UNESCAPED_UNICODE),
+        'user_id' => $user->id,
+        'progress' => 0,
+        'processed' => 0,
+        'file_name' => null,
+    ]);
+
+    try {
+        (new ExportDataJob($export->id))->handle();
+
+        $export->refresh();
+
+        expect($export->status)->toBe('done')
+            ->and($export->processed)->toBe(1);
+    } finally {
+        $export->refresh();
+
+        if ($export->file_name && is_file(storage_path('app/public/'.$export->file_name))) {
+            unlink(storage_path('app/public/'.$export->file_name));
+        }
+    }
+});
+
 test('it includes buildings archived from technical committee decisions when exporting committee filtered data', function () {
     $user = User::factory()->create();
 

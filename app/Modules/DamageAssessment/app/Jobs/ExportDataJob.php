@@ -109,7 +109,10 @@ class ExportDataJob implements ShouldQueue
             $needsHousingJoin = ! empty($housingColumns)
                 || (! empty($importedObjectIds) && $importedObjectIdTarget === 'housing_unit')
                 || collect(array_keys((array) $filters))
-                    ->contains(fn (string $field): bool => ExportDataColumns::hasColumn($housingUnitsSource, $field));
+                    ->contains(
+                        fn (string $field): bool => ! ExportDataColumns::hasColumn($buildingsSource, $field)
+                            && ExportDataColumns::hasColumn($housingUnitsSource, $field),
+                    );
             $needsFamily = ! is_null($familyMembersFrom) || ! is_null($familyMembersTo);
             $paginateByHousing = $needsHousingJoin;
             $committeeArchiveFilter = app(CommitteeReviewArchiveFilter::class);
