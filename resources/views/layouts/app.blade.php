@@ -1782,6 +1782,251 @@
 		})(jQuery);
 	</script>
 
+	<script>
+		(function ($) {
+			'use strict';
+
+			if (!window.jQuery || !window.flatpickr) {
+				return;
+			}
+
+			const flatpickrLocale = document.documentElement.lang === 'ar' && flatpickr.l10ns.ar
+				? flatpickr.l10ns.ar
+				: undefined;
+
+			const flatpickrOptions = function (overrides) {
+				return Object.assign({
+					dateFormat: 'Y-m-d',
+					allowInput: true,
+					disableMobile: true,
+					locale: flatpickrLocale,
+				}, overrides || {});
+			};
+
+			const dateRangeKey = function (input) {
+				const value = (input.id || input.name || '').toLowerCase();
+				const match = value.match(/(?:^|[_[\]-])(from|to)(?=$|[_[\]-])/i);
+
+				if (!match) {
+					return null;
+				}
+
+				return {
+					key: value.replace(/((?:^|[_[\]-]))(from|to)(?=(?:$|[_[\]-]))/gi, '$1range'),
+					part: match[1].toLowerCase(),
+				};
+			};
+
+			const isExistingDateRange = function (input) {
+				const marker = [input.id, input.name, input.className].filter(Boolean).join(' ');
+
+				return input.dataset.globalDateRange === 'true'
+					|| /date[_-]?range|daterange/i.test(marker);
+			};
+
+			const fieldContainer = function (input) {
+				return input.closest('[class*="col-"], .fv-row, .form-group') || input.parentElement;
+			};
+
+			const updateHiddenDateRange = function (rangeInput, selectedDates, instance) {
+				const fromInput = document.getElementById(rangeInput.dataset.fromInput);
+				const toInput = document.getElementById(rangeInput.dataset.toInput);
+				const dates = selectedDates.slice(0, 2);
+
+				if (!fromInput || !toInput) {
+					return;
+				}
+
+				fromInput.value = dates[0] ? instance.formatDate(dates[0], 'Y-m-d') : '';
+				toInput.value = dates[1] ? instance.formatDate(dates[1], 'Y-m-d') : '';
+
+				fromInput.dispatchEvent(new Event('change', { bubbles: true }));
+				toInput.dispatchEvent(new Event('change', { bubbles: true }));
+			};
+
+			const syncDateRangeInput = function (rangeInput) {
+				const fromInput = document.getElementById(rangeInput.dataset.fromInput);
+				const toInput = document.getElementById(rangeInput.dataset.toInput);
+
+				if (!fromInput || !toInput || !rangeInput._flatpickr) {
+					return;
+				}
+
+				const dates = [fromInput.value, toInput.value].filter(Boolean);
+
+				rangeInput._flatpickr.setDate(dates, false);
+			};
+
+			const initializeDateRangePairs = function () {
+				const groups = new Map();
+				let generatedId = 0;
+
+				document.querySelectorAll('input:not([type="hidden"])').forEach(function (input) {
+					if (input.dataset.dateRangeHidden || isExistingDateRange(input)) {
+						return;
+					}
+
+					const metadata = dateRangeKey(input);
+
+					if (!metadata) {
+						return;
+					}
+
+					if (!groups.has(metadata.key)) {
+						groups.set(metadata.key, { from: [], to: [] });
+					}
+
+					groups.get(metadata.key)[metadata.part].push(input);
+				});
+
+				groups.forEach(function (group) {
+					if (group.from.length !== 1 || group.to.length !== 1) {
+						return;
+					}
+
+					const fromInput = group.from[0];
+					const toInput = group.to[0];
+
+					if (!fromInput.id) {
+						fromInput.id = `global_date_range_from_${generatedId}`;
+					}
+
+					if (!toInput.id) {
+						toInput.id = `global_date_range_to_${generatedId}`;
+					}
+
+					generatedId++;
+
+					const rangeInput = document.createElement('input');
+					rangeInput.type = 'text';
+					rangeInput.id = `${fromInput.id}_range`;
+					rangeInput.className = fromInput.className.replace(/flatpickr-input/g, '').trim();
+					rangeInput.classList.add('date-range-picker');
+					rangeInput.dataset.globalDateRange = 'true';
+					rangeInput.dataset.fromInput = fromInput.id;
+					rangeInput.dataset.toInput = toInput.id;
+					rangeInput.placeholder = document.documentElement.lang === 'ar'
+						? 'من تاريخ إلى تاريخ'
+						: 'From date to date';
+
+					fromInput.parentElement.insertBefore(rangeInput, fromInput);
+					fromInput.dataset.dateRangeHidden = 'from';
+					toInput.dataset.dateRangeHidden = 'to';
+					fromInput.type = 'hidden';
+					toInput.type = 'hidden';
+					fromInput.classList.remove('flatpickr-input');
+					toInput.classList.remove('flatpickr-input');
+
+					const toContainer = fieldContainer(toInput);
+					const fromContainer = fieldContainer(fromInput);
+					const fromLabel = fromContainer?.querySelector('label');
+
+					if (fromLabel) {
+						fromLabel.textContent = document.documentElement.lang === 'ar' ? 'نطاق التاريخ' : 'Date range';
+					}
+
+					if (toContainer && toContainer !== fromContainer) {
+						toContainer.hidden = true;
+						toContainer.dataset.globalDateRangeHidden = 'true';
+					}
+
+					flatpickr(rangeInput, flatpickrOptions({
+						mode: 'range',
+						defaultDate: [fromInput.value, toInput.value].filter(Boolean),
+						onChange: function (selectedDates, dateString, instance) {
+							updateHiddenDateRange(rangeInput, selectedDates, instance);
+						},
+					}));
+				});
+			};
+
+			const initializeSingleDatePickers = function (root) {
+				const selector = 'input[type="date"], input[data-flatpickr], input.flatpickr-input, input[class*="datepicker"], input[class*="date-picker"]';
+				const inputs = root.matches && root.matches(selector)
+					? [root]
+					: Array.from(root.querySelectorAll ? root.querySelectorAll(selector) : []);
+
+				inputs.forEach(function (input) {
+					if (input.dataset.dateRangeHidden || input.dataset.flatpickrGlobal === 'true' || isExistingDateRange(input) || input._flatpickr) {
+						return;
+					}
+
+					flatpickr(input, flatpickrOptions());
+					input.dataset.flatpickrGlobal = 'true';
+				});
+			};
+
+			const syncDateRanges = function () {
+				document.querySelectorAll('[data-global-date-range="true"]').forEach(syncDateRangeInput);
+		};
+
+			if ($.fn.daterangepicker) {
+				$.fn.daterangepicker = function (options, callback) {
+					return this.each(function () {
+						const element = this;
+						const toDate = function (value) {
+							if (!value) {
+								return null;
+							}
+
+							if (typeof value.toDate === 'function' && (!value.isValid || value.isValid())) {
+								return value.toDate();
+							}
+
+							return value;
+						};
+
+						flatpickr(element, flatpickrOptions({
+							mode: 'range',
+							defaultDate: [toDate(options?.startDate), toDate(options?.endDate)].filter(Boolean),
+							onChange: function (selectedDates, dateString, instance) {
+								if (selectedDates.length < 2 || !callback) {
+									return;
+								}
+
+								callback(moment(selectedDates[0]), moment(selectedDates[1]));
+							},
+						}));
+					});
+				};
+			}
+
+			window.initializeDateControls = function (root) {
+				initializeDateRangePairs();
+				initializeSingleDatePickers(root || document);
+			};
+
+			initializeDateRangePairs();
+
+			$(function () {
+				initializeSingleDatePickers(document);
+				syncDateRanges();
+			});
+
+			document.addEventListener('click', function () {
+				window.setTimeout(syncDateRanges, 0);
+			}, true);
+
+			document.addEventListener('reset', function () {
+				window.setTimeout(syncDateRanges, 0);
+			}, true);
+
+			if (window.MutationObserver && document.body) {
+				const observer = new MutationObserver(function (mutations) {
+					mutations.forEach(function (mutation) {
+						mutation.addedNodes.forEach(function (node) {
+							if (node.nodeType === Node.ELEMENT_NODE) {
+								window.initializeDateControls(node);
+							}
+						});
+					});
+				});
+
+				observer.observe(document.body, { childList: true, subtree: true });
+			}
+		})(jQuery);
+	</script>
+
 
 	<script>
 
