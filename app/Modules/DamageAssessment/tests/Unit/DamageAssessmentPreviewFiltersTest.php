@@ -7,15 +7,16 @@ it('filters live GIS layers safely and renders their actual geometry types', fun
 import assert from 'node:assert/strict';
 import { buildGisWhere, resolveGisField, createDamageRenderer } from './assets/js/custom/DamageAssessment/dashboard-preview.js';
 const fields = [
-    {name:'Governorate',type:'string'}, {name:'Neighborhood',type:'string'},
+    {name:'Governorate',type:'string'}, {name:'Municipalitie',type:'string'}, {name:'Neighborhood',type:'string'},
     {name:'end',type:'date'}, {name:'CreationDate',type:'date'},
 ];
 assert.equal(resolveGisField(fields,'governorate').name,'Governorate');
+assert.equal(buildGisWhere([{name:'unit_municipalitie',type:'string'}],{municipalitie:'Gaza'},'end','OBJECTID'), '"unit_municipalitie" = \'Gaza\'');
 assert.equal(buildGisWhere(fields,{},'end','OBJECTID'), '1=1');
 assert.equal(buildGisWhere(fields,{},'end','OBJECTID',[]), '1=0');
 assert.equal(buildGisWhere(fields,{},'end','OBJECTID',[2,2,3,'1 OR 1=1']), '("OBJECTID" IN (2,3))');
-const where = buildGisWhere(fields,{governorate:"Gaza's",neighborhood:'Rimal',from:'2026-09-01',to:'2026-09-30'},'end','OBJECTID');
-assert.equal(where, '"Governorate" = \'Gaza\'\'s\' AND "Neighborhood" = \'Rimal\' AND "end" >= TIMESTAMP \'2026-09-01 00:00:00\' AND "end" < TIMESTAMP \'2026-10-01 00:00:00\'');
+const where = buildGisWhere(fields,{governorate:"Gaza's",municipalitie:'Gaza',neighborhood:'Rimal',from:'2026-09-01',to:'2026-09-30'},'end','OBJECTID');
+assert.equal(where, '"Governorate" = \'Gaza\'\'s\' AND "Municipalitie" = \'Gaza\' AND "Neighborhood" = \'Rimal\' AND "end" >= TIMESTAMP \'2026-09-01 00:00:00\' AND "end" < TIMESTAMP \'2026-10-01 00:00:00\'');
 assert.match(buildGisWhere(fields,{to:'2024-02-29'},'creationdate','OBJECTID'), /2024-03-01/);
 assert.throws(()=>buildGisWhere(fields,{from:'2026-02-30'},'end','OBJECTID'));
 assert.throws(()=>buildGisWhere(fields,{from:'2026-09-02',to:'2026-09-01'},'end','OBJECTID'));

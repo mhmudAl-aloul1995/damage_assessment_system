@@ -26,6 +26,8 @@ it('renders the official damage assessment dashboard with live GIS layers', func
     $response->assertOk()->assertViewIs('damage-assessment::dashboard.preview')
         ->assertSee('لوحة متابعة تقييم الأضرار')->assertSee('خرائط GIS للقطاعات')
         ->assertSee('تصدير البطاقات')->assertSee('dashboard_cards_export_modal', false)
+        ->assertSee('id="cards-municipality"', false)
+        ->assertSee('class="damage-dashboard-filter-row"', false)
         ->assertSee('data-dashboard-export-download', false)
         ->assertSee('dashboard-preview.js')
         ->assertDontSee('معاينة Metronic')->assertDontSee('بيانات فعلية')
@@ -152,8 +154,8 @@ it('scopes GIS features to the selected phase and passes the active filters', fu
     }
     $user = User::factory()->create(['allowed_phase_numbers' => [2], 'default_phase_number' => 2]);
     $response = $this->actingAs($user)->get(route('damageAssessment.preview', [
-        'governorate' => 'Gaza', 'neighborhood' => 'Rimal', 'from_date' => '2026-09-01', 'to_date' => '2026-09-30',
+        'governorate' => 'Gaza', 'municipalitie' => 'Gaza Municipality', 'neighborhood' => 'Rimal', 'from_date' => '2026-09-01', 'to_date' => '2026-09-30',
     ]))->assertOk();
     expect($response['previewGis']['sectors']['public']['scopeObjectIds'])->toBe([9002]);
-    expect($response['previewGis']['filters'])->toBe(['governorate' => 'Gaza', 'neighborhood' => 'Rimal', 'from' => '2026-09-01', 'to' => '2026-09-30']);
+    expect($response['previewGis']['filters'])->toBe(['governorate' => 'Gaza', 'municipalitie' => 'Gaza Municipality', 'neighborhood' => 'Rimal', 'from' => '2026-09-01', 'to' => '2026-09-30']);
 });

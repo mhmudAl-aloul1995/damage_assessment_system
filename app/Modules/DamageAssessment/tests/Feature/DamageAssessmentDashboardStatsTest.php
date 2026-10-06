@@ -1117,7 +1117,7 @@ it('uses target cached building statistics after audit edits are refreshed', fun
         });
 });
 
-it('filters the main dashboard statistics by governorate', function () {
+it('filters the main dashboard statistics by governorate and municipality', function () {
     $user = User::factory()->create();
 
     $this->app->instance(ArcgisService::class, new class extends ArcgisService
@@ -1134,6 +1134,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
         'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza City',
     ]);
 
     Building::query()->create([
@@ -1142,6 +1143,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'partially_damaged',
         'governorate' => 'North Gaza',
+        'municipalitie' => 'Jabalia',
     ]);
 
     HousingUnit::query()->create([
@@ -1149,6 +1151,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'globalid' => 'gaza-unit',
         'unit_damage_status' => 'fully_damaged2',
         'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza City',
         'building_field_status' => 'COMPLETED',
     ]);
 
@@ -1157,6 +1160,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'globalid' => 'north-unit',
         'unit_damage_status' => 'partially_damaged2',
         'governorate' => 'North Gaza',
+        'municipalitie' => 'Jabalia',
         'building_field_status' => 'COMPLETED',
     ]);
 
@@ -1166,6 +1170,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
         'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza City',
     ]);
 
     PublicBuildingSurvey::query()->create([
@@ -1174,6 +1179,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'field_status' => 'COMPLETED',
         'building_damage_status' => 'fully_damaged',
         'governorate' => 'North Gaza',
+        'municipalitie' => 'Jabalia',
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -1182,6 +1188,7 @@ it('filters the main dashboard statistics by governorate', function () {
         'field_status' => 'COMPLETED',
         'road_damage_level' => 'severe',
         'governorate' => 'Gaza',
+        'municipalitie' => 'Gaza City',
     ]);
 
     RoadFacilitySurvey::query()->create([
@@ -1190,12 +1197,14 @@ it('filters the main dashboard statistics by governorate', function () {
         'field_status' => 'COMPLETED',
         'road_damage_level' => 'severe',
         'governorate' => 'North Gaza',
+        'municipalitie' => 'Jabalia',
     ]);
 
     $this->actingAs($user)
-        ->get(route('damageAssessment.index', ['governorate' => 'Gaza']))
+        ->get(route('damageAssessment.index', ['governorate' => 'Gaza', 'municipalitie' => 'Gaza City']))
         ->assertOk()
-        ->assertViewHas('dashboardFilters', fn (array $filters): bool => $filters['selectedGovernorate'] === 'Gaza')
+        ->assertViewHas('dashboardFilters', fn (array $filters): bool => $filters['selectedGovernorate'] === 'Gaza'
+            && $filters['selectedMunicipality'] === 'Gaza City')
         ->assertViewHas('buildingStats', function (array $buildingStats): bool {
             return (int) $buildingStats['completed'] === 1
                 && (int) $buildingStats['fully_damaged'] === 1

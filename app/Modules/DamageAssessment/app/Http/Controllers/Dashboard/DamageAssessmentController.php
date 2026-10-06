@@ -145,6 +145,7 @@ class DamageAssessmentController extends Controller
             'error' => $error,
             'filters' => [
                 'governorate' => (string) $request->string('governorate'),
+                'municipalitie' => (string) $request->string('municipalitie'),
                 'neighborhood' => (string) $request->string('neighborhood'),
                 'from' => $from,
                 'to' => $to,
@@ -161,6 +162,9 @@ class DamageAssessmentController extends Controller
             : '';
         $selectedGovernorate = $request->filled('governorate')
             ? (string) $request->string('governorate')
+            : '';
+        $selectedMunicipality = $request->filled('municipalitie')
+            ? (string) $request->string('municipalitie')
             : '';
 
         ['buildingStats' => $buildingStats, 'unitStats' => $unitStats] = $this->cachedDashboardCoreStats($request);
@@ -342,8 +346,9 @@ class DamageAssessmentController extends Controller
                 ->count(),
         ];
         $governorates = $this->dashboardGovernorates();
+        $municipalities = $this->dashboardMunicipalities();
         $neighborhoods = $this->dashboardNeighborhoods();
-        $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedNeighborhood');
+        $dashboardFilters = compact('period', 'startDate', 'endDate', 'selectedGovernorate', 'selectedMunicipality', 'selectedNeighborhood');
         $isCsoOfficerDashboard = $this->isCsoOfficerOnly($request->user());
         $dashboardCards = $this->dashboardCards($request);
         $dashboardCardItemValues = $this->dashboardCardItemValues($dashboardCards, $request);
@@ -353,7 +358,7 @@ class DamageAssessmentController extends Controller
         return compact(
             'unitStats', 'buildingStats', 'publicBuildingStats', 'roadFacilityStats',
             'csoSurveyStats', 'csoOrganizationStats', 'csoUnitStats',
-            'governorates', 'neighborhoods', 'dashboardFilters', 'dashboardCards',
+            'governorates', 'municipalities', 'neighborhoods', 'dashboardFilters', 'dashboardCards',
             'dashboardCardItemValues', 'isCsoOfficerDashboard', 'dashboardStatLinks',
         );
     }
@@ -2734,6 +2739,20 @@ class DamageAssessmentController extends Controller
             ->values();
     }
 
+    private function dashboardMunicipalities(): Collection
+    {
+        return collect()
+            ->merge(Building::query()->whereNotNull('municipalitie')->where('municipalitie', '!=', '')->distinct()->pluck('municipalitie'))
+            ->merge(HousingUnit::query()->whereNotNull('municipalitie')->where('municipalitie', '!=', '')->distinct()->pluck('municipalitie'))
+            ->merge(PublicBuildingSurvey::query()->whereNotNull('municipalitie')->where('municipalitie', '!=', '')->distinct()->pluck('municipalitie'))
+            ->merge(RoadFacilitySurvey::query()->whereNotNull('municipalitie')->where('municipalitie', '!=', '')->distinct()->pluck('municipalitie'))
+            ->merge(CsoSurvey::query()->whereNotNull('municipalitie')->where('municipalitie', '!=', '')->distinct()->pluck('municipalitie'))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
     private function dashboardDateRange(Request $request): array
     {
         $requestedPeriod = (string) $request->string('period');
@@ -2866,6 +2885,10 @@ class DamageAssessmentController extends Controller
             $query->where('governorate', (string) $request->string('governorate'));
         }
 
+        if ($request->filled('municipalitie')) {
+            $query->where('municipalitie', (string) $request->string('municipalitie'));
+        }
+
         if ($request->filled('neighborhood')) {
             $query->whereIn('parentglobalid', Building::query()
                 ->select('globalid')
@@ -2883,6 +2906,10 @@ class DamageAssessmentController extends Controller
 
         if ($request->filled('governorate')) {
             $query->where('housing_units.governorate', (string) $request->string('governorate'));
+        }
+
+        if ($request->filled('municipalitie')) {
+            $query->where('housing_units.municipalitie', (string) $request->string('municipalitie'));
         }
 
         if ($startDate !== null && $endDate !== null) {
@@ -2917,6 +2944,10 @@ class DamageAssessmentController extends Controller
 
         if ($request->filled('governorate')) {
             $query->where($tablePrefix.'governorate', (string) $request->string('governorate'));
+        }
+
+        if ($request->filled('municipalitie')) {
+            $query->where($tablePrefix.'municipalitie', (string) $request->string('municipalitie'));
         }
 
         if ($startDate !== null) {

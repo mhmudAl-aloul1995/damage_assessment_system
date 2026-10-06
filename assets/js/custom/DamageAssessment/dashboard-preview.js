@@ -8,9 +8,14 @@ export function buildGisWhere(fields, filters, dateFieldName, objectIdField, sco
         if (!/^[a-z_][a-z0-9_]*$/i.test(name)) throw new Error('حقل GIS غير صالح.');
         return '"' + name + '"';
     };
-    for (const [key, label] of [['governorate', 'المحافظة'], ['neighborhood', 'الحي']]) {
+    const locationFields = {
+        governorate: ['governorate', 'unit_governorate'],
+        municipalitie: ['municipalitie', 'unit_municipalitie'],
+        neighborhood: ['neighborhood', 'unit_neighborhood'],
+    };
+    for (const [key, label] of [['governorate', 'المحافظة'], ['municipalitie', 'البلدية'], ['neighborhood', 'الحي']]) {
         if (!filters[key]) continue;
-        const field = resolveGisField(fields, key);
+        const field = locationFields[key].map(name => resolveGisField(fields, name)).find(Boolean);
         if (!field) throw new Error('طبقة GIS لا تدعم فلتر ' + label + ' المختار.');
         clauses.push(identifier(field.name) + " = '" + String(filters[key]).replace(/'/g, "''") + "'");
     }
@@ -138,6 +143,7 @@ function pageFilterSummary(root) {
     const to = inputValue('#cards-to-date');
     return [
         'المحافظة: ' + (selectedText('#cards-governorate') || 'كل المحافظات'),
+        'البلدية: ' + (selectedText('#cards-municipality') || 'كل البلديات'),
         'الحي: ' + (selectedText('#cards-neighborhood') || 'كل الأحياء'),
         'الفترة: ' + (from || to ? [from || 'البداية', to || 'اليوم'].join(' إلى ') : 'كل الفترات'),
     ];
