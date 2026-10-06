@@ -458,7 +458,7 @@ $(document).ready(function () {
                                 ${escapeHtml(optionUi.label)}
                                 <code class="ms-2" dir="ltr">--${escapeHtml(option.name)}</code>
                             </label>
-                            <select class="form-select" name="option:${escapeHtml(option.name)}">
+                            <select class="form-select" data-control="select2" name="option:${escapeHtml(option.name)}">
                                 <option value="">${escapeHtml(@json(__('ui.artisan_commands.leave_empty')))}</option>
                                 ${optionUi.choices.map(function (choice) {
                                     return `<option value="${escapeHtml(choice.value)}">${escapeHtml(choice.label)}</option>`;

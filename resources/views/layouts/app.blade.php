@@ -1697,6 +1697,91 @@
 	<!--end::Custom Javascript-->
 	<!--end::Javascript-->
 
+	<script>
+		(function ($) {
+			'use strict';
+
+			if (!window.jQuery || !$.fn.select2) {
+				return;
+			}
+
+			const select2Options = function (element) {
+				const options = {
+					dir: document.documentElement.getAttribute('dir') || document.body.getAttribute('direction') || 'ltr',
+				};
+
+				if (element.dataset.hideSearch === 'true') {
+					options.minimumResultsForSearch = Infinity;
+				}
+
+				if (element.dataset.placeholder) {
+					options.placeholder = element.dataset.placeholder;
+				}
+
+				if (element.dataset.allowClear) {
+					options.allowClear = element.dataset.allowClear !== 'false';
+				}
+
+				if (element.dataset.closeOnSelect) {
+					options.closeOnSelect = element.dataset.closeOnSelect !== 'false';
+				}
+
+				if (element.dataset.tags === 'true') {
+					options.tags = true;
+				}
+
+				if (element.dataset.dropdownParent) {
+					const dropdownParent = document.querySelector(element.dataset.dropdownParent);
+
+					if (dropdownParent) {
+						options.dropdownParent = $(dropdownParent);
+					}
+				}
+
+				return options;
+			};
+
+			const initializeSelect2 = function (root) {
+				const elements = [];
+
+				if (root instanceof HTMLSelectElement) {
+					elements.push(root);
+				} else if (root.querySelectorAll) {
+					elements.push(...root.querySelectorAll('select'));
+				}
+
+				elements.forEach(function (element) {
+					if ($(element).hasClass('select2-hidden-accessible')) {
+						return;
+					}
+
+					$(element).attr('data-control', 'select2').select2(select2Options(element));
+					element.setAttribute('data-kt-initialized', '1');
+				});
+			};
+
+			window.initializeSelect2Controls = initializeSelect2;
+
+			$(function () {
+				initializeSelect2(document);
+			});
+
+			if (window.MutationObserver && document.body) {
+				const observer = new MutationObserver(function (mutations) {
+					mutations.forEach(function (mutation) {
+						mutation.addedNodes.forEach(function (node) {
+							if (node.nodeType === Node.ELEMENT_NODE) {
+								initializeSelect2(node);
+							}
+						});
+					});
+				});
+
+				observer.observe(document.body, { childList: true, subtree: true });
+			}
+		})(jQuery);
+	</script>
+
 
 	<script>
 
