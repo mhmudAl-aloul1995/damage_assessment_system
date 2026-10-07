@@ -358,6 +358,55 @@
 		}
 	</style>
 
+	@if(! $isFieldEngineerAudit)
+		@php
+			$auditTrackLabels = [
+				'engineering' => [
+					'title' => 'المسار الهندسي',
+					'statuses' => [
+						'pending' => 'بانتظار التدقيق',
+						'assigned_to_engineer' => 'مسندة للمهندس',
+						'accepted_by_engineer' => 'مقبولة هندسيًا',
+						'need_review' => 'بحاجة لمراجعة',
+						'rejected_by_engineer' => 'مرفوضة هندسيًا',
+					],
+				],
+				'legal' => [
+					'title' => 'المسار القانوني',
+					'statuses' => [
+						'pending' => 'بانتظار التدقيق',
+						'assigned_to_lawyer' => 'مسندة للمحامي',
+						'accepted_by_lawyer' => 'مقبولة قانونيًا',
+						'legal_notes' => 'ملاحظات قانونية',
+					],
+				],
+			];
+		@endphp
+		<div class="row g-5 mb-5" id="audit-track-summary">
+			@foreach($auditTrackLabels as $track => $trackDefinition)
+				<div class="col-xl-6">
+					<div class="card card-flush shadow-sm h-100">
+						<div class="card-header min-h-50px">
+							<h3 class="card-title fw-bold">{{ $trackDefinition['title'] }}</h3>
+						</div>
+						<div class="card-body pt-0">
+							<div class="row g-3">
+								@foreach($trackDefinition['statuses'] as $status => $label)
+									<div class="col-6 col-md">
+										<div class="border rounded p-3 h-100 text-center">
+											<div class="fs-2 fw-bold" data-audit-track="{{ $track }}" data-audit-status="{{ $status }}">{{ number_format($auditTrackSummary[$track][$status] ?? 0) }}</div>
+											<div class="text-muted fs-8 mt-1">{{ $label }}</div>
+										</div>
+									</div>
+								@endforeach
+							</div>
+						</div>
+					</div>
+				</div>
+			@endforeach
+		</div>
+	@endif
+
 	<div class="row mb-5">
 		<div class="col-md-12">
 			<div class="card card-flush shadow-sm">

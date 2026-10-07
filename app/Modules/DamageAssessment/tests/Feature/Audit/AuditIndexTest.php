@@ -78,6 +78,14 @@ it('includes the housing units status progress in the audit table response', fun
         'order_step' => 2,
     ]);
 
+    $legalNotesStatus = AssessmentStatus::query()->create([
+        'name' => 'legal_notes',
+        'label_en' => 'Legal Notes',
+        'label_ar' => 'legal notes ar',
+        'stage' => 'legal',
+        'order_step' => 3,
+    ]);
+
     $building = Building::query()->create([
         'objectid' => 7001,
         'globalid' => '084c000a-c0bd-4eed-9a01-3dd491bc1eff',
@@ -137,6 +145,13 @@ it('includes the housing units status progress in the audit table response', fun
         'updated_at' => '2026-04-26 10:00:00',
     ])->save();
 
+    BuildingStatus::query()->create([
+        'building_id' => $building->objectid,
+        'status_id' => $legalNotesStatus->id,
+        'user_id' => $user->id,
+        'type' => 'Legal Auditor',
+    ]);
+
     $olderStatusBuilding = Building::query()->create([
         'objectid' => 7002,
         'globalid' => '018e2bc7-efab-4b0a-a359-6f1378bb8bd9',
@@ -176,6 +191,13 @@ it('includes the housing units status progress in the audit table response', fun
         'created_at' => '2026-04-27 10:00:00',
         'updated_at' => '2026-04-27 10:00:00',
     ])->save();
+
+    $this->actingAs($user)
+        ->get(route('audit.index'))
+        ->assertOk()
+        ->assertSee('data-audit-track="engineering" data-audit-status="accepted_by_engineer">2</div>', false)
+        ->assertSee('data-audit-track="legal" data-audit-status="pending">2</div>', false)
+        ->assertSee('data-audit-track="legal" data-audit-status="legal_notes">1</div>', false);
 
     $this->actingAs($user)
         ->getJson(route('audit.index', [

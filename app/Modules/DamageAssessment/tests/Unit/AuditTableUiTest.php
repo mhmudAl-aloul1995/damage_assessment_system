@@ -226,6 +226,26 @@ test('audit table keeps all columns with responsive text cells', function () {
         ->toContain('housing_status_notes');
 });
 
+test('audit index shows separate engineering and legal status summaries', function () {
+    $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/audit/audit.blade.php');
+    $controller = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/app/Http/Controllers/Audit/auditController.php');
+
+    expect($view)
+        ->toContain('id="audit-track-summary"')
+        ->toContain('المسار الهندسي')
+        ->toContain('المسار القانوني')
+        ->toContain('data-audit-track="{{ $track }}"')
+        ->toContain('accepted_by_engineer')
+        ->toContain('accepted_by_lawyer')
+        ->toContain('legal_notes');
+
+    expect($controller)
+        ->toContain('private function auditTrackSummary(): array')
+        ->toContain("latestTrackStatusCounts('QC/QA Engineer'")
+        ->toContain("latestTrackStatusCounts('Legal Auditor'")
+        ->toContain('current_status.id = (SELECT MAX(latest_status.id)');
+});
+
 test('dashboard primary building and housing cards show obstacles without duplicate assessment blocked rows', function () {
     $view = file_get_contents(dirname(__DIR__, 5).'/app/Modules/DamageAssessment/resources/views/dashboard/damageAssessment.blade.php');
 

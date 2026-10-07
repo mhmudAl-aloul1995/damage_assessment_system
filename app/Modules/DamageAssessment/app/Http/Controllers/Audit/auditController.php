@@ -3066,11 +3066,61 @@ class auditController extends Controller
                 ->orderBy('name')
                 ->get()
             : collect();
+        $auditTrackSummary = $this->auditTrackSummary();
 
         return View::make(
             'damage-assessment::audit.audit',
-            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'buildingFilterSections', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges', 'canManageAuditReviewers', 'auditReviewers', 'auditReviewerCandidates')
+            compact('assignedTo', 'engineers', 'lawyers', 'users', 'neighborhoods', 'filterName', 'filters', 'buildingFilterSections', 'engineers', 'owners', 'municip', 'assessments', 'buildingExportColumns', 'housingExportColumns', 'hideAuditManagementActions', 'legalChallenges', 'canManageAuditReviewers', 'auditReviewers', 'auditReviewerCandidates', 'auditTrackSummary')
         );
+    }
+
+    /**
+     * @return array{engineering: array<string, int>, legal: array<string, int>}
+     */
+    private function auditTrackSummary(): array
+    {
+        return [
+            'engineering' => $this->latestTrackStatusCounts('QC/QA Engineer', [
+                'pending',
+                'assigned_to_engineer',
+                'accepted_by_engineer',
+                'need_review',
+                'rejected_by_engineer',
+            ]),
+            'legal' => $this->latestTrackStatusCounts('Legal Auditor', [
+                'pending',
+                'assigned_to_lawyer',
+                'accepted_by_lawyer',
+                'legal_notes',
+            ]),
+        ];
+    }
+
+    /**
+     * @param  list<string>  $statuses
+     * @return array<string, int>
+     */
+    private function latestTrackStatusCounts(string $type, array $statuses): array
+    {
+        $counts = Building::query()
+            ->leftJoin('building_statuses as current_status', function ($join) use ($type) {
+                $join->on('current_status.building_id', '=', 'buildings.objectid')
+                    ->where('current_status.type', $type)
+                    ->whereRaw(
+                        'current_status.id = (SELECT MAX(latest_status.id) FROM building_statuses AS latest_status WHERE latest_status.building_id = buildings.objectid AND latest_status.type = ?)',
+                        [$type]
+                    );
+            })
+            ->leftJoin('assessment_statuses', 'assessment_statuses.id', '=', 'current_status.status_id')
+            ->whereRaw("LOWER(TRIM(COALESCE(buildings.field_status, ''))) = 'completed'")
+            ->selectRaw("COALESCE(LOWER(TRIM(assessment_statuses.name)), 'pending') as status_name")
+            ->selectRaw('COUNT(*) as aggregate')
+            ->groupBy('status_name')
+            ->pluck('aggregate', 'status_name');
+
+        return collect($statuses)->mapWithKeys(
+            fn (string $status): array => [$status => (int) ($counts[$status] ?? 0)]
+        )->all();
     }
 
     /**
