@@ -140,11 +140,11 @@ class SectorOverviewService
             'accepted_engineer' => ['accepted_by_engineer'],
             'accepted_lawyer' => ['accepted_by_lawyer'],
             'assigned' => ['assigned'], 'accepted' => ['accepted'],
-            'needs_action' => ['need_review', 'legal_notes'],
+            'needs_action' => ['need_review'],
             'rejected' => ['rejected', 'rejected_by_engineer', 'final_reject'],
             'team_approved' => ['final_approval'], 'undp_approved' => ['undp_final_approve'],
             'approved' => in_array($sector, ['buildings', 'housing-units'], true) ? ['final_approval', 'undp_final_approve'] : ['final_approval'],
-            'action_required' => ['need_review', 'legal_notes', 'rejected', 'rejected_by_engineer', 'final_reject'],
+            'action_required' => ['need_review', 'rejected', 'rejected_by_engineer', 'final_reject'],
             default => [],
         };
     }

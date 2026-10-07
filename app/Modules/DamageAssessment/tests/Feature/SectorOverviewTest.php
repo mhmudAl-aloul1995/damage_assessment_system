@@ -398,8 +398,8 @@ it('partitions completed records by their latest audit state without counting un
     }
     $response = $this->getJson(route('sector-overview.stats', $sector))->assertOk()
         ->assertJsonPath('summary.total', count($states) + 2)->assertJsonPath('summary.completed', count($states) + 1)
-        ->assertJsonPath('summary.pending', 1)->assertJsonPath('audit.unclassified', 1)
-        ->assertJsonPath('summary.action_required', 2)->assertJsonPath('summary.approved', $buildingSector ? 2 : 1);
+        ->assertJsonPath('summary.pending', 1)->assertJsonPath('audit.unclassified', $buildingSector ? 2 : 1)
+        ->assertJsonPath('summary.action_required', $buildingSector ? 1 : 2)->assertJsonPath('summary.approved', $buildingSector ? 2 : 1);
     expect(array_sum($response->json('audit')))->toBe(count($states) + 1);
     foreach ($response->json('audit') as $bucket => $count) {
         $this->getJson(route('sector-overview.records', ['sector' => $sector, 'audit_status' => $bucket]))
