@@ -54,6 +54,7 @@ it('renders a simple overview as the first tab and sidebar destination for each 
 })->with(['buildings', 'housing-units', 'public-buildings', 'road-facilities', 'cso-surveys']);
 
 it('shows separate latest engineering and legal audit tracks for buildings', function (): void {
+    app()->setLocale('ar');
     $acceptedByEngineer = AssessmentStatus::query()->create(['name' => 'accepted_by_engineer', 'label_en' => 'Accepted By Engineer', 'label_ar' => 'مقبولة هندسيًا', 'stage' => 'engineer', 'order_step' => 1]);
     $legalNotes = AssessmentStatus::query()->create(['name' => 'legal_notes', 'label_en' => 'Legal Notes', 'label_ar' => 'ملاحظات قانونية', 'stage' => 'lawyer', 'order_step' => 2]);
     $acceptedByLawyer = AssessmentStatus::query()->create(['name' => 'accepted_by_lawyer', 'label_en' => 'Accepted By Lawyer', 'label_ar' => 'مقبولة قانونيًا', 'stage' => 'lawyer', 'order_step' => 3]);

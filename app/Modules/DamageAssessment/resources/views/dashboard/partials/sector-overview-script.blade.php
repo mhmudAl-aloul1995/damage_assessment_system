@@ -11,6 +11,7 @@
     const mapMode = document.getElementById('sector-map-mode');
     const colors = { fully_damaged: '#dc3545', partially_damaged: '#f59e0b', committee_review: '#8b5cf6', no_damage: '#059669', unclassified: '#64748b', destroyed: '#dc3545', severe: '#f97316', moderate: '#f59e0b', minor: '#3b82f6', mixed: '#db2777' };
     const auditColors = { pending: '#64748b', assigned: '#0284c7', assigned_engineer: '#0284c7', assigned_lawyer: '#6366f1', accepted: '#2563eb', accepted_engineer: '#2563eb', accepted_lawyer: '#7c3aed', needs_action: '#d97706', rejected: '#dc2626', team_approved: '#0d9488', undp_approved: '#059669', approved: '#059669', unclassified: '#475569', not_completed: '#94a3b8', mixed: '#db2777' };
+    const auditTrackColors = { pending: '#64748b', assigned_to_engineer: '#0284c7', accepted_by_engineer: '#2563eb', need_review: '#d97706', rejected_by_engineer: '#dc2626', assigned_to_lawyer: '#6366f1', accepted_by_lawyer: '#7c3aed', legal_notes: '#d97706' };
     const bounds = ['west', 'south', 'east', 'north'];
     let version = 0, controller, sdkPromise, mapPromise, mapContext, mapLoading = false, extentTimer;
     let cachedFeatures = [], currentStatistics = initial.statistics, currentParameters = parameters();
@@ -78,7 +79,7 @@
             const statuses = data.audit_tracks?.[track] || {};
             const total = Object.values(statuses).reduce((sum, count) => sum + count, 0);
             if (!total) container.append(element('p', 'text-muted py-3', labels.no_data));
-            else Object.entries(statuses).forEach(([key, count]) => container.append(chartRow(labels.audit_tracks[track][key], count, total, auditColors[key] || auditColors.pending)));
+            else Object.entries(statuses).forEach(([key, count]) => container.append(chartRow(labels.audit_tracks[key], count, total, auditTrackColors[key] || auditColors.pending)));
         });
         if (!data.summary.total) damage.append(element('p', 'text-muted py-3', labels.no_data));
         else Object.entries(data.damage).forEach(([key, count]) => damage.append(chartRow(labels.damage[key], count, data.summary.total, colors[key], { damage_status: key })));
