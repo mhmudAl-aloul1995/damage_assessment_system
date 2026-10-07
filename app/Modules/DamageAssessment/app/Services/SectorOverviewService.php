@@ -261,11 +261,61 @@ class SectorOverviewService
             'damage' => $damageCounts,
             'fieldwork' => ['completed' => $completed, 'not_completed' => $total - $completed],
             'audit' => $audit,
+            'audit_tracks' => $this->auditTracks($completedQuery, $sector),
             'chart' => $this->sectorChart(clone $query, $sector),
             'progress' => ['not_completed' => $total - $completed, 'pending' => $pending, 'in_review' => ($audit['accepted_engineer'] ?? 0) + ($audit['accepted_lawyer'] ?? 0) + ($audit['accepted'] ?? 0), 'approved' => $approved],
             'neighborhoods' => $this->options($sector, 'neighborhood', array_intersect_key($filters, ['municipality' => true])),
             'calculated_at' => now()->toIso8601String(),
         ];
+    }
+
+    /** @return array{engineering: array<string, int>, legal: array<string, int>} */
+    private function auditTracks(Builder $completedQuery, string $sector): array
+    {
+        if (! in_array($sector, ['buildings', 'housing-units'], true)) {
+            return ['engineering' => [], 'legal' => []];
+        }
+
+        return [
+            'engineering' => $this->trackStatusCounts($completedQuery, 'QC/QA Engineer', [
+                'pending', 'assigned_to_engineer', 'accepted_by_engineer', 'need_review', 'rejected_by_engineer',
+            ]),
+            'legal' => $this->trackStatusCounts($completedQuery, 'Legal Auditor', [
+                'pending', 'assigned_to_lawyer', 'accepted_by_lawyer', 'legal_notes',
+            ]),
+        ];
+    }
+
+    /**
+     * @param  list<string>  $statuses
+     * @return array<string, int>
+     */
+    private function trackStatusCounts(Builder $completedQuery, string $type, array $statuses): array
+    {
+        $model = $completedQuery->getModel();
+        $statusClass = $model instanceof AuditedBuilding ? BuildingStatus::class : HousingStatus::class;
+        $foreignKey = $model instanceof AuditedBuilding ? 'building_id' : 'housing_id';
+        $localKey = 'objectid';
+        $statusTable = (new $statusClass)->getTable();
+        $latest = $statusClass::query()->leftJoin('assessment_statuses', 'assessment_statuses.id', '=', $statusTable.'.status_id')
+            ->selectRaw('LOWER(TRIM(assessment_statuses.name))')
+            ->whereColumn($statusTable.'.'.$foreignKey, $model->qualifyColumn($localKey))
+            ->where($statusTable.'.type', $type)
+            ->orderByDesc($statusTable.'.id')->limit(1);
+        $table = $model->getTable();
+        $trackQuery = (clone $completedQuery)->select($table.'.id')->addSelect(['overview_track_status' => $latest]);
+        $groups = $completedQuery->getQuery()->newQuery()->fromSub($trackQuery->toBase(), 'overview_track_statuses')
+            ->select('overview_track_status')->selectRaw('COUNT(*) as aggregate')->groupBy('overview_track_status')->get();
+        $counts = array_fill_keys($statuses, 0);
+
+        foreach ($groups as $group) {
+            $status = filled($group->overview_track_status) ? (string) $group->overview_track_status : 'pending';
+            if (array_key_exists($status, $counts)) {
+                $counts[$status] += (int) $group->aggregate;
+            }
+        }
+
+        return $counts;
     }
 
     /** @return array{fully_damaged: int, partially_damaged: int, committee_review: int, no_damage: int, assessment_blocked: int} */

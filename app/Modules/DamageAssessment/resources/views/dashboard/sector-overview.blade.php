@@ -110,10 +110,18 @@
                             <div id="sector-fieldwork-chart"></div>
                             @if($sector === 'housing-units')<p class="text-muted fs-7 mt-3">{{ __('sector-overview.units_completion_note') }}</p>@endif
                             <hr class="my-6">
-                            <h3 class="fs-4 mb-3">{{ __('sector-overview.audit_chart') }}</h3>
-                            <p class="text-muted fs-7">{{ __('sector-overview.audit_note') }}</p>
-                            <div id="sector-progress-chart" class="sector-overview-audit"></div>
-                            <p class="text-muted fs-8 mt-3 mb-0">{{ __('sector-overview.unknown_audit_note') }}</p>
+                            @if(in_array($sector, ['buildings', 'housing-units'], true))
+                                <h3 class="fs-4 mb-3">{{ __('sector-overview.audit_tracks.engineering') }}</h3>
+                                <div id="sector-engineering-audit" class="sector-overview-audit"></div>
+                                <hr class="my-6">
+                                <h3 class="fs-4 mb-3">{{ __('sector-overview.audit_tracks.legal') }}</h3>
+                                <div id="sector-legal-audit" class="sector-overview-audit"></div>
+                            @else
+                                <h3 class="fs-4 mb-3">{{ __('sector-overview.audit_chart') }}</h3>
+                                <p class="text-muted fs-7">{{ __('sector-overview.audit_note') }}</p>
+                                <div id="sector-progress-chart" class="sector-overview-audit"></div>
+                                <p class="text-muted fs-8 mt-3 mb-0">{{ __('sector-overview.unknown_audit_note') }}</p>
+                            @endif
                         </div>
                     </div>
                 </div>

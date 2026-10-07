@@ -42,6 +42,18 @@ return [
         'team_approved' => 'اعتماد قائد الفريق', 'undp_approved' => 'اعتماد UNDP', 'approved' => 'اعتماد نهائي',
         'unclassified' => 'حالة تدقيق غير معروفة', 'not_completed' => 'غير مكتملة ميدانيًا',
     ],
+    'audit_tracks' => [
+        'engineering' => 'المسار الهندسي',
+        'legal' => 'المسار القانوني',
+        'pending' => 'بانتظار التدقيق',
+        'assigned_to_engineer' => 'مسندة للمهندس',
+        'accepted_by_engineer' => 'مقبولة هندسيًا',
+        'need_review' => 'بحاجة لمراجعة',
+        'rejected_by_engineer' => 'مرفوضة هندسيًا',
+        'assigned_to_lawyer' => 'مسندة للمحامي',
+        'accepted_by_lawyer' => 'مقبولة قانونيًا',
+        'legal_notes' => 'ملاحظات قانونية',
+    ],
     'fieldwork' => ['completed' => 'مكتملة ميدانيًا', 'not_completed' => 'غير مكتملة ميدانيًا'],
     'charts' => ['buildings' => 'توزيع المباني حسب الحي', 'housing-units' => 'عوائق حصر الوحدات', 'public-buildings' => 'استخدام المباني العامة', 'road-facilities' => 'أنواع الطرق', 'cso-surveys' => 'حالة تشغيل منشآت المجتمع المدني'],
     'chart_notes' => [

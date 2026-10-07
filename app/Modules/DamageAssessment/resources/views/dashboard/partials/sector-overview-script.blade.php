@@ -61,15 +61,25 @@
         root.querySelectorAll('[data-metric]').forEach(item => { item.textContent = number.format(data.summary[item.dataset.metric]); });
         root.querySelectorAll('[data-drill-metric]').forEach(item => { item.disabled = data.summary[item.dataset.drillMetric] === 0; });
         const field = document.getElementById('sector-fieldwork-chart'), audit = document.getElementById('sector-progress-chart');
+        const engineeringAudit = document.getElementById('sector-engineering-audit'), legalAudit = document.getElementById('sector-legal-audit');
         const damage = document.getElementById('sector-damage-chart'), specific = document.getElementById('sector-specific-chart');
-        [field, audit, damage, specific].forEach(item => item.replaceChildren());
+        [field, audit, engineeringAudit, legalAudit, damage, specific].filter(Boolean).forEach(item => item.replaceChildren());
         const rate = data.summary.total ? Math.round(data.summary.completed / data.summary.total * 100) : 0;
         const heading = element('div', 'd-flex justify-content-between align-items-center mb-3');
         heading.append(element('span', 'text-muted fs-7', labels.completion_rate), element('strong', 'fs-2 text-success', number.format(rate) + '%')); field.append(heading);
         Object.entries(data.fieldwork).forEach(([key, count]) => field.append(chartRow(labels.fieldwork[key], count, data.summary.total, key === 'completed' ? '#059669' : '#94a3b8', { field_completion: key })));
-        const auditTotal = Object.values(data.audit).reduce((sum, count) => sum + count, 0);
-        if (!auditTotal) audit.append(element('p', 'text-muted py-3', labels.no_data));
-        else Object.entries(data.audit).forEach(([key, count]) => audit.append(chartRow(labels.audit[key], count, auditTotal, auditColors[key], { audit_status: key, field_completion: 'completed' })));
+        if (audit) {
+            const auditTotal = Object.values(data.audit).reduce((sum, count) => sum + count, 0);
+            if (!auditTotal) audit.append(element('p', 'text-muted py-3', labels.no_data));
+            else Object.entries(data.audit).forEach(([key, count]) => audit.append(chartRow(labels.audit[key], count, auditTotal, auditColors[key], { audit_status: key, field_completion: 'completed' })));
+        }
+        [['engineering', engineeringAudit], ['legal', legalAudit]].forEach(([track, container]) => {
+            if (!container) return;
+            const statuses = data.audit_tracks?.[track] || {};
+            const total = Object.values(statuses).reduce((sum, count) => sum + count, 0);
+            if (!total) container.append(element('p', 'text-muted py-3', labels.no_data));
+            else Object.entries(statuses).forEach(([key, count]) => container.append(chartRow(labels.audit_tracks[track][key], count, total, auditColors[key] || auditColors.pending)));
+        });
         if (!data.summary.total) damage.append(element('p', 'text-muted py-3', labels.no_data));
         else Object.entries(data.damage).forEach(([key, count]) => damage.append(chartRow(labels.damage[key], count, data.summary.total, colors[key], { damage_status: key })));
         document.getElementById('sector-specific-title').textContent = data.chart.title;

@@ -37,16 +37,42 @@ beforeEach(function (): void {
 
 it('renders a simple overview as the first tab and sidebar destination for each sector', function (string $sector): void {
     app()->setLocale('ar');
-    $this->get(route('sector-overview.show', $sector))->assertOk()
+    $response = $this->get(route('sector-overview.show', $sector))->assertOk()
         ->assertSee('نظرة عامة')->assertSee('التوزيع الجغرافي')->assertSee('توزيع حالات الضرر')
-        ->assertSee('sector-progress-chart')->assertSee('https://js.arcgis.com/4.22/', false)
+        ->assertSee('https://js.arcgis.com/4.22/', false)
         ->assertDontSee('sector-workspace-title')
         ->assertDontSee('مساحة قطاع');
+    if (in_array($sector, ['buildings', 'housing-units'], true)) {
+        $response->assertSee('sector-engineering-audit')->assertSee('sector-legal-audit');
+    } else {
+        $response->assertSee('sector-progress-chart');
+    }
     $tabs = SectorNavigation::forUser($sector, $this->overviewUser);
     expect($tabs[0]['key'])->toBe('overview')->and($tabs[0]['url'])->toBe(route('sector-overview.show', $sector));
     $section = Sidebar::forUser($this->overviewUser)->firstWhere('key', 'damage_assessment')['sections']->firstWhere('sector', $sector);
     expect($section['url'])->toBe('damage-assessment/sectors/'.$sector);
 })->with(['buildings', 'housing-units', 'public-buildings', 'road-facilities', 'cso-surveys']);
+
+it('shows separate latest engineering and legal audit tracks for buildings', function (): void {
+    $acceptedByEngineer = AssessmentStatus::query()->create(['name' => 'accepted_by_engineer', 'label_en' => 'Accepted By Engineer', 'label_ar' => 'مقبولة هندسيًا', 'stage' => 'engineer', 'order_step' => 1]);
+    $legalNotes = AssessmentStatus::query()->create(['name' => 'legal_notes', 'label_en' => 'Legal Notes', 'label_ar' => 'ملاحظات قانونية', 'stage' => 'lawyer', 'order_step' => 2]);
+    $acceptedByLawyer = AssessmentStatus::query()->create(['name' => 'accepted_by_lawyer', 'label_en' => 'Accepted By Lawyer', 'label_ar' => 'مقبولة قانونيًا', 'stage' => 'lawyer', 'order_step' => 3]);
+
+    foreach ([701, 702] as $objectid) {
+        AuditedBuilding::query()->create(['objectid' => $objectid, 'globalid' => 'audit-track-'.$objectid, 'field_status' => 'COMPLETED']);
+    }
+    BuildingStatus::query()->create(['building_id' => 701, 'status_id' => $acceptedByEngineer->id, 'type' => 'QC/QA Engineer']);
+    BuildingStatus::query()->create(['building_id' => 701, 'status_id' => $legalNotes->id, 'type' => 'Legal Auditor']);
+    BuildingStatus::query()->create(['building_id' => 702, 'status_id' => $acceptedByLawyer->id, 'type' => 'Legal Auditor']);
+
+    $this->get(route('sector-overview.show', 'buildings'))->assertOk()
+        ->assertSee('sector-engineering-audit', false)->assertSee('sector-legal-audit', false);
+    $this->getJson(route('sector-overview.stats', 'buildings'))->assertOk()
+        ->assertJsonPath('audit_tracks.engineering.accepted_by_engineer', 1)
+        ->assertJsonPath('audit_tracks.engineering.pending', 1)
+        ->assertJsonPath('audit_tracks.legal.legal_notes', 1)
+        ->assertJsonPath('audit_tracks.legal.accepted_by_lawyer', 1);
+});
 
 it('applies the same municipality neighborhood and damage filters to stats and map records', function (): void {
     foreach ([
