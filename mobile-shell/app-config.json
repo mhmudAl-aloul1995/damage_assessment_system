@@ -1,0 +1,15 @@
+{
+    "serverUrl": "http://213.6.135.115/damage_assessment_system/",
+    "version": "1.0.0",
+    "modules": [
+        {"title": "حصر وتقييم الأضرار", "description": "المباني والوحدات والتقييمات والقطاعات", "path": "damage-assessment/damageAssessment", "symbol": "▦", "color": "green"},
+        {"title": "مقترضو بنك التنمية الإسلامي", "description": "ملفات المقترضين والمتابعة", "path": "damage-assessment-borrowers", "symbol": "◈", "color": "blue"},
+        {"title": "برنامج HEKS", "description": "المساعدة النقدية لإصلاح المأوى الطارئ", "path": "heks", "symbol": "⌂", "color": "amber"},
+        {"title": "الإدارة", "description": "المستخدمون والأدوار والصلاحيات", "path": "user-management/user", "symbol": "⚙", "color": "slate"}
+    ],
+    "maps": [
+        {"title": "الوحدات السكنية", "path": "damage-assessment/housing-units-map"},
+        {"title": "المباني العامة", "path": "damage-assessment/public-buildings-map"},
+        {"title": "الطرق والمرافق", "path": "damage-assessment/road-facilities-map"}
+    ]
+}

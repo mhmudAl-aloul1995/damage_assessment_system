@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#153f36">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>PHC | بوابة المنظومة</title>
+    <link rel="icon" href="logo.png">
+    <link rel="stylesheet" href="app.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <header class="brand-row">
+        <div class="brand"><img src="logo.png" alt="شعار مجلس الإسكان الفلسطيني" width="48" height="48"><div><strong>مجلس الإسكان الفلسطيني</strong><span>PALESTINIAN HOUSING COUNCIL</span></div></div>
+        <span class="edition">PHC</span>
+    </header>
+    <main>
+        <section class="hero" aria-labelledby="welcome-title">
+            <span class="eyebrow"><span class="tiny-square"></span> بوابة المنظومة الموحدة</span>
+            <h1 id="welcome-title">كل المنظومة.<br><span>بين يديك.</span></h1>
+            <p>وصول إلى أقسام العمل والملفات والخرائط<br>بحسابك المعتمد في المنظومة.</p>
+            <a class="primary-button" data-system-link aria-disabled="true">الدخول إلى المنظومة <span aria-hidden="true">←</span></a>
+            <div class="hero-note">تسجيل الدخول والصلاحيات من خلال المنظومة</div>
+            <div class="hero-art" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </section>
+        <div class="section-heading"><div><span class="eyebrow muted">مساحة العمل</span><h2>أقسام المنظومة</h2></div><span class="count" id="module-count"></span></div>
+        <label class="search-box"><span aria-hidden="true">⌕</span><input id="module-search" type="search" placeholder="ابحث عن قسم…" aria-label="ابحث عن قسم" autocomplete="off"></label>
+        <div class="modules" id="modules" aria-live="polite"></div>
+        <p id="empty-search" class="empty" hidden>لا يوجد قسم بهذا الاسم. جرّب كلمة أخرى.</p>
+        <p class="permissions-note">هذه اختصارات للأقسام؛ يحدّد حسابك صلاحية الوصول إلى كل قسم وبياناته. تجد بقية الشاشات من قائمة المنظومة.</p>
+        <section class="map-section" aria-labelledby="maps-title">
+            <div class="map-art" aria-hidden="true"><span class="pin pin-one"></span><span class="pin pin-two"></span><span class="pin pin-three"></span></div>
+            <div class="map-copy"><span class="eyebrow muted">GIS · الاستعلام المكاني</span><h2 id="maps-title">استكشف عبر الخريطة</h2><p>افتح الخرائط المتاحة في المنظومة.</p></div>
+            <div class="map-links" id="maps"></div>
+        </section>
+        <details class="help"><summary>كيف أستخدم التطبيق؟ <span aria-hidden="true">＋</span></summary><ol><li>اضغط «الدخول إلى المنظومة» وسجّل الدخول بحسابك الحالي.</li><li>اختر الموديول من قائمة المنظومة، أو استخدم الاختصارات هنا.</li><li>استخدم شريط التطبيق للرجوع والتحديث والعودة إلى هذه الصفحة.</li><li>سجّل الخروج من قائمة حسابك عند الانتهاء، خصوصًا على الأجهزة المشتركة.</li></ol><p>يلزم اتصال بالإنترنت لعرض بيانات المنظومة. الواجهة الحالية تستخدم HTTP؛ الاتصال بالسيرفر غير مشفّر.</p></details>
+        <p class="status" id="connection-state" role="status"></p>
+        <noscript><p>يجب تفعيل JavaScript لتشغيل التطبيق.</p></noscript>
+    </main>
+    <footer><span>PHC · بوابة المنظومة</span><span id="version"></span></footer>
+</body>
+</html>

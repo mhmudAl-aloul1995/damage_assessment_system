@@ -7,7 +7,10 @@
         "dev": "vite",
         "cap:add:android": "cap add android",
         "cap:sync": "cap sync",
-        "cap:open:android": "cap open android"
+        "cap:open:android": "cap open android",
+        "cap:open:ios": "cap open ios",
+        "mobile:test": "node --test tests/mobile-shell.test.mjs",
+        "mobile:android": "npm run cap:sync && powershell -NoProfile -ExecutionPolicy Bypass -File android/build-mobile.ps1"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
@@ -22,10 +25,11 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@arcgis/core": "^4.34.8",
         "@capacitor/android": "^7.4.3",
         "@capacitor/cli": "^7.4.3",
         "@capacitor/core": "^7.4.3",
-        "@arcgis/core": "^4.34.8",
+        "@capacitor/ios": "7.6.5",
         "esri-loader": "^3.7.0",
         "puppeteer": "^24.43.1"
     }

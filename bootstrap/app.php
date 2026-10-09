@@ -39,6 +39,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->shouldRenderJsonWhen(fn (\Illuminate\Http\Request $request, \Throwable $exception): bool => $request->is('api/v1/*') || $request->routeIs('api.v1.*') || $request->expectsJson());
+
         $exceptions->respond(function ($response) {
             if ($response->getStatusCode() === 419) {
                 return redirect()->to(app_route('login'))->with('error', __('ui.messages.session_expired'));

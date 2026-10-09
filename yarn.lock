@@ -118,6 +118,11 @@
   dependencies:
     tslib "^2.1.0"
 
+"@capacitor/ios@7.6.5":
+  version "7.6.5"
+  resolved "https://registry.npmjs.org/@capacitor/ios/-/ios-7.6.5.tgz"
+  integrity sha512-jJK3wW65GAsmzgaswoePWDQ7mADIwQNWqWGcOeZyrPP7+lzW5/8gGqu9ASFGbG+GplFfgwRWzd4oH/7xb+lYFw==
+
 "@esbuild/win32-x64@0.27.3":
   version "0.27.3"
   resolved "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.27.3.tgz"

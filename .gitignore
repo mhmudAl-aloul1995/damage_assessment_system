@@ -13,6 +13,9 @@
 /.zed
 /auth.json
 /node_modules
+/tmp/mobile-toolchain/
+/tmp/mobile-preview/
+/tmp/mobile-delivery/
 /public/build
 /public/hot
 /public/storage

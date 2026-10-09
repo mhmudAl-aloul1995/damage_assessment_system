@@ -1,7 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">PHC</string>
-    <string name="title_activity_main">PHC</string>
+    <string name="app_name">PHC بوابة المنظومة</string>
+    <string name="title_activity_main">PHC بوابة المنظومة</string>
+    <string name="mobile_home">الرئيسية</string>
+    <string name="mobile_back">رجوع</string>
+    <string name="mobile_refresh">تحديث</string>
+    <string name="download_started">بدأ تنزيل الملف. يمكنك متابعته من الإشعارات.</string>
+    <string name="download_failed">تعذّر تنزيل الملف.</string>
     <string name="package_name">com.phc.mobile</string>
     <string name="custom_url_scheme">com.phc.mobile</string>
 </resources>
