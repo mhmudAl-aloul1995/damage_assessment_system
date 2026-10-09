@@ -335,23 +335,24 @@ Route::middleware('auth')->group(function () {
                 ], 500);
             }
 
-            $pushResult = Process::path($repo)
-                ->run(['git', '-c', 'safe.directory='.$safeRepo, 'push']);
-
-            if (! $pushResult->successful()) {
-                return response()->json([
-                    'status' => 'failed',
-                    'command' => 'git push',
-                    'error' => $pushResult->errorOutput() ?: $pushResult->output(),
-                    'exit_code' => $pushResult->exitCode(),
-                ], 500);
-            }
         } elseif ($diffResult->exitCode() !== 0) {
             return response()->json([
                 'status' => 'failed',
                 'command' => 'git diff --cached --quiet',
                 'error' => $diffResult->errorOutput() ?: $diffResult->output(),
                 'exit_code' => $diffResult->exitCode(),
+            ], 500);
+        }
+
+        $pushResult = Process::path($repo)
+            ->run(['git', '-c', 'safe.directory='.$safeRepo, 'push']);
+
+        if (! $pushResult->successful()) {
+            return response()->json([
+                'status' => 'failed',
+                'command' => 'git push',
+                'error' => $pushResult->errorOutput() ?: $pushResult->output(),
+                'exit_code' => $pushResult->exitCode(),
             ], 500);
         }
 
