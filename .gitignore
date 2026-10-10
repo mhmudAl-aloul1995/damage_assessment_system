@@ -48,6 +48,7 @@ Thumbs.db
 /storage/framework/views/*
 !/storage/framework/views/.gitignore
 info*
+!/ios/App/App/Info.plist
 *.log
 storage/logs/*
 /.htaccess

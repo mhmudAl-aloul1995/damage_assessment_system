@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>استعلام حصر الأضرار</title>
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="inquiry.css">
+    <script src="inquiry.js" defer></script>
+</head>
+<body>
+    <header class="brand-row"><a href="index.html">← الرئيسية</a><strong>استعلام حصر الأضرار</strong></header>
+    <main>
+        <h1>ابحث في سجلات المنظومة</h1>
+        <p>المباني والوحدات السكنية والمباني العامة والطرق والمؤسسات الأهلية، حسب صلاحيات حسابك.</p>
+        <form id="login-form" class="inquiry-card">
+            <h2>تسجيل الدخول</h2>
+            <label>البريد الإلكتروني<input name="email" type="email" autocomplete="username" required></label>
+            <label>كلمة المرور<input name="password" type="password" autocomplete="current-password" required></label>
+            <button class="primary-button" type="submit">دخول للاستعلام</button>
+            <p class="permissions-note">الاتصال الحالي بالسيرفر عبر HTTP غير مشفّر.</p>
+        </form>
+        <section id="inquiry-workspace" hidden>
+            <button id="logout" class="secondary-button" type="button">تسجيل الخروج</button>
+            <form id="search-form" class="inquiry-card">
+                <label>القطاع<select id="sector" required></select></label>
+                <label>اسم المبنى أو رقم السجل<input id="record-search" type="search" maxlength="150" placeholder="مثال: الأمل أو 1234"></label>
+                <label>البلدية<input id="municipality" maxlength="255" placeholder="اختياري — الاسم كما هو مسجل"></label>
+                <label>الحي<input id="neighborhood" maxlength="255" placeholder="اختياري"></label>
+                <button id="search-submit" class="primary-button" type="submit">بحث</button>
+            </form>
+            <p id="result-count"></p>
+            <div id="inquiry-results" aria-live="polite"></div>
+            <div class="pagination"><button id="previous" type="button" disabled>السابق</button><span id="page-number"></span><button id="next" type="button" disabled>التالي</button></div>
+        </section>
+        <p id="inquiry-status" role="status"></p>
+    </main>
+</body>
+</html>

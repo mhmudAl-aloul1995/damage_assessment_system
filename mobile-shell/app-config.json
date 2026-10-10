@@ -8,8 +8,8 @@
         {"title": "الإدارة", "description": "المستخدمون والأدوار والصلاحيات", "path": "user-management/user", "symbol": "⚙", "color": "slate"}
     ],
     "maps": [
-        {"title": "الوحدات السكنية", "path": "damage-assessment/housing-units-map"},
-        {"title": "المباني العامة", "path": "damage-assessment/public-buildings-map"},
-        {"title": "الطرق والمرافق", "path": "damage-assessment/road-facilities-map"}
+        {"title": "الوحدات السكنية", "path": "damage-assessment/sectors/housing-units"},
+        {"title": "المباني العامة", "path": "damage-assessment/sectors/public-buildings"},
+        {"title": "الطرق والمرافق", "path": "damage-assessment/sectors/road-facilities"}
     ]
 }

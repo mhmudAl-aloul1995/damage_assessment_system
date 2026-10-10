@@ -50,6 +50,27 @@ class SectorOverviewService
         $configuration = $this->configuration($sector);
         $query = $configuration['model']::query();
 
+        if (isset($filters['_allowed_phases'])) {
+            if ($sector === 'housing-units') {
+                $query->whereHas('building', fn (Builder $building): Builder => $building->whereIn('phase_number', $filters['_allowed_phases']));
+            } else {
+                $query->whereIn('phase_number', $filters['_allowed_phases']);
+            }
+        }
+
+        if (filled($filters['search'] ?? null)) {
+            $columns = $this->existingColumns($query->getModel(), ['objectid', 'globalid', ...$this->nameColumns($sector)]);
+            $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], trim($filters['search'])).'%';
+            $query->where(function (Builder $search) use ($columns, $term, $sector): void {
+                foreach ($columns as $column) {
+                    $search->orWhereRaw($search->getQuery()->getGrammar()->wrap($column)." LIKE ? ESCAPE '!'", [$term]);
+                }
+                if ($sector === 'housing-units') {
+                    $search->orWhereHas('building', fn (Builder $building): Builder => $building->whereRaw("building_name LIKE ? ESCAPE '!'", [$term]));
+                }
+            });
+        }
+
         if ($sector === 'buildings') {
             app(PhaseContext::class)->applyToEloquent($query);
         }
@@ -264,7 +285,7 @@ class SectorOverviewService
             'audit_tracks' => $this->auditTracks($completedQuery, $sector),
             'chart' => $this->sectorChart(clone $query, $sector),
             'progress' => ['not_completed' => $total - $completed, 'pending' => $pending, 'in_review' => ($audit['accepted_engineer'] ?? 0) + ($audit['accepted_lawyer'] ?? 0) + ($audit['accepted'] ?? 0), 'approved' => $approved],
-            'neighborhoods' => $this->options($sector, 'neighborhood', array_intersect_key($filters, ['municipality' => true])),
+            'neighborhoods' => $this->options($sector, 'neighborhood', array_intersect_key($filters, ['municipality' => true, '_allowed_phases' => true])),
             'calculated_at' => now()->toIso8601String(),
         ];
     }
@@ -417,18 +438,40 @@ class SectorOverviewService
         $query = $this->geographicQuery($this->query($sector, $filters), $sector);
         $page = $this->withLatestAudit($query)->orderBy('id')->paginate(20, ['*'], 'page', $filters['page'] ?? 1);
 
-        return ['data' => $page->getCollection()->map(fn (Model $row): array => $this->recordAttributes($row, $sector))->all(),
+        return ['data' => $page->getCollection()->map(fn (Model $row): array => $this->recordAttributes($row, $sector, $filters['_inquiry'] ?? false))->all(),
             'total' => $page->total(), 'current_page' => $page->currentPage(), 'last_page' => $page->lastPage()];
+    }
+
+    /** @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    public function record(string $sector, int $recordId, array $filters): array
+    {
+        $row = $this->withLatestAudit($this->geographicQuery($this->query($sector, $filters), $sector))
+            ->where('id', $recordId)->firstOrFail();
+
+        return $this->recordAttributes($row, $sector, true);
+    }
+
+    /** @return list<string> */
+    private function nameColumns(string $sector): array
+    {
+        return match ($sector) {
+            'housing-units' => ['unit_building_name', 'q_9_3_1_first_name', 'q_9_3_4_last_name'],
+            'road-facilities' => ['str_name'],
+            'cso-surveys' => ['building_name', 'organization_name'],
+            default => ['building_name'],
+        };
     }
 
     private function geographicQuery(Builder $query, string $sector): Builder
     {
         $configuration = $this->configuration($sector);
-        $columns = ['id', 'objectid', $configuration['damage'], 'field_status'];
+        $columns = ['id', 'objectid', $configuration['damage'], 'field_status', ...$this->nameColumns($sector)];
         if ($sector === 'housing-units') {
             $columns[] = 'parentglobalid';
             $building = $query->getModel()->building()->getRelated();
-            $buildingColumns = $this->existingColumns($building, ['id', 'globalid', 'field_status', 'municipalitie', 'neighborhood', ...$this->geometryColumns($building)]);
+            $buildingColumns = $this->existingColumns($building, ['id', 'globalid', 'building_name', 'field_status', 'municipalitie', 'neighborhood', ...$this->geometryColumns($building)]);
             $query->with('building:'.implode(',', $buildingColumns));
         } else {
             $columns = [...$columns, 'globalid', $configuration['municipality'], $configuration['neighborhood'], ...$this->geometryColumns($query->getModel())];
@@ -438,13 +481,18 @@ class SectorOverviewService
     }
 
     /** @return array<string, mixed> */
-    private function recordAttributes(Model $row, string $sector): array
+    private function recordAttributes(Model $row, string $sector, bool $inquiry = false): array
     {
         $source = $sector === 'housing-units' ? $row->building : $row;
         $completed = strtolower(trim((string) ($source?->getRawOriginal('field_status') ?? ''))) === 'completed';
 
         return [
             'record_id' => (int) $row->id, 'objectid' => $row->objectid,
+            ...($inquiry ? [
+                'name' => collect($this->nameColumns($sector))->map(fn (string $column): mixed => $row->getRawOriginal($column))->filter()->implode(' '),
+                'building_name' => $source?->getRawOriginal('building_name'),
+                'geometry' => $source ? $this->geometry($source) : null,
+            ] : []),
             'parentglobalid' => $row->getRawOriginal('parentglobalid'),
             'municipality' => $source?->getRawOriginal('municipalitie'), 'neighborhood' => $source?->getRawOriginal('neighborhood'),
             'damage_status' => $this->damageBucket($sector, $row->getRawOriginal($this->configuration($sector)['damage'])),
@@ -541,7 +589,7 @@ class SectorOverviewService
 
             $features[] = [
                 'geometry' => $geometry,
-                'attributes' => $this->recordAttributes($row, $sector),
+                'attributes' => $this->recordAttributes($row, $sector, $filters['_inquiry'] ?? false),
             ];
         }
 

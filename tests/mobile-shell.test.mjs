@@ -98,3 +98,39 @@ test('configuration failure keeps server links disabled and shows recovery guida
     assert.match(await page.$eval('#connection-state', element => element.textContent), /تعذّر/);
     await page.close();
 });
+
+test('record inquiry uses the authenticated API and safely renders results and expiration', async () => {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 390, height: 844 });
+    await page.evaluateOnNewDocument(() => {
+        window.apiCalls = [];
+        window.Capacitor = { nativePromise: async (plugin, method, options) => {
+            window.apiCalls.push(options);
+            if (options.url.endsWith('auth/login')) return { status: 200, data: { access_token: 'test-token' } };
+            if (options.url.endsWith('/sectors')) return { status: 200, data: { data: [{ key: 'buildings', title: 'المباني' }] } };
+            if (window.expireToken) return { status: 401, data: {} };
+            return { status: 200, data: { total: 1, current_page: 1, last_page: 1, data: [{ name: '<img src=x onerror=alert(1)> برج الأمل', objectid: 123, municipality: 'غزة', neighborhood: 'الرمال', damage_status: 'partially_damaged', audit_status: 'pending', field_completed: true, geometry: null }] } };
+        } };
+    });
+    await page.goto(`${origin}/inquiry.html`, { waitUntil: 'networkidle0' });
+    await page.type('[name=email]', 'test@example.com');
+    await page.type('[name=password]', 'password');
+    await page.click('#login-form button');
+    await page.waitForSelector('#sector option');
+    await page.type('#record-search', 'الأمل');
+    await page.click('#search-submit');
+    await page.waitForSelector('#inquiry-results article');
+    assert.equal(await page.$$eval('#inquiry-results img', nodes => nodes.length), 0);
+    assert.match(await page.$eval('#inquiry-results', node => node.textContent), /برج الأمل/);
+    const calls = await page.evaluate(() => window.apiCalls);
+    assert.equal(calls.at(-1).headers.Authorization, 'Bearer test-token');
+    assert.equal(new URL(calls.at(-1).url).searchParams.get('search'), 'الأمل');
+    assert.equal(await page.evaluate(() => localStorage.length), 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.screenshot({ path: 'tmp/mobile-preview/inquiry-390.png', fullPage: true });
+    await page.evaluate(() => { window.expireToken = true; });
+    await page.click('#search-submit');
+    await page.waitForFunction(() => !document.querySelector('#login-form').hidden);
+    assert.equal(await page.$$eval('#inquiry-results article', nodes => nodes.length), 0);
+    await page.close();
+});
