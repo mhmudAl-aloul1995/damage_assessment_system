@@ -1,33 +1,28 @@
-# Exact continuation — Priority 1 acceptance only
+# Current continuation status — Priority 1 accepted
 
-Read CODEX_PROGRESS.md. Preserve existing work; do not recreate native-android or start Priority 2/3.
+Owner confirmed completion of Priority 1 on 2026-10-10. Preserve existing native 0.2.0 APK/source. Do not re-open the previous acceptance checklist unless requested or new failure evidence appears. No new agent-run device or authenticated API tests are implied by owner acceptance. Priority 2 has not started; wait for an implementation request.
 
-## Current change
-The owner accepted HTTP risk and requested real-account login. Version 0.1.1 removes the test-email/confirmation gate. Do not restore it or ask for the password in chat. Native debug HTTP remains restricted to the configured server; release requires encrypted transport.
+When Priority 2 is requested, inspect existing authorized APIs for advanced filters and fuller building/housing details, then engineering/legal audit history, citizen inquiry and attachment access. Implement incrementally with permission enforcement and relevant tests. GIS/statistics are deferred to Priority 3.
 
-## Required next actions
-1. Build verification is complete: native-account-login-recheck.log, successful in 4m45s; 10 unit tests passed, lint 0 errors/23 warnings. No build is running.
-2. Packaging complete: tmp/mobile-delivery/PHC-Native-0.1.1-debug.apk and PHC-Native-Priority1-debug.apk, versionCode 2, v2 signature verified. Source ZIP refreshed. Deliver/install this version over the previous native APK.
-3. Deployment availability checked: live buildings and housing-units routes both returned 401 on 2026-10-10 after owner deployment; earlier 404 is resolved. Local /push redirects unauthenticated callers to login. Do not repeat deployment merely for these checks; proceed to authenticated device acceptance. No server migration was run.
-4. Install APK on a device, enter account credentials there, verify permissions, building/housing search, pagination, details, empty/error states and logout. No live authenticated test has been performed.
-5. Run connectedDebugAndroidTest when an emulator/device is connected. Compilation alone is not a runtime test.
+## Previous technical continuation notes (historical; use only as needed)
 
-## Build
-From D:/myProjects/phc:
-    powershell -NoProfile -ExecutionPolicy Bypass -File native-android/build-native.ps1 -Verify -CompileDeviceTests
+# Exact continuation — native UX/UI acceptance
+Read CODEX_PROGRESS.md. Do not recreate project or repeat broad analysis. Latest APK is 0.2.0-test/code4; build successful, 11 unit tests passed, 9 UI tests compiled only. APK/source in tmp/mobile-delivery. No running builds.
 
-Portable JDK21, Gradle8.11.1 and Android SDK35 are in tmp/mobile-toolchain. Script configures environment. TestEmail argument was removed. HTTPS endpoint, if provided, can be set with -BaseUrl.
+1. User said they will enable BlueStacks Android Debug Bridge under Advanced. Last observed config still disabled. Confirm ADB accepts actual shell/install commands, not just device enumeration. Do not edit security configuration without authorization.
+2. Configure portable environment from repository root:
+   $env:JAVA_HOME = (Resolve-Path 'tmp/mobile-toolchain/java/jdk-21.0.12.1+1').Path
+   $env:ANDROID_HOME = (Resolve-Path 'tmp/mobile-toolchain/android-sdk').Path
+   $env:GRADLE_USER_HOME = (Resolve-Path 'tmp/mobile-toolchain/gradle-cache').Path
+   Connect with tmp/mobile-toolchain/android-sdk/platform-tools/adb.exe connect 127.0.0.1:5555.
+   Run tmp/mobile-toolchain/gradle/gradle-8.11.1/bin/gradle.bat -p native-android connectedDebugAndroidTest --no-daemon --console=plain --max-workers=2.
+3. NativeScreenTest uses fixture data only, exports design-login-light.png, design-login-dark.png, design-dashboard.png, design-search.png, design-details.png into target app external files directory (/sdcard/Android/data/com.phc.inquiry.test/files). Pull those exact PNGs into tmp/mobile-delivery/design-previews/, inspect and fix actual layout problems. No screenshots currently exist. Tests have not run.
+4. Review small/large/large-font/dark Compose previews in core/ui/DesignPreviews.kt. Verify installation over prior version; cert is same and versionCode raised. Exercise navigation/back/draft/scroll/keyboard/accessibility.
+5. If code changes, run relevant build/unit/UI checks once, verify APK signature and refresh versioned/canonical APK, source ZIP and docs.
+6. Production login error is separate. Need actual live Laravel exception (redacted) or server access. Do not guess missing token table or invoke /run-migrations; empty login request validates correctly and live inquiry routes are protected/reachable. Never request password in chat.
 
-## Files and limitations
-- Native source: native-android/app/src/main/java/com/phc/inquiry; Kotlin/Compose/Hilt/Retrofit/Paging3.
-- Reuse Laravel API listed in CODEX_PROGRESS.md; details use record_id, not objectid.
-- Earlier hybrid android/ios/mobile-shell work is separate and preserved.
-- No connected-device runtime or live authenticated acceptance yet. Debug signing only.
-- Known prior lint findings: 0 errors/23 warnings including three skipped Navigation custom lint registries. Check latest report after verification.
-- Full details, audits, citizen lookup, attachments, GIS, statistics and repair remain deferred.
+Redesign files and exact API contracts are in CODEX_PROGRESS.md. Existing hybrid project is separate. Prior HTTP consent persists. Do not change API/auth/transport security for visual work. No Priority2/3 implementation authorized in this phase.
 
 
-
-## Latest priority: accept fixed login on device
-Version 0.1.2-test / code 3 built successfully (native-login-payload-fix.log, 1m58s). All 11 unit tests passed including missing-device_name regression; APK v2 signature verified. Latest artifact: tmp/mobile-delivery/PHC-Native-0.1.2-debug.apk, also copied to canonical APK; source ZIP refreshed. No builds running.
-Install this version over 0.1.1 and test authenticated login/building/housing search on device. Earlier version 0.1.1 omitted device_name from login JSON and was rejected with 422 before credential verification. Client now supplies a required explicit device_name. No backend change/deployment required for this fix. Never request the account password in chat.
+## Priority 2 now authorized — continue implementation
+Do not obey earlier historical wait-for-authorization note: owner explicitly requested starting Phase2. Backend changes and tests are recorded at end of CODEX_PROGRESS.md. Finish new suite after stage/order fixture fix, add denial/limits/housing coverage. Native DTO/API/repository/search VM edits partially implemented; complete filters UI, full details display, engineering/legal history, citizen dashboard/navigation and in-app image/PDF viewer with private temporary cleanup. Update FakeApi to implement added API methods and add meaningful contract/filter/attachment size tests. Build early Phase2 APK, Pint dirty, targeted Laravel/native tests, signature/package artifacts. GIS stays deferred. No deployment or migrations performed.

@@ -27,10 +27,13 @@ class InquiryRepositoryTest {
     private class FakeApi : InquiryApi {
         var denied = false
         var loginCalls = 0
+        var loginFailure: HttpException? = null
         var loginBody: String? = null
+        var requestedFilters: Map<String, String> = emptyMap()
+        var attachmentBody: okhttp3.ResponseBody = "fixture".toResponseBody()
         var requestedPage = 0
         val user = User(1, "Test account", "demo@example.test")
-        override suspend fun login(request: LoginRequest): LoginResponse { loginCalls++; loginBody = Json.encodeToString(request); return LoginResponse("test-token", "2099-01-01T00:00:00Z", user) }
+        override suspend fun login(request: LoginRequest): LoginResponse { loginFailure?.let { throw it }; loginCalls++; loginBody = Json.encodeToString(request); return LoginResponse("test-token", "2099-01-01T00:00:00Z", user) }
         override suspend fun logout() { if (denied) throw java.io.IOException("offline") }
         override suspend fun me(): DataResponse<User> = DataResponse(user)
         override suspend fun sectors() = DataResponse(listOf(Sector("buildings", "Buildings")))
@@ -40,6 +43,12 @@ class InquiryRepositoryTest {
             return RecordPage(listOf(InquiryRecord(10)), 21, page, 2)
         }
         override suspend fun detail(sector: String, record: Long) = DataResponse(InquiryRecord(record))
+        override suspend fun advancedSearch(sector: String, search: String, page: Int, filters: Map<String, String>): RecordPage { requestedFilters = filters; return search(sector, search, page) }
+        override suspend fun filters(sector: String, municipality: String?) = DataResponse(FilterOptions())
+        override suspend fun history(sector: String, record: Long, track: String, page: Int) = AuditPage(emptyList(), 0, page, 1)
+        override suspend fun attachments(sector: String, record: Long) = DataResponse(emptyList<RecordAttachment>())
+        override suspend fun attachment(sector: String, record: Long, attachment: Long) = attachmentBody
+        override suspend fun citizens(search: String, page: Int) = search("housing-units", search, page)
     }
     private fun repository(api: FakeApi, store: MemoryStore, state: SessionState) = LaravelInquiryRepository(api, store, state, TransportPolicy("https://example.test/".toHttpUrl(), false))
 
@@ -107,5 +116,39 @@ class InquiryRepositoryTest {
             assertEquals(17L, record.recordId)
             assertFalse(record.displayName.isBlank())
         }
+    }
+
+    @Test fun advancedPagingKeepsFiltersAcrossPages() = runTest {
+        val api = FakeApi()
+        val filters = mapOf("municipality" to "غزة", "damage_status" to "fully_damaged")
+        val source = InquiryPagingSource(repository(api, MemoryStore(), SessionState()), "buildings", "", filters) {}
+        source.load(PagingSource.LoadParams.Append(2, 20, false))
+        assertEquals(2, api.requestedPage); assertEquals(filters, api.requestedFilters)
+    }
+
+    @Test fun attachmentReaderRejectsOversizedUnknownLengthStreams() = runTest {
+        val api = FakeApi()
+        val stream = okio.Buffer().write(ByteArray(15 * 1024 * 1024 + 1))
+        api.attachmentBody = object : okhttp3.ResponseBody() {
+            override fun contentType(): okhttp3.MediaType? = null
+            override fun contentLength(): Long = -1L
+            override fun source(): okio.BufferedSource = stream
+        }
+        try { repository(api, MemoryStore(), SessionState()).attachment("buildings", 1, 9); fail("Must reject oversized file") }
+        catch (_: InquiryFailure) {}
+    }
+
+    @Test fun phaseTwoDetailContractRetainsCapabilityDenialsAndNullableValues() {
+        val record = Json.decodeFromString<InquiryRecord>("""{"record_id":17,"sector":"housing-units","details":[{"key":"floor_number","label":"الطابق","value":null}],"capabilities":{"audit_history":false,"attachments":false,"full_details":true}}""")
+        assertEquals("housing-units", record.sector); assertNull(record.details.single().value)
+        assertFalse(record.capabilities.attachments); assertFalse(record.capabilities.auditHistory)
+        assertTrue(record.capabilities.fullDetails)
+    }
+
+    @Test fun validationErrorsAreShownWithoutLeakingRawServerResponse() = runTest {
+        val api = FakeApi()
+        api.loginFailure = HttpException(Response.error<Any>(422, """{"errors":{"email":["fixture validation"]},"trace":"private-trace"}""".toResponseBody()))
+        try { repository(api, MemoryStore(), SessionState()).login("demo@example.test", "fixture-password"); fail("422 must fail") }
+        catch (error: InquiryFailure) { assertEquals("fixture validation", error.message) }
     }
 }

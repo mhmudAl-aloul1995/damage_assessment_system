@@ -14,11 +14,11 @@ class ArcgisService
     // =========================
     // GET TOKEN (WITH CACHE)
     // =========================
-    public function getToken(): string
+    public function getToken(bool $verifyTls = false): string
     {
-        return Cache::remember('arcgis_token', 50 * 60, function () {
+        return Cache::remember($verifyTls ? 'arcgis_mobile_token_verified' : 'arcgis_token', 50 * 60, function () use ($verifyTls) {
 
-            $response = Http::asForm()->withoutVerifying()->post(
+            $response = Http::asForm()->withOptions(['verify' => $verifyTls])->post(
                 'https://www.arcgis.com/sharing/rest/generateToken',
                 [
                     'username' => config('services.arcgis.username'),
@@ -60,11 +60,11 @@ class ArcgisService
         return $result['attachments'] ?? [];
     }
 
-    public function getAttachmentsResult($objectId, $layerId, $token): array
+    public function getAttachmentsResult($objectId, $layerId, $token, bool $verifyTls = false): array
     {
         $url = "{$this->baseUrl}/{$layerId}/{$objectId}/attachments";
 
-        $response = Http::asForm()->withoutVerifying()->post($url, [
+        $response = Http::asForm()->withOptions(['verify' => $verifyTls])->post($url, [
             'f' => 'json',
             'token' => $token,
         ]);
@@ -240,7 +240,7 @@ class ArcgisService
         ];
     }
 
-    public function downloadAttachment(int|string $objectId, int|string $layerId, int|string $attachmentId, string $token): array
+    public function downloadAttachment(int|string $objectId, int|string $layerId, int|string $attachmentId, string $token, bool $verifyTls = false): array
     {
         if (! filled($objectId) || ! filled($attachmentId)) {
             return [
@@ -250,7 +250,7 @@ class ArcgisService
             ];
         }
 
-        $response = Http::withoutVerifying()
+        $response = Http::withOptions(['verify' => $verifyTls])
             ->get("{$this->baseUrl}/{$layerId}/{$objectId}/attachments/{$attachmentId}", [
                 'token' => $token,
             ]);

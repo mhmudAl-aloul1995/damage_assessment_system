@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
 import retrofit2.HttpException
 
 @Singleton
@@ -31,6 +32,12 @@ interface InquiryRepository {
     suspend fun sectors(): List<Sector>
     suspend fun search(sector: String, query: String, page: Int): RecordPage
     suspend fun detail(sector: String, id: Long): InquiryRecord
+    suspend fun searchFiltered(sector: String, query: String, page: Int, filters: Map<String, String>): RecordPage
+    suspend fun filters(sector: String, municipality: String?): FilterOptions
+    suspend fun history(sector: String, id: Long, track: String, page: Int): AuditPage
+    suspend fun attachments(sector: String, id: Long): List<RecordAttachment>
+    suspend fun attachment(sector: String, id: Long, attachment: Long): ByteArray
+    suspend fun citizens(query: String, page: Int): RecordPage
 }
 
 @Singleton
@@ -45,12 +52,18 @@ class LaravelInquiryRepository @Inject constructor(
         catch (cancelled: CancellationException) { throw cancelled }
         catch (error: HttpException) {
             if (error.code() == 401) { state.expire(); store.clear() }
+            val validationMessage = if (error.code() == 422) runCatching {
+                val body = error.response()?.errorBody()?.string()?.take(4096) ?: "{}"
+                kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString<ValidationErrors>(body).errors.values.flatten().firstOrNull()?.take(180)
+            }.getOrNull() else null
             throw InquiryFailure(when (error.code()) {
                 401 -> "انتهت الجلسة. سجّل الدخول مجددًا."
                 403 -> "لا تملك صلاحية عرض هذه البيانات."
                 404 -> "خدمة الاستعلام أو السجل غير متاح. تأكد من نشر API على السيرفر."
-                422 -> "تحقق من البيانات المدخلة وحالة الحساب."
+                422 -> validationMessage ?: "تحقق من البيانات المدخلة وحالة الحساب."
                 429 -> "طلبات كثيرة. انتظر دقيقة ثم حاول مجددًا."
+                413 -> "المرفق أكبر من الحد المسموح للعرض (15 ميغابايت)."
+                415 -> "هذا النوع من المرفقات غير مدعوم للعرض."
                 else -> "تعذّر إتمام الطلب من السيرفر. حاول مجددًا."
             })
         }
@@ -90,4 +103,26 @@ class LaravelInquiryRepository @Inject constructor(
     override suspend fun sectors(): List<Sector> = request { api.sectors().data.filter { it.key in setOf("buildings", "housing-units") } }
     override suspend fun search(sector: String, query: String, page: Int): RecordPage = request { api.search(sector, query, page) }
     override suspend fun detail(sector: String, id: Long): InquiryRecord = request { api.detail(sector, id).data }
+    override suspend fun searchFiltered(sector: String, query: String, page: Int, filters: Map<String, String>): RecordPage = request { api.advancedSearch(sector, query, page, filters) }
+    override suspend fun filters(sector: String, municipality: String?): FilterOptions = request { api.filters(sector, municipality).data }
+    override suspend fun history(sector: String, id: Long, track: String, page: Int): AuditPage = request { api.history(sector, id, track, page) }
+    override suspend fun attachments(sector: String, id: Long): List<RecordAttachment> = request { api.attachments(sector, id).data }
+    override suspend fun citizens(query: String, page: Int): RecordPage = request { api.citizens(query, page) }
+    override suspend fun attachment(sector: String, id: Long, attachment: Long): ByteArray = request {
+        api.attachment(sector, id, attachment).use { body ->
+            val limit = 15 * 1024 * 1024
+            if (body.contentLength() > limit) throw InquiryFailure("المرفق أكبر من الحد المسموح للعرض.")
+            val output = java.io.ByteArrayOutputStream()
+            body.byteStream().use { input ->
+                val buffer = ByteArray(8192)
+                var read = input.read(buffer)
+                while (read != -1) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    if (output.size() + read > limit) throw InquiryFailure("المرفق أكبر من الحد المسموح للعرض.")
+                    output.write(buffer, 0, read); read = input.read(buffer)
+                }
+            }
+            output.toByteArray()
+        }
+    }
 }

@@ -84,3 +84,28 @@ it('creates and backfills the arcgis phase number field when it is missing', fun
         && str_contains(urldecode($request->body()), 'phase_number IS NULL')
         && str_contains(urldecode($request->body()), '"value":1'));
 });
+
+it('verifies provider TLS for mobile token list and attachment requests', function (): void {
+    $options = [];
+    Http::globalMiddleware(function (callable $handler) use (&$options): callable {
+        return function ($request, array $requestOptions) use ($handler, &$options) {
+            $options[] = $requestOptions['verify'] ?? null;
+
+            return $handler($request, $requestOptions);
+        };
+    });
+    \Illuminate\Support\Facades\Cache::forget('arcgis_mobile_token_verified');
+    Http::fake([
+        '*generateToken' => Http::response(['token' => 'verified-fixture-token']),
+        '*/attachments' => Http::response(['attachmentInfos' => [['id' => 9, 'size' => 8]]]),
+        '*/attachments/9*' => Http::response('fixture!', 200, ['Content-Type' => 'image/png']),
+    ]);
+    $service = new ArcgisService;
+    $token = $service->getToken(true);
+    $service->getAttachmentsResult(701, 0, $token, true);
+    $service->downloadAttachment(701, 0, 9, $token, true);
+    expect($options)->toHaveCount(3);
+    foreach ($options as $verified) {
+        expect($verified)->toBeTrue();
+    }
+});

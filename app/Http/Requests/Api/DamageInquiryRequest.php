@@ -9,13 +9,13 @@ class DamageInquiryRequest extends SectorOverviewRequest
     /** @return array<string, array<mixed>> */
     public function rules(): array
     {
-        return [...parent::rules(), 'search' => ['nullable', 'string', 'max:150']];
+        return [...parent::rules(), 'search' => ['nullable', 'string', 'max:150'], 'track' => ['nullable', 'in:engineering,legal']];
     }
 
     /** @return array<string, string> */
     public function messages(): array
     {
-        return [...parent::messages(), 'search.string' => 'أدخل نصًا للبحث.', 'search.max' => 'نص البحث يجب ألا يتجاوز 150 حرفًا.'];
+        return [...parent::messages(), 'search.string' => 'أدخل نصًا للبحث.', 'search.max' => 'نص البحث يجب ألا يتجاوز 150 حرفًا.', 'track.in' => 'مسار التدقيق غير صالح.'];
     }
 
     /** @return array<string, mixed> */

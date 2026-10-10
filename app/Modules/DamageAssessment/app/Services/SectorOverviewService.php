@@ -58,7 +58,31 @@ class SectorOverviewService
             }
         }
 
-        if (filled($filters['search'] ?? null)) {
+        if (($filters['_citizen_search'] ?? false) && filled($filters['search'] ?? null)) {
+            $candidateColumns = $sector === 'buildings'
+                ? ['owner_name', 'owner_name_1', 'owner_id']
+                : ['q_9_3_1_first_name', 'q_9_3_2_second_name__father', 'q_9_3_3_third_name__grandfather', 'q_9_3_4_last_name', 'unit_owner', 'id_number1'];
+            $identity = ctype_digit(trim($filters['search']));
+            if ($identity) {
+                $candidateColumns = $sector === 'buildings' ? ['owner_id'] : ['id_number1'];
+            }
+            $columns = $this->existingColumns($query->getModel(), $candidateColumns);
+            foreach (preg_split('/\s+/u', trim($filters['search'])) ?: [] as $word) {
+                $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $word).'%';
+                $query->where(function (Builder $search) use ($columns, $term, $identity, $word): void {
+                    foreach ($columns as $column) {
+                        if ($identity) {
+                            $search->orWhere($column, $word);
+                        } else {
+                            $search->orWhereRaw($search->getQuery()->getGrammar()->wrap($column)." LIKE ? ESCAPE '!'", [$term]);
+                        }
+                    }
+                    if ($columns === []) {
+                        $search->whereRaw('1 = 0');
+                    }
+                });
+            }
+        } elseif (filled($filters['search'] ?? null)) {
             $columns = $this->existingColumns($query->getModel(), ['objectid', 'globalid', ...$this->nameColumns($sector)]);
             $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], trim($filters['search'])).'%';
             $query->where(function (Builder $search) use ($columns, $term, $sector): void {
@@ -451,6 +475,14 @@ class SectorOverviewService
             ->where('id', $recordId)->firstOrFail();
 
         return $this->recordAttributes($row, $sector, true);
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function inquiryModel(string $sector, int $recordId, array $filters): Model
+    {
+        $query = $this->query($sector, $filters);
+
+        return $query->where($query->getModel()->qualifyColumn('id'), $recordId)->firstOrFail();
     }
 
     /** @return list<string> */
