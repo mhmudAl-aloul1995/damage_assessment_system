@@ -8,7 +8,7 @@ The owner accepted HTTP risk and requested real-account login. Version 0.1.1 rem
 ## Required next actions
 1. Build verification is complete: native-account-login-recheck.log, successful in 4m45s; 10 unit tests passed, lint 0 errors/23 warnings. No build is running.
 2. Packaging complete: tmp/mobile-delivery/PHC-Native-0.1.1-debug.apk and PHC-Native-Priority1-debug.apk, versionCode 2, v2 signature verified. Source ZIP refreshed. Deliver/install this version over the previous native APK.
-3. Owner must deploy existing local Laravel inquiry API changes. Anonymous /api/v1/damage-assessment/buildings still returned 404 on 2026-10-10; expected 401 when the protected route is deployed. No production migration or server setup is authorized by this login change.
+3. Deployment availability checked: live buildings and housing-units routes both returned 401 on 2026-10-10 after owner deployment; earlier 404 is resolved. Local /push redirects unauthenticated callers to login. Do not repeat deployment merely for these checks; proceed to authenticated device acceptance. No server migration was run.
 4. Install APK on a device, enter account credentials there, verify permissions, building/housing search, pagination, details, empty/error states and logout. No live authenticated test has been performed.
 5. Run connectedDebugAndroidTest when an emulator/device is connected. Compilation alone is not a runtime test.
 
@@ -26,3 +26,8 @@ Portable JDK21, Gradle8.11.1 and Android SDK35 are in tmp/mobile-toolchain. Scri
 - Known prior lint findings: 0 errors/23 warnings including three skipped Navigation custom lint registries. Check latest report after verification.
 - Full details, audits, citizen lookup, attachments, GIS, statistics and repair remain deferred.
 
+
+
+## Latest priority: accept fixed login on device
+Version 0.1.2-test / code 3 built successfully (native-login-payload-fix.log, 1m58s). All 11 unit tests passed including missing-device_name regression; APK v2 signature verified. Latest artifact: tmp/mobile-delivery/PHC-Native-0.1.2-debug.apk, also copied to canonical APK; source ZIP refreshed. No builds running.
+Install this version over 0.1.1 and test authenticated login/building/housing search on device. Earlier version 0.1.1 omitted device_name from login JSON and was rejected with 422 before credential verification. Client now supplies a required explicit device_name. No backend change/deployment required for this fix. Never request the account password in chat.

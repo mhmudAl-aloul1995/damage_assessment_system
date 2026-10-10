@@ -6,7 +6,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import retrofit2.http.*
 
 @Serializable
-data class LoginRequest(val email: String, val password: String, @SerialName("device_name") val deviceName: String = "PHC Native Android")
+data class LoginRequest(val email: String, val password: String, @SerialName("device_name") val deviceName: String)
 
 @Serializable
 data class User(val id: Long, val name: String, val email: String, val locale: String? = null)

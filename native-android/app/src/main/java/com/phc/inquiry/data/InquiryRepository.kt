@@ -75,7 +75,7 @@ class LaravelInquiryRepository @Inject constructor(
     override suspend fun login(email: String, password: String) {
         policy.checkTransport()
         request {
-            val result = api.login(LoginRequest(email, password))
+            val result = api.login(LoginRequest(email, password, "PHC Native Android"))
             val session = Session(result.token, result.expiresAt, result.user)
             store.save(session)
             state.set(session)

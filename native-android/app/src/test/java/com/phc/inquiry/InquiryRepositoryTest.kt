@@ -7,6 +7,9 @@ import com.phc.inquiry.feature.damageassessment.InquiryPagingSource
 import androidx.paging.PagingSource
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.*
@@ -24,9 +27,10 @@ class InquiryRepositoryTest {
     private class FakeApi : InquiryApi {
         var denied = false
         var loginCalls = 0
+        var loginBody: String? = null
         var requestedPage = 0
         val user = User(1, "Test account", "demo@example.test")
-        override suspend fun login(request: LoginRequest): LoginResponse { loginCalls++; return LoginResponse("test-token", "2099-01-01T00:00:00Z", user) }
+        override suspend fun login(request: LoginRequest): LoginResponse { loginCalls++; loginBody = Json.encodeToString(request); return LoginResponse("test-token", "2099-01-01T00:00:00Z", user) }
         override suspend fun logout() { if (denied) throw java.io.IOException("offline") }
         override suspend fun me(): DataResponse<User> = DataResponse(user)
         override suspend fun sectors() = DataResponse(listOf(Sector("buildings", "Buildings")))
@@ -48,6 +52,16 @@ class InquiryRepositoryTest {
         try { repository.search("buildings", "", 1); fail("401 must fail") } catch (_: InquiryFailure) {}
         assertNull(store.read()); assertNull(state.session.value)
         assertNotNull(state.notice.value)
+    }
+
+    @Test fun loginSerializesAllRequiredLaravelFieldsWithDefaultEncoding() = runTest {
+        val api = FakeApi()
+        repository(api, MemoryStore(), SessionState()).login("demo@example.test", "fixture-password")
+        val body = Json.parseToJsonElement(requireNotNull(api.loginBody)).jsonObject
+        assertEquals(setOf("email", "password", "device_name"), body.keys)
+        assertEquals("PHC Native Android", body.getValue("device_name").jsonPrimitive.content)
+        assertEquals("demo@example.test", body.getValue("email").jsonPrimitive.content)
+        assertEquals("fixture-password", body.getValue("password").jsonPrimitive.content)
     }
 
     @Test fun logoutClearsLocalSessionEvenWhenOffline() = runTest {

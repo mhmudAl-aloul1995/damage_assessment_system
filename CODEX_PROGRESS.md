@@ -5,12 +5,12 @@ Updated: 2026-10-10 (Asia/Hebron).
 ## Delivery status
 - Separate, genuinely native Android project: native-android/. Kotlin + Jetpack Compose + Material Design 3. No WebView, Capacitor, Cordova or HTML screens in this project.
 - Existing android/, ios/ and mobile-shell/ were preserved as received at the start of the native request. Earlier hybrid/API changes remain in the working tree; they are not the native deliverable.
-- Priority 1 implementation and APK build completed. Live end-to-end acceptance is pending server deployment and a device. Priority 2/3 were not started.
+- Priority 1 implementation and APK build completed. Anonymous live route availability is verified; authenticated end-to-end acceptance is pending a device/account test. Priority 2/3 were not started.
 - Latest native APK: D:/myProjects/phc/tmp/mobile-delivery/PHC-Native-Priority1-debug.apk
-- APK size: 11,433,120 bytes. SHA-256: CAD2276B136E88DF027458E1F624ECD8C78D6852E6006A3A01670146152783B9.
+- APK size: 11433120 bytes. SHA-256: 0B8F52C95BDA1818F2DA110EAD59044F6A4041AFA5598CB4B49205FE61549252.
 - Android Studio source archive: tmp/mobile-delivery/PHC-Native-Priority1-source.zip (created at final packaging).
 - App: PHC Inquiry. Package: com.phc.inquiry.test (debug); com.phc.inquiry (release).
-- Version: 0.1.1-test, versionCode 2. Minimum Android 8/API 26, target/compile Android 15/API 35.
+- Version: 0.1.2-test, versionCode 3. Minimum Android 8/API 26, target/compile Android 15/API 35.
 
 ## Completed features
 - [x] Inspected actual Laravel/Sanctum auth, sector permissions, source models and API response contract.
@@ -44,7 +44,7 @@ HTTP remains limited to the existing IP/port in debug builds. Release builds pro
 - API returns data, total, current_page, last_page for lists; details return data.
 - Server enforcement: Sanctum, active account, mobile:read token, rate limit, SectorOverviewRequest authorization, explicit account phase restrictions.
 - Sources: audited_buildings; audited_housing_units when available, otherwise housing_units, with parent building relation. Reuses SectorOverviewService. No duplicate database/models.
-- Last live inquiry check returned HTTP 404; new routes must be deployed by the owner. No real authenticated server requests were made.
+- Latest live inquiry checks (2026-10-10 after owner used deployment flow): buildings and housing-units both return HTTP 401 to anonymous requests, replacing earlier 404. Protected routes are now reachable. No authenticated server request was made.
 - API search currently reuses existing LIKE search. Large-dataset index/performance work is deferred, not claimed complete.
 
 ## Files
@@ -79,8 +79,8 @@ For the confirmed test account only:
 The script uses existing tmp/mobile-toolchain JDK21 / Gradle8.11.1 / AndroidSDK35, or configured JAVA_HOME/ANDROID_HOME and the wrapper. Android Studio can open native-android/ directly. No passwords, signing keys or machine-specific SDK paths are committed.
 
 ## Remaining / next step
-1. Complete device acceptance of version 0.1.1; login no longer requires a build-time test email.
-2. Owner deploys the local API changes; verify unauthenticated endpoint is 401, not 404, then test authorized flows on the device.
+1. Install version 0.1.2 and complete device acceptance; fixes omitted device_name in login JSON.
+2. Live buildings/housing routes now return 401 as expected; test authorized login/search/details on the device.
 3. Connect an Android device/emulator, install native APK, run Compose instrumentation and login/building/housing/detail/logout smoke tests.
 4. Optional Priority 1 maintenance: align Navigation custom lint version and simplify redundant copied launcher resources. Current build has no lint errors.
 5. Await explicit instruction before Priority 2/3. Full details, audit histories, citizen lookup, attachments, GIS, charts, repair, English localization and large-scale performance remain outside this delivered slice.
@@ -94,4 +94,22 @@ The script uses existing tmp/mobile-toolchain JDK21 / Gradle8.11.1 / AndroidSDK3
 
 - Versioned APK: D:/myProjects/phc/tmp/mobile-delivery/PHC-Native-0.1.1-debug.apk; v2 signature verified, versionCode 2, Android 8 minimum. Latest unit tests: 10 passed, 0 failures/errors. Device tests still compile-only.
 
+
+
+## Deployment follow-up — 2026-10-10
+- Inspected routes/web.php: /push stages/commits changes, runs git push, then redirects to configured server_pull_url; /pull executes git pull. Both require maintenance role/permission within authenticated routes.
+- Working tree was clean and branch matched origin at commit 048995da1 (Auto-update).
+- Anonymous request to localhost/phc/push redirected to login; this agent did not run the authenticated deployment action.
+- Live buildings and housing-units API requests now both return 401, confirming protected routes are available. Earlier 404 observations are historical. This does not verify authenticated search, database queries, or account permissions.
+- Next step: install native 0.1.1 APK and test with account credentials entered only on device. No new APK is needed for this server deployment.
+
+## Login payload correction — 2026-10-10
+- User screenshot showed the native generic HTTP 422 validation error after login.
+- Root cause found in client contract: LoginRequest.deviceName had a Kotlin default value while network Json uses default encodeDefaults=false, so device_name was omitted. Laravel MobileLoginRequest requires device_name before credential verification. This defect alone prevents login regardless of valid account credentials.
+- Fixed deviceName to be a required constructor value; repository explicitly supplies PHC Native Android. No backend validation/authentication was weakened or changed.
+- Added regression test through repository login and actual kotlinx serialization checking all three required wire keys and values using fixture credentials only.
+- Bumped Android version to 0.1.2-test / versionCode 3. Build and unit/lint verification running: tmp/mobile-toolchain/native-login-payload-fix.log.
+- Pending: verify build/test results, package APK/source and update canonical artifact/hash. No real credentials used; device login acceptance still pending.
+
+- Login payload fix verification complete: BUILD SUCCESSFUL in 1m58s; 11 unit tests passed (8 repository/contract + 3 transport), 0 failures. Lint completed; signature v2 verified; versionCode 3 confirmed. No builds running. APK: D:/myProjects/phc/tmp/mobile-delivery/PHC-Native-0.1.2-debug.apk. SHA-256: 0B8F52C95BDA1818F2DA110EAD59044F6A4041AFA5598CB4B49205FE61549252. Canonical APK and source archive refreshed. Live authenticated login remains unverified; user must install new APK and retry on device.
 
