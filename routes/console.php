@@ -110,7 +110,7 @@ foreach (range(1, 3) as $workerSlot) {
 | يعمل كل ساعة من 01:00 حتى 23:00
 */
 //Schedule::command('sync:arcgis-layers --exclude=cso_surveys --exclude=cso_survey_organizations --exclude=cso_survey_units')
-Schedule::command('sync:arcgis-layers')
+Schedule::command('sync:arcgis-layers --exclude=buildings --exclude=housing_units')
     ->cron('0 16-23 * * *')
     ->withoutOverlapping(120)
     ->name('sync-arcgis-layers')

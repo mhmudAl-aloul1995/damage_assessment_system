@@ -3,6 +3,8 @@ package com.phc.inquiry.core.network
 import com.phc.inquiry.BuildConfig
 import com.phc.inquiry.core.security.*
 import com.phc.inquiry.data.*
+import com.phc.inquiry.feature.portal.DraftSummaryStore
+import com.phc.inquiry.feature.portal.DraftVault
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -22,6 +24,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 abstract class RepositoryModule {
     @Binds @Singleton abstract fun store(store: KeystoreSessionStore): SessionStore
     @Binds @Singleton abstract fun repository(repository: LaravelInquiryRepository): InquiryRepository
+    @Binds @Singleton abstract fun drafts(vault: DraftVault): DraftSummaryStore
 }
 
 @Module

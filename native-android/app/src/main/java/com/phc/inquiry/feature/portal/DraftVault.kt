@@ -2,6 +2,8 @@ package com.phc.inquiry.feature.portal
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.security.KeyStoreException
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
@@ -21,6 +23,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 
 @Serializable data class DraftAttachment(val localId: String, val name: String, val mime: String, val size: Long, val remoteId: Long? = null)
 data class DraftSummary(val uuid: String, val formKey: String, val title: String, val module: String, val recordId: Long?, val updatedAt: String, val pending: Boolean, val receiptId: Long?)
@@ -31,7 +34,7 @@ data class DraftSummary(val uuid: String, val formKey: String, val title: String
     fun summary() = DraftSummary(uuid, schema.key, schema.title, schema.module, schema.recordId, updatedAt, pending != null, receipt?.id)
 }
 
-@Singleton class DraftVault @Inject constructor(@ApplicationContext private val context: Context, policy: TransportPolicy) {
+@Singleton class DraftVault @Inject constructor(@ApplicationContext private val context: Context, policy: TransportPolicy) : DraftSummaryStore {
     val origin = policy.baseUrl.toString()
     private val root = File(context.noBackupFilesDir, "form-vault")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -42,9 +45,10 @@ data class DraftSummary(val uuid: String, val formKey: String, val title: String
         return File(root, scope).apply { if (!exists() && !mkdirs()) throw InquiryFailure("تعذّر إنشاء مخزن المسودات.") }
     }
     private fun safeId(id: String): String = UUID.fromString(id).toString()
-    private fun key(): SecretKey {
+    private fun key(create: Boolean = true): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(alias, null) as? SecretKey)?.let { return it }
+        if (!create) throw InquiryFailure(DRAFT_STORAGE_MESSAGE)
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
             init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())
@@ -54,8 +58,11 @@ data class DraftSummary(val uuid: String, val formKey: String, val title: String
         java.io.ByteArrayInputStream(bytes).use { writeStream(file, it, bytes.size) }
     }
     private fun writeStream(file: File, input: java.io.InputStream, limit: Int): Long {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
-        cipher.updateAAD((file.parentFile!!.name + ":" + file.name).toByteArray())
+        val cipher = try { Cipher.getInstance("AES/GCM/NoPadding").apply {
+            init(Cipher.ENCRYPT_MODE, key())
+            updateAAD((file.parentFile!!.name + ":" + file.name).toByteArray())
+        } }
+        catch (_: Exception) { throw InquiryFailure("تعذّر تشغيل التشفير لحفظ المسودة على هذا الجهاز. أعد فتح التطبيق وحاول مجددًا.") }
         val atomic = AtomicFile(file)
         val output = atomic.startWrite()
         try {
@@ -74,18 +81,29 @@ data class DraftSummary(val uuid: String, val formKey: String, val title: String
             atomic.finishWrite(output)
             return total
         }
-        catch (error: Exception) { atomic.failWrite(output); throw error }
+        catch (error: Exception) {
+            atomic.failWrite(output)
+            if (error is java.security.GeneralSecurityException || error is java.security.ProviderException) throw InquiryFailure("تعذّر إتمام الحفظ المشفر على الجهاز. لا تغلق النموذج قبل نجاح الحفظ.")
+            throw error
+        }
     }
     private fun read(file: File, max: Int): ByteArray {
         if (file.length() > max + 64) throw InquiryFailure("حجم الملف المحفوظ غير صالح.")
-        val bytes = AtomicFile(file).readFully()
+        val bytes = try { AtomicFile(file).readFully() } catch (_: java.io.IOException) { throw InquiryFailure(DRAFT_STORAGE_MESSAGE) }
         if (bytes.size < 28) throw InquiryFailure("تعذّر فتح الملف المشفر.")
-        return Cipher.getInstance("AES/GCM/NoPadding").run {
-            init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
-            updateAAD((file.parentFile!!.name + ":" + file.name).toByteArray())
-            doFinal(bytes.copyOfRange(12, bytes.size))
-        }
+        return try {
+            retryTransientRead(::isTransientKeystoreFailure) {
+                Cipher.getInstance("AES/GCM/NoPadding").run {
+                    init(Cipher.DECRYPT_MODE, key(create = false), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
+                    updateAAD((file.parentFile!!.name + ":" + file.name).toByteArray())
+                    doFinal(bytes.copyOfRange(12, bytes.size))
+                }
+            }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { throw InquiryFailure(DRAFT_STORAGE_MESSAGE) }
     }
+    private fun isTransientKeystoreFailure(error: Exception): Boolean = Build.VERSION.SDK_INT >= 33 &&
+        generateSequence<Throwable>(error) { it.cause }.take(8).filterIsInstance<KeyStoreException>().any { it.isTransientFailure }
     @Synchronized fun save(draft: FormDraft) {
         require(draft.origin == origin)
         val bytes = json.encodeToString(draft).toByteArray()
@@ -103,7 +121,11 @@ data class DraftSummary(val uuid: String, val formKey: String, val title: String
         .map { load(owner, it.nameWithoutExtension) }.sortedByDescending { it.updatedAt }
     @Synchronized fun summaries(owner: Long): List<DraftSummary> = directory(owner).listFiles { file -> file.extension == "draft" }.orEmpty().asSequence()
         .map { load(owner, it.nameWithoutExtension).summary() }.sortedByDescending { it.updatedAt }.toList()
-    @Synchronized fun delete(owner: Long, uuid: String) {
+    @Synchronized override fun listing(owner: Long): DraftListing {
+        val files = directory(owner).listFiles { file -> file.extension == "draft" } ?: throw InquiryFailure(DRAFT_STORAGE_MESSAGE)
+        return collectDraftSummaries(files.map { it.nameWithoutExtension }) { load(owner, it).summary() }
+    }
+    @Synchronized override fun delete(owner: Long, uuid: String) {
         val draft = load(owner, uuid)
         require(draft.pending == null || draft.receipt != null) { "لا تحذف إرسالًا ينتظر تأكيد الاستلام." }
         draft.attachments.forEach { File(directory(owner), safeId(it.localId) + ".file").delete() }

@@ -14,22 +14,21 @@ import kotlinx.serialization.json.*
 
 data class PortalState(val loading: Boolean = true, val modules: List<PortalModule> = emptyList(), val forms: List<PublishedForm> = emptyList(),
     val drafts: List<DraftSummary> = emptyList(), val receipts: List<SubmissionReceipt> = emptyList(), val receiptsPage: Int = 0, val receiptsLast: Int = 1, val error: String? = null,
-    val receiptsLoading: Boolean = false, val receiptsError: String? = null)
-@HiltViewModel class PortalViewModel @Inject constructor(private val repository: PortalRepository, private val vault: DraftVault, private val session: SessionState): ViewModel() {
+    val receiptsLoading: Boolean = false, val receiptsError: String? = null, val draftsError: String? = null)
+@HiltViewModel class PortalViewModel @Inject constructor(private val repository: PortalRepository, private val vault: DraftSummaryStore, private val session: SessionState): ViewModel() {
     private val mutable = MutableStateFlow(PortalState())
     val state = mutable.asStateFlow()
     private var job: Job? = null
     private var receiptsJob: Job? = null
+    private var draftsJob: Job? = null
     private var owner: Long? = null
-    init { viewModelScope.launch { session.session.map { it?.user?.id }.distinctUntilChanged().collect { id -> job?.cancel(); receiptsJob?.cancel(); owner = id; mutable.value = PortalState(); if (id != null) refresh() } } }
+    init { viewModelScope.launch { session.session.map { it?.user?.id }.distinctUntilChanged().collect { id -> job?.cancel(); receiptsJob?.cancel(); draftsJob?.cancel(); owner = id; mutable.value = PortalState(); if (id != null) refresh() } } }
     fun refresh() {
         val id = owner ?: return
         job?.cancel()
         job = viewModelScope.launch {
             mutable.update { it.copy(loading = true, error = null) }
             try {
-                val drafts = withContext(Dispatchers.IO) { vault.summaries(id).filter { it.formKey in PUBLISHED_FORM_KEYS } }
-                mutable.update { it.copy(drafts = drafts) }
                 val modules = repository.modules()
                 mutable.update { it.copy(modules = modules) }
                 val forms = repository.forms()
@@ -38,12 +37,18 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutable.update { it.copy(loading = false, error = error.message ?: "تعذّر تحديث البوابة.") } }
         }
+        localDrafts()
     }
     fun localDrafts() {
         val id = owner ?: return
-        viewModelScope.launch {
-            try { val drafts = withContext(Dispatchers.IO) { vault.summaries(id).filter { it.formKey in PUBLISHED_FORM_KEYS } }; if(owner == id) mutable.update { it.copy(drafts = drafts) } }
-            catch (error: Exception) { mutable.update { it.copy(error = "تعذّر فتح المسودات المشفرة. ${error.message.orEmpty()}") } }
+        draftsJob?.cancel()
+        draftsJob = viewModelScope.launch {
+            try {
+                val listing = withContext(Dispatchers.IO) { vault.listing(id) }
+                if(owner == id) mutable.update { it.copy(drafts = listing.drafts.filter { it.formKey in PUBLISHED_FORM_KEYS }, draftsError = if(listing.unavailableCount > 0) DRAFT_STORAGE_MESSAGE else null) }
+            }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if(owner == id) mutable.update { it.copy(draftsError = DRAFT_STORAGE_MESSAGE) } }
         }
     }
     fun moreReceipts() {
@@ -69,7 +74,8 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
         val id = owner ?: return
         viewModelScope.launch {
             try { withContext(Dispatchers.IO) { vault.delete(id, uuid) }; localDrafts() }
-            catch (error: Exception) { mutable.update { it.copy(error = error.message ?: "تعذّر حذف المسودة.") } }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if(owner == id) mutable.update { it.copy(draftsError = "تعذّر حذف المسودة. الملف محفوظ؛ أعد المحاولة من المسودات.") } }
         }
     }
 }

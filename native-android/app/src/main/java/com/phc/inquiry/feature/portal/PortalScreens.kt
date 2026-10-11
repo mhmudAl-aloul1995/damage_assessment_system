@@ -62,9 +62,13 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
             }
         } }
         item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedCard(onClick = onDrafts, modifier = Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text("${state.drafts.count { it.receiptId == null }}", style = MaterialTheme.typography.headlineMedium); Text("مسودات على الجهاز") } }
+            OutlinedCard(onClick = onDrafts, modifier = Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text(if(state.draftsError != null && state.drafts.isEmpty()) "—" else "${state.drafts.count { it.receiptId == null }}", style = MaterialTheme.typography.headlineMedium); Text(if(state.draftsError != null) "مسودات يمكن فتحها" else "مسودات على الجهاز") } }
             OutlinedCard(onClick = onSurveys, modifier = Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text("${state.forms.size}", style = MaterialTheme.typography.headlineMedium); Text("نماذج متاحة") } }
         } }
+        state.draftsError?.let { item { OutlinedCard(onClick = onDrafts, modifier = Modifier.fillMaxWidth().testTag("home-drafts-warning")) { Column(Modifier.padding(18.dp)) {
+            Text("تنبيه المسودات المحفوظة", style = MaterialTheme.typography.titleSmall)
+            Text("تعذّر فتح بعض المسودات على الجهاز. يمكنك متابعة الاستعلام وفتح المسودات لإعادة المحاولة.", style = MaterialTheme.typography.bodySmall)
+        } } } }
         item { Text("الموديولات المتاحة لحسابك", style = MaterialTheme.typography.titleLarge) }
         if(state.loading) item { LoadingState() }
         state.error?.let { item { ErrorState(it, retry) } }
@@ -125,16 +129,16 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
         }
     }
 }
-@Composable fun SurveysScreen(state: PortalState, initialTab: Int, onForm: (PublishedForm) -> Unit, onDraft: (DraftSummary) -> Unit, deleteDraft: (String) -> Unit, retry: () -> Unit, moreReceipts: () -> Unit, refreshReceipts: () -> Unit = {}, onAttachment: (String, Long) -> Unit = { _, _ -> }) {
+@Composable fun SurveysScreen(state: PortalState, initialTab: Int, onForm: (PublishedForm) -> Unit, onDraft: (DraftSummary) -> Unit, deleteDraft: (String) -> Unit, retry: () -> Unit, moreReceipts: () -> Unit, refreshReceipts: () -> Unit = {}, retryDrafts: () -> Unit = {}, onAttachment: (String, Long) -> Unit = { _, _ -> }) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab) }
     var toDelete by remember { mutableStateOf<DraftSummary?>(null) }
     LaunchedEffect(tab) { if (tab == 2) refreshReceipts() }
     Column {
         TabRow(tab) { listOf("النماذج", "المسودات", "المرسلة").forEachIndexed { index, title -> Tab(tab == index, { tab = index }, text = { Text(title) }) } }
         LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (if (tab == 2) state.receiptsLoading else state.loading) item { LoadingState() }
+            if (if (tab == 2) state.receiptsLoading else tab == 0 && state.loading) item { LoadingState() }
             if (tab == 2) state.receiptsError?.let { item { ErrorState(it, refreshReceipts) } }
-            else state.error?.let { item { ErrorState(it, retry) } }
+            else if (tab == 0) state.error?.let { item { ErrorState(it, retry) } }
             when(tab) {
                 0 -> {
                     item { Text("ابدأ استبيانًا", style = MaterialTheme.typography.headlineSmall); Text("النماذج المنشورة والمسموحة لحسابك فقط.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -144,11 +148,16 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
                 }
                 1 -> {
                     item { Text("محفوظة على هذا الجهاز", style = MaterialTheme.typography.headlineSmall); Text("المسودات مشفرة ومخصصة لهذا الحساب. الحفظ هنا لا يعني الاستلام على السيرفر.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    state.draftsError?.let { item { OutlinedCard(Modifier.fillMaxWidth().testTag("draft-storage-warning")) { Column(Modifier.padding(18.dp)) {
+                        Text("تعذّر فتح بعض المسودات", style = MaterialTheme.typography.titleMedium)
+                        Text(it)
+                        TextButton(onClick = retryDrafts) { Text("إعادة محاولة فتح المسودات") }
+                    } } } }
                     items(state.drafts, key = { it.uuid }) { draft -> Column {
                         PortalCard(draft.title, when { draft.receiptId != null -> "تم الاستلام · إيصال ${draft.receiptId}"; draft.pending -> "بانتظار تأكيد الاستلام · أعد المحاولة"; else -> "مسودة محلية · ${displayTime(draft.updatedAt)}" }, { onDraft(draft) })
                         if(!draft.pending || draft.receiptId != null) TextButton(onClick = { toDelete = draft }) { Text("حذف النسخة المحلية") }
                     } }
-                    if(state.drafts.isEmpty()) item { EmptyState("لا توجد مسودات", "ابدأ نموذجًا؛ تُحفظ إجاباتك تلقائيًا.", Icons.Default.Edit) }
+                    if(state.drafts.isEmpty() && state.draftsError == null) item { EmptyState("لا توجد مسودات", "ابدأ نموذجًا؛ تُحفظ إجاباتك تلقائيًا.", Icons.Default.Edit) }
                 }
                 2 -> {
                     item { Text("استلمها السيرفر", style = MaterialTheme.typography.headlineSmall); Text("إيصال الاستلام يؤكد حفظ البيانات؛ ولا يغيّر حالة اعتمادها داخل الموديول.", color = MaterialTheme.colorScheme.onSurfaceVariant) }

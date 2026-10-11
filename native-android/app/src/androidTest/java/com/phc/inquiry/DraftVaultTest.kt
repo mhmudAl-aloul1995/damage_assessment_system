@@ -47,5 +47,24 @@ class DraftVaultTest {
             assertThrows(IllegalArgumentException::class.java) { vault.delete(draft.owner, draft.uuid) }
         } finally { vault.save(draft); vault.delete(draft.owner, draft.uuid) }
     }
+    @Test fun damagedCiphertextDoesNotHideReadableDraftsOrModifyTheFailedFile() {
+        val vault = DraftVault(context, policy)
+        val healthy = draft(900000005)
+        val damaged = draft(900000005)
+        vault.save(healthy); vault.save(damaged)
+        val file = File(context.noBackupFilesDir, "form-vault").walkTopDown().first { it.name == damaged.uuid + ".draft" }
+        val original = file.readBytes()
+        val tampered = original.copyOf().apply { this[lastIndex] = (this[lastIndex].toInt() xor 1).toByte() }
+        try {
+            file.writeBytes(tampered)
+            val result = vault.listing(healthy.owner)
+            assertEquals(listOf(healthy.uuid), result.drafts.map { it.uuid }); assertEquals(1, result.unavailableCount)
+            assertArrayEquals(tampered, file.readBytes())
+            assertThrows(Exception::class.java) { vault.load(damaged.owner, damaged.uuid) }
+        } finally {
+            file.writeBytes(original)
+            vault.delete(damaged.owner, damaged.uuid); vault.delete(healthy.owner, healthy.uuid)
+        }
+    }
 }
 
