@@ -80,3 +80,13 @@ Future feature parity not implemented:full HEKS BOQ/pricing/scores/labels/native
 
 Build: powershell -NoProfile -ExecutionPolicy Bypass -File native-android/build-native.ps1 -Verify -CompileDeviceTests
 Existing JDK21/Gradle8.11.1/SDK35/Esri200.6 caches in tmp/mobile-toolchain; do not redownload or restart analysis.
+
+## 0.5.1 screenshot failure investigation — 2026-10-11
+- Screenshot shows modules/forms loaded, followed by failure while loading receipt history. Confirmed code defect: refresh fetched receipts on HOME and reused write-ambiguity messages for GET failures.
+- Fixed native read/write error messages; receipt history now loads only in Sent tab, with independent loading/error/pagination and retry. HOME/inquiry/forms stay usable on receipt failure; Sent does not falsely show an empty history on failure.
+- Added Laravel authenticated storage readiness checks before receipt/private-file/submission operations; absent table(s) yield safe JSON503 code mobile_form_storage_not_ready. No automatic migrations and no new endpoint/dependency.
+- Boost read-only LOCAL schema check returned neither mobile_form_submissions nor mobile_form_attachments. CLOUD missing-table cause remains unverified: no authenticated cloud error/log evidence available. Asked owner whether targeted migrations were run.
+- Modified native PortalRepository.kt, PortalViewModels.kt, PortalScreens.kt, MainActivity.kt, app/build.gradle (0.5.1/code8), PortalRepositoryTest.kt, PortalScreenTest.kt; Laravel MobilePortalController.php and new MobileFormStorageReadinessTest.php.
+- Tests/build currently running; logs portal-051-backend.log, portal-051-pint.log, portal-051-native.log in tmp/mobile-toolchain. Preserve latest delivered 0.5.0 APK until new build succeeds.
+- No real DB migrations/deployment/provider writes. ArcGIS incident remains owner review before any correction.
+- Next: inspect targeted tests/build, verify/package 0.5.1 APK +source, then update this section with final status and server follow-up.

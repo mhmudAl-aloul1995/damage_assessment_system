@@ -17,7 +17,7 @@ class FormFailure(val code: Int?, val errors: Map<String, List<String>> = emptyM
 
 @Singleton
 class PortalRepository @Inject constructor(private val api: PortalApi, private val session: SessionState, private val store: SessionStore) {
-    private suspend fun <T> request(action: suspend (String) -> T): T = withContext(Dispatchers.IO) {
+    private suspend fun <T> request(mutation: Boolean = false, action: suspend (String) -> T): T = withContext(Dispatchers.IO) {
         val owner = session.session.value ?: throw FormFailure(401, message = "سجّل الدخول للمتابعة.")
         try {
             val result = action("Bearer ${owner.token}")
@@ -36,12 +36,15 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
                 422 -> fields.values.flatten().firstOrNull() ?: json?.get("message")?.jsonPrimitive?.content?.take(240) ?: "تحقق من الإجابات."
                 429 -> "طلبات كثيرة. انتظر دقيقة ثم أعد المحاولة."
                 413 -> "حجم المرفق أكبر من الحد المسموح."
-                else -> "تعذّر تأكيد استلام السيرفر. أعد المحاولة من نفس المسودة."
+                503 -> if (json?.get("code")?.jsonPrimitive?.contentOrNull == "mobile_form_storage_not_ready")
+                    "خدمة إرسال الاستبيانات وسجل الإرساليات تحتاج تهيئة من مسؤول السيرفر. يمكنك متابعة الاستعلام وحفظ المسودات على الجهاز."
+                    else if (mutation) "تعذّر تأكيد استلام السيرفر. أعد المحاولة من نفس المسودة." else "الخدمة غير متاحة مؤقتًا. أعد المحاولة لاحقًا."
+                else -> if (mutation) "تعذّر تأكيد استلام السيرفر. أعد المحاولة من نفس المسودة." else "تعذّر تحميل البيانات من السيرفر. أعد المحاولة لاحقًا."
             }
             throw FormFailure(error.code(), fields, message)
         } catch (error: FormFailure) { throw error }
-        catch (_: IOException) { throw FormFailure(null, message = "تعذّر الاتصال أو تأكيد الاستلام. المسودة محفوظة؛ أعد المحاولة عند توفر الإنترنت.") }
-        catch (_: Exception) { throw FormFailure(null, message = "تعذّرت قراءة الاستجابة. المسودة محفوظة؛ تحقق من تحديث API.") }
+        catch (_: IOException) { throw FormFailure(null, message = if (mutation) "تعذّر الاتصال أو تأكيد الاستلام. المسودة محفوظة؛ أعد المحاولة عند توفر الإنترنت." else "تعذّر الاتصال بالسيرفر. تحقق من الإنترنت وأعد المحاولة.") }
+        catch (_: Exception) { throw FormFailure(null, message = if (mutation) "تعذّرت قراءة الاستجابة. المسودة محفوظة؛ تحقق من تحديث API." else "تعذّرت قراءة بيانات السيرفر. تأكد من تحديث الخدمة.") }
     }
     suspend fun modules(): List<PortalModule> = request { api.modules(it).data.filter { module -> module.key in MODULE_KEYS } }
     suspend fun forms(): List<PublishedForm> = request { api.forms(it).data.filter { form -> form.module in MODULE_KEYS } }
@@ -49,10 +52,10 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
     suspend fun record(module: String, id: Long): PortalRecord = request { api.record(it, module, id).data }
     suspend fun formRecords(form: String, query: String, page: Int): PortalPage = request { api.formRecords(it, form, query, page) }
     suspend fun schema(form: String, id: Long?): FormSchema = request { api.schema(it, form, id).data }
-    suspend fun submit(form: String, body: SubmissionRequest): SubmissionReceipt = request { api.submit(it, form, body).data }
+    suspend fun submit(form: String, body: SubmissionRequest): SubmissionReceipt = request(mutation = true) { api.submit(it, form, body).data }
     suspend fun receipts(page: Int = 1): ReceiptPage = request { api.receipts(it, page) }
     suspend fun receipt(uuid: String): SubmissionReceipt = request { api.receipt(it, uuid).data }
-    suspend fun discard(form: String, uuid: String, id: Long) = request { api.discard(it, form, id, DiscardFileRequest(uuid)); Unit }
+    suspend fun discard(form: String, uuid: String, id: Long) = request(mutation = true) { api.discard(it, form, id, DiscardFileRequest(uuid)); Unit }
     suspend fun attachment(id: Long): ByteArray = request { auth ->
         api.attachment(auth, id).use { body ->
             val limit = 15 * 1024 * 1024
@@ -71,7 +74,7 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
             output.toByteArray()
         }
     }
-    suspend fun upload(form: String, uuid: String, name: String, mime: String, bytes: ByteArray): FormFile = request {
+    suspend fun upload(form: String, uuid: String, name: String, mime: String, bytes: ByteArray): FormFile = request(mutation = true) {
         if (bytes.size > 15 * 1024 * 1024) throw FormFailure(413, message = "الحد الأقصى للمرفق 15 ميغابايت.")
         api.upload(it, form, uuid.toRequestBody("text/plain".toMediaType()), MultipartBody.Part.createFormData("file", name.replace("\"", "_").replace("\r", "").replace("\n", ""), bytes.toRequestBody(mime.toMediaType()))).data
     }

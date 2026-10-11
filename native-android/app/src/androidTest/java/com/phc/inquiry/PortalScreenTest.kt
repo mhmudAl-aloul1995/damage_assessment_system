@@ -39,5 +39,25 @@ class PortalScreenTest {
         compose.onNodeWithText("استبيان تجريبي").performClick()
         compose.runOnIdle { assertEquals("fixture-uuid", opened) }
     }
+    @Test fun receiptFailureDoesNotBlockHomeModules() {
+        var opened: String? = null
+        compose.setContent { PhcTheme {
+            PortalHome("اختبار", PortalState(loading = false, modules = listOf(PortalModule("heks", "HEKS")), receiptsError = "خطأ سجل الإرساليات"),
+                { opened = it }, {}, {}, {}, {})
+        } }
+        compose.onNodeWithText("خطأ سجل الإرساليات").assertDoesNotExist()
+        compose.onNodeWithTag("module-heks").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("heks", opened) }
+    }
+    @Test fun sentTabShowsReceiptFailureAndRetryWithoutFalseEmptyState() {
+        var retried = 0
+        compose.setContent { PhcTheme {
+            SurveysScreen(PortalState(loading = false, receiptsError = "خطأ سجل الإرساليات"), 2, {}, {}, {}, {}, {}, { retried++ })
+        } }
+        compose.onNodeWithText("خطأ سجل الإرساليات").assertExists()
+        compose.onNodeWithText("لا توجد إرساليات").assertDoesNotExist()
+        compose.onNodeWithText("إعادة المحاولة").performClick()
+        compose.runOnIdle { assertEquals(2, retried) }
+    }
 }
 

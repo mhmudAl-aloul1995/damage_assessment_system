@@ -11,8 +11,10 @@ use App\Models\MobileFormAttachment;
 use App\Models\MobileFormSubmission;
 use App\services\MobileFormService;
 use App\services\MobilePortalService;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -54,6 +56,8 @@ class MobilePortalController extends Controller
 
     public function submit(MobileFormSubmitRequest $request, string $form): JsonResponse
     {
+        $this->forms->definition($request->user(), $form);
+        $this->ensureFormStorageIsReady();
         $result = $this->forms->submit($request->user(), $form, $request->validated(), $request);
 
         return $this->json($result, $result['replayed'] ? 200 : 201);
@@ -61,6 +65,8 @@ class MobilePortalController extends Controller
 
     public function upload(MobileFormUploadRequest $request, string $form): JsonResponse
     {
+        $this->forms->definition($request->user(), $form);
+        $this->ensureFormStorageIsReady();
         $attachment = $this->forms->upload($request->user(), $form, $request->validated('submission_uuid'), $request->file('file'));
 
         return $this->json(['data' => $attachment->only(['id', 'name', 'mime', 'size'])], 201);
@@ -68,6 +74,7 @@ class MobilePortalController extends Controller
 
     public function submissions(MobilePortalQueryRequest $request): JsonResponse
     {
+        $this->ensureFormStorageIsReady();
         $page = MobileFormSubmission::query()->where('user_id', $request->user()->id)->orderByDesc('id')->paginate(20, ['*'], 'page', (int) $request->validated('page', 1));
         $data = $page->getCollection()->filter(function (MobileFormSubmission $row) use ($request): bool {
             try {
@@ -84,6 +91,7 @@ class MobilePortalController extends Controller
 
     public function receipt(Request $request, string $uuid): JsonResponse
     {
+        $this->ensureFormStorageIsReady();
         $row = MobileFormSubmission::query()->where('user_id', $request->user()->id)->where('submission_uuid', $uuid)->firstOrFail();
         $this->forms->authorizeReceipt($request->user(), $row);
 
@@ -92,6 +100,8 @@ class MobilePortalController extends Controller
 
     public function discard(MobileFormDiscardRequest $request, string $form, int $attachment): JsonResponse
     {
+        $this->forms->definition($request->user(), $form);
+        $this->ensureFormStorageIsReady();
         $this->forms->discard($request->user(), $form, $request->validated('submission_uuid'), $attachment);
 
         return $this->json(['discarded' => true]);
@@ -99,6 +109,7 @@ class MobilePortalController extends Controller
 
     public function attachment(Request $request, int $attachment): StreamedResponse
     {
+        $this->ensureFormStorageIsReady();
         $row = MobileFormAttachment::query()->where('user_id', $request->user()->id)->findOrFail($attachment);
         $this->forms->definition($request->user(), $row->form_key);
         if ($row->mobile_form_submission_id !== null) {
@@ -110,6 +121,16 @@ class MobilePortalController extends Controller
             'Content-Type' => $row->mime, 'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff', 'Content-Security-Policy' => "default-src 'none'; sandbox",
         ]);
+    }
+
+    private function ensureFormStorageIsReady(): void
+    {
+        if (! Schema::hasTable('mobile_form_submissions') || ! Schema::hasTable('mobile_form_attachments')) {
+            throw new HttpResponseException($this->json([
+                'code' => 'mobile_form_storage_not_ready',
+                'message' => 'خدمة إرسال الاستبيانات وسجل الإرساليات تحتاج تهيئة من مسؤول السيرفر. يمكنك متابعة الاستعلام وحفظ المسودات على الجهاز.',
+            ], 503));
+        }
     }
 
     /** @param array<string, mixed> $data */

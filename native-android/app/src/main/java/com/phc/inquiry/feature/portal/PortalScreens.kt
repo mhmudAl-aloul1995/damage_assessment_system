@@ -125,14 +125,16 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
         }
     }
 }
-@Composable fun SurveysScreen(state: PortalState, initialTab: Int, onForm: (PublishedForm) -> Unit, onDraft: (DraftSummary) -> Unit, deleteDraft: (String) -> Unit, retry: () -> Unit, moreReceipts: () -> Unit, onAttachment: (String, Long) -> Unit = { _, _ -> }) {
+@Composable fun SurveysScreen(state: PortalState, initialTab: Int, onForm: (PublishedForm) -> Unit, onDraft: (DraftSummary) -> Unit, deleteDraft: (String) -> Unit, retry: () -> Unit, moreReceipts: () -> Unit, refreshReceipts: () -> Unit = {}, onAttachment: (String, Long) -> Unit = { _, _ -> }) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab) }
     var toDelete by remember { mutableStateOf<DraftSummary?>(null) }
+    LaunchedEffect(tab) { if (tab == 2) refreshReceipts() }
     Column {
         TabRow(tab) { listOf("النماذج", "المسودات", "المرسلة").forEachIndexed { index, title -> Tab(tab == index, { tab = index }, text = { Text(title) }) } }
         LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            if(state.loading) item { LoadingState() }
-            state.error?.let { item { ErrorState(it, retry) } }
+            if (if (tab == 2) state.receiptsLoading else state.loading) item { LoadingState() }
+            if (tab == 2) state.receiptsError?.let { item { ErrorState(it, refreshReceipts) } }
+            else state.error?.let { item { ErrorState(it, retry) } }
             when(tab) {
                 0 -> {
                     item { Text("ابدأ استبيانًا", style = MaterialTheme.typography.headlineSmall); Text("النماذج المنشورة والمسموحة لحسابك فقط.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -155,8 +157,8 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
                         Text("إيصال #${receipt.id} · سجل #${receipt.recordId}"); Text(displayTime(receipt.receivedAt), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         receipt.attachments.forEach { file -> TextButton(onClick = { onAttachment(receipt.uuid, file.id) }) { Text("عرض ${file.name}") } }
                     } } }
-                    if(state.receipts.isEmpty() && !state.loading) item { EmptyState("لا توجد إرساليات", "تظهر الإيصالات بعد نجاح الإرسال.", Icons.Default.CheckCircle) }
-                    if(state.receiptsPage < state.receiptsLast) item { OutlinedButton(onClick = moreReceipts, enabled = !state.loading, modifier = Modifier.fillMaxWidth()) { Text("تحميل المزيد") } }
+                    if(state.receipts.isEmpty() && state.receiptsPage > 0 && !state.receiptsLoading && state.receiptsError == null) item { EmptyState("لا توجد إرساليات", "تظهر الإيصالات بعد نجاح الإرسال.", Icons.Default.CheckCircle) }
+                    if(state.receiptsPage > 0 && state.receiptsPage < state.receiptsLast) item { OutlinedButton(onClick = moreReceipts, enabled = !state.receiptsLoading, modifier = Modifier.fillMaxWidth()) { Text("تحميل المزيد") } }
                 }
             }
         }

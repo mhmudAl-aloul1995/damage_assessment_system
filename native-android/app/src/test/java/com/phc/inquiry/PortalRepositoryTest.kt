@@ -38,7 +38,7 @@ class PortalRepositoryTest {
             return SubmissionResponse(SubmissionReceipt(1, request.uuid, form, "heks", 1, "r", "received", "2026-10-11"), false)
         }
         override suspend fun upload(authorization: String, form: String, uuid: RequestBody, file: MultipartBody.Part) = DataResponse(FormFile(1, "test.jpg", "image/jpeg", 5))
-        override suspend fun receipts(authorization: String, page: Int) = ReceiptPage(emptyList())
+        override suspend fun receipts(authorization: String, page: Int): ReceiptPage { check(authorization); return ReceiptPage(emptyList()) }
         override suspend fun receipt(authorization: String, uuid: String) = DataResponse(SubmissionReceipt(1, uuid, "heks-beneficiary", "heks", 1, "r", "received", "2026-10-11"))
         override suspend fun attachment(authorization: String, id: Long): ResponseBody { check(authorization); return body }
         override suspend fun discard(authorization: String, form: String, id: Long, request: DiscardFileRequest): JsonObject { check(authorization); return JsonObject(mapOf("discarded" to JsonPrimitive(true))) }
@@ -77,6 +77,32 @@ class PortalRepositoryTest {
         val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
         api.body = ByteArray(15 * 1024 * 1024 + 1).toResponseBody()
         try { repository.attachment(1); fail("Oversized file accepted") } catch(error: FormFailure) { assertEquals(413, error.code) }
+    }
+    @Test fun failedReceiptReadsDoNotSuggestThatASurveyWasSent() = runTest {
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        for (failure in listOf(HttpException(Response.error<Any>(500, "{}".toResponseBody())), java.io.IOException("offline"))) {
+            api.failure = failure
+            try { repository.receipts(); fail("Expected read failure") } catch(error: FormFailure) {
+                assertFalse(error.message!!.contains("استلام")); assertFalse(error.message!!.contains("المسودة"))
+            }
+            api.failure = null
+            assertEquals(listOf("heks"), repository.modules().map { it.key })
+        }
+    }
+    @Test fun ambiguousWriteFailuresStillRequireRetryingTheSameDraft() = runTest {
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        api.failure = HttpException(Response.error<Any>(500, "{}".toResponseBody()))
+        val request = SubmissionRequest("same-uuid", "version", answers = JsonObject(mapOf("name" to JsonPrimitive("same"))))
+        try { repository.submit("heks-beneficiary", request); fail("Expected write failure") } catch(error: FormFailure) {
+            assertFalse(error.definitelyRejected); assertTrue(error.message!!.contains("نفس المسودة"))
+        }
+    }
+    @Test fun uninitializedStorageHasAnActionableMessageWithoutExposingServerDetails() = runTest {
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        api.failure = HttpException(Response.error<Any>(503, """{"code":"mobile_form_storage_not_ready","message":"SQL private details","trace":"private"}""".toResponseBody()))
+        try { repository.receipts(); fail("Expected readiness failure") } catch(error: FormFailure) {
+            assertEquals(503, error.code); assertTrue(error.message!!.contains("مسؤول السيرفر")); assertFalse(error.message!!.contains("private"))
+        }
     }
 }
 

@@ -13,13 +13,15 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 
 data class PortalState(val loading: Boolean = true, val modules: List<PortalModule> = emptyList(), val forms: List<PublishedForm> = emptyList(),
-    val drafts: List<DraftSummary> = emptyList(), val receipts: List<SubmissionReceipt> = emptyList(), val receiptsPage: Int = 0, val receiptsLast: Int = 1, val error: String? = null)
+    val drafts: List<DraftSummary> = emptyList(), val receipts: List<SubmissionReceipt> = emptyList(), val receiptsPage: Int = 0, val receiptsLast: Int = 1, val error: String? = null,
+    val receiptsLoading: Boolean = false, val receiptsError: String? = null)
 @HiltViewModel class PortalViewModel @Inject constructor(private val repository: PortalRepository, private val vault: DraftVault, private val session: SessionState): ViewModel() {
     private val mutable = MutableStateFlow(PortalState())
     val state = mutable.asStateFlow()
     private var job: Job? = null
+    private var receiptsJob: Job? = null
     private var owner: Long? = null
-    init { viewModelScope.launch { session.session.map { it?.user?.id }.distinctUntilChanged().collect { id -> owner = id; mutable.value = PortalState(); if (id != null) refresh() else job?.cancel() } } }
+    init { viewModelScope.launch { session.session.map { it?.user?.id }.distinctUntilChanged().collect { id -> job?.cancel(); receiptsJob?.cancel(); owner = id; mutable.value = PortalState(); if (id != null) refresh() } } }
     fun refresh() {
         val id = owner ?: return
         job?.cancel()
@@ -32,8 +34,7 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
                 mutable.update { it.copy(modules = modules) }
                 val forms = repository.forms()
                 mutable.update { it.copy(forms = forms) }
-                val receipts = repository.receipts()
-                mutable.value = PortalState(false, modules, forms, drafts, receipts.data, receipts.currentPage, receipts.lastPage)
+                mutable.update { it.copy(loading = false) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutable.update { it.copy(loading = false, error = error.message ?: "تعذّر تحديث البوابة.") } }
         }
@@ -46,12 +47,22 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
         }
     }
     fun moreReceipts() {
-        if (mutable.value.loading || mutable.value.receiptsPage >= mutable.value.receiptsLast) return
-        viewModelScope.launch {
-            mutable.update { it.copy(loading = true) }
-            try { val page = repository.receipts(mutable.value.receiptsPage + 1); mutable.update { it.copy(loading = false, receipts = (it.receipts + page.data).distinctBy { row -> row.id }, receiptsPage = page.currentPage, receiptsLast = page.lastPage) } }
+        if (mutable.value.receiptsLoading || mutable.value.receiptsPage >= mutable.value.receiptsLast) return
+        loadReceipts(reset = false)
+    }
+    fun refreshReceipts() = loadReceipts(reset = true)
+    private fun loadReceipts(reset: Boolean) {
+        val id = owner ?: return
+        receiptsJob?.cancel()
+        receiptsJob = viewModelScope.launch {
+            val nextPage = if (reset) 1 else mutable.value.receiptsPage + 1
+            mutable.update { it.copy(receiptsLoading = true, receiptsError = null) }
+            try {
+                val page = repository.receipts(nextPage)
+                if (owner == id) mutable.update { it.copy(receiptsLoading = false, receipts = if (reset) page.data else (it.receipts + page.data).distinctBy { row -> row.id }, receiptsPage = page.currentPage, receiptsLast = page.lastPage) }
+            }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) { mutable.update { it.copy(loading = false, error = error.message) } }
+            catch (error: Exception) { if (owner == id) mutable.update { it.copy(receiptsLoading = false, receiptsError = error.message ?: "تعذّر تحميل سجل الإرساليات.") } }
         }
     }
     fun deleteDraft(uuid: String) {
