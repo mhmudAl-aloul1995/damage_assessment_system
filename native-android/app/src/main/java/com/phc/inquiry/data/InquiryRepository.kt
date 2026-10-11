@@ -26,6 +26,8 @@ class SessionState @Inject constructor() {
 }
 
 interface InquiryRepository {
+    suspend fun map(sector: String, filters: Map<String, String>): MapPage
+    suspend fun statistics(sector: String, filters: Map<String, String>): SectorStatistics
     suspend fun restore()
     suspend fun login(email: String, password: String)
     suspend fun logout()
@@ -65,7 +67,7 @@ class LaravelInquiryRepository @Inject constructor(
                 413 -> "المرفق أكبر من الحد المسموح للعرض (15 ميغابايت)."
                 415 -> "هذا النوع من المرفقات غير مدعوم للعرض."
                 else -> "تعذّر إتمام الطلب من السيرفر. حاول مجددًا."
-            })
+            }, error.code())
         }
         catch (error: InquiryFailure) { throw error }
         catch (_: SocketTimeoutException) { throw InquiryFailure("انتهت مهلة الاتصال. تحقق من الشبكة وحاول مجددًا.") }
@@ -78,11 +80,15 @@ class LaravelInquiryRepository @Inject constructor(
         try {
             policy.checkTransport()
             if (!Instant.parse(saved.expiresAt).isAfter(Instant.now())) { store.clear(); return@withContext }
-            state.set(saved)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { state.set(null); store.clear(); return@withContext }
+        state.set(saved)
+        try {
             val user = request { api.me().data }
+            if(user.id != saved.user.id) { state.set(null); store.clear(); return@withContext }
             state.set(saved.copy(user = user))
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { state.set(null); store.clear() }
+        catch (error: InquiryFailure) { if(error.statusCode in setOf(401, 403)) { state.set(null); store.clear() } }
     }
 
     override suspend fun login(email: String, password: String) {
@@ -100,7 +106,9 @@ class LaravelInquiryRepository @Inject constructor(
         finally { withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { state.set(null); store.clear() } }
     }
 
-    override suspend fun sectors(): List<Sector> = request { api.sectors().data.filter { it.key in setOf("buildings", "housing-units") } }
+    override suspend fun sectors(): List<Sector> = request { api.sectors().data.filter { it.key in SUPPORTED_SECTORS } }
+    override suspend fun map(sector: String, filters: Map<String, String>): MapPage = request { api.map(sector, filters) }
+    override suspend fun statistics(sector: String, filters: Map<String, String>): SectorStatistics = request { api.statistics(sector, filters) }
     override suspend fun search(sector: String, query: String, page: Int): RecordPage = request { api.search(sector, query, page) }
     override suspend fun detail(sector: String, id: Long): InquiryRecord = request { api.detail(sector, id).data }
     override suspend fun searchFiltered(sector: String, query: String, page: Int, filters: Map<String, String>): RecordPage = request { api.advancedSearch(sector, query, page, filters) }

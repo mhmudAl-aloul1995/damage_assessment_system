@@ -1,10 +1,10 @@
 <resources>
 <string name="app_name">بوابة الإسكان</string>
 <string name="council_name">مجلس الإسكان الفلسطيني</string>
-<string name="portal_name">بوابة الاستعلام</string>
+<string name="portal_name">بوابة المنظومة</string>
 <string name="logo_description">شعار مجلس الإسكان الفلسطيني</string>
 <string name="login_title">تسجيل الدخول</string>
-<string name="login_intro">ادخل بحساب المنظومة للوصول إلى الاستعلامات المتاحة لك.</string>
+<string name="login_intro">ادخل بحساب المنظومة للاستعلام وتعبئة الاستبيانات المتاحة لك.</string>
 <string name="email_label">البريد الإلكتروني</string>
 <string name="email_hint">name@example.com</string>
 <string name="password_label">كلمة المرور</string>
@@ -17,7 +17,7 @@
 <string name="required_password">أدخل كلمة المرور.</string>
 <string name="http_notice">اتصال غير مشفّر: كلمة المرور والبيانات تنتقل عبر HTTP.</string>
 <string name="http_blocked">اتصال HTTP غير مسموح في هذه النسخة أو لهذا السيرفر.</string>
-<string name="login_footer">للاستعلام فقط · الوصول حسب صلاحيات حسابك</string>
+<string name="login_footer">الاستعلام وتعبئة الاستبيانات · حسب صلاحيات حسابك</string>
 <string name="welcome">مرحبًا، %1$s</string>
 <string name="dashboard_intro">معلومات المنظومة، في متناولك</string>
 <string name="dashboard_description">اختر نوع السجل وابدأ الاستعلام عن بياناته وحالته.</string>
@@ -117,6 +117,50 @@
 <string name="zoom_out">تصغير</string>
 <string name="show_empty_fields">إظهار الحقول غير المتوفرة</string>
 <string name="hide_empty_fields">إخفاء الحقول غير المتوفرة</string>
+    <string name="explore_title">الخريطة والمؤشرات</string>
+    <string name="gis_title">الخريطة التفاعلية</string>
+    <string name="gis_description">استكشف مواقع السجلات وتصنيف الأضرار حسب صلاحياتك.</string>
+    <string name="statistics_title">الإحصائيات</string>
+    <string name="statistics_description">مؤشرات الحصر والتدقيق لجميع القطاعات المتاحة.</string>
+    <string name="public_buildings">المباني العامة</string>
+    <string name="road_facilities">الطرق والمرافق</string>
+    <string name="cso_surveys">مؤسسات المجتمع المدني</string>
+    <string name="sector_description">ابحث في سجلات القطاع واطّلع على بياناته المعتمدة.</string>
+    <string name="damage_severe">ضرر شديد</string>
+    <string name="damage_moderate">ضرر متوسط</string>
+    <string name="damage_minor">ضرر طفيف</string>
+    <string name="approved">معتمد</string>
+    <string name="in_review">قيد التدقيق</string>
+    <string name="map_search_hint">اسم المبنى أو السجل أو رقمه</string>
+    <string name="map_tab">الخريطة</string>
+    <string name="legend">دليل الألوان</string>
+    <string name="fit_map">إظهار المواقع</string>
+    <string name="search_map_area">بحث في هذه المنطقة</string>
+    <string name="map_empty">لا توجد مواقع في هذه الدفعة</string>
+    <string name="map_empty_hint">قد تكون الإحداثيات غير مسجلة. حمّل الدفعة التالية أو غيّر البحث والفلاتر.</string>
+    <string name="map_loaded">%1$d سجلًا بموقع مسجل · تم فحص %2$d سجلًا</string>
+    <string name="map_limited">وصل العرض إلى حده. ضيّق البحث أو حدّد منطقة أصغر.</string>
+    <string name="map_area_only">المواقع ضمن المنطقة المحددة</string>
+    <string name="map_next">تحميل مواقع إضافية</string>
+    <string name="map_choose_record">سجلات في هذا الموقع</string>
+    <string name="map_basemap_failed">تعذّر تحميل خلفية الخريطة. تحقّق من الإنترنت أو أعد المحاولة.</string>
+    <string name="map_render_failed">تعذّر عرض الخريطة على هذا الجهاز.</string>
+    <string name="map_legend_hint">الألوان تعبّر عن التصنيف المسجّل. الوحدات تُعرض عند موقع المبنى. الرقم يوضح عدد السجلات المعروضة في الموقع نفسه، ولونه يعكس أشد تصنيف بينها؛ اضغط لاختيار السجل.</string>
+    <string name="stats_scope">تشمل المؤشرات جميع نتائج البحث والفلاتر في القطاع، بما فيها السجلات بلا إحداثيات.</string>
+    <string name="stats_total">إجمالي السجلات</string>
+    <string name="stats_completed">مكتمل ميدانيًا</string>
+    <string name="stats_pending">بانتظار التدقيق</string>
+    <string name="stats_approved">معتمد</string>
+    <string name="stats_action">يحتاج إجراء</string>
+    <string name="damage_distribution">توزيع الأضرار</string>
+    <string name="field_distribution">إنجاز العمل الميداني</string>
+    <string name="audit_distribution">تدقيق السجلات المكتملة ميدانيًا</string>
+    <string name="stats_no_data">لا توجد سجلات تطابق البحث والفلاتر.</string>
+    <string name="stats_updated">آخر احتساب: %1$s</string>
+    <string name="chart_count">%1$d سجلًا · %2$d%%</string>
+    <string name="map_partial_geometry">بعض المواقع غير قابلة للرسم. يمكنك الاستعلام عن سجلاتها من البحث.</string>
+    <string name="map_omitted">تعذّر عرض %1$d موقعًا بسبب بيانات هندسية غير صالحة أو كبيرة. ابحث عن السجل للاطّلاع على تفاصيله.</string>
+    <string name="assigned_audit">مُسند للتدقيق</string>
 </resources>
 
 

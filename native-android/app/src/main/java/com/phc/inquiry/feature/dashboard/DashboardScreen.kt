@@ -19,7 +19,7 @@ import com.phc.inquiry.core.ui.*
 import com.phc.inquiry.data.Sector
 
 @Composable
-fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> Unit, retry: () -> Unit, onCitizens: () -> Unit = {}) {
+fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> Unit, retry: () -> Unit, onCitizens: () -> Unit = {}, onExplore: (String) -> Unit = {}) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(Modifier.widthIn(max = 880.dp).fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             item {
@@ -42,6 +42,16 @@ fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> U
                 Text(stringResource(R.string.permission_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
             if (state.loading) item { LoadingState() }
             state.error?.let { error -> item { ErrorState(error, retry) } }
+            if (state.sectors.isNotEmpty()) item {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Card(onClick = { onExplore("map") }, Modifier.fillMaxWidth().testTag("open-map")) {
+                        Column(Modifier.padding(20.dp)) { Text(stringResource(R.string.gis_title), style = MaterialTheme.typography.titleLarge); Text(stringResource(R.string.gis_description)) }
+                    }
+                    Card(onClick = { onExplore("stats") }, Modifier.fillMaxWidth().testTag("open-statistics")) {
+                        Column(Modifier.padding(20.dp)) { Text(stringResource(R.string.statistics_title), style = MaterialTheme.typography.titleLarge); Text(stringResource(R.string.statistics_description)) }
+                    }
+                }
+            }
             if (!state.loading && state.error == null && state.sectors.isEmpty()) item { EmptyState(stringResource(R.string.no_services), stringResource(R.string.no_services_hint), Icons.Default.Lock) }
             items(state.sectors, key = { it.key }) { sector -> SectorCard(sector) { onSector(sector.key) } }
             if (state.sectors.any { it.citizenInquiry }) item {
@@ -65,7 +75,7 @@ private fun SectorCard(sector: Sector, onClick: () -> Unit) {
                 IconTile(if (sector.key == "housing-units") Icons.Default.Home else Icons.Default.Place)
                 Text(sectorTitle(sector.key), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             }
-            Text(stringResource(if (sector.key == "housing-units") R.string.housing_description else R.string.building_description),
+            Text(stringResource(when (sector.key) { "housing-units" -> R.string.housing_description; "buildings" -> R.string.building_description; else -> R.string.sector_description }),
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.start_inquiry), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)

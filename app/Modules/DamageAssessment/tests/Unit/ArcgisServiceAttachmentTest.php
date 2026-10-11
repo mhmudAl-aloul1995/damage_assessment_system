@@ -101,7 +101,7 @@ it('verifies provider TLS for mobile token list and attachment requests', functi
         '*/attachments/9*' => Http::response('fixture!', 200, ['Content-Type' => 'image/png']),
     ]);
     $service = new ArcgisService;
-    $token = $service->getToken(true);
+    $token = $service->getVerifiedToken();
     $service->getAttachmentsResult(701, 0, $token, true);
     $service->downloadAttachment(701, 0, 9, $token, true);
     expect($options)->toHaveCount(3);

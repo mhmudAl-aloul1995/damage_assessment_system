@@ -7,7 +7,10 @@ use App\Support\Forms\LoginSecurity;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach (['mobile-form-submit', 'mobile-form-upload', 'mobile-form-discard'] as $limiter) {
+            RateLimiter::for($limiter, fn (Request $request): Limit => Limit::perMinute(10)->by($limiter.':'.($request->user()?->id ?? $request->ip())));
+        }
+
         Event::listen(Login::class, function (Login $event) {
             $agent = request()->userAgent();
             $ip = request()->ip();

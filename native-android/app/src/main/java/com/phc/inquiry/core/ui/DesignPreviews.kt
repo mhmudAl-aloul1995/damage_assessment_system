@@ -65,3 +65,21 @@ fun SearchPreview() = DesignPreviewFrame {
 @Preview(name = "Details", widthDp = 400, heightDp = 900)
 @Composable
 fun DetailPreview() = DesignPreviewFrame { DetailScreen(DetailState(false, PreviewRecord), {}) }
+
+private val PreviewStatistics = com.phc.inquiry.data.SectorStatistics(
+    summary = mapOf("total" to 120, "completed" to 90, "pending" to 30, "approved" to 50, "action_required" to 10),
+    damage = mapOf("fully_damaged" to 20, "partially_damaged" to 60, "committee_review" to 10, "no_damage" to 30),
+    fieldwork = mapOf("completed" to 90, "not_completed" to 30),
+)
+
+@Preview(name = "Statistics — fixture", widthDp = 360, heightDp = 800)
+@Composable
+fun StatisticsPreview() = DesignPreviewFrame { StatisticsScreen(PreviewStatistics, false, null, {}) }
+
+@Preview(name = "Statistics — dark fixture", widthDp = 360, heightDp = 800)
+@Composable
+fun StatisticsDarkPreview() = DesignPreviewFrame(true) { StatisticsScreen(PreviewStatistics, false, null, {}) }
+
+@Preview(name = "Statistics — large text fixture", widthDp = 320, heightDp = 720, fontScale = 1.4f)
+@Composable
+fun StatisticsLargeTextPreview() = DesignPreviewFrame { StatisticsScreen(PreviewStatistics, false, null, {}) }

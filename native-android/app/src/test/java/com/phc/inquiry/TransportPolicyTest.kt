@@ -9,6 +9,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TransportPolicyTest {
+    @Test fun formWritesAreNarrowlyScopedAndCannotSwitchAccountTokens() {
+        val base = "https://example.test/system/".toHttpUrl()
+        val client = OkHttpClient.Builder().addInterceptor(InquiryInterceptor(TransportPolicy(base, false)) { "owner-token" })
+            .addInterceptor { chain -> Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK").body("{}".toResponseBody()).build() }.build()
+        for (path in listOf("forms/borrower-survey/submissions", "forms/heks-followup/attachments")) {
+            client.newCall(Request.Builder().url(base.toString() + "api/v1/" + path).header("Authorization", "Bearer owner-token").post("{}".toRequestBody()).build()).execute().close()
+        }
+        for (path in listOf("forms/borrower-survey/delete", "forms/borrower-survey/submissions/extra", "forms/%2e%2e/submissions", "portal/heks/records")) {
+            assertThrows(InquiryFailure::class.java) { client.newCall(Request.Builder().url(base.toString() + "api/v1/" + path).post("{}".toRequestBody()).build()).execute() }
+        }
+        assertThrows(InquiryFailure::class.java) { client.newCall(Request.Builder().url(base.toString() + "api/v1/forms/borrower-survey/submissions").header("Authorization", "Bearer previous-owner").post("{}".toRequestBody()).build()).execute() }
+    }
     private val publicBase = "http://213.6.135.115/damage_assessment_system/".toHttpUrl()
 
     @Test fun explicitlyEnabledHttpWorksWithoutAnAccountAllowlist() {

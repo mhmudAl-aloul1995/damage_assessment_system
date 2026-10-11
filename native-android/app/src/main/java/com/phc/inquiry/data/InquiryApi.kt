@@ -3,7 +3,10 @@ package com.phc.inquiry.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonObject
 import retrofit2.http.*
+
+val SUPPORTED_SECTORS = setOf("buildings", "housing-units", "public-buildings", "road-facilities", "cso-surveys")
 
 @Serializable
 data class LoginRequest(val email: String, val password: String, @SerialName("device_name") val deviceName: String)
@@ -61,7 +64,16 @@ data class InquiryRecord(
 @Serializable
 data class RecordPage(val data: List<InquiryRecord>, val total: Int, @SerialName("current_page") val currentPage: Int, @SerialName("last_page") val lastPage: Int)
 
+@Serializable
+data class MapFeature(val geometry: JsonObject, val attributes: InquiryRecord)
+@Serializable
+data class MapPage(val features: List<MapFeature>, @SerialName("next_cursor") val nextCursor: Long? = null, val scanned: Int = 0, val omitted: Int = 0)
+@Serializable
+data class SectorStatistics(val summary: Map<String, Long> = emptyMap(), val damage: Map<String, Long> = emptyMap(), val fieldwork: Map<String, Long> = emptyMap(), val audit: Map<String, Long> = emptyMap(), @SerialName("audit_tracks") val auditTracks: Map<String, Map<String, Long>> = emptyMap(), @SerialName("calculated_at") val calculatedAt: String? = null)
+
 interface InquiryApi {
+    @GET("api/v1/damage-assessment/{sector}/map") suspend fun map(@Path("sector") sector: String, @QueryMap filters: Map<String, String>): MapPage
+    @GET("api/v1/damage-assessment/{sector}/stats") suspend fun statistics(@Path("sector") sector: String, @QueryMap filters: Map<String, String>): SectorStatistics
     @POST("api/v1/auth/login") suspend fun login(@Body request: LoginRequest): LoginResponse
     @POST("api/v1/auth/logout") suspend fun logout()
     @GET("api/v1/me") suspend fun me(): DataResponse<User>

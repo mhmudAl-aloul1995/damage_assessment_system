@@ -29,13 +29,15 @@ abstract class RepositoryModule {
 object NetworkModule {
     @Provides @Singleton fun policy(): TransportPolicy = TransportPolicy(BuildConfig.API_BASE_URL.toHttpUrl(), BuildConfig.ALLOW_HTTP)
 
-    @Provides @Singleton fun api(policy: TransportPolicy, session: SessionState): InquiryApi {
+    @Provides @Singleton fun retrofit(policy: TransportPolicy, session: SessionState): Retrofit {
         val client = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).callTimeout(30, TimeUnit.SECONDS)
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
             .addInterceptor(InquiryInterceptor(policy, session::token)).build()
         val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
         return Retrofit.Builder().baseUrl(policy.baseUrl).client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(InquiryApi::class.java)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build()
     }
+    @Provides @Singleton fun api(retrofit: Retrofit): InquiryApi = retrofit.create(InquiryApi::class.java)
+    @Provides @Singleton fun portalApi(retrofit: Retrofit): PortalApi = retrofit.create(PortalApi::class.java)
 }

@@ -1,90 +1,82 @@
-# PHC Native Android — current progress
-Updated: 2026-10-10. Owner confirmed completion of Priority 1 after delivery of the native UX/UI redesign.
+# CODEX_PROGRESS — Native portal
+Updated: 2026-10-11, Asia/Hebron. Branch: codex/borrower-floor-demolition-valuation.
 
-## Current delivery
-- APK: D:/myProjects/phc/tmp/mobile-delivery/PHC-Native-0.2.0-debug.apk
-- Canonical APK: tmp/mobile-delivery/PHC-Native-Priority1-debug.apk
-- Source archive: tmp/mobile-delivery/PHC-Native-Priority1-source.zip
-- Version: 0.2.0-test / code 4, package com.phc.inquiry.test; minimum Android 8/API26, compile/target35.
-- APK size: 12,451,448 bytes; SHA256 4F2C21C2EC40E1697CC6AA0F584C36D3952B0EC3C2F3A30D1EA7CB8B164B9829.
-- Native Kotlin/Jetpack Compose/Material3; existing hybrid android/ios/mobile-shell work preserved separately.
-- Priority 1 accepted as complete by owner on 2026-10-10. Agent has not independently executed the device UI tests or verified live authenticated login/search; this confirmation does not create new test evidence.
+## Current scope / state
+Owner approved unified Native Android portal for ALL four enabled modules, including HEKS (supersedes former Priority3 repair exclusion). Implemented the portal and supported questionnaire workflows below. This is a portal baseline, not full parity with every administrative/BOQ/report screen in the web application. No generic form designer was requested. No iOS binary: owner has no Mac or Apple Developer account.
+Final Android0.5.0-test/code7 packaging SUCCESS in2m42s (portal-native-final-package.log);42 JVM tests pass,20 device tests COMPILED ONLY. No physical installation/screenshots/authenticated cloud acceptance claimed. Owner chose phone testing; do not ask for BlueStacks ADB again.
+Final APK:tmp/mobile-delivery/PHC-Native-0.5.0-debug.apk,169208473 bytes, SHA256 81BD2AA3E1ACA8C4784936A79A0968DC6949A319653489CCDBB7AAC29F9C42C6. Package com.phc.inquiry.test,code7,min26,target35,four ABIs. v2 signature VERIFIED; same certificate as0.4:67d381b9e432578f0a732e7e902dc8441d105451c61fee6774749cbafbfd045c. Source ZIP:tmp/mobile-delivery/PHC-Native-0.5.0-source.zip. Previous0.4 and internal early APK preserved; use final0.5.
 
-## Completed native features
-- Arabic RTL login, field validation, keyboard Next/Done, compatible Compose autofill hooks, loading/error states and compact visible HTTP notice.
-- Adaptive login for phones/tablets, larger official logo, embedded Noto Sans Arabic with bundled SIL OFL license, green/light palette and explicit dark palette.
-- Reusable brand mark, icon tile, status badge, loading/error/empty states; Arabic UI strings in Android resources.
-- Dashboard: user welcome, server-authorized building/housing cards, account/logout action.
-- Explicit building/housing search, clear query, refresh, server pagination/total, readable record cards, draft/list state retained through navigation state, new search scrolls to first result.
-- Basic details grouped by information/location/status; missing values labeled, parent reference when available, copy record number.
-- Seven Compose previews in core/ui/DesignPreviews.kt: phone/light/dark/tablet/large text login, dashboard, results, details (annotations share some cases; see source).
-- Retrofit/OkHttp/serialization, repository/use case/ViewModels/StateFlow, Navigation/Paging3 retained.
-- Keystore AES-GCM token storage, no persistent passwords or network logs, expiry/401, logout cleanup; backups/transfer excluded and production activity FLAG_SECURE retained.
-- API-origin/path guard, read-only requests except login/logout, redirects disabled, TLS verification unchanged. Debug HTTP limited to existing server, release prohibits cleartext.
-- Owner accepted existing real-account HTTP use; earlier test-email gate removed. Credentials are entered on device only.
-- 0.1.2 fixed missing device_name: required non-default LoginRequest field with explicit repository value. Regression test retained.
+## Completed — UX / inquiry
+-100% Native Kotlin/Compose/Material3, Arabic RTL/Noto, light/dark, Arabic calendar/time controls; five destinations:home,inquiry,surveys,map,account.
+-Role-aware catalog from Sidebar::forUser:damage_assessment,damage_assessment_borrowers,heks,administration. Disabled/unauthorized modules omitted.
+-Borrower name/identity/phone/loan-number search, HEKS name/code/identity/phone search, authorized administration user search/details. Literal SQL wildcard escaping,20-row pagination, bounded queries. Explicit safe fields; no passwords/provider/raw payload dumps.
+-Existing five damage sectors/search/filters/basic/full approved details/engineering+legal history/citizen inquiry/files/ArcGIS maps/native statistics retained. New form action on authorized damage details.
+-Portal shows available inquiry modules even if a later forms/receipt request fails. Form close refreshes receipts.
+-Account changes bind outgoing requests to captured bearer and suppress previous-account responses.
 
-## Modified/new files for redesign
-- app/build.gradle (version only; no dependency changes).
-- MainActivity.kt; core/ui/PhcTheme.kt, PhcComponents.kt, DesignPreviews.kt.
-- feature/authentication/LoginScreen.kt; feature/dashboard/DashboardScreen.kt; feature/damageassessment/InquiryScreens.kt.
-- res/values/strings.xml, res/font/noto_sans_arabic.ttf, assets/NotoSansArabic-OFL.txt.
-- app/src/androidTest/.../NativeScreenTest.kt; these two progress documents.
-- No Laravel/API/schema changes made in redesign.
+## Completed — published forms / writes
+12 supported adapters when their source metadata is available:
+borrower-survey;heks-beneficiary;heks-followup;
+building-audit;housing-audit;public-building-audit;public-building-unit-audit;
+road-audit;road-item-audit;cso-audit;cso-organization-audit;cso-unit-audit.
+Borrower supports NEW survey and explicit update; other adapters update existing authorized records/children. No invented new building/HEKS/Kobo creation workflow.
+-Reuses StoreBorrowerSurveyRequest, risk analysis, demolition valuation/exchange settings, HEKS existing update/followup rules and engineer resolver, AssessmentEditService and infrastructure edit controllers/history. Unchanged infrastructure answers do not create duplicate edit history.
+-Damage phases/audit access/assignment/read-only lawyer and team-leader restrictions enforced; target picker limited to editable assignments/source records. System IDs/phases/assignments/device metadata/geometry excluded from writable questions.
+-Only approved scalar/choice/repeat types exposed; raw HEKS Kobo editing remains DISABLED. Not automatic arbitrary XLSForm/form-builder publishing.
+-Versioned native schema, required/min/max/length/choice/repeat/conditional validation. Reject unknown/nested mass assignment; exclusive none choices; preserves visit date AND time. JSON answers max2MiB.
+-Login grants mobile:submit only if a permitted writable adapter exists. All calls retain active Sanctum bearer/mobile:read; writes also require submit + CURRENT form/module/record authorization.
+-Durable per-user UUID/request-hash receipts, user-row/record locks, one transaction for write+receipt+attachment links, replay200/new201; different body/snapshot/schema409. No implicit overwrite by borrower identity.
+-Private staged JPEG/PNG/PDF files:15MiB/file,5 files/30MiB/submission,100 pending/user; actual MIME validation/hash dedup, private local disk, safe filenames, actor/form/UUID binding. Scoped receipt/file GET, idempotent staged discard, received files protected from discard.
+-Encrypted before/after audit and precise receipt GPS via Laravel encrypted casts. Existing module data/history remains in its existing storage.
+-Separate named submit/upload/discard limiters10/min each alongside general60/min; reads do not exhaust write quota.
+-Provider audit synchronization now verifies HTTPS certificates.
 
-## Verification
-- Latest log: tmp/mobile-toolchain/native-design-acceptance.log, BUILD SUCCESSFUL in 3m37s, 90 tasks (22 executed/68 up-to-date). No running builds remain.
-- 11 native unit tests passed: 8 repository/contract/paging plus 3 transport; 0 failures/errors.
-- assembleDebugAndroidTest succeeded with 9 native UI tests compiled. NOT executed on device yet.
-- UI tests cover valid login/invalid email/disabled transport, authorized card callbacks, explicit search/internal record ID, saved search draft, detail copy, and five fixture screenshot exports.
-- lint: 0 errors/26 warnings. Known Navigation custom lint registries skipped due lint API mismatch; remaining warnings include original launcher resources, IO-thread SharedPreferences commit and unused strings. Do not claim full custom-lint coverage.
-- APK v2 signature verified; certificate SHA256 matches previous 0.1.2: 67d381b9e432578f0a732e7e902dc8441d105451c61fee6774749cbafbfd045c. Version/package/minSdk verified with aapt. Installation-over not yet tested.
-- Contrast ratios: light button 7.91:1, primary text 14.89:1, secondary text 5.35:1, HTTP notice 6.58:1; dark counterparts 7.97/13.40/9.42:1. Runtime font scaling/TalkBack/autofill still require device review.
-- First redesign build needed experimental autofill opt-in; corrected, later builds passed.
+## Completed — drafts / file UX
+-Android Keystore AES-GCM, account+API-origin isolation, authenticated filename/scope binding, atomic private/noBackup files. No saved passwords/plaintext photo cache.
+-Cached schema, autosave coalescing, step/repeat/choice wizard, inline errors/review/explicit send. Local save and server receipt clearly distinguished.
+-Frozen durable pending request before sending; ambiguous retries preserve UUID/payload. Reauthentication does not delete drafts. An unexpired previously authenticated account can open its own drafts offline; expired/revoked/inactive sessions cannot restore.
+-Conflict refresh preserves answers, displays current-server versus draft changes, requires explicit review. Bounded lightweight draft list summaries.
+-PNG/JPEG/PDF picker; streaming encryption during import, private viewers reuse isolated PDF renderer and bounded image decode. Optional foreground GPS with runtime consent/timeout; no background location, GPS hardware optional.
+-Safe local deletion/retry-save/failure states; unresolved submissions cannot be deleted as ordinary drafts.
 
-## Device visual verification blocker
-BlueStacks Pie64 listens at 127.0.0.1:5555 and ADB enumerates API28 device, but shell/install services return error: closed. Configuration showed bst.enable_adb_access="0"; last observation still disabled. Owner replied they will enable Android Debug Bridge. Agent did not change security settings. No real device screenshots were generated; fixture previews are available as Compose source.
+## API additions
+GET api/v1/portal/modules
+GET api/v1/portal/{damage_assessment_borrowers|heks|administration}/records and /{record}
+GET api/v1/forms; forms/{form}/schema?record=; forms/{form}/records
+POST api/v1/forms/{form}/submissions; /attachments; /attachments/{attachment}/discard
+GET api/v1/submissions; submissions/{uuid}; form-attachments/{attachment}
+Existing damage/auth/modules endpoints retained. Exact native mutation allowlist; no arbitrary server commands.
 
-## API contract / backend status
-- POST api/v1/auth/login: email,password,device_name -> access_token,expires_at,user.
-- GET api/v1/me; GET api/v1/modules; POST api/v1/auth/logout.
-- GET api/v1/damage-assessment/sectors.
-- GET api/v1/damage-assessment/{buildings|housing-units}?search=...&page=...
-- GET api/v1/damage-assessment/{sector}/{record_id}; internal record_id, not objectid.
-- Lists: data,total,current_page,last_page; details: data.
-- Existing Sanctum/active-account/mobile:read token/rate limit/sector permissions/phase restrictions retained.
-- Existing API files: routes/api.php; Api/V1/DamageInquiryController.php; Requests/Api/DamageInquiryRequest.php; Modules/DamageAssessment/.../SectorOverviewService.php. Reuses audited buildings and audited housing/base housing models.
-- Owner deployment made anonymous live buildings/housing routes return 401 rather than earlier 404. Local /push stages/commits/pushes then redirects to configured /pull; it does not run migrations. Agent did not run authenticated deploy.
-- Latest actual owner login screenshot after 0.1.2 showed generic server failure. Exact HTTP status/production exception not available. Empty live JSON login test returned proper 422 validation errors. Missing personal_access_tokens table is only a hypothesis. Need production exception/authorized terminal access; never run all pending migrations blindly.
-- Earlier Laravel targeted tests: 69 passed/547 assertions. No PHP changes in native redesign.
+## Modified files
+New:MobilePortalController; requests MobilePortalQueryRequest/MobileFormSubmitRequest/MobileFormUploadRequest/MobileFormDiscardRequest;
+models/factories MobileFormSubmission/MobileFormAttachment;
+services MobilePortalService/MobileFormDefinitionService/MobileFormService/MobileDamageFormService;
+two migrations listed below; four portal/form Pest suites.
+Updated:MobileAccessController,AppServiceProvider,routes/api.php,SectorOverviewService,ArcgisAuditedUploadService.
+Native new:PortalApi/PortalRepository; feature/portal DraftVault,FormRules,PortalViewModels,PortalScreens,NativeLocation,PortalFileViewModel,PortalPreviews; FormRulesTest/PortalRepositoryTest; DraftVaultTest/PortalScreenTest.
+Native updated:MainActivity,NetworkModule,TransportPolicy,InquiryRepository,strings,manifest,Gradle,existing repository/transport tests. Prior Priority3 dirty files preserved; no commit/push/deployment performed.
 
-## Next steps
-1. Owner enables BlueStacks ADB; confirm shell/install works. Run connectedDebugAndroidTest with existing portable toolchain.
-2. Extract five fixture PNGs and review actual phone/large/dark layouts; add/fix any necessary tests or layout changes based on evidence. No account needed for fixtures.
-3. Install 0.2.0 over existing app and verify native navigation/back/keyboard/font scale and clipboard.
-4. Separately obtain production login exception and resolve verified cause; test authorized search/details on device without sharing credentials in chat.
-5. Refresh APK/source/progress after any fixes. Do not start Priority2/3 (GIS, audits, attachments, citizen, stats, repair).
+## Verification / deployment
+-59 backend tests/412 assertions pass in portal-backend-combined.log; mocked existing provider regression1 test/2 assertions PASS.60 unique affected backend tests. Later affected private-file test1/19 and portal-label tests5/28 PASS. Scoped inquiry/map regressions included.
+-42 JVM tests pass;20 device tests compiled only. Lint0errors/27warnings+1info (Navigation custom lint registries skipped; dynamic locale AppBundle warning remains in lint model despite disabled language splitting). No APK compiler/signature failure.
+-Pint dirty --format agent checked. No installed pest-testing skill; Boost12.x docs used. Boost Artisan/URL/schema tools used; actual users.id verified bigint unsigned matches receipt FK.
+-New migrations NOT executed against real local/cloud DB:
+database/migrations/2026_10_11_112238_create_mobile_form_submissions_table.php
+database/migrations/2026_10_11_112239_create_mobile_form_attachments_table.php
+-Owner deployment required:verified maintenance page http://localhost/phc/push does git push/pull, NOT migration. Run ONLY the two listed migrations on deployed Laravel, clear route/config caches as appropriate; never invoke all-pending run-migrations blindly.
+-Owner real-account HTTP acceptance persists; debug HTTP restricted to existing IP/port, release blocks cleartext. HTTPS/release signing/ArcGIS Lite deployment licensing still production prerequisites; no fake SDK key.
+-Source archive requires the existing Laravel repository; not a standalone complete backend.
 
-## Build
-From repository root:
-    powershell -NoProfile -ExecutionPolicy Bypass -File native-android/build-native.ps1 -Verify -CompileDeviceTests
-Portable JDK21/Gradle8.11.1/SDK35 in tmp/mobile-toolchain. TestEmail argument no longer exists. BaseUrl argument can configure a supplied encrypted endpoint; no server SSL changes performed.
+## Real test-write incident — owner chose manual review
+One initial test omitted Queue::fake; existing sync queue executed TWO actual ArcGIS edits before isolation:
+building source801 -> target15413 building_type=edited; housing source901 -> target48702 housing_unit_type=new.
+Verified HTTPS read confirmed matching source links. Current source values are building and mezzanine respectively. Local audited rows801/901 absent; PRE-TEST audited values are UNKNOWN (source values are not proven backups).
+Owner was informed, then explicitly chose “سأراجع السجلين قبل التصحيح”. NO correction authorized/performed; do not auto-restore. Keep this fact in final report.
+New damage tests now Queue::fake +Http::preventStrayRequests and verify queued jobs/SSL; subsequent tests use only fixtures/mocks. No additional real provider writes identified. No production SQL migrations or Laravel deployment performed.
 
-## Owner acceptance — 2026-10-10
-Owner message: "تم إكتمال المرحلة الأولى". Record Priority 1 as accepted by the owner. No additional APK, code, server changes or tests were performed for this acceptance update. Prior device-test and production-log observations are historical investigation context; do not infer whether they were resolved or invent results. Priority 2 has not started and requires a new instruction to implement it.
-Next planned scope: advanced API-supported search filters, fuller building/housing details, authorized engineering/legal audit history, unified citizen inquiry and authorized attachment viewer. GIS/statistics remain Priority 3. Inspect available contracts and permissions incrementally when Priority 2 is requested.
+## Exact next step
+Final package/version/signature/hash checked and copied. Source archive prepared with native project/mobile integration files; Pest temporary results restored. Next is owner deployment of PHP plus ONLY two migrations, re-login and physical phone acceptance. No data correction without later owner direction.
+Future feature parity not implemented:full HEKS BOQ/pricing/scores/labels/native administration CRUD/bank-portfolio screens/new module-specific creation workflows/arbitrary form designer/XLSForm logic. Do not claim these are complete.
 
-## Priority 2 — active implementation (owner authorized)
-- Local Laravel Boost tools used via php artisan boost:mcp stdio: search-docs for Laravel12/Pest3 validation/auth/file testing, list-artisan-commands, database-schema (metadata only, audited tables). No configured remote Boost tool was exposed. pest-testing skill not found in installed skill locations; version-specific Boost test docs used.
-- Existing route/service permission logic and audited models inspected; no DB migrations/dependency changes.
-- Implemented locally: sector-scoped filters endpoint, full detail fields from approved Assessment labels/known fields with technical fields excluded and audit visibility required, paginated engineering/legal history with source fallback, combined citizen inquiry restricted to authorized audited sectors/phases, attachment list/content proxy (PNG/JPEG/PDF <=15MB, no provider token/URL exposed).
-- Files: SectorOverviewService (citizen query + scoped inquiryModel), DamageInquiryController, DamageInquiryRequest, MobileCitizenInquiryRequest, services/MobileDamageDetailService, routes/api.php, MobileDamageAdvancedApiTest.
-- Previous API tests passed 9/59 assertions. New suite initial failures were test fixture required status metadata and guard caching when switching token in one test; corrections applied. Latest suite rerun still needed after stage/order fix.
-- Native DTO/API/repository methods and bounded attachment reader added; search ViewModel/PagingSource being extended for filters/citizens. Native UI/history/viewer navigation and FakeApi regression implementations still pending. No Phase2 APK built yet.
-
-## Priority 2 verification checkpoint
-- Full backend suite passed 23 tests / 156 assertions (phase2-backend-final.log), including baseline routes, phase filtering/housing/citizen name and exact identity checks, audit authorization, bounded history, attachment ownership/MIME/size and verified TLS options plus existing Arcgis attachment behavior. Pint dirty completed.
-- Mobile provider requests explicitly verify TLS using optional existing ArcgisService parameters and separate verified token cache; legacy service defaults preserved. Unknown attachment size is refused before byte download.
-- PDF rendering now uses a non-exported isolated Android service receiving a temporary read-only descriptor; no token/account data is sent to it. Temporary private PDF removed after rendering; PNG/JPEG decoded with dimension sampling, attachment reader bounded at 15MB including unknown-length streams.
-- Native build assembled APK and 15 unit tests passed. Latest native-final failed only compiling new Android test because PdfDocument is not Closeable; test changed to try/finally close. Rebuild required. UI suite now includes Phase2 callbacks/filter application and isolated PDF rendering tests; device tests remain unexecuted (BlueStacks ADB still disabled).
-- Remaining immediate work: finish small UI usability changes/full empty-field toggle; build verify/compile device tests, package 0.3.0 code5 APK and updated source, record hashes/signature/results. Backend changes remain local and must be deployed with owner's existing authenticated /push->/pull workflow before Phase2 endpoints work live. No server migration/deploy occurred.
+Build: powershell -NoProfile -ExecutionPolicy Bypass -File native-android/build-native.ps1 -Verify -CompileDeviceTests
+Existing JDK21/Gradle8.11.1/SDK35/Esri200.6 caches in tmp/mobile-toolchain; do not redownload or restart analysis.

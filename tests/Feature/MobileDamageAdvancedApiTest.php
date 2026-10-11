@@ -75,7 +75,7 @@ it('denies citizen inquiry to users without audit access', function (): void {
 
 it('proxies authorized attachments without leaking provider secrets or urls', function (): void {
     $arcgis = Mockery::mock(ArcgisService::class);
-    $arcgis->shouldReceive('getToken')->with(true)->twice()->andReturn('private-provider-token');
+    $arcgis->shouldReceive('getVerifiedToken')->withNoArgs()->twice()->andReturn('private-provider-token');
     $arcgis->shouldReceive('getLayerId')->twice()->with(App\Models\Building::class)->andReturn(0);
     $arcgis->shouldReceive('getAttachmentsResult')->twice()->with(701, 0, 'private-provider-token', true)->andReturn(['success' => true, 'attachments' => [['id' => 9, 'name' => 'photo.png', 'contentType' => 'image/png', 'size' => 8, 'url' => 'private-url']]]);
     $arcgis->shouldReceive('downloadAttachment')->once()->with(701, 0, 9, 'private-provider-token', true)->andReturn(['success' => true, 'body' => 'fixture!']);
@@ -86,7 +86,7 @@ it('proxies authorized attachments without leaking provider secrets or urls', fu
 
 it('rejects attachment ids outside the scoped record before download', function (): void {
     $arcgis = Mockery::mock(ArcgisService::class);
-    $arcgis->shouldReceive('getToken')->with(true)->once()->andReturn('fixture-token');
+    $arcgis->shouldReceive('getVerifiedToken')->withNoArgs()->once()->andReturn('fixture-token');
     $arcgis->shouldReceive('getLayerId')->once()->andReturn(0);
     $arcgis->shouldReceive('getAttachmentsResult')->once()->andReturn(['success' => true, 'attachments' => [['id' => 9, 'contentType' => 'image/png']]]);
     $arcgis->shouldNotReceive('downloadAttachment');
@@ -118,7 +118,7 @@ it('scopes housing citizen results and history through the allowed parent buildi
 
 it('refuses unsupported or oversized attachments before requesting their bytes', function (string $mime, int $size, int $status): void {
     $arcgis = Mockery::mock(ArcgisService::class);
-    $arcgis->shouldReceive('getToken')->with(true)->once()->andReturn('fixture');
+    $arcgis->shouldReceive('getVerifiedToken')->withNoArgs()->once()->andReturn('fixture');
     $arcgis->shouldReceive('getLayerId')->once()->andReturn(0);
     $arcgis->shouldReceive('getAttachmentsResult')->once()->andReturn(['success' => true, 'attachments' => [['id' => 9, 'contentType' => $mime, 'size' => $size]]]);
     $arcgis->shouldNotReceive('downloadAttachment');

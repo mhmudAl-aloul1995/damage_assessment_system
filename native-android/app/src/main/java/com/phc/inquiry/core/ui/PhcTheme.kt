@@ -46,11 +46,20 @@ fun statusLabel(value: String?): String = stringResource(when (value) {
     "partially_damaged" -> R.string.damage_partial
     "committee_review" -> R.string.committee_review
     "no_damage" -> R.string.no_damage
+    "destroyed" -> R.string.damage_total
+    "severe" -> R.string.damage_severe
+    "moderate" -> R.string.damage_moderate
+    "minor" -> R.string.damage_minor
     "pending" -> R.string.pending_audit
-    "assigned_engineer" -> R.string.assigned_engineer
-    "accepted_engineer" -> R.string.accepted_engineer
-    "assigned_lawyer" -> R.string.assigned_lawyer
-    "accepted_lawyer" -> R.string.accepted_lawyer
+    "assigned_engineer", "assigned_to_engineer" -> R.string.assigned_engineer
+    "accepted_engineer", "accepted_by_engineer" -> R.string.accepted_engineer
+    "assigned_lawyer", "assigned_to_lawyer" -> R.string.assigned_lawyer
+    "accepted_lawyer", "accepted_by_lawyer" -> R.string.accepted_lawyer
+    "approved" -> R.string.approved
+    "assigned" -> R.string.assigned_audit
+    "accepted", "in_review" -> R.string.in_review
+    "need_review", "legal_notes" -> R.string.needs_action
+    "rejected_by_engineer" -> R.string.rejected
     "team_approved" -> R.string.team_approved
     "undp_approved" -> R.string.undp_approved
     "needs_action" -> R.string.needs_action
@@ -61,4 +70,10 @@ fun statusLabel(value: String?): String = stringResource(when (value) {
 })
 
 @Composable
-fun sectorTitle(sector: String): String = stringResource(if (sector == "housing-units") R.string.housing_units else R.string.buildings)
+fun sectorTitle(sector: String): String = stringResource(when (sector) {
+    "housing-units" -> R.string.housing_units
+    "public-buildings" -> R.string.public_buildings
+    "road-facilities" -> R.string.road_facilities
+    "cso-surveys" -> R.string.cso_surveys
+    else -> R.string.buildings
+})

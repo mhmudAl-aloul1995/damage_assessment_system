@@ -2147,7 +2147,7 @@ class ArcgisAuditedUploadService
             ->timeout(120)
             ->connectTimeout(30)
             ->retry(2, 1000, throw: false)
-            ->withoutVerifying();
+            ->withOptions(['verify' => true]);
     }
 
     private function withTokenRetry(Closure $callback): mixed

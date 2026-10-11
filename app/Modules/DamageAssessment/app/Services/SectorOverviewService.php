@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\services;
 
+use App\Models\AssignedAssessmentUser;
 use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
@@ -56,6 +57,31 @@ class SectorOverviewService
             } else {
                 $query->whereIn('phase_number', $filters['_allowed_phases']);
             }
+        }
+
+        if (isset($filters['_mobile_audit_user'])) {
+            $userId = (int) $filters['_mobile_audit_user'];
+            if (in_array($sector, ['buildings', 'housing-units'], true)) {
+                $assigned = AssignedAssessmentUser::query()->select('building_id')->where('user_id', $userId)->whereIn('type', $filters['_mobile_audit_types'] ?? []);
+                if ($sector === 'housing-units') {
+                    $query->whereHas('building', fn (Builder $building): Builder => $building->whereIn($building->getModel()->qualifyColumn('objectid'), $assigned));
+                } else {
+                    $query->whereIn($query->getModel()->qualifyColumn('objectid'), $assigned);
+                }
+            } else {
+                $query->where(function (Builder $query) use ($userId): void {
+                    $query->whereHas('infAuditAssignment', fn (Builder $assignment): Builder => $assignment->where('user_id', $userId))
+                        ->orWhereHas('infAuditStatus', fn (Builder $status): Builder => $status->where('assigned_to', $userId));
+                });
+            }
+        }
+
+        if (($filters['_mobile_require_source'] ?? false) && in_array($sector, ['buildings', 'housing-units'], true)) {
+            $source = $sector === 'buildings' ? Building::query() : HousingUnit::query();
+            if (isset($filters['_allowed_phases'])) {
+                $source->whereIn('phase_number', $filters['_allowed_phases']);
+            }
+            $query->whereIn($query->getModel()->qualifyColumn('globalid'), $source->select('globalid'));
         }
 
         if (($filters['_citizen_search'] ?? false) && filled($filters['search'] ?? null)) {
@@ -601,15 +627,19 @@ class SectorOverviewService
     }
 
     /** @param array<string, mixed> $filters
-     * @return array{features: list<array<string, mixed>>, next_cursor: ?int, scanned: int}
+     * @return array{features: list<array<string, mixed>>, next_cursor: ?int, scanned: int, omitted: int}
      */
     public function mapFeatures(string $sector, array $filters): array
     {
-        $query = $this->query($sector, $filters)->where('id', '>', $filters['after_id'] ?? 0)->orderBy('id');
+        $mobileExtent = ($filters['_inquiry'] ?? false) && isset($filters['west'], $filters['south'], $filters['east'], $filters['north']);
+        $queryFilters = $mobileExtent ? array_diff_key($filters, array_flip(['west', 'south', 'east', 'north'])) : $filters;
+        $query = $this->query($sector, $queryFilters)->where('id', '>', $filters['after_id'] ?? 0)->orderBy('id');
         $rows = $this->withLatestAudit($this->geographicQuery($query, $sector))->limit(501)->get();
         $hasMore = $rows->count() > 500;
         $rows = $rows->take(500);
         $features = [];
+        $omitted = 0;
+        $vertexBudget = 50000;
 
         foreach ($rows as $row) {
             $source = $sector === 'housing-units' ? $row->building : $row;
@@ -619,13 +649,80 @@ class SectorOverviewService
                 continue;
             }
 
+            $candidateBudget = $vertexBudget;
+            if ($filters['_inquiry'] ?? false) {
+                $geometry = $this->inquiryGeometry($geometry, $candidateBudget);
+                if ($geometry === null) {
+                    $omitted++;
+
+                    continue;
+                }
+            }
+
+            if ($mobileExtent && ! $this->intersectsExtent($geometry, $filters)) {
+                continue;
+            }
+            $vertexBudget = $candidateBudget;
+
             $features[] = [
                 'geometry' => $geometry,
                 'attributes' => $this->recordAttributes($row, $sector, $filters['_inquiry'] ?? false),
             ];
         }
 
-        return ['features' => $features, 'next_cursor' => $hasMore ? (int) $rows->last()->id : null, 'scanned' => $rows->count()];
+        return ['features' => $features, 'next_cursor' => $hasMore ? (int) $rows->last()->id : null, 'scanned' => $rows->count(), 'omitted' => $omitted];
+    }
+
+    /**
+     * @param  array<string, mixed>  $geometry
+     * @return array<string, mixed>|null
+     */
+    private function inquiryGeometry(array $geometry, int &$vertexBudget): ?array
+    {
+        $reference = $geometry['spatialReference'] ?? [];
+        if (! is_array($reference)) {
+            return null;
+        }
+        $wkid = $reference['latestWkid'] ?? $reference['wkid'] ?? null;
+        if (! is_numeric($wkid) || (int) $wkid < 1 || (int) $wkid > 999999) {
+            return null;
+        }
+        $validPoint = static fn (mixed $x, mixed $y): bool => is_numeric($x) && is_numeric($y)
+            && is_finite((float) $x) && is_finite((float) $y)
+            && ((int) $wkid !== 4326 || (abs((float) $x) <= 180 && abs((float) $y) <= 90));
+        $safeReference = ['wkid' => (int) $wkid];
+        if (isset($geometry['x'], $geometry['y'])) {
+            if ($vertexBudget < 1 || ! $validPoint($geometry['x'], $geometry['y'])) {
+                return null;
+            }
+            $vertexBudget--;
+
+            return ['x' => (float) $geometry['x'], 'y' => (float) $geometry['y'], 'spatialReference' => $safeReference];
+        }
+        $key = isset($geometry['rings']) ? 'rings' : 'paths';
+        $parts = $geometry[$key] ?? null;
+        if (! is_array($parts) || $parts === [] || count($parts) > 5000) {
+            return null;
+        }
+        $safeParts = [];
+        $count = 0;
+        foreach ($parts as $part) {
+            if (! is_array($part) || count($part) < ($key === 'rings' ? 4 : 2) || $count + count($part) > min(5000, $vertexBudget)) {
+                return null;
+            }
+            $safePart = [];
+            foreach ($part as $coordinate) {
+                if (! is_array($coordinate) || ! isset($coordinate[0], $coordinate[1]) || ! $validPoint($coordinate[0], $coordinate[1])) {
+                    return null;
+                }
+                $safePart[] = [(float) $coordinate[0], (float) $coordinate[1]];
+            }
+            $count += count($part);
+            $safeParts[] = $safePart;
+        }
+        $vertexBudget -= $count;
+
+        return [$key => $safeParts, 'spatialReference' => $safeReference];
     }
 
     /** @return class-string<Model> */

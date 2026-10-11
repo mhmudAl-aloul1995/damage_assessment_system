@@ -1,0 +1,80 @@
+package com.phc.inquiry.data
+
+import com.phc.inquiry.core.security.*
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.*
+import kotlinx.serialization.json.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.HttpException
+import java.io.IOException
+
+class FormFailure(val code: Int?, val errors: Map<String, List<String>> = emptyMap(), message: String) : IOException(message) {
+    val definitelyRejected: Boolean get() = code in setOf(400, 401, 403, 404, 409, 413, 415, 422, 429)
+}
+
+@Singleton
+class PortalRepository @Inject constructor(private val api: PortalApi, private val session: SessionState, private val store: SessionStore) {
+    private suspend fun <T> request(action: suspend (String) -> T): T = withContext(Dispatchers.IO) {
+        val owner = session.session.value ?: throw FormFailure(401, message = "سجّل الدخول للمتابعة.")
+        try {
+            val result = action("Bearer ${owner.token}")
+            if (session.session.value?.user?.id != owner.user.id) throw FormFailure(null, message = "تغيّر الحساب. افتح المسودة بالحساب الذي أنشأها.")
+            result
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: HttpException) {
+            if (error.code() == 401 && session.session.value?.user?.id == owner.user.id) { session.expire(); store.clear() }
+            val json = runCatching { Json.parseToJsonElement(error.response()?.errorBody()?.string()?.take(16384).orEmpty()).jsonObject }.getOrNull()
+            val fields = json?.get("errors")?.let { runCatching { it.jsonObject.mapValues { entry -> entry.value.jsonArray.map { value -> value.jsonPrimitive.content.take(200) } } }.getOrNull() }.orEmpty()
+            val message = when(error.code()) {
+                401 -> "انتهت الجلسة. سجّل الدخول مجددًا؛ المسودة محفوظة لهذا الحساب."
+                403 -> "لا يملك حسابك صلاحية هذه العملية. قد تحتاج تسجيل الدخول مجددًا لتحديث صلاحيات التطبيق."
+                404 -> "الخدمة أو السجل غير متاح. تأكد من نشر تحديث API."
+                409 -> json?.get("message")?.jsonPrimitive?.content?.take(240) ?: "تغيّر النموذج أو السجل. راجع النسخة الحالية."
+                422 -> fields.values.flatten().firstOrNull() ?: json?.get("message")?.jsonPrimitive?.content?.take(240) ?: "تحقق من الإجابات."
+                429 -> "طلبات كثيرة. انتظر دقيقة ثم أعد المحاولة."
+                413 -> "حجم المرفق أكبر من الحد المسموح."
+                else -> "تعذّر تأكيد استلام السيرفر. أعد المحاولة من نفس المسودة."
+            }
+            throw FormFailure(error.code(), fields, message)
+        } catch (error: FormFailure) { throw error }
+        catch (_: IOException) { throw FormFailure(null, message = "تعذّر الاتصال أو تأكيد الاستلام. المسودة محفوظة؛ أعد المحاولة عند توفر الإنترنت.") }
+        catch (_: Exception) { throw FormFailure(null, message = "تعذّرت قراءة الاستجابة. المسودة محفوظة؛ تحقق من تحديث API.") }
+    }
+    suspend fun modules(): List<PortalModule> = request { api.modules(it).data.filter { module -> module.key in MODULE_KEYS } }
+    suspend fun forms(): List<PublishedForm> = request { api.forms(it).data.filter { form -> form.module in MODULE_KEYS } }
+    suspend fun records(module: String, query: String, page: Int): PortalPage = request { api.records(it, module, query, page) }
+    suspend fun record(module: String, id: Long): PortalRecord = request { api.record(it, module, id).data }
+    suspend fun formRecords(form: String, query: String, page: Int): PortalPage = request { api.formRecords(it, form, query, page) }
+    suspend fun schema(form: String, id: Long?): FormSchema = request { api.schema(it, form, id).data }
+    suspend fun submit(form: String, body: SubmissionRequest): SubmissionReceipt = request { api.submit(it, form, body).data }
+    suspend fun receipts(page: Int = 1): ReceiptPage = request { api.receipts(it, page) }
+    suspend fun receipt(uuid: String): SubmissionReceipt = request { api.receipt(it, uuid).data }
+    suspend fun discard(form: String, uuid: String, id: Long) = request { api.discard(it, form, id, DiscardFileRequest(uuid)); Unit }
+    suspend fun attachment(id: Long): ByteArray = request { auth ->
+        api.attachment(auth, id).use { body ->
+            val limit = 15 * 1024 * 1024
+            if(body.contentLength() > limit) throw FormFailure(413, message = "حجم المرفق أكبر من الحد المسموح.")
+            val output = java.io.ByteArrayOutputStream()
+            body.byteStream().use { input ->
+                val buffer = ByteArray(8192)
+                while(true) {
+                    currentCoroutineContext().ensureActive()
+                    val count = input.read(buffer)
+                    if(count < 0) break
+                    if(output.size() + count > limit) throw FormFailure(413, message = "حجم المرفق أكبر من الحد المسموح.")
+                    output.write(buffer, 0, count)
+                }
+            }
+            output.toByteArray()
+        }
+    }
+    suspend fun upload(form: String, uuid: String, name: String, mime: String, bytes: ByteArray): FormFile = request {
+        if (bytes.size > 15 * 1024 * 1024) throw FormFailure(413, message = "الحد الأقصى للمرفق 15 ميغابايت.")
+        api.upload(it, form, uuid.toRequestBody("text/plain".toMediaType()), MultipartBody.Part.createFormData("file", name.replace("\"", "_").replace("\r", "").replace("\n", ""), bytes.toRequestBody(mime.toMediaType()))).data
+    }
+}
+val MODULE_KEYS = setOf("damage_assessment", "damage_assessment_borrowers", "heks", "administration")
+

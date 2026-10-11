@@ -7,6 +7,7 @@ use App\Http\Requests\Api\MobileLoginRequest;
 use App\Http\Resources\MobileModuleResource;
 use App\Http\Resources\MobileUserResource;
 use App\Models\User;
+use App\services\MobileFormService;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +27,11 @@ class MobileAccessController extends Controller
         }
 
         $expiresAt = now()->addDay();
-        $token = $user->createToken($request->validated('device_name'), ['mobile:read'], $expiresAt);
+        $abilities = ['mobile:read'];
+        if (app(MobileFormService::class)->canWriteAny($user)) {
+            $abilities[] = 'mobile:submit';
+        }
+        $token = $user->createToken($request->validated('device_name'), $abilities, $expiresAt);
 
         return response()->json([
             'token_type' => 'Bearer',

@@ -101,7 +101,7 @@ class MobileDamageDetailService
         abort_unless($this->canAudit($user, $sector), 403);
         $row = $this->overview->inquiryModel($sector, $id, $filters);
         abort_unless(filled($row->objectid), 404);
-        $token = $this->arcgis->getToken(true);
+        $token = $this->arcgis->getVerifiedToken();
         $layer = $this->arcgis->getLayerId($sector === 'housing-units' ? HousingUnit::class : Building::class);
         $result = $this->arcgis->getAttachmentsResult($row->objectid, $layer, $token, true);
         abort_unless($result['success'] ?? false, 502, 'تعذّر جلب المرفقات من الخدمة.');

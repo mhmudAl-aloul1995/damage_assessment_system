@@ -14,7 +14,17 @@ class ArcgisService
     // =========================
     // GET TOKEN (WITH CACHE)
     // =========================
-    public function getToken(bool $verifyTls = false): string
+    public function getToken(): string
+    {
+        return $this->requestToken(false);
+    }
+
+    public function getVerifiedToken(): string
+    {
+        return $this->requestToken(true);
+    }
+
+    private function requestToken(bool $verifyTls): string
     {
         return Cache::remember($verifyTls ? 'arcgis_mobile_token_verified' : 'arcgis_token', 50 * 60, function () use ($verifyTls) {
 

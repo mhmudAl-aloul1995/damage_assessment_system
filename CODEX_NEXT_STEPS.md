@@ -1,28 +1,17 @@
-# Current continuation status — Priority 1 accepted
+# CODEX_NEXT_STEPS — full native portal
+Updated2026-10-11. Read CODEX_PROGRESS.md. Preserve existing source/dirty work/APKs; owner approved all modules including HEKS, superseding previous exclusion.
 
-Owner confirmed completion of Priority 1 on 2026-10-10. Preserve existing native 0.2.0 APK/source. Do not re-open the previous acceptance checklist unless requested or new failure evidence appears. No new agent-run device or authenticated API tests are implied by owner acceptance. Priority 2 has not started; wait for an implementation request.
+1. Final Android0.5.0-test/code7 package SUCCESS2m42s:tmp/mobile-delivery/PHC-Native-0.5.0-debug.apk,169208473 bytes,SHA25681BD2AA3E1ACA8C4784936A79A0968DC6949A319653489CCDBB7AAC29F9C42C6. v2 verified,same certificate as0.4.42 JVM tests pass;20 device tests COMPILED ONLY;lint0errors/27warnings+1info. No installation/cloud acceptance yet.
+2. Source archive:tmp/mobile-delivery/PHC-Native-0.5.0-source.zip (full native source and mobile Laravel integration/migrations/tests/providers; excludes build/cache/local.properties/keys/.env/vendor). Existing Laravel repo is required. Do not regenerate unchanged code/artifacts.
+3. Owner deploys PHP/native integration source through maintenance page http://localhost/phc/push. It does NOT migrate. On the DEPLOYED Laravel root, run ONLY:
+   php artisan migrate --path=database/migrations/2026_10_11_112238_create_mobile_form_submissions_table.php --path=database/migrations/2026_10_11_112239_create_mobile_form_attachments_table.php --force --no-interaction
+   Check deployment backups/current migration status first. Do not call generic run-migrations/all-pending commands. Then clear deployed route/config caches as appropriate. Upload PHP configuration should permit intended15MiB files (upload_max_filesize>=15M,post_max_size>=16M); storage/app/private must be writable.
+4. Install APK as UPDATE to com.phc.inquiry.test (same signing cert as0.4). Log out/back in AFTER backend deployment to obtain mobile:submit. No real credentials in chat/tool logs.
+5. Owner physical PHONE acceptance:role catalog/inquiry in four modules; borrower new +existing full survey/validation/repeats/risk/valuation/date+time; HEKS beneficiary/followup updates; nine damage root/child adapters with phases/assignment; pause/reopen offline draft/photo/GPS; schema/record conflict review; interrupted submit/retry same receipt; private photos/PDF/discard; existing damage search/maps/stats/history. Do not ask for BlueStacks ADB. No actual installation/provider/device-runtime tests claimed.
+6. ArcGIS incident requires OWNER MANUAL REVIEW:source building801(target15413) now building_type edited, source housing901(target48702) now housing_unit_type new. Source values building/mezzanine match source links but prior audited values are unknown. Owner explicitly chose review BEFORE correction; do NOT restore without later explicit direction.
+7. Test safety:always Queue::fake and Http::preventStrayRequests in new damage write tests. Existing provider regression configures fake example.test URLs/HTTP. Provider sync now verifies TLS. Restore only vendor/pestphp/pest/.temp/test-results after tests, preserving unrelated changes.
+8. Further parity remains separate implementation:HEKS pricing/BOQ/scores/labels, bank portfolio, admin CRUD/role workflows, creation of new building/HEKS records and generic form designer. Current12 adapters are actual existing writable workflows; raw HEKS Kobo editing stays disabled and unsupported XLSForm types must not silently submit.
+9. Current checks:59 backend tests412assertions +provider regression1/2 (60 unique);42 native unit tests;20 device tests compiled;Pint. Logs in tmp/mobile-toolchain. Repeat only affected checks if code changes.
+10. No new dependencies/subagents requested; no iOS binary with current no-Mac/no-Apple account. Production HTTPS/release signing/ArcGIS licensing pending owner setup. Existing HTTP acceptance persists.
 
-When Priority 2 is requested, inspect existing authorized APIs for advanced filters and fuller building/housing details, then engineering/legal audit history, citizen inquiry and attachment access. Implement incrementally with permission enforcement and relevant tests. GIS/statistics are deferred to Priority 3.
-
-## Previous technical continuation notes (historical; use only as needed)
-
-# Exact continuation — native UX/UI acceptance
-Read CODEX_PROGRESS.md. Do not recreate project or repeat broad analysis. Latest APK is 0.2.0-test/code4; build successful, 11 unit tests passed, 9 UI tests compiled only. APK/source in tmp/mobile-delivery. No running builds.
-
-1. User said they will enable BlueStacks Android Debug Bridge under Advanced. Last observed config still disabled. Confirm ADB accepts actual shell/install commands, not just device enumeration. Do not edit security configuration without authorization.
-2. Configure portable environment from repository root:
-   $env:JAVA_HOME = (Resolve-Path 'tmp/mobile-toolchain/java/jdk-21.0.12.1+1').Path
-   $env:ANDROID_HOME = (Resolve-Path 'tmp/mobile-toolchain/android-sdk').Path
-   $env:GRADLE_USER_HOME = (Resolve-Path 'tmp/mobile-toolchain/gradle-cache').Path
-   Connect with tmp/mobile-toolchain/android-sdk/platform-tools/adb.exe connect 127.0.0.1:5555.
-   Run tmp/mobile-toolchain/gradle/gradle-8.11.1/bin/gradle.bat -p native-android connectedDebugAndroidTest --no-daemon --console=plain --max-workers=2.
-3. NativeScreenTest uses fixture data only, exports design-login-light.png, design-login-dark.png, design-dashboard.png, design-search.png, design-details.png into target app external files directory (/sdcard/Android/data/com.phc.inquiry.test/files). Pull those exact PNGs into tmp/mobile-delivery/design-previews/, inspect and fix actual layout problems. No screenshots currently exist. Tests have not run.
-4. Review small/large/large-font/dark Compose previews in core/ui/DesignPreviews.kt. Verify installation over prior version; cert is same and versionCode raised. Exercise navigation/back/draft/scroll/keyboard/accessibility.
-5. If code changes, run relevant build/unit/UI checks once, verify APK signature and refresh versioned/canonical APK, source ZIP and docs.
-6. Production login error is separate. Need actual live Laravel exception (redacted) or server access. Do not guess missing token table or invoke /run-migrations; empty login request validates correctly and live inquiry routes are protected/reachable. Never request password in chat.
-
-Redesign files and exact API contracts are in CODEX_PROGRESS.md. Existing hybrid project is separate. Prior HTTP consent persists. Do not change API/auth/transport security for visual work. No Priority2/3 implementation authorized in this phase.
-
-
-## Priority 2 now authorized — continue implementation
-Do not obey earlier historical wait-for-authorization note: owner explicitly requested starting Phase2. Backend changes and tests are recorded at end of CODEX_PROGRESS.md. Finish new suite after stage/order fixture fix, add denial/limits/housing coverage. Native DTO/API/repository/search VM edits partially implemented; complete filters UI, full details display, engineering/legal history, citizen dashboard/navigation and in-app image/PDF viewer with private temporary cleanup. Update FakeApi to implement added API methods and add meaningful contract/filter/attachment size tests. Build early Phase2 APK, Pint dirty, targeted Laravel/native tests, signature/package artifacts. GIS stays deferred. No deployment or migrations performed.
+Toolchain already installed/cached. Build-native.ps1 -Verify -CompileDeviceTests. Boost via php artisan boost:mcp JSON-RPC; cached portal-artisan.json/portal-borrower-schema.json; users bigint FK verified. Do not restart analysis.

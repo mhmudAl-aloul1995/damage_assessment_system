@@ -25,9 +25,12 @@ class InquiryRepositoryTest {
         override fun clear() { value = null }
     }
     private class FakeApi : InquiryApi {
+        override suspend fun map(sector: String, filters: Map<String, String>) = MapPage(emptyList())
+        override suspend fun statistics(sector: String, filters: Map<String, String>) = SectorStatistics()
         var denied = false
         var loginCalls = 0
         var loginFailure: HttpException? = null
+        var meFailure: Exception? = null
         var loginBody: String? = null
         var requestedFilters: Map<String, String> = emptyMap()
         var attachmentBody: okhttp3.ResponseBody = "fixture".toResponseBody()
@@ -35,7 +38,7 @@ class InquiryRepositoryTest {
         val user = User(1, "Test account", "demo@example.test")
         override suspend fun login(request: LoginRequest): LoginResponse { loginFailure?.let { throw it }; loginCalls++; loginBody = Json.encodeToString(request); return LoginResponse("test-token", "2099-01-01T00:00:00Z", user) }
         override suspend fun logout() { if (denied) throw java.io.IOException("offline") }
-        override suspend fun me(): DataResponse<User> = DataResponse(user)
+        override suspend fun me(): DataResponse<User> { meFailure?.let { throw it }; return DataResponse(user) }
         override suspend fun sectors() = DataResponse(listOf(Sector("buildings", "Buildings")))
         override suspend fun search(sector: String, search: String, page: Int): RecordPage {
             if (denied) throw HttpException(Response.error<Any>(401, "{}".toResponseBody()))
@@ -100,6 +103,24 @@ class InquiryRepositoryTest {
         store.save(Session("expired", "2000-01-01T00:00:00Z", api.user))
         repository(api, store, state).restore()
         assertNull(store.read()); assertNull(state.session.value)
+    }
+
+    @Test fun offlineRestoreKeepsOnlyAnUnexpiredPreviouslyAuthenticatedAccount() = runTest {
+        val api = FakeApi(); val store = MemoryStore(); val state = SessionState()
+        val saved = Session("stored", "2099-01-01T00:00:00Z", api.user)
+        store.save(saved); api.meFailure = java.io.IOException("offline")
+        repository(api, store, state).restore()
+        assertEquals(saved, state.session.value); assertEquals(saved, store.read())
+    }
+
+    @Test fun revokedOrInactiveAccountsCannotRestoreEvenWithAnUnexpiredLocalToken() = runTest {
+        for(status in listOf(401, 403)) {
+            val api = FakeApi(); val store = MemoryStore(); val state = SessionState()
+            store.save(Session("stored", "2099-01-01T00:00:00Z", api.user))
+            api.meFailure = HttpException(Response.error<Any>(status, "{}".toResponseBody()))
+            repository(api, store, state).restore()
+            assertNull(store.read()); assertNull(state.session.value)
+        }
     }
 
     @Test fun pagingUsesServerPagesAndKeepsInternalRecordId() = runTest {
