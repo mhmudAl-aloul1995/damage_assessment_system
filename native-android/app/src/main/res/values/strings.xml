@@ -33,8 +33,8 @@
 <string name="search">بحث</string>
 <string name="search_buildings">البحث في المباني</string>
 <string name="search_housing">البحث في الوحدات السكنية</string>
-<string name="search_hint">الاسم أو رقم السجل</string>
-<string name="search_instruction">أدخل الاسم أو الرقم، أو ابحث بحقل فارغ لعرض السجلات المسموحة.</string>
+<string name="search_hint">الاسم أو OBJECTID</string>
+<string name="search_instruction">البحث بالاسم أو برقم OBJECTID مطابق بالكامل. اترك الحقل فارغًا لعرض السجلات المسموحة.</string>
 <string name="clear_search">مسح البحث</string>
 <string name="refresh">تحديث</string>
 <string name="results_count">%1$d نتيجة</string>
@@ -45,8 +45,8 @@
 <string name="loading_more">جارٍ تحميل المزيد…</string>
 <string name="retry">إعادة المحاولة</string>
 <string name="request_failed">تعذّر تحميل البيانات</string>
-<string name="record_number">رقم السجل: %1$s</string>
-<string name="record_label">رقم السجل</string>
+<string name="record_number">OBJECTID: %1$s</string>
+<string name="record_label">OBJECTID</string>
 <string name="inquiry_reference">مرجع الاستعلام</string>
 <string name="view_details">عرض التفاصيل</string>
 <string name="details">تفاصيل السجل</string>
@@ -65,7 +65,7 @@
 <string name="unavailable">غير متوفر</string>
 <string name="unrecorded_location">الموقع غير مسجل</string>
 <string name="unnamed_record">سجل %1$s</string>
-<string name="copy_record">نسخ رقم السجل</string>
+<string name="copy_record">نسخ OBJECTID</string>
 <string name="record_copied">تم نسخ رقم السجل</string>
 <string name="detail_footer">بيانات الاستعلام كما وردت من المنظومة</string>
 <string name="back">رجوع</string>
@@ -131,7 +131,7 @@
     <string name="damage_minor">ضرر طفيف</string>
     <string name="approved">معتمد</string>
     <string name="in_review">قيد التدقيق</string>
-    <string name="map_search_hint">اسم المبنى أو السجل أو رقمه</string>
+    <string name="map_search_hint">الاسم أو OBJECTID مطابق بالكامل</string>
     <string name="map_tab">الخريطة</string>
     <string name="legend">دليل الألوان</string>
     <string name="fit_map">إظهار المواقع</string>

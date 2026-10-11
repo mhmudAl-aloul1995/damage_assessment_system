@@ -77,7 +77,7 @@ fun StatusBadge(value: String?) {
 @Composable
 fun recordName(record: InquiryRecord): String = record.name?.takeIf(String::isNotBlank)
     ?: record.buildingName?.takeIf(String::isNotBlank)
-    ?: stringResource(R.string.unnamed_record, record.objectid?.content ?: record.recordId.toString())
+    ?: stringResource(R.string.unnamed_record, record.objectid?.content ?: stringResource(R.string.unavailable))
 
 @Composable
 fun recordLocation(record: InquiryRecord): String {

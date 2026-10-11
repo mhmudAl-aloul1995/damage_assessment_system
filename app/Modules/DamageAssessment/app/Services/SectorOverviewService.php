@@ -84,6 +84,10 @@ class SectorOverviewService
             $query->whereIn($query->getModel()->qualifyColumn('globalid'), $source->select('globalid'));
         }
 
+        $objectId = strtr(trim($filters['search'] ?? ''), [
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        ]);
         if (($filters['_citizen_search'] ?? false) && filled($filters['search'] ?? null)) {
             $candidateColumns = $sector === 'buildings'
                 ? ['owner_name', 'owner_name_1', 'owner_id']
@@ -108,8 +112,10 @@ class SectorOverviewService
                     }
                 });
             }
+        } elseif (($filters['_inquiry'] ?? false) && ctype_digit($objectId)) {
+            $query->where($query->getModel()->qualifyColumn('objectid'), $objectId);
         } elseif (filled($filters['search'] ?? null)) {
-            $columns = $this->existingColumns($query->getModel(), ['objectid', 'globalid', ...$this->nameColumns($sector)]);
+            $columns = $this->existingColumns($query->getModel(), [...(($filters['_inquiry'] ?? false) ? [] : ['objectid']), 'globalid', ...$this->nameColumns($sector)]);
             $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], trim($filters['search'])).'%';
             $query->where(function (Builder $search) use ($columns, $term, $sector): void {
                 foreach ($columns as $column) {

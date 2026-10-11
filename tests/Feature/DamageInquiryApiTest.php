@@ -89,3 +89,34 @@ it('finds housing units by the parent building name while respecting phase restr
     $this->withToken($this->inquiryToken)->getJson('/api/v1/damage-assessment/housing-units?'.http_build_query(['search' => 'الأمل']))
         ->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.objectid', 301)->assertJsonPath('data.0.geometry.x', 34.4);
 });
+
+it('matches numeric inquiry searches only against the complete OBJECTID across lists maps and statistics', function (string $sector, string $model, string $name): void {
+    $tableName = (new $model)->getTable();
+    foreach ([$name, 'location'] as $column) {
+        if (! Schema::hasColumn($tableName, $column)) {
+            Schema::table($tableName, fn (Blueprint $table) => $table->text($column)->nullable());
+        }
+    }
+    if ($sector === 'housing-units') {
+        AuditedBuilding::query()->create(['objectid' => 999, 'globalid' => 'objectid-parent', 'building_name' => '71231', 'latitude' => 31.5, 'longitude' => 34.4]);
+    }
+    $parent = $sector === 'housing-units' ? ['parentglobalid' => 'objectid-parent'] : [];
+    $target = $model::query()->create([...$parent, 'objectid' => 71231, 'globalid' => 'numeric-target', $name => 'المطلوب', 'location' => json_encode(['x' => 34.4, 'y' => 31.5])])->refresh();
+    $model::query()->create([...$parent, 'objectid' => 1712319, 'globalid' => '71231', $name => '71231']);
+    $path = '/api/v1/damage-assessment/'.$sector;
+    $this->withToken($this->inquiryToken);
+    foreach (['71231', ' 71231 ', '٧١٢٣١', '۷۱۲۳۱'] as $input) {
+        $search = '?'.http_build_query(['search' => $input]);
+        $this->getJson($path.$search)->assertOk()->assertJsonPath('total', 1)->assertJsonPath('data.0.objectid', 71231);
+        $this->getJson($path.'/stats'.$search)->assertOk()->assertJsonPath('summary.total', 1);
+    }
+    $this->getJson($path.'/map?search=71231')->assertOk()->assertJsonCount(1, 'features');
+    $this->getJson($path.'?search=7123')->assertOk()->assertJsonPath('total', 0);
+    $this->getJson($path.'?search='.$target->id)->assertOk()->assertJsonPath('total', 0);
+})->with([
+    ['buildings', AuditedBuilding::class, 'building_name'],
+    ['housing-units', \App\Models\AuditedHousingUnit::class, 'housing_unit_group'],
+    ['public-buildings', PublicBuildingSurvey::class, 'building_name'],
+    ['road-facilities', RoadFacilitySurvey::class, 'str_name'],
+    ['cso-surveys', CsoSurvey::class, 'organization_name'],
+]);

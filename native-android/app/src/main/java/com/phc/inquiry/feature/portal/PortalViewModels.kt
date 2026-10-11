@@ -28,7 +28,7 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
         job = viewModelScope.launch {
             mutable.update { it.copy(loading = true, error = null) }
             try {
-                val drafts = withContext(Dispatchers.IO) { vault.summaries(id) }
+                val drafts = withContext(Dispatchers.IO) { vault.summaries(id).filter { it.formKey in PUBLISHED_FORM_KEYS } }
                 mutable.update { it.copy(drafts = drafts) }
                 val modules = repository.modules()
                 mutable.update { it.copy(modules = modules) }
@@ -42,7 +42,7 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
     fun localDrafts() {
         val id = owner ?: return
         viewModelScope.launch {
-            try { val drafts = withContext(Dispatchers.IO) { vault.summaries(id) }; if(owner == id) mutable.update { it.copy(drafts = drafts) } }
+            try { val drafts = withContext(Dispatchers.IO) { vault.summaries(id).filter { it.formKey in PUBLISHED_FORM_KEYS } }; if(owner == id) mutable.update { it.copy(drafts = drafts) } }
             catch (error: Exception) { mutable.update { it.copy(error = "تعذّر فتح المسودات المشفرة. ${error.message.orEmpty()}") } }
         }
     }
@@ -131,7 +131,9 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
     fun load() { viewModelScope.launch {
         mutable.value = FormState()
         try {
+            require(form in PUBLISHED_FORM_KEYS) { "هذا الاستبيان غير متاح في تطبيق الموبايل." }
             val draft = if(uuid != null) withContext(Dispatchers.IO) { vault.load(owner, uuid) } else FormDraft(owner = owner, origin = vault.origin, schema = repository.schema(form, record))
+            require(draft.schema.key in PUBLISHED_FORM_KEYS) { "هذا الاستبيان غير متاح في تطبيق الموبايل." }
             require(draft.schema.sections.isNotEmpty() && draft.schema.sections.flatMap { it.fields }.size <= 500)
             mutable.value = FormState(false, draft, saved = uuid != null)
             persist(draft)

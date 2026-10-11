@@ -17,6 +17,9 @@ class FormFailure(val code: Int?, val errors: Map<String, List<String>> = emptyM
 
 @Singleton
 class PortalRepository @Inject constructor(private val api: PortalApi, private val session: SessionState, private val store: SessionStore) {
+    private fun requirePublishedForm(form: String) {
+        if (form !in PUBLISHED_FORM_KEYS) throw FormFailure(404, message = "هذا الاستبيان غير متاح في تطبيق الموبايل.")
+    }
     private suspend fun <T> request(mutation: Boolean = false, action: suspend (String) -> T): T = withContext(Dispatchers.IO) {
         val owner = session.session.value ?: throw FormFailure(401, message = "سجّل الدخول للمتابعة.")
         try {
@@ -47,15 +50,15 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
         catch (_: Exception) { throw FormFailure(null, message = if (mutation) "تعذّرت قراءة الاستجابة. المسودة محفوظة؛ تحقق من تحديث API." else "تعذّرت قراءة بيانات السيرفر. تأكد من تحديث الخدمة.") }
     }
     suspend fun modules(): List<PortalModule> = request { api.modules(it).data.filter { module -> module.key in MODULE_KEYS } }
-    suspend fun forms(): List<PublishedForm> = request { api.forms(it).data.filter { form -> form.module in MODULE_KEYS } }
+    suspend fun forms(): List<PublishedForm> = request { api.forms(it).data.filter { form -> form.module in MODULE_KEYS && form.key in PUBLISHED_FORM_KEYS } }
     suspend fun records(module: String, query: String, page: Int): PortalPage = request { api.records(it, module, query, page) }
     suspend fun record(module: String, id: Long): PortalRecord = request { api.record(it, module, id).data }
-    suspend fun formRecords(form: String, query: String, page: Int): PortalPage = request { api.formRecords(it, form, query, page) }
-    suspend fun schema(form: String, id: Long?): FormSchema = request { api.schema(it, form, id).data }
-    suspend fun submit(form: String, body: SubmissionRequest): SubmissionReceipt = request(mutation = true) { api.submit(it, form, body).data }
-    suspend fun receipts(page: Int = 1): ReceiptPage = request { api.receipts(it, page) }
-    suspend fun receipt(uuid: String): SubmissionReceipt = request { api.receipt(it, uuid).data }
-    suspend fun discard(form: String, uuid: String, id: Long) = request(mutation = true) { api.discard(it, form, id, DiscardFileRequest(uuid)); Unit }
+    suspend fun formRecords(form: String, query: String, page: Int): PortalPage = request { requirePublishedForm(form); api.formRecords(it, form, query, page) }
+    suspend fun schema(form: String, id: Long?): FormSchema = request { requirePublishedForm(form); api.schema(it, form, id).data }
+    suspend fun submit(form: String, body: SubmissionRequest): SubmissionReceipt = request(mutation = true) { requirePublishedForm(form); api.submit(it, form, body).data }
+    suspend fun receipts(page: Int = 1): ReceiptPage = request { api.receipts(it, page).let { rows -> rows.copy(data = rows.data.filter { receipt -> receipt.formKey in PUBLISHED_FORM_KEYS }) } }
+    suspend fun receipt(uuid: String): SubmissionReceipt = request { api.receipt(it, uuid).data.also { receipt -> requirePublishedForm(receipt.formKey) } }
+    suspend fun discard(form: String, uuid: String, id: Long) = request(mutation = true) { requirePublishedForm(form); api.discard(it, form, id, DiscardFileRequest(uuid)); Unit }
     suspend fun attachment(id: Long): ByteArray = request { auth ->
         api.attachment(auth, id).use { body ->
             val limit = 15 * 1024 * 1024
@@ -75,9 +78,11 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
         }
     }
     suspend fun upload(form: String, uuid: String, name: String, mime: String, bytes: ByteArray): FormFile = request(mutation = true) {
+        requirePublishedForm(form)
         if (bytes.size > 15 * 1024 * 1024) throw FormFailure(413, message = "الحد الأقصى للمرفق 15 ميغابايت.")
         api.upload(it, form, uuid.toRequestBody("text/plain".toMediaType()), MultipartBody.Part.createFormData("file", name.replace("\"", "_").replace("\r", "").replace("\n", ""), bytes.toRequestBody(mime.toMediaType()))).data
     }
 }
 val MODULE_KEYS = setOf("damage_assessment", "damage_assessment_borrowers", "heks", "administration")
+val PUBLISHED_FORM_KEYS = setOf("borrower-survey", "heks-beneficiary", "heks-followup")
 

@@ -290,7 +290,7 @@ class MobileFormService
     /** @return array<string, array<string, mixed>> */
     private function allDefinitions(): array
     {
-        return $this->cachedDefinitions ??= [...$this->definitions->definitions(), ...$this->damage->definitions()];
+        return $this->cachedDefinitions ??= $this->definitions->definitions();
     }
 
     private function version(string $form, Model $row): string

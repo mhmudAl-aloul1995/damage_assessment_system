@@ -103,7 +103,7 @@ fun RecordCard(record: InquiryRecord, onClick: () -> Unit) {
                 IconTile(Icons.Default.Home)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(recordName(record), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.record_number, record.objectid?.content ?: record.recordId.toString()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.record_number, record.objectid?.content ?: stringResource(R.string.unavailable)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -132,17 +132,15 @@ fun DetailScreen(state: DetailState, retry: () -> Unit, onHistory: (() -> Unit)?
                 Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(recordName(record), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text(stringResource(R.string.record_number, record.objectid?.content ?: record.recordId.toString()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(stringResource(R.string.record_number, record.objectid?.content ?: stringResource(R.string.unavailable)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         StatusBadge(record.damageStatus)
                         TextButton(onClick = {
-                            clipboard.setText(AnnotatedString(record.objectid?.content ?: record.recordId.toString()))
-                            Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
-                        }, modifier = Modifier.testTag("copy-record")) { Text(stringResource(R.string.copy_record)) }
+                            record.objectid?.content?.let { clipboard.setText(AnnotatedString(it)); Toast.makeText(context, copied, Toast.LENGTH_SHORT).show() }
+                        }, enabled = record.objectid != null, modifier = Modifier.testTag("copy-record")) { Text(stringResource(R.string.copy_record)) }
                     }
                 }
                 InformationGroup(stringResource(R.string.basic_information)) {
-                    InformationRow(stringResource(R.string.record_label), record.objectid?.content ?: record.recordId.toString())
-                    InformationRow(stringResource(R.string.inquiry_reference), record.recordId.toString())
+                    InformationRow(stringResource(R.string.record_label), record.objectid?.content)
                     if (!record.buildingName.isNullOrBlank()) InformationRow(stringResource(R.string.building_label), record.buildingName)
                     record.parentGlobalId?.takeIf(String::isNotBlank)?.let { InformationRow(stringResource(R.string.parent_reference), it) }
                 }

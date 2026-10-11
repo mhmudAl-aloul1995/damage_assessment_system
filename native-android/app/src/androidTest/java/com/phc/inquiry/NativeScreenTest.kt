@@ -98,14 +98,24 @@ class NativeScreenTest {
     }
 
     @Test fun detailShowsMissingValuesAndCopyAction() {
-        compose.setContent { DesignPreviewFrame { DetailScreen(DetailState(false, PreviewRecord.copy(municipality = null)), {}) } }
+        compose.setContent { DesignPreviewFrame { DetailScreen(DetailState(false, PreviewRecord.copy(municipality = null, objectid = kotlinx.serialization.json.JsonPrimitive(71231))), {}) } }
         snapshot("details")
         compose.onNodeWithTag("copy-record").performScrollTo().assertIsEnabled().performClick()
         compose.runOnIdle {
             val context = InstrumentationRegistry.getInstrumentation().targetContext
             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            assertEquals("17", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            assertEquals("71231", clipboard.primaryClip?.getItemAt(0)?.text?.toString())
         }
         compose.onNodeWithText("غير متوفر").assertExists()
+    }
+    @Test fun recordCardShowsObjectIdRatherThanTheDatabaseId() {
+        compose.setContent { DesignPreviewFrame { RecordCard(InquiryRecord(recordId = 17, objectid = kotlinx.serialization.json.JsonPrimitive(71231), name = "اختبار")) {} } }
+        compose.onNodeWithText("OBJECTID: 71231").assertExists()
+        compose.onNodeWithText("OBJECTID: 17").assertDoesNotExist()
+    }
+    @Test fun missingObjectIdNeverFallsBackToTheDatabaseId() {
+        compose.setContent { DesignPreviewFrame { RecordCard(InquiryRecord(recordId = 17, name = "اختبار")) {} } }
+        compose.onNodeWithText("OBJECTID: غير متوفر").assertExists()
+        compose.onNodeWithText("OBJECTID: 17").assertDoesNotExist()
     }
 }
