@@ -137,7 +137,7 @@
     <string name="fit_map">إظهار المواقع</string>
     <string name="search_map_area">بحث في هذه المنطقة</string>
     <string name="map_empty">لا توجد مواقع في هذه الدفعة</string>
-    <string name="map_empty_hint">قد تكون الإحداثيات غير مسجلة. حمّل الدفعة التالية أو غيّر البحث والفلاتر.</string>
+    <string name="map_empty_hint">قد تكون الحدود أو الإحداثيات غير متاحة. حمّل الدفعة التالية أو غيّر البحث والفلاتر.</string>
     <string name="map_loaded">%1$d سجلًا بموقع مسجل · تم فحص %2$d سجلًا</string>
     <string name="map_limited">وصل العرض إلى حده. ضيّق البحث أو حدّد منطقة أصغر.</string>
     <string name="map_area_only">المواقع ضمن المنطقة المحددة</string>
@@ -145,7 +145,15 @@
     <string name="map_choose_record">سجلات في هذا الموقع</string>
     <string name="map_basemap_failed">تعذّر تحميل خلفية الخريطة. تحقّق من الإنترنت أو أعد المحاولة.</string>
     <string name="map_render_failed">تعذّر عرض الخريطة على هذا الجهاز.</string>
-    <string name="map_legend_hint">الألوان تعبّر عن التصنيف المسجّل. الوحدات تُعرض عند موقع المبنى. الرقم يوضح عدد السجلات المعروضة في الموقع نفسه، ولونه يعكس أشد تصنيف بينها؛ اضغط لاختيار السجل.</string>
+    <string name="map_legend_hint">الألوان تعبّر عن تصنيف ضرر الطريق أو المرفق. الرقم يوضح عدد السجلات المحمّلة في الموقع نفسه؛ اضغط لاختيار السجل.</string>
+    <string name="map_building_legend_hint">كل رمز يمثل مبنى، ولونه يعبّر عن تصنيف ضرر المبنى نفسه. في قطاع الوحدات، الرقم هو عدد الوحدات المحمّلة لهذا المبنى ضمن البحث والفلاتر، وليس إجمالي وحداته. الرمادي يعني أن تصنيف المبنى غير متوفر أو غير مصنّف. اضغط لعرض السجلات المرتبطة.</string>
+    <string name="map_building_scope">حدود المباني الفعلية ملوّنة حسب ضرر المبنى</string>
+    <string name="map_buildings_loaded">%1$d مبنى · %2$d وحدة محمّلة ضمن النتائج</string>
+    <string name="map_building_units">المباني ووحداتها المحمّلة</string>
+    <string name="map_building_unnamed">مبنى بدون اسم مسجّل</string>
+    <string name="map_building_damage">تصنيف ضرر المبنى</string>
+    <string name="map_loaded_units">%1$d وحدة محمّلة ضمن البحث والفلاتر</string>
+    <string name="map_building_update">بيانات تصنيف المبنى غير متاحة لبعض الوحدات؛ يلزم رفع تحديث السيرفر لإظهار ألوانها.</string>
     <string name="stats_scope">تشمل المؤشرات جميع نتائج البحث والفلاتر في القطاع، بما فيها السجلات بلا إحداثيات.</string>
     <string name="stats_total">إجمالي السجلات</string>
     <string name="stats_completed">مكتمل ميدانيًا</string>
@@ -159,7 +167,7 @@
     <string name="stats_updated">آخر احتساب: %1$s</string>
     <string name="chart_count">%1$d سجلًا · %2$d%%</string>
     <string name="map_partial_geometry">بعض المواقع غير قابلة للرسم. يمكنك الاستعلام عن سجلاتها من البحث.</string>
-    <string name="map_omitted">تعذّر عرض %1$d موقعًا بسبب بيانات هندسية غير صالحة أو كبيرة. ابحث عن السجل للاطّلاع على تفاصيله.</string>
+    <string name="map_omitted">تعذّر عرض %1$d سجلًا بسبب حدود غير متاحة أو بيانات هندسية غير صالحة أو كبيرة. يمكنك البحث عن السجل لعرض تفاصيله.</string>
     <string name="assigned_audit">مُسند للتدقيق</string>
 </resources>
 

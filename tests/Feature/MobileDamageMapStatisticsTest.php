@@ -4,10 +4,14 @@ use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
+    Queue::fake();
+    Http::preventStrayRequests();
     foreach (['municipalitie', 'latitude', 'longitude', 'location', 'building_name'] as $column) {
         if (! Schema::hasColumn('audited_buildings', $column)) {
             Schema::table('audited_buildings', fn (Blueprint $table) => $table->text($column)->nullable());
@@ -74,12 +78,57 @@ it('keeps statistics complete when records lack coordinates and scopes all filte
 });
 
 it('maps housing at its allowed parent location while retaining distinct internal unit ids', function (): void {
-    $building = AuditedBuilding::query()->create(['objectid' => 7000, 'globalid' => 'parent-map', 'phase_number' => 1, 'building_name' => 'برج الأمل', 'latitude' => 31.5, 'longitude' => 34.4]);
+    $building = AuditedBuilding::query()->create(['objectid' => 7000, 'globalid' => 'parent-map', 'phase_number' => 1, 'building_name' => 'برج الأمل', 'building_damage_status' => 'no_damage', 'latitude' => 31.5, 'longitude' => 34.4]);
     $units = collect([1, 2])->map(fn (int $index) => AuditedHousingUnit::query()->create(['objectid' => 7100 + $index, 'globalid' => 'unit-map-'.$index, 'parentglobalid' => $building->globalid, 'unit_damage_status' => 'fully_damaged2']));
     $response = $this->withToken($this->mapToken)->getJson('/api/v1/damage-assessment/housing-units/map?search='.urlencode('الأمل'))
         ->assertOk()->assertJsonCount(2, 'features')->assertJsonPath('features.0.geometry.x', 34.4)
-        ->assertJsonPath('features.0.attributes.damage_status', 'fully_damaged');
+        ->assertJsonPath('features.0.attributes.damage_status', 'fully_damaged')
+        ->assertJsonPath('features.0.building', ['globalid' => 'parent-map', 'objectid' => 7000, 'name' => 'برج الأمل', 'damage_status' => 'no_damage'])
+        ->assertJsonPath('features.1.building.damage_status', 'no_damage');
     expect(array_column(array_column($response->json('features'), 'attributes'), 'record_id'))->toBe(AuditedHousingUnit::query()->orderBy('id')->pluck('id')->all());
+});
+
+it('keeps the parent building classification when filtering and paging housing units', function (): void {
+    AuditedBuilding::query()->create(['objectid' => 7200, 'globalid' => 'classification-parent', 'phase_number' => 1,
+        'building_damage_status' => 'partially_damaged', 'latitude' => 31.5, 'longitude' => 34.4]);
+    foreach (['fully_damaged2', 'no_damaged'] as $index => $damage) {
+        AuditedHousingUnit::query()->create(['objectid' => 7210 + $index, 'globalid' => 'classification-unit-'.$index,
+            'parentglobalid' => 'classification-parent', 'unit_damage_status' => $damage]);
+    }
+    $this->withToken($this->mapToken)->getJson('/api/v1/damage-assessment/housing-units/map?damage_status=no_damage')
+        ->assertOk()->assertJsonCount(1, 'features')->assertJsonPath('features.0.attributes.objectid', 7211)
+        ->assertJsonPath('features.0.attributes.damage_status', 'no_damage')
+        ->assertJsonPath('features.0.building.damage_status', 'partially_damaged');
+    $cursor = AuditedHousingUnit::query()->where('objectid', 7210)->value('id');
+    $this->getJson('/api/v1/damage-assessment/housing-units/map?after_id='.$cursor)
+        ->assertOk()->assertJsonCount(1, 'features')->assertJsonPath('features.0.building.objectid', 7200)
+        ->assertJsonPath('features.0.building.damage_status', 'partially_damaged');
+});
+
+it('does not derive missing parent damage from units or expose buildings outside account phases', function (): void {
+    foreach ([1, 2] as $phase) {
+        AuditedBuilding::query()->create(['objectid' => 7300 + $phase, 'globalid' => 'missing-damage-'.$phase,
+            'phase_number' => $phase, 'latitude' => 31.5, 'longitude' => 34.4]);
+        AuditedHousingUnit::query()->create(['objectid' => 7310 + $phase, 'globalid' => 'missing-unit-'.$phase,
+            'parentglobalid' => 'missing-damage-'.$phase, 'unit_damage_status' => 'fully_damaged2']);
+    }
+    $this->withToken($this->mapToken)->getJson('/api/v1/damage-assessment/housing-units/map')
+        ->assertOk()->assertJsonCount(1, 'features')->assertJsonPath('features.0.building.objectid', 7301)
+        ->assertJsonPath('features.0.building.damage_status', 'unclassified')
+        ->assertJsonMissingPath('features.0.building.owner_id')->assertJsonMissingPath('features.0.building.record_id');
+});
+
+it('returns distinct building identities even when their coordinates match', function (): void {
+    foreach ([1 => 'fully_damaged', 2 => 'no_damage'] as $index => $damage) {
+        AuditedBuilding::query()->create(['objectid' => 7400 + $index, 'globalid' => 'separate-building-'.$index,
+            'phase_number' => 1, 'latitude' => 31.5, 'longitude' => 34.4, 'building_damage_status' => $damage]);
+    }
+    $this->withToken($this->mapToken)->getJson($this->mapPath.'/map')
+        ->assertOk()->assertJsonCount(2, 'features')
+        ->assertJsonPath('features.0.building.globalid', 'separate-building-1')
+        ->assertJsonPath('features.0.building.damage_status', 'fully_damaged')
+        ->assertJsonPath('features.1.building.globalid', 'separate-building-2')
+        ->assertJsonPath('features.1.building.damage_status', 'no_damage');
 });
 
 it('rejects incomplete reversed and excessive extents and forbidden mobile map access', function (): void {

@@ -24,7 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 @Composable
-fun ArcGISCanvas(features: List<MapFeature>, focusRevision: Int, selectedId: Long?, onSelect: (List<Long>) -> Unit, onBounds: (MapBounds) -> Unit, modifier: Modifier = Modifier) {
+fun ArcGISCanvas(features: List<MapFeature>, sector: String, focusRevision: Int, selectedId: Long?, onSelect: (List<Long>) -> Unit, onBounds: (MapBounds) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val selectCallback by rememberUpdatedState(onSelect)
@@ -66,22 +66,23 @@ fun ArcGISCanvas(features: List<MapFeature>, focusRevision: Int, selectedId: Lon
             if (bounds.filters() != null) boundsCallback(bounds)
         }
     }
-    LaunchedEffect(features) {
+    LaunchedEffect(features, sector) {
         val graphics = withContext(Dispatchers.Default) {
-            groupsAtSameGeometry(features).flatMap { group -> runCatching {
-                val feature = group.maxBy { damageRank(it.attributes.damageStatus) }
-                val geometry = Geometry.fromJsonOrNull(feature.geometry.toString()) ?: return@runCatching null
-                val color = Color(damageColor(feature.attributes.damageStatus))
-                val outline = SimpleLineSymbol(SimpleLineSymbolStyle.Solid, Color(0xFFFFFFFF.toInt()), 1.5f)
+            mapSymbolGroups(features, sector).flatMap { group -> runCatching {
+                val geometry = Geometry.fromJsonOrNull(group.geometry.toString()) ?: return@runCatching null
+                if (isBuildingMap(sector) && (geometry !is Polygon || !validBuildingPolygon(group.geometry))) return@runCatching null
+                val color = Color(damageColor(group.damageStatus))
+                val showCount = group.features.size > 1 && (sector == "housing-units" || !isBuildingMap(sector))
+                val outline = SimpleLineSymbol(SimpleLineSymbolStyle.Solid, if (geometry is Polygon) color else Color(0xFFFFFFFF.toInt()), 1.5f)
                 val symbol = when (geometry) {
-                    is Polygon -> SimpleFillSymbol(SimpleFillSymbolStyle.Solid, color, outline)
+                    is Polygon -> SimpleFillSymbol(SimpleFillSymbolStyle.Solid, Color((damageColor(group.damageStatus) and 0x00FFFFFF) or 0x99000000.toInt()), outline)
                     is Polyline -> SimpleLineSymbol(SimpleLineSymbolStyle.Solid, color, 4f)
-                    else -> SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, color, if (group.size > 1) 26f else 13f).apply { this.outline = outline }
+                    else -> SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, color, if (showCount) 26f else 13f).apply { this.outline = outline }
                 }
-                val attributes = mapOf("record_ids" to group.joinToString(",") { it.attributes.recordId.toString() })
+                val attributes = mapOf("record_ids" to group.features.joinToString(",") { it.attributes.recordId.toString() })
                 val graphics = mutableListOf(Graphic(geometry, attributes, symbol))
-                if (group.size > 1) {
-                    val label = TextSymbol(group.size.toString(), Color(0xFFFFFFFF.toInt()), 12f, HorizontalAlignment.Center, VerticalAlignment.Middle)
+                if (showCount) {
+                    val label = TextSymbol(group.features.size.toString(), Color(0xFFFFFFFF.toInt()), 12f, HorizontalAlignment.Center, VerticalAlignment.Middle)
                     graphics += Graphic(geometry.extent.center, attributes, label)
                 }
                 graphics

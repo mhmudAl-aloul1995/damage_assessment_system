@@ -14,6 +14,7 @@ import com.phc.inquiry.feature.damageassessment.*
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import kotlinx.serialization.json.*
 
 class MapStatisticsScreenTest {
     @get:Rule val compose = createComposeRule()
@@ -39,5 +40,18 @@ class MapStatisticsScreenTest {
         val projected = GeometryEngine.projectOrNull(requireNotNull(point), SpatialReference.webMercator())
         assertNotNull(projected)
         assertTrue(requireNotNull(projected).extent.xMin > 3000000)
+    }
+
+    @Test fun buildingSummaryShowsParentObjectidAndDamageInsteadOfUnitDamage() {
+        val feature = MapFeature(Json.parseToJsonElement("""{"x":34.4,"y":31.5,"spatialReference":{"wkid":4326}}""").jsonObject,
+            InquiryRecord(8, objectid = JsonPrimitive(900), damageStatus = "fully_damaged"),
+            MapBuilding("parent", JsonPrimitive(7000), "برج الأمل", "no_damage"))
+        compose.setContent { DesignPreviewFrame { BuildingMapSummary(mapSymbolGroups(listOf(feature), "housing-units").single(), true) } }
+        compose.onNodeWithText("برج الأمل").assertExists()
+        compose.onNodeWithText("OBJECTID: 7000").assertExists()
+        compose.onNodeWithText("OBJECTID: 900").assertDoesNotExist()
+        compose.onNodeWithText("ضرر كلي").assertDoesNotExist()
+        compose.onNodeWithText("تصنيف ضرر المبنى").assertExists()
+        compose.onNodeWithText("1 وحدة محمّلة ضمن البحث والفلاتر").assertExists()
     }
 }

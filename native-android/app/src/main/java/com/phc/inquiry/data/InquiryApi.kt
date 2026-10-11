@@ -65,7 +65,10 @@ data class InquiryRecord(
 data class RecordPage(val data: List<InquiryRecord>, val total: Int, @SerialName("current_page") val currentPage: Int, @SerialName("last_page") val lastPage: Int)
 
 @Serializable
-data class MapFeature(val geometry: JsonObject, val attributes: InquiryRecord)
+data class MapBuilding(val globalid: String? = null, val objectid: JsonPrimitive? = null, val name: String? = null,
+    @SerialName("damage_status") val damageStatus: String? = null)
+@Serializable
+data class MapFeature(val geometry: JsonObject, val attributes: InquiryRecord, val building: MapBuilding? = null)
 @Serializable
 data class MapPage(val features: List<MapFeature>, @SerialName("next_cursor") val nextCursor: Long? = null, val scanned: Int = 0, val omitted: Int = 0)
 @Serializable

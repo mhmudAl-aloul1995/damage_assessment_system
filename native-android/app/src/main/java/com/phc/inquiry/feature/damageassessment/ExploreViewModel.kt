@@ -68,12 +68,12 @@ class ExploreViewModel @Inject constructor(saved: SavedStateHandle, private val 
         val sector = mutable.value.sector
         val previous = if (reset) MapCollection() else mutable.value.map
         val after = if (reset) 0L else previous.cursor ?: return
-        val filters = mapFilters + ("after_id" to after.toString())
+        val filters = mapFilters + ("after_id" to after.toString()) + if (isBuildingMap(sector)) mapOf("geometry" to "polygon") else emptyMap()
         mapJob = viewModelScope.launch {
             mutable.update { it.copy(map = previous, mapLoading = true, mapError = null) }
             try {
                 val page = repository.map(sector, filters)
-                val batch = withContext(Dispatchers.Default) { previous.append(page, after) }
+                val batch = withContext(Dispatchers.Default) { previous.append(page, after, polygonsOnly = isBuildingMap(sector)) }
                 mutable.update { it.copy(map = batch, mapLoading = false, focusRevision = if (focus) it.focusRevision + 1 else it.focusRevision) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: InquiryFailure) { mutable.update { it.copy(mapLoading = false, mapError = error.message) } }

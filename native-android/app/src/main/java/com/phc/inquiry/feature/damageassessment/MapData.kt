@@ -6,11 +6,12 @@ import kotlinx.serialization.json.*
 import kotlin.math.abs
 
 data class MapCollection(val features: List<MapFeature> = emptyList(), val cursor: Long? = null, val scanned: Int = 0, val limited: Boolean = false, val omitted: Int = 0) {
-    fun append(page: MapPage, after: Long): MapCollection {
+    fun append(page: MapPage, after: Long, polygonsOnly: Boolean = false): MapCollection {
         if (page.scanned !in 0..500 || page.omitted !in 0..500 || page.features.size > 500 || page.nextCursor?.let { it <= after } == true) {
             throw InquiryFailure("تعذّرت قراءة دفعة مواقع صحيحة من السيرفر.")
         }
-        val candidates = (features + page.features.filter { it.attributes.recordId > 0 && validMapGeometry(it.geometry) }).distinctBy { it.attributes.recordId }
+        fun usable(feature: MapFeature) = feature.attributes.recordId > 0 && validMapGeometry(feature.geometry) && (!polygonsOnly || validBuildingPolygon(feature.geometry))
+        val candidates = (features.filter(::usable) + page.features.filter(::usable)).distinctBy { it.attributes.recordId }
         var vertices = 0
         val merged = candidates.takeWhile { feature ->
             vertices += geometryVertexCount(feature.geometry)
@@ -18,7 +19,7 @@ data class MapCollection(val features: List<MapFeature> = emptyList(), val curso
         }
         val checked = scanned + page.scanned
         val capped = merged.size >= 2000 || checked >= 5000 || candidates.size != merged.size
-        val dropped = page.features.count { it.attributes.recordId <= 0 || !validMapGeometry(it.geometry) }
+        val dropped = page.features.count { !usable(it) }
         return MapCollection(merged.take(2000), if (capped) null else page.nextCursor, checked, capped && (page.nextCursor != null || candidates.size > merged.size), omitted + page.omitted + dropped)
     }
 }
@@ -37,6 +38,41 @@ fun damageRank(status: String?): Int = when (status) {
 }
 
 fun groupsAtSameGeometry(features: List<MapFeature>): List<List<MapFeature>> = features.groupBy { it.geometry.toString() }.values.toList()
+
+fun isBuildingMap(sector: String): Boolean = sector in setOf("buildings", "housing-units", "public-buildings", "cso-surveys")
+
+fun validBuildingPolygon(geometry: JsonObject): Boolean = geometry["rings"] is JsonArray && validMapGeometry(geometry) &&
+    (geometry["rings"] as JsonArray).all { ring ->
+        val points = ring as JsonArray
+        val first = points.first() as JsonArray
+        val last = points.last() as JsonArray
+        (first[0] as JsonPrimitive).doubleOrNull == (last[0] as JsonPrimitive).doubleOrNull &&
+            (first[1] as JsonPrimitive).doubleOrNull == (last[1] as JsonPrimitive).doubleOrNull
+    }
+
+data class MapSymbolGroup(val features: List<MapFeature>, val damageStatus: String?, val building: MapBuilding? = null) {
+    val geometry: JsonObject get() = features.first().geometry
+}
+
+fun mapSymbolGroups(features: List<MapFeature>, sector: String): List<MapSymbolGroup> {
+    if (!isBuildingMap(sector)) return groupsAtSameGeometry(features).map { group ->
+        MapSymbolGroup(group, group.maxBy { damageRank(it.attributes.damageStatus) }.attributes.damageStatus)
+    }
+    fun identity(value: String?): String? = value?.trim()?.removeSurrounding("{", "}")?.lowercase()?.takeIf(String::isNotBlank)
+    return features.groupBy { feature ->
+        val globalid = identity(feature.building?.globalid) ?: if (sector == "housing-units") identity(feature.attributes.parentGlobalId) else null
+        val objectid = feature.building?.objectid?.content?.takeIf { it.isNotBlank() && it != "null" }
+            ?: if (sector != "housing-units") feature.attributes.objectid?.content?.takeIf { it.isNotBlank() && it != "null" } else null
+        globalid?.let { "globalid:$it" } ?: objectid?.let { "objectid:$it" } ?: "record:${feature.attributes.recordId}"
+    }.values.map { group ->
+        val statuses = group.map { feature ->
+            feature.building?.damageStatus ?: if (sector == "housing-units") "unclassified" else feature.attributes.damageStatus ?: "unclassified"
+        }.distinct()
+        val status = statuses.singleOrNull() ?: "unclassified"
+        val building = group.firstNotNullOfOrNull { it.building }?.copy(damageStatus = status)
+        MapSymbolGroup(group, status, building)
+    }
+}
 
 fun validMapGeometry(geometry: JsonObject): Boolean {
     val spatial = geometry["spatialReference"] as? JsonObject ?: return false

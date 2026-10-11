@@ -17,7 +17,7 @@ import org.junit.Test
 class ExploreViewModelTest {
     @Before fun setup() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
     @After fun cleanup() { Dispatchers.resetMain() }
-    private fun feature(id: Long) = MapFeature(Json.parseToJsonElement("""{"x":34.4,"y":31.5,"spatialReference":{"wkid":4326}}""").jsonObject, InquiryRecord(id))
+    private fun feature(id: Long) = MapFeature(Json.parseToJsonElement("""{"rings":[[[34.4,31.5],[34.41,31.5],[34.41,31.51],[34.4,31.5]]],"spatialReference":{"wkid":4326}}""").jsonObject, InquiryRecord(id))
     private class FakeRepository : InquiryRepository {
         var mapCalls = mutableListOf<Pair<String, Map<String, String>>>()
         var statsCalls = mutableListOf<Pair<String, Map<String, String>>>()
@@ -46,6 +46,7 @@ class ExploreViewModelTest {
         model.state.first { !it.mapLoading }
         val request = repository.mapCalls.last().second
         assertEquals("الأمل", request["search"]); assertEquals("غزة", request["municipality"])
+        assertEquals("polygon", request["geometry"]); assertFalse(repository.statsCalls.last().second.containsKey("geometry"))
         assertEquals("500", request["after_id"]); assertFalse(request.containsKey("token"))
         assertEquals("2", model.state.value.statistics?.summary?.get("total").toString())
     }

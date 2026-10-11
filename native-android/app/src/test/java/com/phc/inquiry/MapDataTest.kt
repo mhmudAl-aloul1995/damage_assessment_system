@@ -70,4 +70,67 @@ class MapDataTest {
         assertEquals(listOf(1L, 2L), group.map { it.attributes.recordId })
         assertEquals("fully_damaged", group.maxBy { damageRank(it.attributes.damageStatus) }.attributes.damageStatus)
     }
+
+    @Test fun unitsUseParentClassificationAndKeepAllSelectableUnitIds() {
+        val parent = MapBuilding("parent", JsonPrimitive(7000), "برج الأمل", "no_damage")
+        val units = listOf(feature(1).copy(building = parent, attributes = InquiryRecord(1, damageStatus = "fully_damaged")),
+            feature(2).copy(building = parent, attributes = InquiryRecord(2, damageStatus = "partially_damaged")))
+        val group = mapSymbolGroups(units, "housing-units").single()
+        assertEquals("no_damage", group.damageStatus)
+        assertEquals(listOf(1L, 2L), group.features.map { it.attributes.recordId })
+        assertEquals("7000", group.building?.objectid?.content)
+        assertEquals("no_damage", mapSymbolGroups(units.take(1), "housing-units").single().damageStatus)
+    }
+
+    @Test fun colocatedBuildingsAreNeverMergedByCoordinates() {
+        val buildings = listOf(feature(1).copy(building = MapBuilding("one", damageStatus = "fully_damaged")),
+            feature(2).copy(building = MapBuilding("two", damageStatus = "no_damage")))
+        assertEquals(2, mapSymbolGroups(buildings, "buildings").size)
+        assertEquals(2, mapSymbolGroups(buildings, "housing-units").size)
+        assertEquals(2, mapSymbolGroups(listOf(feature(1), feature(2)), "public-buildings").size)
+    }
+
+    @Test fun parentIdentityGroupsAcrossPagesAndGeometryChanges() {
+        val first = feature(1).copy(building = MapBuilding("{ABC-123}", damageStatus = "partially_damaged"))
+        val second = feature(2).copy(building = MapBuilding("abc-123", damageStatus = "partially_damaged"),
+            geometry = Json.parseToJsonElement("""{"y":31.50001,"x":34.4,"spatialReference":{"wkid":4326}}""").jsonObject)
+        val collection = MapCollection().append(MapPage(listOf(first), 1, 1), 0).append(MapPage(listOf(second), null, 1), 1)
+        assertEquals(1, mapSymbolGroups(collection.features, "housing-units").size)
+    }
+
+    @Test fun oldBackendUnitsUseNeutralParentSymbolsWithoutInventingBuildingDamage() {
+        val units = listOf(feature(1).copy(attributes = InquiryRecord(1, parentGlobalId = "parent", damageStatus = "fully_damaged")),
+            feature(2).copy(attributes = InquiryRecord(2, parentGlobalId = "parent", damageStatus = "no_damage")))
+        assertEquals("unclassified", mapSymbolGroups(units, "housing-units").single().damageStatus)
+        assertEquals(2, mapSymbolGroups(listOf(feature(1), feature(2)), "housing-units").size)
+        assertEquals("fully_damaged", mapSymbolGroups(units.take(1), "buildings").single().damageStatus)
+    }
+
+    @Test fun contradictoryParentClassificationsUseNeutralInsteadOfWorstUnit() {
+        val units = listOf(feature(1).copy(building = MapBuilding("parent", damageStatus = "no_damage")),
+            feature(2).copy(building = MapBuilding("parent", damageStatus = "fully_damaged")))
+        assertEquals("unclassified", mapSymbolGroups(units, "housing-units").single().damageStatus)
+        assertEquals("unclassified", mapSymbolGroups(units, "housing-units").single().building?.damageStatus)
+    }
+
+    @Test fun mapDecodesBuildingMetadataWithoutChangingUnitRecordRouting() {
+        val json = Json { ignoreUnknownKeys = true }
+        val feature = json.decodeFromString<MapFeature>("""{"geometry":{"x":34.4,"y":31.5,"spatialReference":{"wkid":4326}},"attributes":{"record_id":8,"objectid":900,"damage_status":"fully_damaged"},"building":{"globalid":"parent","objectid":7000,"name":"برج الأمل","damage_status":"no_damage"}}""")
+        assertEquals(8L, feature.attributes.recordId)
+        assertEquals("900", feature.attributes.objectid?.content)
+        assertEquals("no_damage", mapSymbolGroups(listOf(feature), "housing-units").single().damageStatus)
+        assertEquals("7000", feature.building?.objectid?.content)
+    }
+    @Test fun buildingPolygonModeRejectsOldServerPointsAndRetainsCursorForMoreBuildings() {
+        val ring = Json.parseToJsonElement("""{"rings":[[[34.4,31.5],[34.41,31.5],[34.41,31.51],[34.4,31.5]]],"spatialReference":{"wkid":4326}}""").jsonObject
+        val page = MapPage(listOf(feature(1), feature(2).copy(geometry = ring)), 500, 500)
+        val result = MapCollection().append(page, 0, polygonsOnly = true)
+        assertEquals(listOf(2L), result.features.map { it.attributes.recordId }); assertEquals(1, result.omitted); assertEquals(500L, result.cursor)
+        assertTrue(validBuildingPolygon(ring)); assertFalse(validBuildingPolygon(feature(1).geometry))
+    }
+    @Test fun openRingsNeverRepresentRealBuildingFootprints() {
+        val open = Json.parseToJsonElement("""{"rings":[[[34.4,31.5],[34.41,31.5],[34.41,31.51],[34.4,31.51]]],"spatialReference":{"wkid":4326}}""").jsonObject
+        assertFalse(validBuildingPolygon(open))
+        assertEquals(1, MapCollection().append(MapPage(listOf(feature(1).copy(geometry = open)), null, 1), 0, polygonsOnly = true).omitted)
+    }
 }

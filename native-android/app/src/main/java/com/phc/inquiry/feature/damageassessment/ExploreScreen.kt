@@ -51,6 +51,7 @@ fun ExploreScreen(state: ExploreState, initialMode: String, retryCatalog: () -> 
     var localFocus by rememberSaveable { mutableIntStateOf(0) }
     var bounds by remember { mutableStateOf<MapBounds?>(null) }
     var selected by remember(state.sector, state.criteria) { mutableStateOf<List<Long>>(emptyList()) }
+    val symbolGroups = remember(state.map.features, state.sector) { mapSymbolGroups(state.map.features, state.sector) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = LocalFocusManager.current
     val submit = { focus.clearFocus(); keyboard?.hide(); search(query, state.criteria.filters) }
@@ -85,7 +86,7 @@ fun ExploreScreen(state: ExploreState, initialMode: String, retryCatalog: () -> 
                     TextButton(onClick = { bounds?.let(searchArea); selected = emptyList() }, enabled = bounds != null && !state.mapLoading) { Text(stringResource(R.string.search_map_area)) }
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    ArcGISCanvas(state.map.features, state.focusRevision + localFocus, selected.firstOrNull(), { selected = it }, { bounds = it }, Modifier.fillMaxSize())
+                    ArcGISCanvas(state.map.features, state.sector, state.focusRevision + localFocus, selected.firstOrNull(), { selected = it }, { bounds = it }, Modifier.fillMaxSize())
                     if (state.mapLoading) LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                     state.mapError?.let { error -> Surface(Modifier.align(Alignment.TopCenter), tonalElevation = 4.dp) { ErrorState(error, retryMap) } }
                     if (!state.mapLoading && state.mapError == null && state.map.features.isEmpty()) Surface(Modifier.align(Alignment.TopCenter).padding(16.dp), tonalElevation = 4.dp, shape = MaterialTheme.shapes.medium) {
@@ -93,7 +94,10 @@ fun ExploreScreen(state: ExploreState, initialMode: String, retryCatalog: () -> 
                     }
                 }
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.map_loaded, state.map.features.size, state.map.scanned), style = MaterialTheme.typography.labelMedium)
+                    Text(if (state.sector == "housing-units") stringResource(R.string.map_buildings_loaded, symbolGroups.size, state.map.features.size)
+                        else stringResource(R.string.map_loaded, state.map.features.size, state.map.scanned), style = MaterialTheme.typography.labelMedium)
+                    if (isBuildingMap(state.sector)) Text(stringResource(R.string.map_building_scope), style = MaterialTheme.typography.bodySmall)
+                    if (state.sector == "housing-units" && state.map.features.any { it.building == null }) Text(stringResource(R.string.map_building_update), style = MaterialTheme.typography.bodySmall)
                     if (state.areaOnly) Text(stringResource(R.string.map_area_only), style = MaterialTheme.typography.bodySmall)
                     if (state.map.limited) Text(stringResource(R.string.map_limited), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     if (state.map.omitted > 0) Text(stringResource(R.string.map_omitted, state.map.omitted), style = MaterialTheme.typography.bodySmall)
@@ -106,18 +110,37 @@ fun ExploreScreen(state: ExploreState, initialMode: String, retryCatalog: () -> 
     val selectedRecords = state.map.features.map { it.attributes }.filter { it.recordId in selectedIds }
     if (selectedRecords.isNotEmpty() && mode == "map") ModalBottomSheet(onDismissRequest = { selected = emptyList() }) {
         LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { Text(stringResource(R.string.map_choose_record), style = MaterialTheme.typography.titleLarge) }
+            item { Text(stringResource(if (state.sector == "housing-units") R.string.map_building_units else R.string.map_choose_record), style = MaterialTheme.typography.titleLarge) }
+            if (isBuildingMap(state.sector)) symbolGroups.filter { group -> group.features.any { it.attributes.recordId in selectedIds } }.forEachIndexed { index, group ->
+                item(key = "building-$index") { BuildingMapSummary(group, state.sector == "housing-units") }
+            }
             selectedRecords.forEach { record -> item(key = record.recordId) { RecordCard(record) { selected = emptyList(); openRecord(record) } } }
         }
     }
     if (legendOpen) ModalBottomSheet(onDismissRequest = { legendOpen = false }) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.legend), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.map_legend_hint))
-            (state.filters.options.damageStatuses.ifEmpty { listOf("fully_damaged", "partially_damaged", "committee_review", "no_damage", "unclassified") }).forEach { LegendRow(it) }
+            Text(stringResource(if (isBuildingMap(state.sector)) R.string.map_building_legend_hint else R.string.map_legend_hint))
+            (if (isBuildingMap(state.sector)) listOf("fully_damaged", "partially_damaged", "committee_review", "no_damage", "unclassified")
+                else state.filters.options.damageStatuses.ifEmpty { listOf("destroyed", "severe", "moderate", "minor", "no_damage", "unclassified") }).forEach { LegendRow(it) }
         }
     }
     if (filtersOpen) ExploreFilterSheet(state, loadFilters, { filtersOpen = false }) { filters -> filtersOpen = false; search(query, filters) }
+}
+
+@Composable
+fun BuildingMapSummary(group: MapSymbolGroup, units: Boolean) {
+    OutlinedCard(Modifier.fillMaxWidth().testTag("map-building-summary")) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(group.building?.name?.takeIf(String::isNotBlank) ?: group.features.first().attributes.buildingName?.takeIf(String::isNotBlank)
+                ?: stringResource(R.string.map_building_unnamed), style = MaterialTheme.typography.titleMedium)
+            val objectid = group.building?.objectid ?: if (!units) group.features.first().attributes.objectid else null
+            if (objectid != null && objectid.content != "null") Text("OBJECTID: ${objectid.content}", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.map_building_damage), style = MaterialTheme.typography.labelMedium)
+            LegendRow(group.damageStatus ?: "unclassified")
+            if (units) Text(stringResource(R.string.map_loaded_units, group.features.size), style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\Schema;
 
 class SectorOverviewService
 {
+    public function __construct(private MobileBuildingFootprintService $footprints) {}
+
     /** @return array{model: class-string<Model>, damage: string, municipality: string, neighborhood: string} */
     private function configuration(string $sector): array
     {
@@ -535,7 +537,7 @@ class SectorOverviewService
         if ($sector === 'housing-units') {
             $columns[] = 'parentglobalid';
             $building = $query->getModel()->building()->getRelated();
-            $buildingColumns = $this->existingColumns($building, ['id', 'globalid', 'building_name', 'field_status', 'municipalitie', 'neighborhood', ...$this->geometryColumns($building)]);
+            $buildingColumns = $this->existingColumns($building, ['id', 'objectid', 'globalid', 'building_name', 'building_damage_status', 'field_status', 'municipalitie', 'neighborhood', ...$this->geometryColumns($building)]);
             $query->with('building:'.implode(',', $buildingColumns));
         } else {
             $columns = [...$columns, 'globalid', $configuration['municipality'], $configuration['neighborhood'], ...$this->geometryColumns($query->getModel())];
@@ -646,15 +648,38 @@ class SectorOverviewService
         $features = [];
         $omitted = 0;
         $vertexBudget = 50000;
+        $polygonsOnly = ($filters['_inquiry'] ?? false) && ($filters['geometry'] ?? null) === 'polygon' && $sector !== 'road-facilities';
+        $footprints = [];
+        if ($polygonsOnly) {
+            $missing = $rows->map(function (Model $row) use ($sector): ?string {
+                $building = $sector === 'housing-units' ? $row->building : $row;
+                $geometry = $building ? $this->geometry($building) : null;
+
+                return $building && ! isset($geometry['rings']) ? $building->getRawOriginal('globalid') : null;
+            })->filter()->values()->all();
+            $footprints = $this->footprints->geometries($sector, $missing);
+        }
 
         foreach ($rows as $row) {
             $source = $sector === 'housing-units' ? $row->building : $row;
             $geometry = $source ? $this->geometry($source) : null;
 
+            if ($polygonsOnly && ! isset($geometry['rings'])) {
+                $identity = $this->footprints->identity($source?->getRawOriginal('globalid'));
+                $geometry = $identity !== null ? ($footprints[$identity] ?? null) : null;
+            }
+
             if ($geometry === null) {
+                if ($polygonsOnly) {
+                    $omitted++;
+                }
+
                 continue;
             }
 
+            if ($polygonsOnly) {
+                $geometry = array_intersect_key($geometry, array_flip(['rings', 'spatialReference']));
+            }
             $candidateBudget = $vertexBudget;
             if ($filters['_inquiry'] ?? false) {
                 $geometry = $this->inquiryGeometry($geometry, $candidateBudget);
@@ -673,6 +698,14 @@ class SectorOverviewService
             $features[] = [
                 'geometry' => $geometry,
                 'attributes' => $this->recordAttributes($row, $sector, $filters['_inquiry'] ?? false),
+                ...(($filters['_inquiry'] ?? false) && $sector !== 'road-facilities' ? [
+                    'building' => [
+                        'globalid' => $source?->getRawOriginal('globalid'),
+                        'objectid' => $source?->getRawOriginal('objectid'),
+                        'name' => $source?->getRawOriginal('building_name'),
+                        'damage_status' => $this->damageBucket($sector === 'housing-units' ? 'buildings' : $sector, $source?->getRawOriginal('building_damage_status')),
+                    ],
+                ] : []),
             ];
         }
 
@@ -722,6 +755,9 @@ class SectorOverviewService
                     return null;
                 }
                 $safePart[] = [(float) $coordinate[0], (float) $coordinate[1]];
+            }
+            if ($key === 'rings' && $safePart[0] !== $safePart[array_key_last($safePart)]) {
+                return null;
             }
             $count += count($part);
             $safeParts[] = $safePart;
