@@ -36,6 +36,12 @@ Following the owner's explicit request on 12 October 2026, HR web pages allow HT
 6. Create schedule versions with explicit working days/timezone and finite assignments. Schedules and assignments cannot be edited/deleted through the application. Changes must use a new version/non-overlapping future period. Open-ended assignment retirement and historical correction workflows remain outstanding.
 7. Run staging regression checks and PHC acceptance. Keep capture disabled. No production deployment, migration or router modification was performed during implementation.
 
+### Fixing attendance authorization on the deployed server
+
+Local permissions are not transferred by Git. After pulling the latest code and applying the HR migration on the server, run `php artisan hr:grant-attendance-view mhmudaloul@gmail.com --no-interaction` on that server. This creates the viewing permission if needed, grants only attendance viewing to the named active account, preserves all existing roles/grants, records an audit entry and clears the Spatie permission cache. Re-running it is safe. It refuses to grant access when the HR tables are missing and never runs migrations automatically.
+
+If SSH/terminal access is unavailable, a Database Officer can open **الإدارة المركزية → أوامر Artisan**, find `hr:grant-attendance-view`, enter the target account's email in the `email` argument, and run it. The existing admin authorization and CSRF protections apply. After a successful run, refresh the attendance page. Setup and export continue to require their separate permissions.
+
 ### Calculation rules in this increment
 
 - UTC event instants; organization/schedule timezone for presentation and work date. Overnight checkout belongs to the check-in work date, even if the assignment expires at midnight.
