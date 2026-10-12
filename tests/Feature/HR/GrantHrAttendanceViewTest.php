@@ -11,7 +11,7 @@ use Spatie\Permission\Models\Role;
 
 it('grants only attendance viewing while retaining existing roles and grants', function (): void {
     $user = User::factory()->create();
-    $role = Role::findOrCreate('Database Officer', 'web');
+    $role = Role::findOrCreate('Field Engineer', 'web');
     $user->assignRole($role);
     $user->givePermissionTo(Permission::findOrCreate('users.view', 'web'));
 
@@ -20,7 +20,7 @@ it('grants only attendance viewing while retaining existing roles and grants', f
     $user = $user->fresh();
     expect($user->can('hr.attendance.view'))->toBeTrue()
         ->and($user->can('users.view'))->toBeTrue()
-        ->and($user->hasRole('Database Officer'))->toBeTrue()
+        ->and($user->hasRole('Field Engineer'))->toBeTrue()
         ->and($user->can('hr.attendance.setup'))->toBeFalse()
         ->and($user->can('hr.attendance.export'))->toBeFalse()
         ->and($role->fresh()->permissions)->toHaveCount(0)

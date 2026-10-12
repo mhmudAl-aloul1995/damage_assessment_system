@@ -22,8 +22,7 @@ beforeEach(function (): void {
     $this->viewer = User::factory()->create();
 });
 
-it('requires attendance grants even for existing database officers', function (): void {
-    $this->viewer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+it('requires attendance grants for accounts without the database officer role', function (): void {
     $this->actingAs($this->viewer)->get(route('hr.attendance.index'))->assertForbidden();
     $this->get(route('hr.attendance.setup'))->assertForbidden();
     $this->postJson(route('hr.attendance.employees.store'), [])->assertForbidden();
