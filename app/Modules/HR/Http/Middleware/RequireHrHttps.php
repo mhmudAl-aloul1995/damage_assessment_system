@@ -10,7 +10,7 @@ class RequireHrHttps
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! app()->environment(['local', 'testing']) && ! $request->isSecure()) {
+        if (config('hr.web_require_https') && ! app()->environment(['local', 'testing']) && ! $request->isSecure()) {
             abort(403, 'HR access requires HTTPS.');
         }
 

@@ -10,6 +10,7 @@ Set these through deployment secrets/environment and rebuild the normal configur
 
 ```dotenv
 HR_TIMEZONE=Asia/Hebron
+HR_WEB_REQUIRE_HTTPS=false
 HR_ATTENDANCE_ENABLED=false
 HR_ATTENDANCE_NETWORK_MODE=disabled
 HR_ATTENDANCE_GATEWAY_URL=
@@ -23,7 +24,7 @@ HR_MIKROTIK_PASSWORD=
 
 There are no guessed addresses, ports, CIDRs or router credentials. Device approval is mandatory in configuration; it cannot be disabled by an environment switch. Production capture stays blocked even if `HR_ATTENDANCE_ENABLED=true`. The network services explicitly report unconfigured state and perform no router I/O.
 
-HR web routes reject HTTP outside `local` and `testing`. TLS must terminate on a trusted endpoint. Do not set APP_ENV=local on a public server. Do not trust all proxy IPs or a caller-supplied X-Forwarded-Proto header. Existing public HTTP login is not suitable for new HR use: deploy a verified HTTPS authentication/session origin before granting HR access.
+Following the owner's explicit request on 12 October 2026, HR web pages allow HTTP by default (`HR_WEB_REQUIRE_HTTPS=false`). Authentication, authorization and CSRF controls still apply. HTTP does not encrypt sessions or HR data. Set `HR_WEB_REQUIRE_HTTPS=true` to restore HTTPS enforcement outside local/testing once TLS is available. Do not change APP_ENV to bypass transport checks or trust caller-supplied proxy headers. This setting applies only to web pages; it does not enable native biometric attendance, gateway verification or disable certificate verification. After pulling this change, clear or rebuild the deployed configuration cache if it is used.
 
 ### Approved deployment sequence (not executed by this change)
 

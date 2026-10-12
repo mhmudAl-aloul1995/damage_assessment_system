@@ -95,7 +95,7 @@ it('validates schedules and creates effective dated assignments through the UI e
 });
 
 it('never enables production capture through flags or claimed network headers', function (): void {
-    config(['hr.attendance_enabled' => true, 'hr.network_mode' => 'simulation', 'hr.gateway_url' => 'https://gateway.example.test']);
+    config(['hr.web_require_https' => false, 'hr.attendance_enabled' => true, 'hr.network_mode' => 'simulation', 'hr.gateway_url' => 'https://gateway.example.test']);
     app()->instance('env', 'production');
     try {
         expect(fn () => app(AttendanceGatewayService::class)->assertSimulationAllowed())
@@ -106,7 +106,8 @@ it('never enables production capture through flags or claimed network headers', 
     }
 });
 
-it('rejects insecure HR requests outside development even with forged proxy headers', function (): void {
+it('rejects insecure HR requests when HTTPS enforcement is enabled even with forged proxy headers', function (): void {
+    config(['hr.web_require_https' => true]);
     $middleware = app(App\Modules\HR\Http\Middleware\RequireHrHttps::class);
     $request = Request::create('http://example.test/hr/attendance');
     $request->headers->set('X-Forwarded-Proto', 'https');
@@ -117,6 +118,32 @@ it('rejects insecure HR requests outside development even with forged proxy head
     } finally {
         app()->instance('env', 'testing');
     }
+});
+
+it('allows the configured HR web transport in production', function (bool $requireHttps, string $scheme): void {
+    config(['hr.web_require_https' => $requireHttps]);
+    $middleware = app(App\Modules\HR\Http\Middleware\RequireHrHttps::class);
+    $request = Request::create($scheme.'://example.test/hr/attendance');
+    app()->instance('env', 'production');
+    try {
+        $response = $middleware->handle($request, fn () => response('Continue to authentication'));
+        expect($response->getStatusCode())->toBe(200)
+            ->and($response->getContent())->toBe('Continue to authentication');
+    } finally {
+        app()->instance('env', 'testing');
+    }
+})->with([
+    'HTTP permitted' => [false, 'http'],
+    'HTTPS permitted without enforcement' => [false, 'https'],
+    'HTTPS permitted with enforcement' => [true, 'https'],
+]);
+
+it('still requires authentication when HR web HTTP is allowed', function (): void {
+    config(['hr.web_require_https' => false]);
+    $this->getJson(route('hr.attendance.index'))->assertUnauthorized();
+    $this->getJson(route('hr.attendance.setup'))->assertUnauthorized();
+    $this->postJson(route('hr.attendance.employees.store'), [])->assertUnauthorized();
+    $this->getJson(route('hr.attendance.export'))->assertUnauthorized();
 });
 
 it('keeps the simulator disabled by default', function (): void {

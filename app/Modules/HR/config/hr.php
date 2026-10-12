@@ -2,6 +2,7 @@
 
 return [
     'timezone' => env('HR_TIMEZONE', 'Asia/Hebron'),
+    'web_require_https' => (bool) env('HR_WEB_REQUIRE_HTTPS', false),
     'attendance_enabled' => (bool) env('HR_ATTENDANCE_ENABLED', false),
     'gateway_url' => env('HR_ATTENDANCE_GATEWAY_URL'),
     'network_mode' => env('HR_ATTENDANCE_NETWORK_MODE', 'disabled'),
