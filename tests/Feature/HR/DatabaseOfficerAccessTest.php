@@ -28,7 +28,7 @@ it('shows attendance and all employee rows to database officers without HR permi
     $this->get(route('hr.attendance.export', ['month' => '2026-10']))->assertOk();
     Excel::assertDownloaded('hr-attendance.xlsx');
     $this->assertDatabaseCount('model_has_permissions', 0);
-    $this->assertDatabaseCount('role_has_permissions', 0);
+    expect(Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(0);
 });
 
 it('allows database officers to set up employee identities schedules and assignments', function (): void {
