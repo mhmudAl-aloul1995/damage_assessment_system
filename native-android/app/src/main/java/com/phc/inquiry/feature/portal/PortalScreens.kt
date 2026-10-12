@@ -35,41 +35,44 @@ fun moduleTitle(key: String): String = when(key) {
 }
 private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks" -> Icons.Default.Favorite; else -> Icons.Default.AccountCircle }
 @Composable private fun PortalCard(title: String, subtitle: String, action: () -> Unit, modifier: Modifier = Modifier, tag: String = "", icon: ImageVector = Icons.Default.List) {
-    Card(onClick = action, modifier = modifier.fillMaxWidth().testTag(tag), shape = RoundedCornerShape(20.dp),
+    Card(onClick = action, modifier = modifier.fillMaxWidth().testTag(tag), shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             IconTile(icon)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 if(subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Default.KeyboardArrowLeft, "فتح")
+            Icon(Icons.Default.KeyboardArrowLeft, "فتح", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         }
     }
 }
-@Composable fun PortalHome(name: String, state: PortalState, onModule: (String) -> Unit, onSurveys: () -> Unit, onDrafts: () -> Unit, onDamage: () -> Unit, retry: () -> Unit) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+@Composable fun PortalHome(name: String, state: PortalState, onModule: (String) -> Unit, onSurveys: () -> Unit, onDrafts: () -> Unit, onDamage: () -> Unit, retry: () -> Unit, onInquiry: () -> Unit = onDamage,
+    onTasks: () -> Unit = onDrafts, summaryContent: @Composable () -> Unit = {}) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            BrandMark(56)
-            Column { Text("أهلًا، $name", style = MaterialTheme.typography.titleLarge); Text("مجلس الإسكان الفلسطيني", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Column(Modifier.weight(1f)) { Text("أهلًا، $name", style = MaterialTheme.typography.titleMedium); Text("المجلس الفلسطيني للإسكان", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            BrandMark(92)
         } }
-        item { Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
-            Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("منظومتك، في مكان واحد", style = MaterialTheme.typography.headlineSmall)
-                Text("استعلم عن السجلات، أكمل الاستبيانات، وتابع ما أرسلته.")
-                FilledTonalButton(onClick = onSurveys, modifier = Modifier.testTag("home-surveys")) { Icon(Icons.Default.Edit, null); Spacer(Modifier.width(8.dp)); Text("تعبئة استبيان") }
-            }
+        item { PortalCard("البحث في المنظومة", "المباني، الوحدات، المستفيدون والسجلات", onInquiry, tag = "home-inquiry", icon = Icons.Default.Search) }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onSurveys, modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("home-surveys"), shape = RoundedCornerShape(10.dp)) { Icon(Icons.Default.Edit, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("تعبئة استبيان") }
+            OutlinedButton(onClick = onTasks, modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("home-tasks"), shape = RoundedCornerShape(10.dp)) { Text("متابعة أعمالي") }
         } }
         item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedCard(onClick = onDrafts, modifier = Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text(if(state.draftsError != null && state.drafts.isEmpty()) "—" else "${state.drafts.count { it.receiptId == null }}", style = MaterialTheme.typography.headlineMedium); Text(if(state.draftsError != null) "مسودات يمكن فتحها" else "مسودات على الجهاز") } }
-            OutlinedCard(onClick = onSurveys, modifier = Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text("${state.forms.size}", style = MaterialTheme.typography.headlineMedium); Text("نماذج متاحة") } }
+            PortalMetric(if(state.draftsError != null && state.drafts.isEmpty()) "—" else "${state.drafts.count { it.receiptId == null }}", if(state.draftsError != null) "مسودات يمكن فتحها" else "مسودات على الجهاز", Icons.Default.Edit, onDrafts, Modifier.weight(1f))
+            PortalMetric(if(state.loading || (state.error != null && state.forms.isEmpty())) "—" else "${state.forms.size}", "نماذج متاحة", Icons.Default.List, onSurveys, Modifier.weight(1f))
         } }
+        item { summaryContent() }
+        if(state.drafts.any { it.receiptId == null }) item {
+            PortalCard("تابع من حيث توقفت", "${state.drafts.count { it.receiptId == null }} مسودات محفوظة؛ افتحها للاستكمال أو متابعة تأكيد الإرسال.", onDrafts, tag = "home-continue-drafts", icon = Icons.Default.Edit)
+        }
         state.draftsError?.let { item { OutlinedCard(onClick = onDrafts, modifier = Modifier.fillMaxWidth().testTag("home-drafts-warning")) { Column(Modifier.padding(18.dp)) {
             Text("تنبيه المسودات المحفوظة", style = MaterialTheme.typography.titleSmall)
             Text("تعذّر فتح بعض المسودات على الجهاز. يمكنك متابعة الاستعلام وفتح المسودات لإعادة المحاولة.", style = MaterialTheme.typography.bodySmall)
         } } } }
-        item { Text("الموديولات المتاحة لحسابك", style = MaterialTheme.typography.titleLarge) }
+        item { Text("مساحات العمل المتاحة لحسابك", style = MaterialTheme.typography.titleMedium) }
         if(state.loading) item { LoadingState() }
         state.error?.let { item { ErrorState(it, retry) } }
         items(state.modules, key = { it.key }) { module -> PortalCard(module.title, module.description, { onModule(module.key) }, tag = "module-${module.key}", icon = moduleIcon(module.key)) }
@@ -77,12 +80,20 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
         if(state.error != null) item { OutlinedButton(onClick = onDamage, modifier = Modifier.fillMaxWidth()) { Text("فتح خدمات حصر الأضرار الحالية") } }
     }
 }
+@Composable private fun PortalMetric(value: String, label: String, icon: ImageVector, action: () -> Unit, modifier: Modifier) {
+    Card(onClick = action, modifier = modifier, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { IconTile(icon); Text(value, style = MaterialTheme.typography.headlineMedium) }
+            Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 @Composable fun PortalInquiry(state: PortalState, onModule: (String) -> Unit, retry: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text("عن ماذا تريد الاستعلام؟", style = MaterialTheme.typography.headlineSmall); Text("اختر الموديول، ثم ابحث بالاسم أو الرقم.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { Text("الموديولات", style = MaterialTheme.typography.headlineSmall); Text("اختر مساحة العمل للوصول إلى السجلات والخدمات المتاحة.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if(state.loading) item { LoadingState() }
         state.error?.let { item { ErrorState(it, retry) } }
-        items(state.modules, key = { it.key }) { module -> PortalCard(module.title, "البحث وعرض التفاصيل", { onModule(module.key) }, icon = moduleIcon(module.key)) }
+        items(state.modules, key = { it.key }) { module -> PortalCard(module.title, module.description, { onModule(module.key) }, icon = moduleIcon(module.key)) }
     }
 }
 @Composable fun ModuleScreen(module: PortalModule?, forms: List<PublishedForm>, onRecords: () -> Unit, onForm: (PublishedForm) -> Unit) {
@@ -177,6 +188,27 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessmen
         confirmButton = { TextButton(onClick = { deleteDraft(draft.uuid); toDelete = null }) { Text("حذف") } },
         dismissButton = { TextButton(onClick = { toDelete = null }) { Text("إلغاء") } }) }
 }
+@Composable fun WorkspaceTasksScreen(state: PortalState, onDrafts: () -> Unit, onSent: () -> Unit, onSurveys: () -> Unit, retryDrafts: () -> Unit, onDraft: (DraftSummary) -> Unit) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item { Text("مهامي", style = MaterialTheme.typography.headlineSmall); Text("استكمل المسودات وتابع تأكيد استلام ما أرسلته.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { PortalCard("سجل الإرساليات", "عرض إيصالات الاستلام والمرفقات المرسلة", onSent, tag = "tasks-sent", icon = Icons.Default.CheckCircle) }
+        state.draftsError?.let { message -> item { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
+            Text("تعذّر فتح بعض المسودات", style = MaterialTheme.typography.titleMedium)
+            Text(message, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = retryDrafts) { Text("إعادة محاولة فتح المسودات") }
+        } } } }
+        item { Text("بانتظار الاستكمال أو التأكيد", style = MaterialTheme.typography.titleMedium) }
+        items(state.drafts.filter { it.receiptId == null }, key = { it.uuid }) { draft ->
+            PortalCard(draft.title, if(draft.pending) "بانتظار تأكيد الاستلام · أعد المحاولة من نفس المسودة" else "مسودة محفوظة · ${moduleTitle(draft.module)}", { onDraft(draft) }, tag = "task-${draft.uuid}", icon = Icons.Default.Edit)
+        }
+        if(state.drafts.none { it.receiptId == null } && state.draftsError == null) item { EmptyState("لا توجد مسودات معلّقة", "يمكنك بدء استبيان جديد أو مراجعة الإرساليات.", Icons.Default.CheckCircle) }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onSurveys, Modifier.weight(1f)) { Text("استبيان جديد") }
+            OutlinedButton(onClick = onDrafts, Modifier.weight(1f)) { Text("كل المسودات") }
+        } }
+    }
+}
+
 @Composable fun AccountScreen(name: String, email: String, moduleCount: Int, logout: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { BrandMark(64); Text(name, style = MaterialTheme.typography.headlineSmall); Text(email, color = MaterialTheme.colorScheme.onSurfaceVariant) }

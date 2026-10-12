@@ -22,19 +22,18 @@ import com.phc.inquiry.data.Sector
 fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> Unit, retry: () -> Unit, onCitizens: () -> Unit = {}, onExplore: (String) -> Unit = {}) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(Modifier.widthIn(max = 880.dp).fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("حصر الأضرار", style = MaterialTheme.typography.headlineSmall)
+                Text("السجلات والخريطة والإحصائيات في مساحة واحدة", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+            } }
             item {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    BrandMark(64)
-                    Column { Text(stringResource(R.string.welcome, name), style = MaterialTheme.typography.titleLarge)
-                        Text(stringResource(R.string.portal_name), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium) }
-                }
-            }
-            item {
-                Surface(color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, shape = RoundedCornerShape(20.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Default.Search, null, Modifier.size(28.dp))
-                        Text(stringResource(R.string.dashboard_intro), style = MaterialTheme.typography.headlineSmall)
-                        Text(stringResource(R.string.dashboard_description), style = MaterialTheme.typography.bodyMedium)
+                Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("ابدأ بالسجل الذي تريد متابعته", style = MaterialTheme.typography.titleMedium)
+                        Text("ابحث بالاسم أو برقم OBJECTID كاملًا.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if(state.sectors.any { it.key == "buildings" }) Button(onClick = { onSector("buildings") }, Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(10.dp)) {
+                            Icon(Icons.Default.Search, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("البحث عن مبنى")
+                        }
                     }
                 }
             }
@@ -43,12 +42,12 @@ fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> U
             if (state.loading) item { LoadingState() }
             state.error?.let { error -> item { ErrorState(error, retry) } }
             if (state.sectors.isNotEmpty()) item {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Card(onClick = { onExplore("map") }, Modifier.fillMaxWidth().testTag("open-map")) {
-                        Column(Modifier.padding(20.dp)) { Text(stringResource(R.string.gis_title), style = MaterialTheme.typography.titleLarge); Text(stringResource(R.string.gis_description)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedCard(onClick = { onExplore("map") }, Modifier.weight(1f).testTag("open-map"), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { IconTile(Icons.Default.Place); Text(stringResource(R.string.map_tab), style = MaterialTheme.typography.titleMedium); Text("استكشاف المواقع", style = MaterialTheme.typography.bodySmall) }
                     }
-                    Card(onClick = { onExplore("stats") }, Modifier.fillMaxWidth().testTag("open-statistics")) {
-                        Column(Modifier.padding(20.dp)) { Text(stringResource(R.string.statistics_title), style = MaterialTheme.typography.titleLarge); Text(stringResource(R.string.statistics_description)) }
+                    OutlinedCard(onClick = { onExplore("stats") }, Modifier.weight(1f).testTag("open-statistics"), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { IconTile(Icons.Default.Info); Text(stringResource(R.string.statistics_title), style = MaterialTheme.typography.titleMedium); Text("الأعداد والنسب", style = MaterialTheme.typography.bodySmall) }
                     }
                 }
             }
@@ -70,10 +69,10 @@ fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> U
 private fun SectorCard(sector: Sector, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth().testTag("sector-${sector.key}"),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 IconTile(if (sector.key == "housing-units") Icons.Default.Home else Icons.Default.Place)
-                Text(sectorTitle(sector.key), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Text(sectorTitle(sector.key), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             }
             Text(stringResource(when (sector.key) { "housing-units" -> R.string.housing_description; "buildings" -> R.string.building_description; else -> R.string.sector_description }),
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

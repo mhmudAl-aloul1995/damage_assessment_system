@@ -1,6 +1,7 @@
 package com.phc.inquiry.data
 
 import com.phc.inquiry.core.security.*
+import com.phc.inquiry.core.network.connectionFailureMessage
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.*
@@ -46,7 +47,8 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
             }
             throw FormFailure(error.code(), fields, message)
         } catch (error: FormFailure) { throw error }
-        catch (_: IOException) { throw FormFailure(null, message = if (mutation) "تعذّر الاتصال أو تأكيد الاستلام. المسودة محفوظة؛ أعد المحاولة عند توفر الإنترنت." else "تعذّر الاتصال بالسيرفر. تحقق من الإنترنت وأعد المحاولة.") }
+        catch (error: InquiryFailure) { throw FormFailure(error.statusCode, message = error.message ?: "تعذّر تنفيذ الطلب.") }
+        catch (error: IOException) { throw FormFailure(null, message = connectionFailureMessage(error) + if (mutation) " لم يتم تأكيد الاستلام؛ أعد المحاولة من نفس المسودة المحفوظة." else "") }
         catch (_: Exception) { throw FormFailure(null, message = if (mutation) "تعذّرت قراءة الاستجابة. المسودة محفوظة؛ تحقق من تحديث API." else "تعذّرت قراءة بيانات السيرفر. تأكد من تحديث الخدمة.") }
     }
     suspend fun modules(): List<PortalModule> = request { api.modules(it).data.filter { module -> module.key in MODULE_KEYS } }

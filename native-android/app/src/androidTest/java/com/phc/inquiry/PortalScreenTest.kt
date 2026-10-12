@@ -17,6 +17,31 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PortalScreenTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun workspaceTasksShowsPendingReceiptAndOpensTheSameDraft() {
+        val pending = DraftSummary("pending-fixture", "borrower-survey", "مسودة متابعة", "damage_assessment_borrowers", null, "2026-10-11T10:00:00Z", true, null)
+        var opened: String? = null
+        var sent = false
+        compose.setContent { PhcTheme {
+            WorkspaceTasksScreen(PortalState(loading = false, drafts = listOf(pending)), {}, { sent = true }, {}, {}, { opened = it.uuid })
+        } }
+        compose.onNodeWithText("بانتظار تأكيد الاستلام", substring = true).assertExists()
+        compose.onNodeWithTag("task-pending-fixture").performScrollTo().performClick()
+        compose.onNodeWithTag("tasks-sent").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("pending-fixture", opened); assertEquals(true, sent) }
+    }
+    @Test fun workspaceStatisticsShowsUnavailableInsteadOfZeroAndOpensStatistics() {
+        var opened = false
+        compose.setContent { PhcTheme {
+            com.phc.inquiry.feature.dashboard.WorkspaceStatisticsCard(
+                com.phc.inquiry.feature.dashboard.WorkspaceStatisticsState(loading = false, counts = listOf(
+                    com.phc.inquiry.feature.dashboard.WorkspaceCount("buildings", 12),
+                    com.phc.inquiry.feature.dashboard.WorkspaceCount("housing-units", failed = true))), { opened = true }, {})
+        } }
+        compose.onNodeWithTag("home-total-buildings").assertTextEquals("12")
+        compose.onNodeWithTag("home-total-housing-units").assertTextEquals("—")
+        compose.onNodeWithTag("home-open-statistics").performClick()
+        compose.runOnIdle { assertEquals(true, opened) }
+    }
     @Test fun homeShowsOnlyProvidedModulesAndOpensPublishedSurveys() {
         var opened = false
         compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
@@ -78,6 +103,14 @@ class PortalScreenTest {
         compose.onNodeWithText("لا توجد مسودات").assertDoesNotExist()
         compose.onNodeWithText("إعادة محاولة فتح المسودات").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, retries) }
+    }
+    @Test fun homeInquiryShortcutOpensUnifiedInquiryInTheUpdatedDashboard() {
+        var opened = false
+        compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
+            PortalHome("حساب اختبار", PortalState(loading = false), {}, {}, {}, {}, {}, { opened = true })
+        } } }
+        compose.onNodeWithTag("home-inquiry").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(true, opened) }
     }
 }
 

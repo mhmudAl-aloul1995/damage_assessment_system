@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'hr' => require __DIR__.'/../app/Modules/HR/config/module.php',
     'damage_assessment' => require __DIR__.'/../app/Modules/DamageAssessment/config/module.php',
     'damage_assessment_borrowers' => require __DIR__.'/../app/Modules/DamageAssessmentBorrowers/config/module.php',
     'heks' => require __DIR__.'/../app/Modules/Heks/config/module.php',

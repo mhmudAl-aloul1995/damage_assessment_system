@@ -46,6 +46,45 @@ class PortalRepositoryTest {
         override suspend fun discard(authorization: String, form: String, id: Long, request: DiscardFileRequest): JsonObject { check(authorization); return JsonObject(mapOf("discarded" to JsonPrimitive(true))) }
     }
     private fun state() = SessionState().apply { set(Session("fixture-owner-token", "2099-01-01T00:00:00Z", User(1, "fixture", "fixture@example.test"))) }
+    @Test fun connectionFailuresIdentifyTheCategoryWithoutLeakingDetailsOrLosingSession() = runTest {
+        val api = FakeApi(); val state = state(); val store = MemoryStore()
+        store.save(state.session.value!!)
+        val repository = PortalRepository(api, state, store)
+        val cases = listOf(
+            java.net.SocketTimeoutException("private") to "NET-TIMEOUT",
+            java.io.InterruptedIOException("private") to "NET-TIMEOUT",
+            java.net.ConnectException("private") to "NET-CONNECT",
+            java.net.NoRouteToHostException("private") to "NET-CONNECT",
+            java.net.UnknownHostException("private") to "NET-DNS",
+            javax.net.ssl.SSLException("private") to "NET-TLS",
+            java.io.EOFException("private") to "NET-INTERRUPTED",
+            java.net.SocketException("private") to "NET-INTERRUPTED",
+            java.io.IOException("private") to "NET-IO",
+        )
+        for ((failure, code) in cases) {
+            api.failure = failure
+            try { repository.modules(); fail("Expected failure") } catch (error: FormFailure) {
+                assertTrue(error.message!!.contains(code)); assertFalse(error.message!!.contains("private"))
+                assertFalse(error.definitelyRejected)
+            }
+            assertNotNull(state.session.value); assertNotNull(store.read())
+        }
+        api.failure = null
+        assertEquals(listOf("heks"), repository.modules().map { it.key })
+    }
+    @Test fun timedOutSubmissionKeepsAmbiguousReceiptAndTransportPolicyIsNotReportedAsOffline() = runTest {
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val request = SubmissionRequest("same-uuid", "version", answers = JsonObject(emptyMap()))
+        api.failure = java.net.SocketTimeoutException("private")
+        try { repository.submit("heks-beneficiary", request); fail("Expected timeout") } catch (error: FormFailure) {
+            assertTrue(error.message!!.contains("NET-TIMEOUT")); assertTrue(error.message!!.contains("نفس المسودة"))
+            assertFalse(error.definitelyRejected)
+        }
+        api.failure = com.phc.inquiry.core.security.InquiryFailure("اتصال HTTP غير مسموح في هذه النسخة أو لهذا السيرفر.")
+        try { repository.modules(); fail("Expected policy failure") } catch (error: FormFailure) {
+            assertTrue(error.message!!.contains("HTTP")); assertFalse(error.message!!.contains("NET-"))
+        }
+    }
     @Test fun catalogIsBoundToCapturedAccountAndFiltersUnknownModules() = runTest {
         val api = FakeApi(); val state = state()
         val repository = PortalRepository(api, state, MemoryStore())

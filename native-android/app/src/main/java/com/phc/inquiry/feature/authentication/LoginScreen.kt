@@ -1,6 +1,7 @@
 package com.phc.inquiry.feature.authentication
 
 import android.util.Patterns
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.autofill.*
 import androidx.compose.ui.focus.*
 import androidx.compose.ui.layout.*
@@ -59,32 +62,31 @@ fun LoginScreen(state: AuthenticationState, usesHttp: Boolean, httpReady: Boolea
             focus.clearFocus(); keyboard?.hide(); onLogin(email.trim(), password); attempted = false; password = ""
         }
     }
-    BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
+    val palette = MaterialTheme.colorScheme
+    BoxWithConstraints(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(palette.primaryContainer, palette.background, palette.surfaceContainerHigh))).safeDrawingPadding().imePadding()) {
         val wide = maxWidth >= 760.dp
         Row(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = if (wide) 48.dp else 24.dp, vertical = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
             if (wide) Column(Modifier.widthIn(max = 340.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                BrandMark(112)
+                BrandMark(204)
                 Text(stringResource(R.string.council_name), style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.portal_name), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
                 Text(stringResource(R.string.dashboard_description), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                if (!wide) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    BrandMark(72)
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.council_name), style = MaterialTheme.typography.titleSmall)
-                        Text(stringResource(R.string.portal_name), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                    }
+                if (!wide) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BrandMark(204)
+                    Text(stringResource(R.string.council_name), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.login_title), style = MaterialTheme.typography.headlineMedium)
-                    Text(stringResource(R.string.login_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("أهلًا بعودتك", style = MaterialTheme.typography.headlineMedium)
+                    Text(stringResource(R.string.login_intro), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 3.dp, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth().testTag("email").phcAutofill(AutofillType.EmailAddress) { email = it },
                             label = { Text(stringResource(R.string.email_label)) }, placeholder = { Text(stringResource(R.string.email_hint)) },
+                            leadingIcon = { Icon(Icons.Default.Email, null) }, shape = RoundedCornerShape(10.dp),
                             singleLine = true, enabled = enabled, isError = emailInvalid,
                             textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next, autoCorrectEnabled = false),
@@ -92,6 +94,7 @@ fun LoginScreen(state: AuthenticationState, usesHttp: Boolean, httpReady: Boolea
                             supportingText = if (emailInvalid) { { Text(stringResource(R.string.invalid_email)) } } else null)
                         OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth().testTag("password").focusRequester(passwordFocus).phcAutofill(AutofillType.Password) { password = it },
                             label = { Text(stringResource(R.string.password_label)) }, singleLine = true, enabled = enabled, isError = passwordInvalid,
+                            leadingIcon = { Icon(Icons.Default.Lock, null) }, shape = RoundedCornerShape(10.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { submit() }),
                             visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = { TextButton(onClick = { visible = !visible }, modifier = Modifier.semantics {
@@ -110,7 +113,8 @@ fun LoginScreen(state: AuthenticationState, usesHttp: Boolean, httpReady: Boolea
                         }
                     }
                 }
-                Text(stringResource(R.string.login_footer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.login_footer), Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("تحتاج مساعدة في الدخول؟ تواصل مع مسؤول النظام", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

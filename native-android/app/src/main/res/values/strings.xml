@@ -1,10 +1,10 @@
 <resources>
 <string name="app_name">بوابة الإسكان</string>
-<string name="council_name">مجلس الإسكان الفلسطيني</string>
+<string name="council_name">المجلس الفلسطيني للإسكان</string>
 <string name="portal_name">بوابة المنظومة</string>
-<string name="logo_description">شعار مجلس الإسكان الفلسطيني</string>
+<string name="logo_description">شعار المجلس الفلسطيني للإسكان</string>
 <string name="login_title">تسجيل الدخول</string>
-<string name="login_intro">ادخل بحساب المنظومة للاستعلام وتعبئة الاستبيانات المتاحة لك.</string>
+<string name="login_intro">سجّل دخولك للوصول إلى مساحة عملك</string>
 <string name="email_label">البريد الإلكتروني</string>
 <string name="email_hint">name@example.com</string>
 <string name="password_label">كلمة المرور</string>
@@ -17,7 +17,7 @@
 <string name="required_password">أدخل كلمة المرور.</string>
 <string name="http_notice">اتصال غير مشفّر: كلمة المرور والبيانات تنتقل عبر HTTP.</string>
 <string name="http_blocked">اتصال HTTP غير مسموح في هذه النسخة أو لهذا السيرفر.</string>
-<string name="login_footer">الاستعلام وتعبئة الاستبيانات · حسب صلاحيات حسابك</string>
+<string name="login_footer">الخدمات والإجراءات حسب صلاحيات حسابك</string>
 <string name="welcome">مرحبًا، %1$s</string>
 <string name="dashboard_intro">معلومات المنظومة، في متناولك</string>
 <string name="dashboard_description">اختر نوع السجل وابدأ الاستعلام عن بياناته وحالته.</string>
@@ -25,7 +25,7 @@
 <string name="permission_hint">تظهر الخدمات المسموحة لحسابك</string>
 <string name="buildings">المباني</string>
 <string name="housing_units">الوحدات السكنية</string>
-<string name="building_description">ابحث بالاسم أو رقم السجل، واطّلع على الموقع وحالة الضرر.</string>
+<string name="building_description">ابحث بالاسم أو برقم OBJECTID كاملًا، واطّلع على الموقع وحالة الضرر.</string>
 <string name="housing_description">ابحث عن وحدة سكنية أو باسم المبنى المرتبط بها.</string>
 <string name="start_inquiry">بدء الاستعلام</string>
 <string name="no_services">لا توجد استعلامات متاحة</string>
@@ -141,7 +141,8 @@
     <string name="map_loaded">%1$d سجلًا بموقع مسجل · تم فحص %2$d سجلًا</string>
     <string name="map_limited">وصل العرض إلى حده. ضيّق البحث أو حدّد منطقة أصغر.</string>
     <string name="map_area_only">المواقع ضمن المنطقة المحددة</string>
-    <string name="map_next">تحميل مواقع إضافية</string>
+    <string name="map_next">عرض المزيد من المواقع</string>
+    <string name="map_more_buildings">عرض المزيد من المباني</string>
     <string name="map_choose_record">سجلات في هذا الموقع</string>
     <string name="map_basemap_failed">تعذّر تحميل خلفية الخريطة. تحقّق من الإنترنت أو أعد المحاولة.</string>
     <string name="map_render_failed">تعذّر عرض الخريطة على هذا الجهاز.</string>

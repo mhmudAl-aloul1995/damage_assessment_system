@@ -79,7 +79,7 @@ fun ExploreScreen(state: ExploreState, initialMode: String, retryCatalog: () -> 
                 Tab(mode == "stats", { mode = "stats" }, text = { Text(stringResource(R.string.statistics_title)) }, modifier = Modifier.testTag("statistics-tab"))
             }
             if (mode == "stats") {
-                StatisticsScreen(state.statistics, state.statisticsLoading, state.statisticsError, retryStats, Modifier.weight(1f))
+                StatisticsScreen(state.statistics, state.statisticsLoading, state.statisticsError, retryStats, Modifier.weight(1f), state.sector)
             } else {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { localFocus++ }, enabled = state.map.features.isNotEmpty()) { Text(stringResource(R.string.fit_map)) }
@@ -101,7 +101,7 @@ fun ExploreScreen(state: ExploreState, initialMode: String, retryCatalog: () -> 
                     if (state.areaOnly) Text(stringResource(R.string.map_area_only), style = MaterialTheme.typography.bodySmall)
                     if (state.map.limited) Text(stringResource(R.string.map_limited), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     if (state.map.omitted > 0) Text(stringResource(R.string.map_omitted, state.map.omitted), style = MaterialTheme.typography.bodySmall)
-                    if (state.map.cursor != null) TextButton(onClick = nextMap, enabled = !state.mapLoading, modifier = Modifier.testTag("map-next")) { Text(stringResource(R.string.map_next)) }
+                    if (state.map.cursor != null) TextButton(onClick = nextMap, enabled = !state.mapLoading, modifier = Modifier.testTag("map-next")) { Text(stringResource(if (isBuildingMap(state.sector)) R.string.map_more_buildings else R.string.map_next)) }
                 }
             }
         }
@@ -168,20 +168,28 @@ private fun ExploreFilterSheet(state: ExploreState, reload: (String?) -> Unit, d
 }
 
 @Composable
-fun StatisticsScreen(statistics: SectorStatistics?, loading: Boolean, error: String?, retry: () -> Unit, modifier: Modifier = Modifier) {
+fun StatisticsScreen(statistics: SectorStatistics?, loading: Boolean, error: String?, retry: () -> Unit, modifier: Modifier = Modifier, sector: String? = null) {
     LazyColumn(modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { Text(stringResource(R.string.stats_scope), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (loading) item { LoadingState() }
         error?.let { item { ErrorState(it, retry) } }
         if (statistics != null) {
-            val metrics = listOf("total" to R.string.stats_total, "completed" to R.string.stats_completed, "pending" to R.string.stats_pending, "approved" to R.string.stats_approved, "action_required" to R.string.stats_action)
+            item { Surface(Modifier.fillMaxWidth().testTag("metric-total"), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if(sector == null) stringResource(R.string.stats_total) else "إجمالي ${sectorTitle(sector)}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(statistics.summary["total"]?.coerceAtLeast(0)?.toString() ?: "—", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("ضمن الفلاتر والصلاحيات الحالية", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            } }
+            if(sector in setOf("buildings", "housing-units")) item { Text(if(sector == "housing-units") "هذه أعداد وحدات سكنية؛ إحصائيات المباني مستقلة." else "إحصائيات المباني مستقلة عن أعداد الوحدات التابعة لها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            val metrics = listOf("completed" to R.string.stats_completed, "pending" to R.string.stats_pending, "approved" to R.string.stats_approved, "action_required" to R.string.stats_action)
             metrics.chunked(2).forEach { group -> item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { group.forEach { (key, label) ->
-                    Card(Modifier.weight(1f).testTag("metric-$key")) { Column(Modifier.padding(16.dp)) { Text(statistics.summary[key]?.coerceAtLeast(0)?.toString() ?: "—", style = MaterialTheme.typography.headlineMedium); Text(stringResource(label), style = MaterialTheme.typography.labelLarge) } }
+                    OutlinedCard(Modifier.weight(1f).testTag("metric-$key"), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) { Column(Modifier.padding(16.dp)) { Text(statistics.summary[key]?.coerceAtLeast(0)?.toString() ?: "—", style = MaterialTheme.typography.headlineMedium); Text(stringResource(label), style = MaterialTheme.typography.labelLarge) } }
                 } }
             } }
             if (statistics.summary["total"] == 0L) item { Text(stringResource(R.string.stats_no_data)) }
-            item { NativeChart(stringResource(R.string.damage_distribution), statistics.damage, donut = true) }
+            item { NativeChart(stringResource(R.string.damage_distribution), statistics.damage) }
             item { NativeChart(stringResource(R.string.field_distribution), statistics.fieldwork) }
             item { NativeChart(stringResource(R.string.audit_distribution), statistics.audit) }
             statistics.auditTracks.filterValues { it.isNotEmpty() }.forEach { (track, values) -> item { NativeChart(stringResource(if (track == "engineering") R.string.engineering_track else R.string.legal_track), values) } }
@@ -195,7 +203,7 @@ fun StatisticsScreen(statistics: SectorStatistics?, loading: Boolean, error: Str
 private fun NativeChart(title: String, values: Map<String, Long>, donut: Boolean = false) {
     val fractions = chartFractions(values)
     val background = MaterialTheme.colorScheme.surfaceVariant
-    Card(Modifier.fillMaxWidth()) {
+    OutlinedCard(Modifier.fillMaxWidth(), colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             if (donut) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

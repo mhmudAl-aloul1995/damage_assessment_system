@@ -72,7 +72,7 @@ data class MapFeature(val geometry: JsonObject, val attributes: InquiryRecord, v
 @Serializable
 data class MapPage(val features: List<MapFeature>, @SerialName("next_cursor") val nextCursor: Long? = null, val scanned: Int = 0, val omitted: Int = 0)
 @Serializable
-data class SectorStatistics(val summary: Map<String, Long> = emptyMap(), val damage: Map<String, Long> = emptyMap(), val fieldwork: Map<String, Long> = emptyMap(), val audit: Map<String, Long> = emptyMap(), @SerialName("audit_tracks") val auditTracks: Map<String, Map<String, Long>> = emptyMap(), @SerialName("calculated_at") val calculatedAt: String? = null)
+data class SectorStatistics(val summary: Map<String, Long> = emptyMap(), val damage: Map<String, Long> = emptyMap(), val fieldwork: Map<String, Long> = emptyMap(), val audit: Map<String, Long> = emptyMap(), @SerialName("audit_tracks") @Serializable(with = AuditTracksSerializer::class) val auditTracks: Map<String, Map<String, Long>> = emptyMap(), @SerialName("calculated_at") val calculatedAt: String? = null)
 
 interface InquiryApi {
     @GET("api/v1/damage-assessment/{sector}/map") suspend fun map(@Path("sector") sector: String, @QueryMap filters: Map<String, String>): MapPage

@@ -25,20 +25,25 @@ private val ArabicTypography = Typography(
 
 @Composable
 fun PhcTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val palette = if (darkTheme) darkColorScheme(
-        primary = Color(0xFF9AD6BD), onPrimary = Color(0xFF003828), primaryContainer = Color(0xFF174C3B), onPrimaryContainer = Color(0xFFCAF3DE),
-        secondary = Color(0xFFE0C38F), onSecondary = Color(0xFF3E2E0C), secondaryContainer = Color(0xFF493B20), onSecondaryContainer = Color(0xFFF8E0B1),
-        background = Color(0xFF101B17), onBackground = Color(0xFFE1ECE5), surface = Color(0xFF16231E), onSurface = Color(0xFFE1ECE5),
-        surfaceVariant = Color(0xFF2A3932), onSurfaceVariant = Color(0xFFB9C9C0), outline = Color(0xFF81998C), outlineVariant = Color(0xFF384A40),
-    ) else lightColorScheme(
-        primary = Color(0xFF125C4A), onPrimary = Color.White, primaryContainer = Color(0xFFE1F0E8), onPrimaryContainer = Color(0xFF0B3D32),
-        secondary = Color(0xFF705A2D), onSecondary = Color.White, secondaryContainer = Color(0xFFF6EDDA), onSecondaryContainer = Color(0xFF5A441B),
-        background = Color(0xFFF6F8F7), onBackground = Color(0xFF172B26), surface = Color.White, onSurface = Color(0xFF172B26),
-        surfaceVariant = Color(0xFFEDF2EF), onSurfaceVariant = Color(0xFF5C6F68), outline = Color(0xFF788A82), outlineVariant = Color(0xFFDCE5DF),
-    )
+    val palette = if (darkTheme) MetronicDarkColors else MetronicLightColors
     MaterialTheme(colorScheme = palette, typography = ArabicTypography,
-        shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(16.dp), large = RoundedCornerShape(20.dp)), content = content)
+        shapes = Shapes(small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(12.dp), large = RoundedCornerShape(16.dp)), content = content)
 }
+
+val MetronicLightColors = lightColorScheme(
+    primary = Color(0xFF2563EB), onPrimary = Color.White, primaryContainer = Color(0xFFEFF6FF), onPrimaryContainer = Color(0xFF1D4ED8),
+    secondary = Color(0xFF5E35B1), onSecondary = Color.White, secondaryContainer = Color(0xFFF3EFFF), onSecondaryContainer = Color(0xFF5E35B1),
+    background = Color(0xFFF5F7FA), onBackground = Color(0xFF071437), surface = Color.White, onSurface = Color(0xFF071437),
+    surfaceVariant = Color(0xFFF1F3F8), onSurfaceVariant = Color(0xFF56627C), outline = Color(0xFF78829D), outlineVariant = Color(0xFFE4E8EF),
+    surfaceContainer = Color.White, surfaceContainerLow = Color.White, surfaceContainerLowest = Color.White, surfaceContainerHigh = Color(0xFFF1F3F8), surfaceContainerHighest = Color(0xFFE9EDF5), surfaceTint = Color.Transparent,
+)
+val MetronicDarkColors = darkColorScheme(
+    primary = Color(0xFF93C5FD), onPrimary = Color(0xFF102B50), primaryContainer = Color(0xFF1D3555), onPrimaryContainer = Color(0xFFBFDBFE),
+    secondary = Color(0xFFC4B5FD), onSecondary = Color(0xFF30204F), secondaryContainer = Color(0xFF33264D), onSecondaryContainer = Color(0xFFE5DEFF),
+    background = Color(0xFF111827), onBackground = Color(0xFFF1F5F9), surface = Color(0xFF1C2536), onSurface = Color(0xFFF1F5F9),
+    surfaceVariant = Color(0xFF273247), onSurfaceVariant = Color(0xFFB4BFD2), outline = Color(0xFF8492AB), outlineVariant = Color(0xFF354157),
+    surfaceContainer = Color(0xFF1C2536), surfaceContainerLow = Color(0xFF1C2536), surfaceContainerLowest = Color(0xFF111827), surfaceContainerHigh = Color(0xFF273247), surfaceContainerHighest = Color(0xFF2E3A50), surfaceTint = Color.Transparent,
+)
 
 @Composable
 fun statusLabel(value: String?): String = stringResource(when (value) {

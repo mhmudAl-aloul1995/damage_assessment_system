@@ -21,15 +21,15 @@ import com.phc.inquiry.data.InquiryRecord
 
 @Composable
 fun BrandMark(size: Int = 72) {
-    Surface(color = Color.White, shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color(0xFFE0E7E2))) {
-        Image(painterResource(R.drawable.phc_logo), stringResource(R.string.logo_description), Modifier.size(size.dp).padding(8.dp))
+    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE4E8EF))) {
+        Image(painterResource(R.drawable.phc_council_logo), stringResource(R.string.logo_description), Modifier.width(size.dp).height((size * 0.69f).dp).padding(6.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
     }
 }
 
 @Composable
 fun IconTile(icon: ImageVector, modifier: Modifier = Modifier) {
-    Surface(modifier.size(48.dp), shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-        Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp)) }
+    Surface(modifier.size(44.dp), shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+        Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(22.dp)) }
     }
 }
 

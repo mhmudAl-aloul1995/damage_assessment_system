@@ -58,6 +58,24 @@ class MapDataTest {
         val stats = json.decodeFromString<SectorStatistics>("""{"summary":{"total":4},"damage":{"fully_damaged":2,"no_damage":2},"fieldwork":{"completed":3},"audit_tracks":{"engineering":{"pending":1}},"chart":{},"neighborhoods":[],"calculated_at":"2026-10-10T12:00:00+03:00"}""")
         assertEquals(4L, stats.summary["total"]); assertEquals(1L, stats.auditTracks["engineering"]?.get("pending"))
     }
+    @Test fun statisticsAcceptEmptyPhpAuditTrackArraysForInfrastructureSectors() {
+        val stats = Json.decodeFromString<SectorStatistics>("""{"summary":{"total":7},"audit_tracks":{"engineering":[],"legal":[]}}""")
+        assertEquals(7L, stats.summary["total"])
+        assertTrue(stats.auditTracks.getValue("engineering").isEmpty())
+        assertTrue(stats.auditTracks.getValue("legal").isEmpty())
+    }
+    @Test fun emptyTracksDoNotErasePopulatedTracksOrInventCounts() {
+        val stats = Json.decodeFromString<SectorStatistics>("""{"audit_tracks":{"engineering":{"pending":3},"legal":[]}}""")
+        assertEquals(3L, stats.auditTracks.getValue("engineering")["pending"])
+        assertTrue(stats.auditTracks.getValue("legal").isEmpty())
+        assertTrue(stats.summary.isEmpty())
+        assertTrue(Json.decodeFromString<SectorStatistics>("""{"audit_tracks":[]}""").auditTracks.isEmpty())
+    }
+    @Test fun malformedNonEmptyAuditArraysAndCountsStillFailValidation() {
+        listOf("""{"audit_tracks":{"legal":[1]}}""", """{"audit_tracks":{"legal":{"pending":"invalid"}}}""").forEach { payload ->
+            assertThrows(kotlinx.serialization.SerializationException::class.java) { Json.decodeFromString<SectorStatistics>(payload) }
+        }
+    }
     @Test fun detailedGeometryBudgetCapsRenderingAndReportsRejectedShapes() {
         val shape = buildJsonObject { put("spatialReference", buildJsonObject { put("wkid", 4326) }); put("rings", buildJsonArray { add(buildJsonArray { repeat(5000) { add(buildJsonArray { add(34); add(31) }) } }) }) }
         val features = (1L..21L).map { MapFeature(shape, InquiryRecord(it)) }

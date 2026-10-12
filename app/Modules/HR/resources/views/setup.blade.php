@@ -1,0 +1,42 @@
+@extends('layouts.app')
+@section('title', 'إعداد الحضور والورديات')
+@section('pageName', 'إعداد الحضور والورديات')
+@section('content')
+<div dir="rtl" lang="ar" class="d-flex flex-column gap-6">
+    <div class="d-flex justify-content-between align-items-center"><h1 class="fs-2">إعداد الحضور والورديات</h1><a class="btn btn-light" href="{{ route('hr.attendance.index') }}">متابعة الحضور</a></div>
+    @if(session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
+    @if($errors->any())<div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+    <p class="text-muted">إعداد هوية الحضور لا يمنح الحساب صلاحيات إضافية. الجداول والتكليفات محفوظة كتاريخ؛ اختر فترات محددة وغير متداخلة.</p>
+    <div class="row g-6">
+        <div class="col-xl-4"><div class="card h-100"><div class="card-header"><h2 class="card-title">هوية الحضور</h2></div><form class="card-body d-flex flex-column gap-4" method="post" action="{{ route('hr.attendance.employees.store') }}">@csrf
+            <div><label for="employee-number" class="form-label">الرقم الوظيفي</label><input id="employee-number" name="employee_number" class="form-control" maxlength="50" value="{{ old('employee_number') }}" required></div>
+            <div><label for="display-name" class="form-label">اسم الموظف</label><input id="display-name" name="display_name" class="form-control" maxlength="255" value="{{ old('display_name') }}" required></div>
+            <div><label for="user-id" class="form-label">معرّف حساب المستخدم (اختياري)</label><input id="user-id" name="user_id" type="number" min="1" class="form-control" value="{{ old('user_id') }}"><small class="text-muted">تحقق من معرّف الحساب في إدارة المستخدمين. اتركه فارغاً لموظف بلا حساب.</small></div>
+            <div><label for="employment-start" class="form-label">بدء العمل</label><input id="employment-start" name="starts_on" type="date" class="form-control" required></div>
+            <div><label for="employment-end" class="form-label">نهاية العمل (اختياري)</label><input id="employment-end" name="ends_on" type="date" class="form-control"></div>
+            <button class="btn btn-primary" type="submit">حفظ هوية الحضور</button>
+        </form></div></div>
+        <div class="col-xl-4"><div class="card h-100"><div class="card-header"><h2 class="card-title">إصدار جدول عمل</h2></div><form class="card-body d-flex flex-column gap-4" method="post" action="{{ route('hr.attendance.schedules.store') }}">@csrf
+            <div><label for="schedule-name" class="form-label">اسم الجدول والإصدار</label><input id="schedule-name" name="name" class="form-control" maxlength="120" required></div>
+            <div><label for="timezone" class="form-label">المنطقة الزمنية</label><input id="timezone" name="timezone" class="form-control" value="{{ config('hr.timezone') }}" required></div>
+            <fieldset><legend class="fs-6">أيام العمل</legend><div class="d-flex flex-wrap gap-3">@foreach([1 => 'الإثنين', 2 => 'الثلاثاء', 3 => 'الأربعاء', 4 => 'الخميس', 5 => 'الجمعة', 6 => 'السبت', 7 => 'الأحد'] as $number => $label)<label class="form-check form-check-inline"><input type="checkbox" class="form-check-input" name="working_days[]" value="{{ $number }}"><span class="form-check-label">{{ $label }}</span></label>@endforeach</div></fieldset>
+            <div class="row g-3"><div class="col-6"><label for="shift-start" class="form-label">بدء الوردية</label><input id="shift-start" name="starts_at" type="time" class="form-control" required></div><div class="col-6"><label for="shift-end" class="form-label">نهاية الوردية</label><input id="shift-end" name="ends_at" type="time" class="form-control" required></div></div>
+            <small class="text-muted">نهاية تسبق البداية تعني وردية ليلية تنتهي في اليوم التالي.</small>
+            <div><label for="grace" class="form-label">دقائق السماح</label><input id="grace" name="grace_minutes" type="number" min="0" max="120" class="form-control" value="0" required></div>
+            <div><label for="break" class="form-label">دقائق الاستراحة غير المدفوعة</label><input id="break" name="break_minutes" type="number" min="0" max="720" class="form-control" value="0" required></div>
+            <button class="btn btn-primary" type="submit">حفظ إصدار الجدول</button>
+        </form></div></div>
+        <div class="col-xl-4"><div class="card h-100"><div class="card-header"><h2 class="card-title">إسناد وردية</h2></div><form class="card-body d-flex flex-column gap-4" method="post" action="{{ route('hr.attendance.assignments.store') }}">@csrf
+            <div><label for="assignment-employee" class="form-label">معرّف هوية الحضور</label><input id="assignment-employee" name="employee_id" type="number" min="1" class="form-control" required></div>
+            <div><label for="assignment-schedule" class="form-label">معرّف جدول العمل</label><input id="assignment-schedule" name="work_schedule_id" type="number" min="1" class="form-control" required></div>
+            <div><label for="assignment-start" class="form-label">بداية التكليف</label><input id="assignment-start" name="starts_on" type="date" class="form-control" required></div>
+            <div><label for="assignment-end" class="form-label">نهاية التكليف</label><input id="assignment-end" name="ends_on" type="date" class="form-control" required></div>
+            <small class="text-muted">استخدم المعرّفات من القوائم أدناه. لا يمكن إسناد فترتين متداخلتين للموظف.</small>
+            <button class="btn btn-primary" type="submit">إسناد الوردية</button>
+        </form></div></div>
+    </div>
+    <div class="card"><div class="card-header"><h2 class="card-title">هويات الحضور</h2></div><div class="card-body table-responsive"><table class="table table-row-dashed"><thead><tr><th>المعرّف</th><th>الرقم الوظيفي</th><th>الاسم</th><th>حساب المستخدم</th><th>فترة العمل</th></tr></thead><tbody>@forelse($employees as $employee)<tr><td>{{ $employee->id }}</td><td>{{ $employee->employee_number }}</td><td>{{ $employee->display_name }}</td><td>{{ $employee->user_id ?? 'بلا حساب' }}</td><td>{{ $employee->starts_on->toDateString() }} — {{ $employee->ends_on?->toDateString() ?? 'مستمر' }}</td></tr>@empty<tr><td colspan="5">لم تُنشأ هويات حضور بعد.</td></tr>@endforelse</tbody></table>{{ $employees->withQueryString()->links() }}</div></div>
+    <div class="card"><div class="card-header"><h2 class="card-title">إصدارات جداول العمل</h2></div><div class="card-body table-responsive"><table class="table table-row-dashed"><thead><tr><th>المعرّف</th><th>الجدول</th><th>الوقت</th><th>المنطقة الزمنية</th><th>أيام الأسبوع (الإثنين = 1)</th></tr></thead><tbody>@forelse($schedules as $schedule)<tr><td>{{ $schedule->id }}</td><td>{{ $schedule->name }}</td><td>{{ $schedule->starts_at }} — {{ $schedule->ends_at }}</td><td>{{ $schedule->timezone }}</td><td>{{ implode(', ', $schedule->working_days) }}</td></tr>@empty<tr><td colspan="5">لم تُنشأ جداول بعد.</td></tr>@endforelse</tbody></table>{{ $schedules->withQueryString()->links() }}</div></div>
+    <div class="card"><div class="card-header"><h2 class="card-title">تكليفات الورديات</h2></div><div class="card-body table-responsive"><table class="table table-row-dashed"><thead><tr><th>الموظف</th><th>الجدول</th><th>من</th><th>إلى</th></tr></thead><tbody>@forelse($assignments as $assignment)<tr><td>{{ $assignment->employee->display_name }}</td><td>{{ $assignment->schedule->name }}</td><td>{{ $assignment->starts_on->toDateString() }}</td><td>{{ $assignment->ends_on?->toDateString() }}</td></tr>@empty<tr><td colspan="4">لم تسند ورديات بعد.</td></tr>@endforelse</tbody></table>{{ $assignments->withQueryString()->links() }}</div></div>
+</div>
+@endsection

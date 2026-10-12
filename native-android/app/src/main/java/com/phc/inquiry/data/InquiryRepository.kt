@@ -1,8 +1,8 @@
 package com.phc.inquiry.data
 
 import com.phc.inquiry.core.security.*
+import com.phc.inquiry.core.network.connectionFailureMessage
 import java.io.IOException
-import java.net.SocketTimeoutException
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -70,8 +70,7 @@ class LaravelInquiryRepository @Inject constructor(
             }, error.code())
         }
         catch (error: InquiryFailure) { throw error }
-        catch (_: SocketTimeoutException) { throw InquiryFailure("انتهت مهلة الاتصال. تحقق من الشبكة وحاول مجددًا.") }
-        catch (_: IOException) { throw InquiryFailure("تعذّر الاتصال بالسيرفر. تحقق من الإنترنت.") }
+        catch (error: IOException) { throw InquiryFailure(connectionFailureMessage(error)) }
         catch (_: Exception) { throw InquiryFailure("تعذّرت قراءة استجابة الخدمة. تحقق من تحديث API.") }
     }
 

@@ -111,9 +111,10 @@ fun RecordCard(record: InquiryRecord, onClick: () -> Unit) {
                 Text(recordLocation(record), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             StatusBadge(record.damageStatus)
-            record.sector?.let { Text(sectorTitle(it), style = MaterialTheme.typography.labelMedium) }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Text(stringResource(R.string.view_details), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                record.sector?.let { Text(sectorTitle(it), style = MaterialTheme.typography.labelMedium) }
+                Text(stringResource(R.string.view_details), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }
@@ -129,16 +130,22 @@ fun DetailScreen(state: DetailState, retry: () -> Unit, onHistory: (() -> Unit)?
             if (state.loading) LoadingState()
             state.error?.let { ErrorState(it, retry) }
             state.record?.let { record ->
-                Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                    Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(recordName(record), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text(stringResource(R.string.record_number, record.objectid?.content ?: stringResource(R.string.unavailable)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                var section by rememberSaveable(record.recordId) { mutableIntStateOf(0) }
+                Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { IconTile(Icons.Default.Home); Text(recordName(record), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f)) }
+                        Text(stringResource(R.string.record_number, record.objectid?.content ?: stringResource(R.string.unavailable)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         StatusBadge(record.damageStatus)
                         TextButton(onClick = {
                             record.objectid?.content?.let { clipboard.setText(AnnotatedString(it)); Toast.makeText(context, copied, Toast.LENGTH_SHORT).show() }
                         }, enabled = record.objectid != null, modifier = Modifier.testTag("copy-record")) { Text(stringResource(R.string.copy_record)) }
                     }
                 }
+                if(record.details.isNotEmpty()) TabRow(selectedTabIndex = section) {
+                    Tab(selected = section == 0, onClick = { section = 0 }, text = { Text("الملخص") }, modifier = Modifier.testTag("detail-summary-tab"))
+                    Tab(selected = section == 1, onClick = { section = 1 }, text = { Text("البيانات التفصيلية") }, modifier = Modifier.testTag("detail-fields-tab"))
+                }
+                if(section == 0) {
                 InformationGroup(stringResource(R.string.basic_information)) {
                     InformationRow(stringResource(R.string.record_label), record.objectid?.content)
                     if (!record.buildingName.isNullOrBlank()) InformationRow(stringResource(R.string.building_label), record.buildingName)
@@ -153,9 +160,10 @@ fun DetailScreen(state: DetailState, retry: () -> Unit, onHistory: (() -> Unit)?
                     InformationRow(stringResource(R.string.field_work), stringResource(if (record.fieldCompleted) R.string.completed else R.string.not_completed))
                     if (!record.auditStatus.isNullOrBlank()) InformationRow(stringResource(R.string.audit_status), statusLabel(record.auditStatus))
                 }
+                }
                 if (record.capabilities.auditHistory && onHistory != null) OutlinedButton(onClick = onHistory, Modifier.fillMaxWidth().testTag("open-history")) { Text(stringResource(R.string.history_title)) }
                 if (record.capabilities.attachments && onAttachments != null) OutlinedButton(onClick = onAttachments, Modifier.fillMaxWidth().testTag("open-attachments")) { Text(stringResource(R.string.attachments_title)) }
-                if (record.details.isNotEmpty()) InformationGroup(stringResource(R.string.full_form)) {
+                if (section == 1 && record.details.isNotEmpty()) InformationGroup(stringResource(R.string.full_form)) {
                     record.details.filter { showEmpty || !it.value.isNullOrBlank() }.forEach { field -> InformationRow(field.label, field.value) }
                     if (record.details.any { it.value.isNullOrBlank() }) TextButton(onClick = { showEmpty = !showEmpty }) { Text(stringResource(if (showEmpty) R.string.hide_empty_fields else R.string.show_empty_fields)) }
                 }

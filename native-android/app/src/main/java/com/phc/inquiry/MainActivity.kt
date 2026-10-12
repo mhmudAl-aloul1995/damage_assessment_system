@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -67,14 +68,14 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                 val portalState by portal.state.collectAsStateWithLifecycle()
                 val backStack by navigation.currentBackStackEntryAsState()
                 val route = backStack?.destination?.route.orEmpty()
-                val root = route in setOf("portal-home", "portal-inquiry", "portal-surveys", "portal-drafts", "portal-account", "explore/{mode}")
+                val root = route in setOf("portal-home", "portal-inquiry", "portal-tasks", "portal-account") || (route == "explore/{mode}" && backStack?.arguments?.getString("mode") == "map")
                 val editingForm = route.startsWith("form-screen/")
                 val atHome = route == "portal-home"
                 val atSearch = backStack?.destination?.route == "search/{sector}"
                 val title = when {
                     atHome -> R.string.portal_name
                     atSearch -> R.string.search
-                    backStack?.destination?.route?.startsWith("explore/") == true -> R.string.explore_title
+                    backStack?.destination?.route?.startsWith("explore/") == true -> if(backStack?.arguments?.getString("mode") == "stats") R.string.statistics_title else R.string.explore_title
                     backStack?.destination?.route == "citizens" -> R.string.citizen_inquiry
                     backStack?.destination?.route?.startsWith("history/") == true -> R.string.history_title
                     backStack?.destination?.route?.startsWith("attachment") == true -> R.string.attachments_title
@@ -88,19 +89,31 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                     topBar = {
                         if (!editingForm) {
                         TopAppBar(title = { Text(if(route == "dashboard") "حصر الأضرار" else if(route.startsWith("form-file/")) stringResource(R.string.attachments_title) else if(route.startsWith("portal-") || route.startsWith("module/") || route.startsWith("form-start/")) "بوابة المنظومة" else stringResource(title), style = MaterialTheme.typography.titleMedium) },
-                            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                             navigationIcon = { if (!root) IconButton(onClick = { navigation.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
-                            actions = { IconButton(onClick = { confirmLogout = true }, enabled = !authenticationState.busy) { Icon(Icons.Default.AccountCircle, stringResource(R.string.account)) } })
+                            actions = { IconButton(onClick = { navigation.navigate("portal-account") { launchSingleTop = true } }, enabled = !authenticationState.busy) { Icon(Icons.Default.AccountCircle, stringResource(R.string.account)) } })
                         }
                     },
-                    bottomBar = { if(!editingForm) NavigationBar {
-                        val tabs = listOf(Triple("portal-home", "الرئيسية", Icons.Default.Home), Triple("portal-inquiry", "الاستعلام", Icons.Default.Search), Triple("portal-surveys", "الاستبيانات", Icons.Default.Edit), Triple("explore/map", "الخريطة", Icons.Default.Place), Triple("portal-account", "حسابي", Icons.Default.AccountCircle))
-                        tabs.forEach { (target, label, icon) -> NavigationBarItem(selected = route == target || (target == "portal-surveys" && route == "portal-drafts") || (target == "explore/map" && route.startsWith("explore/")),
-                            onClick = { navigation.navigate(target) { popUpTo("portal-home") { saveState = true }; launchSingleTop = true; restoreState = true } }, icon = { Icon(icon, label) }, label = { Text(label, style = MaterialTheme.typography.labelSmall) }) }
+                    bottomBar = { if(!editingForm) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+                        val tabs = listOf(Triple("portal-home", "الرئيسية", Icons.Default.Home), Triple("portal-inquiry", "الموديولات", Icons.Default.List), Triple("portal-tasks", "مهامي", Icons.Default.Edit), Triple("explore/map", "الخريطة", Icons.Default.Place), Triple("portal-account", "حسابي", Icons.Default.AccountCircle))
+                        tabs.forEach { (target, label, icon) -> NavigationBarItem(selected = route == target || (target == "portal-tasks" && route in setOf("portal-surveys", "portal-drafts", "portal-sent")) || (target == "portal-inquiry" && (route == "dashboard" || route.startsWith("module/") || (route == "explore/{mode}" && backStack?.arguments?.getString("mode") == "stats"))) || (target == "explore/map" && route == "explore/{mode}" && backStack?.arguments?.getString("mode") == "map"),
+                            onClick = { navigation.navigate(target) { popUpTo("portal-home") { saveState = true }; launchSingleTop = true; restoreState = true } }, icon = { Icon(icon, label) }, label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                            colors = NavigationBarItemDefaults.colors(selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary, indicatorColor = MaterialTheme.colorScheme.primaryContainer, unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant)) }
                     } },
                 ) { padding ->
                     NavHost(navigation, startDestination = "portal-home", modifier = Modifier.padding(padding)) {
-                        composable("portal-home") { PortalHome(session?.user?.name.orEmpty(), portalState, openModule, { navigation.navigate("portal-surveys") }, { navigation.navigate("portal-drafts") }, { navigation.navigate("dashboard") }, portal::refresh) }
+                        composable("portal-home") {
+                            PortalHome(session?.user?.name.orEmpty(), portalState, openModule, { navigation.navigate("portal-surveys") }, { navigation.navigate("portal-drafts") }, { navigation.navigate("dashboard") }, portal::refresh, { navigation.navigate("portal-inquiry") },
+                                onTasks = { navigation.navigate("portal-tasks") }, summaryContent = {
+                                    if(portalState.modules.any { it.key == "damage_assessment" }) {
+                                        val summary: WorkspaceStatisticsViewModel = hiltViewModel()
+                                        val summaryState by summary.state.collectAsStateWithLifecycle()
+                                        WorkspaceStatisticsCard(summaryState, { navigation.navigate("explore/stats") }, summary::refresh)
+                                    }
+                                })
+                        }
+                        composable("portal-tasks") { WorkspaceTasksScreen(portalState, { navigation.navigate("portal-drafts") }, { navigation.navigate("portal-sent") }, { navigation.navigate("portal-surveys") }, portal::localDrafts) { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") } }
+                        composable("portal-sent") { SurveysScreen(portalState, 2, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
                         composable("portal-inquiry") { PortalInquiry(portalState, openModule, portal::refresh) }
                         composable("portal-surveys") { SurveysScreen(portalState, 0, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
                         composable("portal-drafts") { SurveysScreen(portalState, 1, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }

@@ -26,7 +26,8 @@ class InquiryRepositoryTest {
     }
     private class FakeApi : InquiryApi {
         override suspend fun map(sector: String, filters: Map<String, String>) = MapPage(emptyList())
-        override suspend fun statistics(sector: String, filters: Map<String, String>) = SectorStatistics()
+        var statisticsFailure: Exception? = null
+        override suspend fun statistics(sector: String, filters: Map<String, String>): SectorStatistics { statisticsFailure?.let { throw it }; return SectorStatistics() }
         var denied = false
         var loginCalls = 0
         var loginFailure: HttpException? = null
@@ -54,6 +55,21 @@ class InquiryRepositoryTest {
         override suspend fun citizens(search: String, page: Int) = search("housing-units", search, page)
     }
     private fun repository(api: FakeApi, store: MemoryStore, state: SessionState) = LaravelInquiryRepository(api, store, state, TransportPolicy("https://example.test/".toHttpUrl(), false))
+
+    @Test fun statisticsDistinguishesConnectionFailureFromTimeoutAndPreservesSession() = runTest {
+        val api = FakeApi(); val store = MemoryStore(); val state = SessionState()
+        val repository = repository(api, store, state)
+        repository.login("demo@example.test", "fixture-password")
+        for ((failure, code) in listOf(java.net.ConnectException("private") to "NET-CONNECT", java.net.SocketTimeoutException("private") to "NET-TIMEOUT")) {
+            api.statisticsFailure = failure
+            try { repository.statistics("buildings", emptyMap()); fail("Expected failure") } catch (error: InquiryFailure) {
+                assertTrue(error.message!!.contains(code)); assertFalse(error.message!!.contains("private"))
+            }
+            assertNotNull(state.session.value); assertNotNull(store.read())
+        }
+        api.statisticsFailure = null
+        assertEquals(SectorStatistics(), repository.statistics("buildings", emptyMap()))
+    }
 
     @Test fun loginStoresSessionAndUnauthorizedClearsIt() = runTest {
         val api = FakeApi(); val store = MemoryStore(); val state = SessionState()
