@@ -5,6 +5,8 @@ namespace App\Modules\HR\Providers;
 use App\Models\User;
 use App\Modules\HR\Models\AttendanceAdjustment;
 use App\Modules\HR\Models\Employee;
+use App\Modules\HR\Models\EmploymentContract;
+use App\Modules\HR\Policies\EmploymentContractPolicy;
 use App\Modules\HR\Policies\AttendanceAdjustmentPolicy;
 use App\Modules\HR\Policies\EmployeePolicy;
 use App\Modules\HR\Services\EmployeeOrganizationScope;
@@ -30,6 +32,7 @@ class HRServiceProvider extends ModuleServiceProvider
     {
         parent::boot();
         Gate::policy(Employee::class, EmployeePolicy::class);
+        Gate::policy(EmploymentContract::class, EmploymentContractPolicy::class);
         Gate::policy(AttendanceAdjustment::class, AttendanceAdjustmentPolicy::class);
         Gate::before(static function (User $user, string $ability): ?bool {
             if (in_array($ability, [
@@ -45,6 +48,10 @@ class HRServiceProvider extends ModuleServiceProvider
                 'hr.employees.view',
                 'hr.employees.manage',
                 'hr.organization.manage',
+                'hr.contracts.view',
+                'hr.contracts.manage',
+                'hr.contracts.configure',
+                'hr.contracts.export',
             ], true) && $user->hasRole('Database Officer')) {
                 return true;
             }

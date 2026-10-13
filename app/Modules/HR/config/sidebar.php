@@ -16,4 +16,8 @@ return [[
 ], [
     'module' => 'hr', 'title' => 'الهيكل التنظيمي', 'icon' => 'ki-chart', 'url' => 'hr/organization/departments',
     'permissions' => ['hr.organization.manage'], 'active_patterns' => ['hr/organization*', 'hr/department-scopes*'],
+], [
+    'module'=>'hr','title'=>'العقود وتقارير الانتهاء','icon'=>'ki-document','url'=>'hr/contracts',
+    'permissions'=>['hr.contracts.view','hr.contracts.view-own','hr.contracts.view-team'],
+    'active_patterns'=>['hr/contracts*','hr/contract-revisions*'],
 ]];

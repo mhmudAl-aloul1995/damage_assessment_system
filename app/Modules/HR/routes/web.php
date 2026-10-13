@@ -10,6 +10,8 @@ use App\Modules\HR\Http\Middleware\EnsureAttendanceWorkflowStorage;
 use App\Modules\HR\Http\Middleware\EnsureEmployeeStorage;
 use App\Modules\HR\Http\Middleware\RequireHrHttps;
 use Illuminate\Support\Facades\Route;
+use App\Modules\HR\Http\Controllers\ContractController;
+use App\Modules\HR\Http\Middleware\EnsureContractStorage;
 
 Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorage::class])->name('hr.attendance.')->group(function (): void {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('index');
@@ -36,6 +38,18 @@ Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorag
     Route::get('/attendance/security-report', [AttendanceReportController::class, 'security'])->name('security-report');
     Route::get('/attendance/devices', [DeviceController::class, 'index'])->name('devices');
     Route::post('/attendance/devices/{credential}/decision', [DeviceController::class, 'decide'])->name('devices.decide');
+});
+
+Route::middleware([RequireHrHttps::class,'auth',EnsureEmployeeStorage::class,EnsureContractStorage::class])->name('hr.contracts.')->group(function (): void {
+    Route::get('/contracts',[ContractController::class,'index'])->name('index');
+    Route::post('/contracts',[ContractController::class,'store'])->name('store');
+    Route::get('/contracts/export',[ContractController::class,'export'])->name('export');
+    Route::get('/contracts/types',[ContractController::class,'types'])->name('types');
+    Route::post('/contracts/types',[ContractController::class,'storeType'])->name('types.store');
+    Route::put('/contracts/types/{type}',[ContractController::class,'updateType'])->name('types.update');
+    Route::get('/contracts/{contract}',[ContractController::class,'show'])->whereNumber('contract')->name('show');
+    Route::post('/contracts/{contract}/revisions',[ContractController::class,'propose'])->whereNumber('contract')->name('propose');
+    Route::post('/contract-revisions/{revision}/decision',[ContractController::class,'decide'])->name('decide');
 });
 
 Route::middleware([RequireHrHttps::class, 'auth', EnsureEmployeeStorage::class])->group(function (): void {
