@@ -1,12 +1,13 @@
 <?php
 
 use App\Modules\HR\Http\Controllers\NativeAttendanceController;
+use App\Modules\HR\Http\Middleware\AuditNativeAttendanceFailure;
 use App\Modules\HR\Http\Middleware\EnsureAttendanceWorkflowStorage;
 use App\Modules\HR\Http\Middleware\EnsureHrToken;
 use App\Modules\HR\Http\Middleware\EnsureSecureHrApi;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1/hr')->name('api.v1.hr.')->middleware([EnsureSecureHrApi::class, EnsureAttendanceWorkflowStorage::class])->group(function (): void {
+Route::prefix('v1/hr')->name('api.v1.hr.')->middleware([AuditNativeAttendanceFailure::class, EnsureSecureHrApi::class, EnsureAttendanceWorkflowStorage::class])->group(function (): void {
     Route::post('auth/login', [NativeAttendanceController::class, 'login'])->middleware('throttle:5,1')->name('login');
     Route::middleware(['auth:sanctum', EnsureHrToken::class, 'throttle:60,1'])->group(function (): void {
         Route::get('me', [NativeAttendanceController::class, 'me'])->name('me');

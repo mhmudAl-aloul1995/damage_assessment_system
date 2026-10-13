@@ -29,6 +29,9 @@ return ['statuses' => [
     'attendance' => [
         'simulated' => 'Test attendance event', 'correction_requested' => 'Attendance correction requested',
         'signed' => 'Attendance signed by an approved device',
+        'native_request_denied' => 'Native attendance request denied',
+        'export_requested' => 'Background export requested', 'export_ready' => 'Background export ready',
+        'export_failed' => 'Background export failed', 'export_downloaded' => 'Private export downloaded',
         'correction_approved' => 'Attendance correction approved', 'correction_rejected' => 'Attendance correction rejected',
         'reconciled' => 'Attendance summary reconciled', 'view_permission_granted' => 'Attendance viewing granted',
     ],

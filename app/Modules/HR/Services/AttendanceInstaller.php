@@ -39,10 +39,13 @@ class AttendanceInstaller
         ]) !== 0) {
             throw new RuntimeException('لم يكتمل ترحيل HR؛ لم تُنفّذ تهيئة الصلاحيات.');
         }
-        foreach (['hr_employees', 'hr_holidays', 'hr_attendance_adjustments', 'hr_attendance_daily_summaries', 'hr_assignment_retirements', 'hr_holiday_cancellations', 'hr_device_credentials', 'hr_device_decisions', 'hr_device_registration_requests', 'hr_attendance_challenges'] as $table) {
+        foreach (['hr_employees', 'hr_holidays', 'hr_attendance_adjustments', 'hr_attendance_daily_summaries', 'hr_assignment_retirements', 'hr_holiday_cancellations', 'hr_device_credentials', 'hr_device_decisions', 'hr_device_registration_requests', 'hr_attendance_challenges', 'hr_attendance_report_exports', 'hr_attendance_alerts'] as $table) {
             if (! Schema::connection($connection)->hasTable($table)) {
                 throw new RuntimeException('لم تصبح جداول HR جاهزة بعد الترحيل.');
             }
+        }
+        if (! Schema::connection($connection)->hasColumn('hr_audit_logs', 'subject_key')) {
+            throw new RuntimeException('لم يصبح سجل تدقيق HR جاهزاً لمعرفات التقارير.');
         }
         if (Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\HrPermissionsSeeder', '--force' => true, '--no-interaction' => true]) !== 0) {
             throw new RuntimeException('فشلت تهيئة صلاحيات HR.');

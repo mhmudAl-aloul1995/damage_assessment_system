@@ -11,7 +11,7 @@ class AuditLog extends AppendOnlyModel
 
     protected $table = 'hr_audit_logs';
 
-    protected $fillable = ['actor_id', 'action', 'subject_type', 'subject_id', 'metadata', 'created_at'];
+    protected $fillable = ['actor_id', 'action', 'subject_type', 'subject_id', 'subject_key', 'metadata', 'created_at'];
 
     protected function casts(): array
     {

@@ -22,6 +22,8 @@ class DeviceDecisionNotification extends Notification implements ShouldQueue
 
     public function toArray(object $notifiable): array
     {
-        return ['type' => 'hr_device_decision', 'credential_id' => $this->credentialId, 'decision' => $this->decision, 'url' => route('hr.attendance.index')];
+        return ['type' => 'hr_device_decision', 'credential_id' => $this->credentialId, 'decision' => $this->decision,
+            'title' => 'تحديث جهاز الحضور', 'message' => ['approved' => 'اعتُمد الجهاز؛ حدّث حالته في تطبيق PHC.', 'rejected' => 'رُفض طلب الجهاز.', 'revoked' => 'أُلغي اعتماد الجهاز.'][$this->decision],
+            'action_url' => route('hr.attendance.index')];
     }
 }

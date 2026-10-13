@@ -22,6 +22,11 @@ class AppendOnlyBuilder extends Builder
         throw new LogicException('HR ledger records cannot be deleted.');
     }
 
+    public function truncate(): never
+    {
+        throw new LogicException('HR ledger records cannot be truncated.');
+    }
+
     public function upsert(array $values, $uniqueBy, $update = null): never
     {
         throw new LogicException('HR ledger records cannot be upserted.');

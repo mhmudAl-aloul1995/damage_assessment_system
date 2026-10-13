@@ -80,7 +80,7 @@ class AttendanceController extends Controller
     {
         $filters = $request->validated();
         $query = $report->query($request->user(), $filters);
-        abort_if((clone $query)->count() > 500, 422, 'حدد موظفاً لتقليل حجم التصدير؛ التصدير الكبير غير متاح في هذه المرحلة.');
+        abort_if((clone $query)->count() > 500, 422, 'للنطاق الكبير استخدم طلب Excel في صفحة تقارير الحضور ليُجهّز في الخلفية.');
 
         return Excel::download(new AttendanceExport($report->rows($query->get(), $filters)), 'hr-attendance.xlsx');
     }

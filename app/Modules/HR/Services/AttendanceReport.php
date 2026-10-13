@@ -73,4 +73,22 @@ class AttendanceReport
 
         return $totals;
     }
+
+    public function metrics(User $user, array $filters): array
+    {
+        $metrics = ['days' => 0, 'known_days' => 0, 'unknown_days' => 0, 'worked_minutes' => 0, 'late_minutes' => 0, 'early_minutes' => 0, 'conflicts' => 0, 'statuses' => []];
+        $this->query($user, $filters)->reorder()->chunkById(100, function ($employees) use ($filters, &$metrics): void {
+            foreach ($this->rows($employees, $filters) as $row) {
+                $metrics['days']++;
+                $metrics[$row['worked_minutes'] === null ? 'unknown_days' : 'known_days']++;
+                $metrics['worked_minutes'] += $row['worked_minutes'] ?? 0;
+                $metrics['late_minutes'] += $row['late_minutes'] ?? 0;
+                $metrics['early_minutes'] += $row['early_minutes'] ?? 0;
+                $metrics['conflicts'] += (int) $row['conflict'];
+                $metrics['statuses'][$row['status']] = ($metrics['statuses'][$row['status']] ?? 0) + 1;
+            }
+        });
+
+        return $metrics;
+    }
 }

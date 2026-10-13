@@ -2,6 +2,7 @@
 
 namespace App\Modules\HR\Services;
 
+use App\Modules\HR\Jobs\NotifyAttendanceException;
 use App\Modules\HR\Models\AttendanceException;
 use App\Modules\HR\Models\AuditLog;
 use App\Modules\HR\Models\DailySummary;
@@ -38,7 +39,10 @@ class AttendanceReconciliation
             $summary->exceptions()->where('status', 'open')->when($kind, fn ($query) => $query->where('kind', '!=', $kind))
                 ->update(['status' => 'resolved', 'resolved_at' => now('UTC')->format('Y-m-d H:i:s')]);
             if ($kind) {
-                AttendanceException::query()->updateOrCreate(['daily_summary_id' => $summary->id, 'kind' => $kind], ['status' => 'open', 'resolved_at' => null]);
+                $exception = AttendanceException::query()->updateOrCreate(['daily_summary_id' => $summary->id, 'kind' => $kind], ['status' => 'open', 'resolved_at' => null]);
+                if ($changed || $exception->wasRecentlyCreated || $exception->wasChanged('status')) {
+                    NotifyAttendanceException::dispatch($exception->id)->afterCommit();
+                }
             }
 
             return $summary;

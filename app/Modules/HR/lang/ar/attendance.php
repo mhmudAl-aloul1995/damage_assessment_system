@@ -29,6 +29,9 @@ return ['statuses' => [
     'attendance' => [
         'simulated' => 'حدث حضور في بيئة الاختبار', 'correction_requested' => 'طلب تصحيح الحضور',
         'signed' => 'حدث حضور موقع من جهاز معتمد',
+        'native_request_denied' => 'رفض طلب واجهة الحضور',
+        'export_requested' => 'طلب تقرير في الخلفية', 'export_ready' => 'اكتمال تقرير الخلفية',
+        'export_failed' => 'فشل إعداد التقرير', 'export_downloaded' => 'تنزيل التقرير الخاص',
         'correction_approved' => 'اعتماد تصحيح الحضور', 'correction_rejected' => 'رفض تصحيح الحضور',
         'reconciled' => 'تسوية ملخص الحضور', 'view_permission_granted' => 'منح صلاحية عرض الحضور',
     ],

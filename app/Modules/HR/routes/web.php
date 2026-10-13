@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\HR\Http\Controllers\AttendanceController;
+use App\Modules\HR\Http\Controllers\AttendanceReportController;
 use App\Modules\HR\Http\Controllers\AttendanceWorkflowController;
 use App\Modules\HR\Http\Controllers\DeviceController;
 use App\Modules\HR\Http\Middleware\EnsureAttendanceWorkflowStorage;
@@ -26,6 +27,10 @@ Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorag
     Route::get('/attendance/exceptions', [AttendanceWorkflowController::class, 'exceptions'])->name('exceptions');
     Route::post('/attendance/reconcile', [AttendanceWorkflowController::class, 'reconcile'])->name('reconcile');
     Route::get('/attendance/audit', [AttendanceWorkflowController::class, 'audit'])->name('audit');
+    Route::get('/attendance/reports', [AttendanceReportController::class, 'index'])->name('reports');
+    Route::post('/attendance/reports', [AttendanceReportController::class, 'queue'])->middleware('throttle:5,1')->name('reports.queue');
+    Route::get('/attendance/reports/{export}/download', [AttendanceReportController::class, 'download'])->whereUuid('export')->name('reports.download');
+    Route::get('/attendance/security-report', [AttendanceReportController::class, 'security'])->name('security-report');
     Route::get('/attendance/devices', [DeviceController::class, 'index'])->name('devices');
     Route::post('/attendance/devices/{credential}/decision', [DeviceController::class, 'decide'])->name('devices.decide');
 });

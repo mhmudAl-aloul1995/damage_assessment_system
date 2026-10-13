@@ -22,6 +22,8 @@ class AttendanceDecisionNotification extends Notification implements ShouldQueue
 
     public function toArray(object $notifiable): array
     {
-        return ['type' => 'hr_attendance_decision', 'adjustment_id' => $this->adjustmentId, 'decision' => $this->decision, 'url' => route('hr.attendance.corrections', ['state' => 'all'])];
+        return ['type' => 'hr_attendance_decision', 'adjustment_id' => $this->adjustmentId, 'decision' => $this->decision,
+            'title' => 'قرار تصحيح الحضور', 'message' => $this->decision === 'approved' ? 'اعتُمد طلب التصحيح.' : 'رُفض طلب التصحيح؛ راجع ملاحظات المراجع.',
+            'action_url' => route('hr.attendance.corrections', ['state' => 'all'])];
     }
 }

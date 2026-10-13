@@ -8,6 +8,7 @@ return [
     'network_mode' => env('HR_ATTENDANCE_NETWORK_MODE', 'disabled'),
     'allowed_networks' => array_values(array_filter(explode(',', (string) env('HR_ALLOWED_NETWORKS', '')))),
     'device_approval_required' => true,
+    'export_ttl_hours' => (int) env('HR_EXPORT_TTL_HOURS', 24),
     'mikrotik' => [
         'enabled' => (bool) env('HR_MIKROTIK_ENABLED', false),
         'host' => env('HR_MIKROTIK_HOST'),
