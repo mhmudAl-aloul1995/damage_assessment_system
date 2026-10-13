@@ -25,8 +25,10 @@ return ['statuses' => [
     'schedule' => ['created' => 'Schedule version created', 'exception_recorded' => 'Approved schedule exception recorded'],
     'shift' => ['assigned' => 'Shift assigned', 'retired' => 'Assignment end recorded'],
     'holiday' => ['created' => 'Holiday recorded', 'cancelled' => 'Holiday cancellation recorded'],
+    'device' => ['registered' => 'Device enrollment requested', 'approved' => 'Device approved', 'rejected' => 'Device rejected', 'revoked' => 'Device revoked'],
     'attendance' => [
         'simulated' => 'Test attendance event', 'correction_requested' => 'Attendance correction requested',
+        'signed' => 'Attendance signed by an approved device',
         'correction_approved' => 'Attendance correction approved', 'correction_rejected' => 'Attendance correction rejected',
         'reconciled' => 'Attendance summary reconciled', 'view_permission_granted' => 'Attendance viewing granted',
     ],

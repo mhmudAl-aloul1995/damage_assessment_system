@@ -22,6 +22,7 @@ class SessionViewModel @Inject constructor(
     private val login: LoginUseCase,
     sessions: SessionState,
     val policy: TransportPolicy,
+    private val attendance: AttendanceRepository,
 ) : ViewModel() {
     val session = sessions.session
     private val mutable = MutableStateFlow(AuthenticationState())
@@ -46,7 +47,12 @@ class SessionViewModel @Inject constructor(
         if (mutable.value.busy) return
         viewModelScope.launch {
             mutable.update { it.copy(busy = true, message = null) }
-            try { repository.logout() }
+            try {
+                try { attendance.logout() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { attendance.clear() }
+                repository.logout()
+            }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: InquiryFailure) { mutable.update { it.copy(message = "تم حذف الجلسة من الجهاز، لكن تعذّر إلغاؤها على السيرفر. تنتهي صلاحية الرمز خلال 24 ساعة من إصداره.") } }
             finally { mutable.update { it.copy(busy = false) } }

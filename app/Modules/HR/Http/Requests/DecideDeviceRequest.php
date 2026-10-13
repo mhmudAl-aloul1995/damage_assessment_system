@@ -3,26 +3,22 @@
 namespace App\Modules\HR\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class DecideDeviceRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        return $this->user()?->is_active ?? false;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
-        return [
-            //
-        ];
+        return ['decision' => ['required', Rule::in(['approved', 'rejected', 'revoked'])], 'reason' => ['required', 'string', 'min:5', 'max:2000']];
+    }
+
+    public function messages(): array
+    {
+        return ['reason.required' => 'سبب القرار مطلوب.', 'decision.in' => 'قرار الجهاز غير صالح.'];
     }
 }

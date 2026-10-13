@@ -39,7 +39,7 @@ class AttendanceInstaller
         ]) !== 0) {
             throw new RuntimeException('لم يكتمل ترحيل HR؛ لم تُنفّذ تهيئة الصلاحيات.');
         }
-        foreach (['hr_employees', 'hr_holidays', 'hr_attendance_adjustments', 'hr_attendance_daily_summaries', 'hr_assignment_retirements', 'hr_holiday_cancellations'] as $table) {
+        foreach (['hr_employees', 'hr_holidays', 'hr_attendance_adjustments', 'hr_attendance_daily_summaries', 'hr_assignment_retirements', 'hr_holiday_cancellations', 'hr_device_credentials', 'hr_device_decisions', 'hr_device_registration_requests', 'hr_attendance_challenges'] as $table) {
             if (! Schema::connection($connection)->hasTable($table)) {
                 throw new RuntimeException('لم تصبح جداول HR جاهزة بعد الترحيل.');
             }

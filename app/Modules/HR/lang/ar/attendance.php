@@ -25,8 +25,10 @@ return ['statuses' => [
     'schedule' => ['created' => 'إنشاء إصدار جدول العمل', 'exception_recorded' => 'تسجيل استثناء معتمد'],
     'shift' => ['assigned' => 'إسناد وردية', 'retired' => 'تسجيل إنهاء تكليف الوردية'],
     'holiday' => ['created' => 'تسجيل عطلة رسمية', 'cancelled' => 'تسجيل إلغاء عطلة'],
+    'device' => ['registered' => 'طلب تسجيل جهاز', 'approved' => 'اعتماد جهاز', 'rejected' => 'رفض جهاز', 'revoked' => 'إلغاء اعتماد جهاز'],
     'attendance' => [
         'simulated' => 'حدث حضور في بيئة الاختبار', 'correction_requested' => 'طلب تصحيح الحضور',
+        'signed' => 'حدث حضور موقع من جهاز معتمد',
         'correction_approved' => 'اعتماد تصحيح الحضور', 'correction_rejected' => 'رفض تصحيح الحضور',
         'reconciled' => 'تسوية ملخص الحضور', 'view_permission_granted' => 'منح صلاحية عرض الحضور',
     ],

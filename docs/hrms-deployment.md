@@ -40,7 +40,7 @@ Review migrations and staging acceptance before deployment. Never use migrate:fr
 
 ## Authorization and operation
 
-The additive seeder creates eleven attendance permissions; it neither grants roles nor removes existing permissions:
+The additive seeder creates eleven attendance administration/read permissions; it neither grants roles nor removes existing permissions:
 
 - hr.attendance.view: global attendance visibility.
 - hr.attendance.view-own: linked employee self history.
@@ -50,6 +50,8 @@ The additive seeder creates eleven attendance permissions; it neither grants rol
 - hr.attendance.correct-own: self corrections, with self visibility.
 - hr.attendance.approve: independent decisions for visible employees.
 - hr.attendance.exceptions.manage, hr.attendance.reconcile and hr.attendance.audit.
+
+Phase 2 adds hr.attendance.capture and hr.devices.register for authorized employees, plus separate hr.devices.view, hr.devices.approve and hr.devices.revoke for HR staff. Sixteen HR permissions exist in total. These five secure-capture/device permissions are not automatically granted to Database Officer. Device approval requires visible employee scope and a different employee identity. Self-service revocation of one's own lost device is allowed; replacement requires revocation before approval of a new key.
 
 By the owner's instruction, Database Officer receives the nine administrative attendance abilities directly. It receives no payroll/device grants. Model policies still prohibit approving the reviewer's own attendance or a proposal submitted by that reviewer.
 
@@ -83,7 +85,13 @@ Optional --employee narrows the command. No automatic recurring reconciliation s
 
 ## Secure native Android and network prerequisites
 
-Phase 2 extends native-android, not the separate Capacitor shell. It must use a distinct HTTPS-only origin/client/session, Keystore authentication-per-use signing, BiometricPrompt CryptoObject, enrollment approval/revocation, short-lived signed challenges and atomic consumption/event append. Existing HTTP inquiry tokens/client cannot be used as secure HR credentials.
+Phase 2 extends native-android, not the separate Capacitor shell. The implementation uses a distinct HTTPS-only origin/client/session, Keystore authentication-per-use signing, BiometricPrompt CryptoObject, enrollment approval/revocation, short-lived signed challenges and atomic consumption/event append. Existing inquiry tokens, wildcard tokens and mixed HR/inquiry audience tokens are rejected by the HR API. Native HR login issues an eight-hour hr:native token, checks the employee mapping and preserves account separation when switching/logging out.
+
+All native endpoints are under /api/v1/hr and require HTTPS even when web HTTP is allowed. Available endpoints: auth/login, auth/logout, me, attendance/today, attendance/history, devices/challenge, devices/register, devices/status, devices/{credential}/revoke, attendance/challenge, attendance/check-in and attendance/check-out. The protected HR web devices screen provides scoped approval, rejection, revocation and immutable decision history. No public administrative device API is exposed.
+
+Registration proof expires after five minutes. Attendance challenges expire after 60 seconds and include PHC-HR-1 protocol, purpose, UUID, employee, credential, action, optional assignment, random 32-byte nonce and Unix UTC expiry. payload is base64 of the exact stored UTF-8 JSON bytes. Android signs those bytes with SHA256withECDSA; signatures are base64 of ASN.1 DER ECDSA P-256 signatures. The server never rebuilds signed client claims. Employee lock precedes credential and challenge locks. Revocation/activity are rechecked, and event append plus challenge consumption commit together. An identical verified request has a ten-minute receipt retry window; other replay/change attempts fail. Client timestamps, IP/SSID assertions and success messages are not trusted.
+
+Build HR origin is intentionally blank until supplied by PHC. Configure Gradle property phcHrBaseUrl with the approved HTTPS application/gateway base ending in /. No HTTP fallback or redirect following exists. Android 28+ is required for native biometric signing; older/unsupported devices use the audited HR correction workflow. The generated P-256 key requires authentication for each use and is invalidated on biometric enrollment changes. Available certificate chains are sent as unverified evidence. Enrollment proves key possession; trusted hardware attestation validation remains outstanding and is not implied by approval. See the Android documentation for [CryptoObject keys](https://developer.android.com/reference/android/hardware/biometrics/BiometricPrompt.CryptoObject) and [server-side attestation verification](https://developer.android.com/privacy-and-security/security-key-attestation).
 
 An API contract or disabled network adapter does not establish Android completion. Device attestation where feasible and instrumented biometric/integration checks remain necessary. BiometricPrompt verifies an enrolled device user, not a uniquely identified PHC employee. No biometric templates leave Android.
 
@@ -93,7 +101,9 @@ Production activation requires real Android TLS tests, internal network restrict
 
 ## Validation checkpoint
 
-Current attendance/workflow/installer/backup/permission run: **105 tests passed, 453 assertions**. Tests cover global/self/team authorization, immutable source preservation, overnight and DST calculations, flexible and multiple sessions, holidays/retirement history, independent correction decisions, stale sources, idempotency, queues, reconciliation, XLSX string safety and fail-closed capture. Tests use SQLite memory; this does not prove production MySQL concurrency.
+Current HR/workflow/device/installer/backup/permission/mobile run: **135 tests passed, 572 assertions**. Secure tests verify actual OpenSSL P-256 signatures, expiry, replay, changed action, account deactivation, credential revocation, wrong token audience, independent approval, replacement, own-only history and rollback on invalid sequence. Core tests cover global/self/team authorization, source preservation, overnight/DST, flexible/multiple sessions, holidays/history, corrections, queues, reconciliation, XLSX and fail-closed capture. An earlier targeted legacy/module/auth/mobile regression run passed 76 tests (397 assertions). SQLite tests do not prove production MySQL concurrency.
+
+native-android/build-native.ps1 -Verify -CompileDeviceTests completed: debug APK, JVM unit tests, lintDebug and instrumented-test APK compilation. Three new AttendanceSecurityTest JVM cases passed. Two new Compose attendance cases were compiled but not run: both attached ADB aliases returned error: closed. Actual biometric signing, Keystore invalidation/recovery, gateway TLS and device acceptance remain outstanding. Building an APK is not production Android validation.
 
 Formatter: php vendor/bin/pint --dirty --format agent. Tests run with php artisan test --compact and explicit paths; this repository's test wrapper does not accept --no-interaction.
 

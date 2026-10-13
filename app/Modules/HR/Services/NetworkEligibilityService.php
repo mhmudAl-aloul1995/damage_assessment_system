@@ -2,9 +2,11 @@
 
 namespace App\Modules\HR\Services;
 
+use Illuminate\Http\Request;
+
 class NetworkEligibilityService
 {
-    public function verified(): bool
+    public function verified(?Request $request = null): bool
     {
         return false;
     }

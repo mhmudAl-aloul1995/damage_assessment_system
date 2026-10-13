@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.phc.inquiry.core.ui.*
 import com.phc.inquiry.feature.authentication.*
+import com.phc.inquiry.feature.attendance.*
 import com.phc.inquiry.feature.dashboard.*
 import com.phc.inquiry.feature.damageassessment.*
 import com.phc.inquiry.feature.portal.*
@@ -84,11 +85,11 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                 var confirmLogout by remember { mutableStateOf(false) }
                 LaunchedEffect(route) { if(route.startsWith("portal-")) portal.localDrafts() }
                 val openForm: (com.phc.inquiry.data.PublishedForm) -> Unit = { navigation.navigate("form-start/${it.key}") }
-                val openModule: (String) -> Unit = { if(it == "damage_assessment") navigation.navigate("dashboard") else navigation.navigate("module/$it") }
+                val openModule: (String) -> Unit = { if(it == "hr") navigation.navigate("attendance") else if(it == "damage_assessment") navigation.navigate("dashboard") else navigation.navigate("module/$it") }
                 Scaffold(
                     topBar = {
                         if (!editingForm) {
-                        TopAppBar(title = { Text(if(route == "dashboard") "حصر الأضرار" else if(route.startsWith("form-file/")) stringResource(R.string.attachments_title) else if(route.startsWith("portal-") || route.startsWith("module/") || route.startsWith("form-start/")) "بوابة المنظومة" else stringResource(title), style = MaterialTheme.typography.titleMedium) },
+                        TopAppBar(title = { Text(if(route == "attendance") "الحضور والانصراف" else if(route == "dashboard") "حصر الأضرار" else if(route.startsWith("form-file/")) stringResource(R.string.attachments_title) else if(route.startsWith("portal-") || route.startsWith("module/") || route.startsWith("form-start/")) "بوابة المنظومة" else stringResource(title), style = MaterialTheme.typography.titleMedium) },
                             colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                             navigationIcon = { if (!root) IconButton(onClick = { navigation.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
                             actions = { IconButton(onClick = { navigation.navigate("portal-account") { launchSingleTop = true } }, enabled = !authenticationState.busy) { Icon(Icons.Default.AccountCircle, stringResource(R.string.account)) } })
@@ -102,6 +103,11 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                     } },
                 ) { padding ->
                     NavHost(navigation, startDestination = "portal-home", modifier = Modifier.padding(padding)) {
+                        composable("attendance") {
+                            val attendance: AttendanceViewModel = hiltViewModel()
+                            val attendanceState by attendance.state.collectAsStateWithLifecycle()
+                            NativeAttendanceScreen(session!!.user.id, session!!.user.email, attendance, attendanceState)
+                        }
                         composable("portal-home") {
                             PortalHome(session?.user?.name.orEmpty(), portalState, openModule, { navigation.navigate("portal-surveys") }, { navigation.navigate("portal-drafts") }, { navigation.navigate("dashboard") }, portal::refresh, { navigation.navigate("portal-inquiry") },
                                 onTasks = { navigation.navigate("portal-tasks") }, summaryContent = {

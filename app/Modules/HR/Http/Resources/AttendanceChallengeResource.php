@@ -7,13 +7,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class AttendanceChallengeResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return ['id' => $this->id, 'protocol' => 'PHC-HR-1', 'payload' => base64_encode($this->payload), 'expires_at' => $this->expires_at->toIso8601String()];
     }
 }

@@ -6,6 +6,7 @@ use App\Modules\HR\Models\AttendanceEvent;
 use App\Modules\HR\Models\AuditLog;
 use App\Modules\HR\Models\Employee;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -20,11 +21,24 @@ class AttendanceRecorder
     public function simulate(Employee $employee, string $action, string $idempotencyKey, ?int $assignmentId = null): AttendanceEvent
     {
         $this->gateway->assertSimulationAllowed();
+
+        return $this->record($employee, $action, $idempotencyKey, $assignmentId, 'local_simulation');
+    }
+
+    public function recordSigned(Employee $employee, string $action, string $challengeId, ?int $assignmentId, Request $request): AttendanceEvent
+    {
+        $this->gateway->assertCaptureAllowed($request);
+
+        return $this->record($employee, $action, $challengeId, $assignmentId, 'signed_native');
+    }
+
+    private function record(Employee $employee, string $action, string $idempotencyKey, ?int $assignmentId, string $source): AttendanceEvent
+    {
         if (! in_array($action, ['check_in', 'check_out'], true) || ! Str::isUuid($idempotencyKey)) {
             throw ValidationException::withMessages(['action' => 'Invalid attendance action or request identifier.']);
         }
 
-        return Employee::query()->getConnection()->transaction(function () use ($employee, $action, $idempotencyKey, $assignmentId): AttendanceEvent {
+        return Employee::query()->getConnection()->transaction(function () use ($employee, $action, $idempotencyKey, $assignmentId, $source): AttendanceEvent {
             $employee = Employee::query()->lockForUpdate()->findOrFail($employee->id);
             $prior = AttendanceEvent::query()->where('idempotency_key', $idempotencyKey)->first();
             if ($prior) {
@@ -96,12 +110,12 @@ class AttendanceRecorder
                 'action' => $action,
                 'occurred_at' => $now->format('Y-m-d H:i:s'),
                 'created_at' => $now->format('Y-m-d H:i:s'),
-                'source' => 'local_simulation',
+                'source' => $source,
                 'idempotency_key' => $idempotencyKey,
             ]);
             AuditLog::query()->create([
-                'actor_id' => null,
-                'action' => 'attendance.simulated',
+                'actor_id' => $source === 'signed_native' ? $employee->user_id : null,
+                'action' => $source === 'signed_native' ? 'attendance.signed' : 'attendance.simulated',
                 'subject_type' => 'hr_attendance_events',
                 'subject_id' => $event->id,
                 'metadata' => ['action' => $action],

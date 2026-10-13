@@ -2,6 +2,7 @@
 
 use App\Modules\HR\Http\Controllers\AttendanceController;
 use App\Modules\HR\Http\Controllers\AttendanceWorkflowController;
+use App\Modules\HR\Http\Controllers\DeviceController;
 use App\Modules\HR\Http\Middleware\EnsureAttendanceWorkflowStorage;
 use App\Modules\HR\Http\Middleware\RequireHrHttps;
 use Illuminate\Support\Facades\Route;
@@ -25,4 +26,6 @@ Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorag
     Route::get('/attendance/exceptions', [AttendanceWorkflowController::class, 'exceptions'])->name('exceptions');
     Route::post('/attendance/reconcile', [AttendanceWorkflowController::class, 'reconcile'])->name('reconcile');
     Route::get('/attendance/audit', [AttendanceWorkflowController::class, 'audit'])->name('audit');
+    Route::get('/attendance/devices', [DeviceController::class, 'index'])->name('devices');
+    Route::post('/attendance/devices/{credential}/decision', [DeviceController::class, 'decide'])->name('devices.decide');
 });

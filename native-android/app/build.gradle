@@ -8,9 +8,13 @@ plugins {
 }
 
 def apiBase = providers.gradleProperty('phcBaseUrl').getOrElse('http://213.6.135.115/damage_assessment_system/').trim()
+def hrApiBase = providers.gradleProperty('phcHrBaseUrl').getOrElse('').trim()
 def javaString = { String value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' }
 if (!apiBase.endsWith('/') || !(apiBase.startsWith('https://') || apiBase.startsWith('http://'))) {
     throw new GradleException('phcBaseUrl must be an HTTP(S) URL ending in /')
+}
+if (hrApiBase && (!hrApiBase.startsWith('https://') || !hrApiBase.endsWith('/'))) {
+    throw new GradleException('phcHrBaseUrl must be an approved HTTPS URL ending in /')
 }
 
 android {
@@ -24,6 +28,7 @@ android {
         versionName '0.6.1'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         buildConfigField 'String', 'API_BASE_URL', javaString(apiBase)
+        buildConfigField 'String', 'HR_API_BASE_URL', javaString(hrApiBase)
         buildConfigField 'String', 'ARCGIS_LICENSE', javaString(providers.gradleProperty('phcArcgisLicense').getOrElse(''))
     }
     buildTypes {

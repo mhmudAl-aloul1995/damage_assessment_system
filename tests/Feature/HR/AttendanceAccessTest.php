@@ -168,14 +168,14 @@ it('downloads a real Excel workbook for authorized attendance readers', function
 });
 
 it('exposes no ordinary check-in or check-out endpoint', function (): void {
-    $this->actingAs($this->viewer)->postJson('/api/v1/hr/attendance/check-in', [])->assertNotFound();
-    $this->postJson('/api/v1/hr/attendance/check-out', [])->assertNotFound();
+    $this->actingAs($this->viewer)->postJson('/api/v1/hr/attendance/check-in', [])->assertStatus(426);
+    $this->postJson('/api/v1/hr/attendance/check-out', [])->assertStatus(426);
 });
 
 it('seeds HR grants idempotently without assigning them to existing roles', function (): void {
     $role = Role::findOrCreate('Database Officer', 'web');
     $this->seed(HrPermissionsSeeder::class);
-    expect(Spatie\Permission\Models\Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(11)
+    expect(Spatie\Permission\Models\Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(16)
         ->and($role->fresh()->permissions)->toHaveCount(0);
 });
 

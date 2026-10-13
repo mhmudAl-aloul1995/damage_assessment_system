@@ -27,6 +27,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 fun moduleTitle(key: String): String = when(key) {
+    "hr" -> "الموارد البشرية · الحضور"
     "damage_assessment" -> "حصر الأضرار"
     "damage_assessment_borrowers" -> "المقترضون"
     "heks" -> "إصلاح المأوى · HEKS"
