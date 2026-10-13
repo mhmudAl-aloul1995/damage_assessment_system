@@ -22,6 +22,7 @@ class EmployeeManagement
 
     public function create(User $actor, array $data): Employee
     {
+        abort_unless($actor->is_active, 403);
         Gate::forUser($actor)->authorize('hr.employees.manage');
         Gate::forUser($actor)->authorize('hr.employees.view');
 
@@ -45,10 +46,12 @@ class EmployeeManagement
                 Gate::forUser($actor)->authorize('hr.employees.sensitive');
             }
             $profile = $employee->profile()->firstOrNew();
+            $before = ['display_name' => $employee->display_name, ...$profile->only(['name_en', 'work_email', 'work_phone', 'birth_date', 'emergency_contact'])];
             if (array_key_exists('display_name', $data)) {
                 $employee->update(['display_name' => $data['display_name']]);
             }
             $profile->fill(array_intersect_key($data, array_flip(['name_en', 'work_email', 'work_phone', 'birth_date', 'emergency_contact'])))->save();
+            $this->history($actor, $employee, 'profile_updated', now(config('hr.timezone'))->toDateString(), json_encode(['before' => array_intersect_key($before, $data), 'after' => $data], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
             $this->audit($actor, 'employee.profile_updated', $employee->id, ['changed_fields' => array_keys($data)]);
 
             return $profile;

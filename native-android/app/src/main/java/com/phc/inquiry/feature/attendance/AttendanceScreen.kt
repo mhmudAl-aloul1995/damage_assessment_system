@@ -43,12 +43,12 @@ fun NativeAttendanceScreen(userId: Long, email: String, viewModel: AttendanceVie
 
 @Composable
 fun AttendanceScreen(state: AttendanceState, login: (String) -> Unit, refresh: () -> Unit, enroll: () -> Unit,
-    capture: (String) -> Unit, selectShift: (Long) -> Unit, month: (String) -> Unit, revoke: (String) -> Unit,
+    capture: (String) -> Unit, selectShift: (Long) -> Unit, month: (String) -> Unit, revoke: (Long, String) -> Unit,
     retry: () -> Unit, logout: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var selectedMonth by remember(state.month) { mutableStateOf(state.month) }
     var reason by remember { mutableStateOf("") }
-    var confirmRevoke by remember { mutableStateOf(false) }
+    var revokeDevice by remember { mutableStateOf<com.phc.inquiry.data.HrDevice?>(null) }
     val idle = !state.busy && state.signOperation == null
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("الحضور والانصراف", style = MaterialTheme.typography.headlineSmall)
@@ -75,21 +75,25 @@ fun AttendanceScreen(state: AttendanceState, login: (String) -> Unit, refresh: (
         val device = state.currentDevice
         Text("الجهاز: " + when(device?.status) { "pending" -> "بانتظار HR"; "approved" -> "معتمد"; "revoked" -> "ملغى"; "rejected" -> "مرفوض"; else -> "غير مسجل" })
         if (device == null || device.status in setOf("revoked", "rejected")) Button(enroll, enabled = idle) { Text("طلب تسجيل هذا الجهاز") }
-        if (device != null && device.status != "revoked") TextButton({ confirmRevoke = true }, enabled = idle) { Text("إبلاغ عن فقدان / إلغاء الجهاز") }
+        state.devices.filter { it.status in setOf("pending", "approved") }.forEach { owned ->
+            TextButton({ revokeDevice = owned }, enabled = idle) { Text("إلغاء / فقدان " + owned.label + " — #" + owned.credentialId) }
+        }
         if (state.employee?.captureEnabled != true) Text("التسجيل الإنتاجي معطل حتى التحقق من البوابة الداخلية.", Modifier.testTag("attendance-disabled"))
         state.today?.let { day ->
             Text(day.date + " — " + attendanceStatus(day.status), style = MaterialTheme.typography.titleMedium)
             Text("الحضور: " + (day.checkIn ?: "—") + " | الانصراف: " + (day.checkOut ?: "—"))
             Text("ساعات العمل: " + attendanceHours(day.workedMinutes))
             if (day.conflict) Text("يوجد تعارض يحتاج مراجعة HR.")
-            day.sessions.filter { it.active && it.id != null && it.checkIn == null }.forEach { shift ->
-                Row { RadioButton(state.selectedShift == shift.id, { selectShift(shift.id!!) }, enabled = idle); Text(shift.schedule.orEmpty()) }
+            day.captureState.options.filter { it.action == "check_in" }.forEach { shift ->
+                Row { RadioButton(state.selectedShift == shift.assignmentId, { selectShift(shift.assignmentId) }, enabled = idle); Text(shift.schedule + " — " + shift.workDate) }
             }
-            val open = day.sessions.any { it.checkIn != null && it.checkOut == null }
+            val open = day.captureState.openSession
+            open?.let { Text("وردية مفتوحة بتاريخ " + it.workDate + " — الحضور UTC: " + it.checkInUtc) }
+            if (open != null && !open.checkoutEligible) Text("تجاوزت الوردية مهلة الانصراف؛ اطلب تصحيح السجل لدى HR.")
             val enabled = idle && state.employee?.captureEnabled == true && device?.status == "approved" && !state.retryPending
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button({ capture("check_in") }, enabled = enabled && !open && state.selectedShift != null, modifier = Modifier.testTag("attendance-check-in")) { Text("تسجيل حضور") }
-                Button({ capture("check_out") }, enabled = enabled && open, modifier = Modifier.testTag("attendance-check-out")) { Text("تسجيل انصراف") }
+                Button({ capture("check_in") }, enabled = enabled && open == null && day.captureState.options.any { it.action == "check_in" && it.assignmentId == state.selectedShift }, modifier = Modifier.testTag("attendance-check-in")) { Text("تسجيل حضور") }
+                Button({ capture("check_out") }, enabled = enabled && day.captureState.options.any { it.action == "check_out" }, modifier = Modifier.testTag("attendance-check-out")) { Text("تسجيل انصراف") }
             }
         }
         if (state.retryPending) {
@@ -108,10 +112,10 @@ fun AttendanceScreen(state: AttendanceState, login: (String) -> Unit, refresh: (
             } }
         }
     }
-    if (confirmRevoke) AlertDialog(onDismissRequest = { confirmRevoke = false }, title = { Text("إلغاء الجهاز") },
+    revokeDevice?.let { target -> AlertDialog(onDismissRequest = { revokeDevice = null }, title = { Text("إلغاء الجهاز #" + target.credentialId) },
         text = { OutlinedTextField(reason, { reason = it }, label = { Text("سبب الفقدان أو الإلغاء") }) },
-        confirmButton = { TextButton({ confirmRevoke = false; revoke(reason) }, enabled = reason.trim().length >= 5) { Text("تأكيد الإلغاء") } },
-        dismissButton = { TextButton({ confirmRevoke = false }) { Text("رجوع") } })
+        confirmButton = { TextButton({ revokeDevice = null; revoke(target.credentialId, reason) }, enabled = reason.trim().length >= 5) { Text("تأكيد الإلغاء") } },
+        dismissButton = { TextButton({ revokeDevice = null }) { Text("رجوع") } }) }
 }
 
 fun attendanceHours(minutes: Int?): String = minutes?.let { "%d:%02d".format(it / 60, it % 60) } ?: "غير معروفة"

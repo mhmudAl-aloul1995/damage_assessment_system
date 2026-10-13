@@ -183,8 +183,10 @@ it('rolls back challenge consumption when the attendance sequence is invalid', f
     $credential = ($this->approved)();
     ($this->allowTestGateway)();
     $service = app(SecureAttendance::class);
-    $challenge = $service->challenge($this->staff, $this->employee, ['credential_id' => $credential->id, 'action' => 'check_out'], $this->request);
-    expect(fn () => $service->submit($this->staff, $this->employee, 'check_out', ['challenge_id' => $challenge->id, 'signature' => ($this->sign)($challenge->payload)], $this->request))->toThrow(ValidationException::class);
+    $challenge = $service->challenge($this->staff, $this->employee, ['credential_id' => $credential->id, 'action' => 'check_in'], $this->request);
+    $other = $service->challenge($this->staff, $this->employee, ['credential_id' => $credential->id, 'action' => 'check_in'], $this->request);
+    $service->submit($this->staff, $this->employee, 'check_in', ['challenge_id' => $other->id, 'signature' => ($this->sign)($other->payload)], $this->request);
+    expect(fn () => $service->submit($this->staff, $this->employee, 'check_in', ['challenge_id' => $challenge->id, 'signature' => ($this->sign)($challenge->payload)], $this->request))->toThrow(ValidationException::class);
     expect($challenge->fresh()->consumed_at)->toBeNull();
 });
 
@@ -201,4 +203,42 @@ it('limits the device administration page to an explicitly authorized HR scope',
     ($this->register)();
     $this->actingAs($this->staff)->get(route('hr.attendance.devices'))->assertForbidden();
     $this->actingAs($this->admin)->get(route('hr.attendance.devices'))->assertOk()->assertSee('PHC attendance device')->assertSee('غير متحققة');
+});
+
+it('exposes and signs overnight checkout against the original work date after employment ends', function (): void {
+    $credential = ($this->approved)();
+    ($this->allowTestGateway)();
+    $night = WorkSchedule::factory()->create(['name' => 'Night', 'starts_at' => '20:00:00', 'ends_at' => '04:00:00']);
+    $assignment = app(AttendanceSetup::class)->assign($this->admin, ['employee_id' => $this->employee->id, 'work_schedule_id' => $night->id, 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31']);
+    $this->travelTo(CarbonImmutable::parse('2026-10-12 22:00:00', 'Asia/Hebron'));
+    $service = app(SecureAttendance::class);
+    $challenge = $service->challenge($this->staff, $this->employee, ['credential_id' => $credential->id, 'action' => 'check_in', 'assignment_id' => $assignment->id], $this->request);
+    $service->submit($this->staff, $this->employee, 'check_in', ['challenge_id' => $challenge->id, 'signature' => ($this->sign)($challenge->payload)], $this->request);
+    $this->employee->update(['ends_on' => '2026-10-12']);
+    $this->travelTo(CarbonImmutable::parse('2026-10-13 07:00:00', 'Asia/Hebron'));
+    $this->withToken($this->staff->createToken('HR', ['hr:native'])->plainTextToken)
+        ->getJson('https://localhost/api/v1/hr/attendance/today')->assertOk()
+        ->assertJsonPath('data.date', '2026-10-13')->assertJsonPath('data.capture_state.open_session.work_date', '2026-10-12')
+        ->assertJsonPath('data.capture_state.options.0.action', 'check_out');
+    $response = $this->postJson('https://localhost/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_out', 'assignment_id' => $assignment->id])->assertCreated();
+    $bytes = base64_decode($response->json('data.payload'), true);
+    expect(json_decode($bytes, true)['work_date'])->toBe('2026-10-12');
+    $this->postJson('https://localhost/api/v1/hr/attendance/check-out', ['challenge_id' => $response->json('data.id'), 'signature' => ($this->sign)($bytes)])
+        ->assertOk()->assertJsonPath('data.confirmed', true)->assertJsonPath('data.work_date', '2026-10-12');
+    $this->travelTo(CarbonImmutable::parse('2026-10-13 08:10:00', 'Asia/Hebron'));
+    $this->postJson('https://localhost/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertUnprocessable();
+});
+
+it('requires corrections after stale sessions and never offers a second raw checkin', function (): void {
+    $credential = ($this->approved)();
+    ($this->allowTestGateway)();
+    $service = app(SecureAttendance::class);
+    $challenge = $service->challenge($this->staff, $this->employee, ['credential_id' => $credential->id, 'action' => 'check_in'], $this->request);
+    $service->submit($this->staff, $this->employee, 'check_in', ['challenge_id' => $challenge->id, 'signature' => ($this->sign)($challenge->payload)], $this->request);
+    $this->travel(25)->hours();
+    $this->withToken($this->staff->createToken('HR', ['hr:native'])->plainTextToken)
+        ->getJson('https://localhost/api/v1/hr/attendance/today')->assertOk()
+        ->assertJsonPath('data.capture_state.open_session.checkout_eligible', false)->assertJsonCount(0, 'data.capture_state.options');
+    $this->postJson('https://localhost/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_out'])->assertUnprocessable();
+    $this->postJson('https://localhost/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertUnprocessable();
 });

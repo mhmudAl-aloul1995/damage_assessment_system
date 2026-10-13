@@ -36,7 +36,7 @@ class AttendanceSecurityTest {
 
     @Test fun exactChallengeBytesAreBoundToEmployeeCredentialActionAndExpiry() {
         val now = Instant.parse("2026-10-12T05:00:00Z")
-        val bytes = """{"protocol":"PHC-HR-1","purpose":"attendance","id":"challenge-id","employee_id":12,"credential_id":9,"action":"check_in","nonce":"AAECAw==","expires_at":1791781260}""".toByteArray()
+        val bytes = """{"protocol":"PHC-HR-1","purpose":"attendance","id":"challenge-id","employee_id":12,"credential_id":9,"action":"check_in","assignment_id":24,"work_date":"2026-10-12","nonce":"AAECAw==","expires_at":1791781260}""".toByteArray()
         val expires = Instant.ofEpochSecond(1791781260).toString()
         val challenge = HrChallenge("challenge-id", "PHC-HR-1", Base64.getEncoder().encodeToString(bytes), expires)
         assertArrayEquals(bytes, AttendanceProtocol.verify(challenge, 12, "attendance", 9, "check_in", now))
@@ -44,6 +44,9 @@ class AttendanceSecurityTest {
         assertThrows(InquiryFailure::class.java) { AttendanceProtocol.verify(challenge, 12, "attendance", 8, "check_in", now) }
         assertThrows(InquiryFailure::class.java) { AttendanceProtocol.verify(challenge, 12, "attendance", 9, "check_out", now) }
         assertThrows(InquiryFailure::class.java) { AttendanceProtocol.verify(challenge, 12, "device_registration", now = now) }
+        assertArrayEquals(bytes, AttendanceProtocol.verify(challenge, 12, "attendance", 9, "check_in", now, assignment = 24, workDate = "2026-10-12"))
+        assertThrows(InquiryFailure::class.java) { AttendanceProtocol.verify(challenge, 12, "attendance", 9, "check_in", now, assignment = 25) }
+        assertThrows(InquiryFailure::class.java) { AttendanceProtocol.verify(challenge, 12, "attendance", 9, "check_in", now, workDate = "2026-10-13") }
         assertThrows(InquiryFailure::class.java) { AttendanceProtocol.verify(challenge, 12, "attendance", 9, "check_in", Instant.ofEpochSecond(1791781260)) }
         assertArrayEquals(byteArrayOf(0, 1, 2, 3), AttendanceProtocol.nonce(bytes))
     }

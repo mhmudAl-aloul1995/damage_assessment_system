@@ -79,10 +79,11 @@ class AttendanceViewModel @Inject constructor(private val repository: Attendance
         if (mutable.value.employee?.captureEnabled != true) throw InquiryFailure("التسجيل الإنتاجي غير مفعل حتى التحقق من بوابة الحضور.")
         val device = mutable.value.currentDevice?.takeIf { it.status == "approved" } ?: throw InquiryFailure("يلزم اعتماد الجهاز لدى HR.")
         val key = keys.current(session.employee.id, session.origin) ?: throw InquiryFailure("مفتاح الجهاز غير متاح؛ اطلب الاستبدال لدى HR.")
-        val open = mutable.value.today?.sessions?.firstOrNull { it.checkIn != null && it.checkOut == null }
-        val assignment = if (action == "check_out") open?.id else mutable.value.selectedShift
-        val challenge = repository.challenge(HrChallengeRequest(device.credentialId, action, assignment))
-        val bytes = AttendanceProtocol.verify(challenge, session.employee.id, "attendance", device.credentialId, action)
+        val option = mutable.value.today?.captureState?.options?.firstOrNull {
+            it.action == action && (action == "check_out" || it.assignmentId == mutable.value.selectedShift)
+        } ?: throw InquiryFailure("لا توجد وردية مؤهلة؛ حدّث الحالة أو اطلب تصحيح الحضور لدى HR.")
+        val challenge = repository.challenge(HrChallengeRequest(device.credentialId, action, option.assignmentId))
+        val bytes = AttendanceProtocol.verify(challenge, session.employee.id, "attendance", device.credentialId, action, assignment = option.assignmentId, workDate = option.workDate)
         attendance = challenge to action
         retry = null
         mutable.update { it.copy(signOperation = AttendanceSignOperation(key.alias, bytes, if (action == "check_in") "الحضور" else "الانصراف"), retryPending = false) }
@@ -122,9 +123,9 @@ class AttendanceViewModel @Inject constructor(private val repository: Attendance
         mutable.update { it.copy(retryPending = false, lastReceipt = receipt, message = "أكد الخادم " + (if (receipt.action == "check_in") "الحضور" else "الانصراف") + " بتاريخ " + receipt.workDate) }
         load()
     }
-    fun revoke(reason: String) = run {
+    fun revoke(credentialId: Long, reason: String) = run {
         if (reason.trim().length < 5) throw InquiryFailure("أدخل سبباً واضحاً لإلغاء الجهاز.")
-        val device = mutable.value.currentDevice ?: throw InquiryFailure("لم يُسجل هذا الجهاز.")
+        val device = mutable.value.devices.firstOrNull { it.credentialId == credentialId && it.status in setOf("pending", "approved") } ?: throw InquiryFailure("الجهاز غير قابل للإلغاء.")
         repository.revoke(device.credentialId, reason.trim())
         retry = null; attendance = null
         load()
@@ -144,7 +145,8 @@ class AttendanceViewModel @Inject constructor(private val repository: Attendance
         val history = repository.history(mutable.value.month)
         val key = keys.current(session.employee.id, session.origin)
         val current = devices.firstOrNull { it.uuid == key?.uuid }
-        val shift = mutable.value.selectedShift?.takeIf { selected -> today.sessions.any { it.id == selected } } ?: today.sessions.firstOrNull { it.active && it.checkIn == null }?.id
+        val eligible = today.captureState.options.filter { it.action == "check_in" }
+        val shift = mutable.value.selectedShift?.takeIf { selected -> eligible.any { it.assignmentId == selected } } ?: eligible.firstOrNull()?.assignmentId
         mutable.update { it.copy(employee = employee, today = today, devices = devices, currentDevice = current, history = history, selectedShift = shift) }
     }
     private fun run(operation: suspend () -> Unit) {

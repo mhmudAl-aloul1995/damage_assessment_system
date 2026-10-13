@@ -29,6 +29,7 @@ return ['statuses' => [
     'attendance' => [
         'simulated' => 'حدث حضور في بيئة الاختبار', 'correction_requested' => 'طلب تصحيح الحضور',
         'signed' => 'حدث حضور موقع من جهاز معتمد',
+        'session_resolved' => 'إغلاق إداري لوردية بعد تصحيح معتمد',
         'native_request_denied' => 'رفض طلب واجهة الحضور',
         'export_requested' => 'طلب تقرير في الخلفية', 'export_ready' => 'اكتمال تقرير الخلفية',
         'export_failed' => 'فشل إعداد التقرير', 'export_downloaded' => 'تنزيل التقرير الخاص',

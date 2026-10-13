@@ -4,7 +4,10 @@ use App\Modules\HR\Http\Controllers\AttendanceController;
 use App\Modules\HR\Http\Controllers\AttendanceReportController;
 use App\Modules\HR\Http\Controllers\AttendanceWorkflowController;
 use App\Modules\HR\Http\Controllers\DeviceController;
+use App\Modules\HR\Http\Controllers\EmployeeController;
+use App\Modules\HR\Http\Controllers\OrganizationController;
 use App\Modules\HR\Http\Middleware\EnsureAttendanceWorkflowStorage;
+use App\Modules\HR\Http\Middleware\EnsureEmployeeStorage;
 use App\Modules\HR\Http\Middleware\RequireHrHttps;
 use Illuminate\Support\Facades\Route;
 
@@ -33,4 +36,25 @@ Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorag
     Route::get('/attendance/security-report', [AttendanceReportController::class, 'security'])->name('security-report');
     Route::get('/attendance/devices', [DeviceController::class, 'index'])->name('devices');
     Route::post('/attendance/devices/{credential}/decision', [DeviceController::class, 'decide'])->name('devices.decide');
+});
+
+Route::middleware([RequireHrHttps::class, 'auth', EnsureEmployeeStorage::class])->group(function (): void {
+    Route::get('/organization-chart', [OrganizationController::class, 'chart'])->name('hr.organization.chart');
+    Route::get('/employees', [EmployeeController::class, 'index'])->name('hr.employees.index');
+    Route::get('/employees/create', [EmployeeController::class, 'create'])->name('hr.employees.create');
+    Route::post('/employees', [EmployeeController::class, 'store'])->name('hr.employees.store');
+    Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->whereNumber('employee')->name('hr.employees.show');
+    Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->whereNumber('employee')->name('hr.employees.update');
+    Route::post('/employees/{employee}/assignments', [EmployeeController::class, 'assign'])->name('hr.employees.assignments.store');
+    Route::post('/employee-assignments/{assignment}/end', [EmployeeController::class, 'endAssignment'])->name('hr.employees.assignments.end');
+    Route::post('/employees/{employee}/notes', [EmployeeController::class, 'note'])->name('hr.employees.notes.store');
+    Route::post('/employees/{employee}/archive', [EmployeeController::class, 'archive'])->name('hr.employees.archive');
+    Route::post('/employees/{employee}/documents', [EmployeeController::class, 'upload'])->name('hr.employees.documents.store');
+    Route::get('/employee-documents/{document}/download', [EmployeeController::class, 'download'])->name('hr.employees.documents.download');
+    Route::post('/employee-documents/{document}/withdraw', [EmployeeController::class, 'withdraw'])->name('hr.employees.documents.withdraw');
+    Route::get('/organization/{kind}', [OrganizationController::class, 'index'])->whereIn('kind', array_keys(\App\Modules\HR\Services\OrganizationCatalog::MODELS))->name('hr.organization.index');
+    Route::post('/organization/{kind}', [OrganizationController::class, 'store'])->whereIn('kind', array_keys(\App\Modules\HR\Services\OrganizationCatalog::MODELS))->name('hr.organization.store');
+    Route::put('/organization/{kind}/{record}', [OrganizationController::class, 'update'])->whereIn('kind', array_keys(\App\Modules\HR\Services\OrganizationCatalog::MODELS))->whereNumber('record')->name('hr.organization.update');
+    Route::post('/department-scopes', [OrganizationController::class, 'scope'])->name('hr.organization.scopes.store');
+    Route::post('/department-scopes/{scope}/end', [OrganizationController::class, 'endScope'])->name('hr.organization.scopes.end');
 });

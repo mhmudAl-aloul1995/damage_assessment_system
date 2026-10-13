@@ -6,12 +6,12 @@ use App\Models\User;
 use App\Modules\HR\Models\Department;
 use App\Modules\HR\Models\DepartmentScope;
 use App\Modules\HR\Models\Employee;
-use App\Modules\HR\Models\EmployeeAssignment;
 use Illuminate\Database\Eloquent\Builder;
 
 class EmployeeOrganizationScope
 {
     private array $departmentCache = [];
+
     private array $visibleCache = [];
 
     public function forget(): void

@@ -71,7 +71,7 @@ class Employee extends Model
 
     public function currentOrganizationAssignment(): HasOne
     {
-        return $this->hasOne(EmployeeAssignment::class)->ofMany('id', 'max', fn ($query) => $query->where('primary', true)->effectiveOn(now(config('hr.timezone'))->toDateString()));
+        return $this->hasOne(EmployeeAssignment::class)->ofMany(['id' => 'max'], fn ($query) => $query->where('primary', true)->effectiveOn(now(config('hr.timezone'))->toDateString()));
     }
 
     public function employmentHistory(): HasMany

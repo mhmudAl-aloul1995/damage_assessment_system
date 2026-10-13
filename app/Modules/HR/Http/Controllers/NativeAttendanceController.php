@@ -16,6 +16,7 @@ use App\Modules\HR\Http\Resources\NativeAttendanceResource;
 use App\Modules\HR\Models\DeviceCredential;
 use App\Modules\HR\Models\Employee;
 use App\Modules\HR\Services\AttendanceCalculator;
+use App\Modules\HR\Services\AttendanceRecorder;
 use App\Modules\HR\Services\AttendanceReport;
 use App\Modules\HR\Services\DeviceEnrollment;
 use App\Modules\HR\Services\NetworkEligibilityService;
@@ -54,9 +55,11 @@ class NativeAttendanceController extends Controller
         ]]);
     }
 
-    public function today(Request $request, AttendanceCalculator $calculator): NativeAttendanceResource
+    public function today(Request $request, AttendanceCalculator $calculator, AttendanceRecorder $recorder): NativeAttendanceResource
     {
-        return new NativeAttendanceResource($calculator->day($this->employee($request->user()), now(config('hr.timezone'))->toDateString()));
+        $employee = $this->employee($request->user());
+
+        return new NativeAttendanceResource([...$calculator->day($employee, now(config('hr.timezone'))->toDateString()), 'capture_state' => $recorder->captureState($employee)]);
     }
 
     public function history(AttendanceReportRequest $request, AttendanceReport $report): AnonymousResourceCollection
@@ -126,7 +129,7 @@ class NativeAttendanceController extends Controller
     private function employee(User $user): Employee
     {
         $employee = Employee::query()->where('user_id', $user->id)->first();
-        abort_unless($employee && $employee->employedOn(now(config('hr.timezone'))->toDateString()), 403, 'لا يوجد ربط موظف فعال لهذا الحساب.');
+        abort_unless($user->is_active && $employee, 403, 'لا يوجد ربط موظف لهذا الحساب.');
         Gate::forUser($user)->authorize('view', $employee);
 
         return $employee;

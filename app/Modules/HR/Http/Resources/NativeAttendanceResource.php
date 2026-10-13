@@ -11,7 +11,7 @@ class NativeAttendanceResource extends JsonResource
     {
         return array_intersect_key($this->resource, array_flip([
             'date', 'status', 'schedule', 'timezone', 'check_in', 'check_out',
-            'worked_minutes', 'expected_minutes', 'late_minutes', 'early_minutes', 'conflict', 'sessions',
+            'worked_minutes', 'expected_minutes', 'late_minutes', 'early_minutes', 'conflict', 'sessions', 'capture_state',
         ]));
     }
 }

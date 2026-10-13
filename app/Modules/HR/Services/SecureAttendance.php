@@ -31,10 +31,8 @@ class SecureAttendance
             if (! in_array($data['action'], ['check_in', 'check_out'], true)) {
                 throw ValidationException::withMessages(['action' => 'عملية الحضور غير صالحة.']);
             }
-            $assignmentId = $data['assignment_id'] ?? null;
-            if ($assignmentId !== null && ! $employee->assignments()->whereKey($assignmentId)->exists()) {
-                throw ValidationException::withMessages(['assignment_id' => 'الوردية لا تخص الموظف.']);
-            }
+            $option = $this->recorder->eligibleOption($employee, $data['action'], $data['assignment_id'] ?? null);
+            $assignmentId = $option['assignment_id'];
             $id = (string) Str::uuid();
             $expires = now('UTC')->addSeconds(60);
 
@@ -42,7 +40,7 @@ class SecureAttendance
                 'id' => $id, 'employee_id' => $employee->id, 'credential_id' => $credential->id,
                 'action' => $data['action'], 'shift_assignment_id' => $assignmentId,
                 'payload' => $this->crypto->payload('attendance', $id, $employee->id, [
-                    'credential_id' => $credential->id, 'action' => $data['action'], 'assignment_id' => $assignmentId,
+                    'credential_id' => $credential->id, 'action' => $data['action'], 'assignment_id' => $assignmentId, 'work_date' => $option['work_date'],
                 ], $expires->timestamp),
                 'expires_at' => $expires->format('Y-m-d H:i:s'),
             ]);
@@ -71,7 +69,8 @@ class SecureAttendance
             if ($challenge->expires_at->lessThanOrEqualTo(now('UTC'))) {
                 throw ValidationException::withMessages(['challenge_id' => 'انتهت صلاحية تحدي الحضور.']);
             }
-            $event = $this->recorder->recordSigned($employee, $action, $challenge->id, $challenge->shift_assignment_id, $request);
+            $payload = json_decode($challenge->payload, true, flags: JSON_THROW_ON_ERROR);
+            $event = $this->recorder->recordSigned($employee, $action, $challenge->id, $challenge->shift_assignment_id, $request, $payload['work_date']);
             $challenge->update([
                 'event_id' => $event->id, 'signature_fingerprint' => $signature,
                 'consumed_at' => now('UTC')->format('Y-m-d H:i:s'),
@@ -84,7 +83,7 @@ class SecureAttendance
     private function credential(User $actor, Employee $employee, int $id): DeviceCredential
     {
         $actor = User::query()->findOrFail($actor->id);
-        abort_unless($actor->is_active && $employee->user_id === $actor->id && $employee->employedOn(now(config('hr.timezone'))->toDateString()), 403);
+        abort_unless($actor->is_active && $employee->user_id === $actor->id, 403);
         $credential = DeviceCredential::query()->with(['device', 'latestDecision'])->lockForUpdate()->findOrFail($id);
         abort_unless($credential->device->employee_id === $employee->id && $credential->status() === 'approved', 403);
 

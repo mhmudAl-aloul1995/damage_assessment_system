@@ -27,7 +27,13 @@ data class HrReceipt(@SerialName("event_id") val eventId: Long, val action: Stri
 @Serializable
 data class HrShift(@SerialName("assignment_id") val id: Long? = null, val schedule: String? = null, val timezone: String, val active: Boolean = false, @SerialName("check_in") val checkIn: String? = null, @SerialName("check_out") val checkOut: String? = null, @SerialName("worked_minutes") val workedMinutes: Int? = null)
 @Serializable
-data class HrAttendanceDay(val date: String, val status: String, val schedule: String? = null, val timezone: String, @SerialName("check_in") val checkIn: String? = null, @SerialName("check_out") val checkOut: String? = null, @SerialName("worked_minutes") val workedMinutes: Int? = null, @SerialName("late_minutes") val lateMinutes: Int? = null, @SerialName("early_minutes") val earlyMinutes: Int? = null, val conflict: Boolean = false, val sessions: List<HrShift> = emptyList())
+data class HrAttendanceDay(val date: String, val status: String, val schedule: String? = null, val timezone: String, @SerialName("check_in") val checkIn: String? = null, @SerialName("check_out") val checkOut: String? = null, @SerialName("worked_minutes") val workedMinutes: Int? = null, @SerialName("late_minutes") val lateMinutes: Int? = null, @SerialName("early_minutes") val earlyMinutes: Int? = null, val conflict: Boolean = false, val sessions: List<HrShift> = emptyList(), @SerialName("capture_state") val captureState: HrCaptureState = HrCaptureState())
+@Serializable
+data class HrCaptureOption(val action: String, @SerialName("assignment_id") val assignmentId: Long, @SerialName("work_date") val workDate: String, val schedule: String, val timezone: String)
+@Serializable
+data class HrOpenSession(@SerialName("event_id") val eventId: Long, @SerialName("assignment_id") val assignmentId: Long, @SerialName("work_date") val workDate: String, @SerialName("check_in_utc") val checkInUtc: String, @SerialName("checkout_eligible") val checkoutEligible: Boolean)
+@Serializable
+data class HrCaptureState(@SerialName("open_session") val openSession: HrOpenSession? = null, val options: List<HrCaptureOption> = emptyList())
 
 interface AttendanceApi {
     @POST("api/v1/hr/auth/login") suspend fun login(@Body data: LoginRequest): HrLoginResponse
