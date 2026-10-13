@@ -27,11 +27,14 @@ class SurveyReportController extends Controller
             PublicBuildingSurvey::query()->whereNotNull('date_of_damage')->max('date_of_damage')
         );
 
-        $surveys = PublicBuildingSurvey::query()
-            ->withCount('units')
-            ->whereNotNull('date_of_damage')
-            ->whereBetween('date_of_damage', [$startDate->toDateString(), $endDate->toDateString()])
-            ->get();
+        $query = PublicBuildingSurvey::query()->withCount('units');
+
+        if ($request->filled('start_date') || $request->filled('end_date')) {
+            $query->whereDate('date_of_damage', '>=', $startDate->toDateString())
+                ->whereDate('date_of_damage', '<=', $endDate->toDateString());
+        }
+
+        $surveys = $query->get();
 
         $statusCounts = $surveys
             ->groupBy(fn (PublicBuildingSurvey $survey) => $survey->building_damage_status ?: 'not_specified')

@@ -69,6 +69,66 @@ it('shows the public buildings report page with summary metrics and curve chart 
     });
 });
 
+it('includes undated public buildings in report totals unless a date filter is submitted', function (array $filters, int $expectedTotal): void {
+    config()->set('database.connections.mysql', config('database.connections.sqlite'));
+    DB::purge('mysql');
+    Artisan::call('migrate', ['--database' => 'mysql', '--force' => true]);
+
+    $viewerRole = Role::query()->create([
+        'name' => 'Database Officer',
+        'guard_name' => 'web',
+    ]);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole($viewerRole);
+
+    foreach (['2026-03-02', '2026-04-10', null] as $index => $damageDate) {
+        $survey = PublicBuildingSurvey::query()->create([
+            'objectid' => 1901 + $index,
+            'globalid' => 'public-building-date-filter-'.$index,
+            'building_name' => 'Public Building '.$index,
+            'municipalitie' => 'Gaza',
+            'building_damage_status' => 'partially_damaged',
+            'date_of_damage' => $damageDate,
+        ]);
+
+        PublicBuildingSurveyUnit::query()->create([
+            'parentglobalid' => $survey->globalid,
+            'repeat_index' => 0,
+            'unit_name' => 'Ground Floor',
+        ]);
+    }
+
+    $response = $this->actingAs($viewer)
+        ->get(route('reports.public-buildings', $filters))
+        ->assertOk()
+        ->assertViewHas('summaryCards', function (array $cards) use ($expectedTotal): bool {
+            $values = collect($cards)->pluck('value', 'label');
+
+            return $values['Total Surveys'] === $expectedTotal
+                && $values['Damaged Buildings'] === $expectedTotal
+                && $values['Total Units'] === $expectedTotal;
+        })
+        ->assertViewHas('rows', fn ($rows): bool => $rows->sum('total_surveys') === $expectedTotal)
+        ->assertViewHas('primaryChart', fn (array $chart): bool => array_sum($chart['series']) === $expectedTotal)
+        ->assertViewHas('secondaryChart', fn (array $chart): bool => array_sum($chart['series']) === $expectedTotal)
+        ->assertViewHas('curveChart', fn (array $chart): bool => array_sum($chart['series']) === min($expectedTotal, 2));
+
+    if ($expectedTotal === 3) {
+        $exportResponse = $this->get(route('public-buildings.export-data'))->assertOk();
+
+        expect($response->viewData('summaryCards')[0]['value'])
+            ->toBe($exportResponse->viewData('summary')['total_surveys']);
+    }
+})->with([
+    'no date filter' => [[], 3],
+    'empty date filters' => [['start_date' => '', 'end_date' => ''], 3],
+    'inclusive date range' => [['start_date' => '2026-03-02', 'end_date' => '2026-04-10'], 2],
+    'narrow date range' => [['start_date' => '2026-03-01', 'end_date' => '2026-03-31'], 1],
+    'start date only' => [['start_date' => '2026-04-01'], 1],
+    'end date only' => [['end_date' => '2026-03-31'], 1],
+]);
+
 it('shows the road facilities report page with summary metrics and curve chart data', function () {
     config()->set('database.connections.mysql', config('database.connections.sqlite'));
     DB::purge('mysql');
