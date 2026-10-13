@@ -1290,6 +1290,11 @@ it('shows and applies advanced building filters on the audit index', function ()
 });
 
 it('filters audit buildings by field status and completes field status on arcgis', function () {
+    $this->mock(\App\services\ArcgisAuditedUploadService::class, function (\Mockery\MockInterface $mock): void {
+        $mock->shouldReceive('updateBuildingFieldStatus')
+            ->once()
+            ->withArgs(fn (Building $building, string $status): bool => $building->objectid === 7302 && $status === 'COMPLETED');
+    });
     Http::fake([
         'https://www.arcgis.com/sharing/rest/generateToken' => Http::response([
             'token' => 'arcgis-token',

@@ -681,6 +681,7 @@ return [
         'survey_status' => 'Survey Status',
         'all_statuses' => 'All statuses',
         'field_status_completed' => 'Survey status was changed to COMPLETED.',
+        'audited_field_status_update_failed' => 'The original ArcGIS layer was updated, but the audited layer could not be updated. The local status was not changed. Check that the building exists and updates are allowed in the audited layer, then retry.',
         'field_status_update_failed' => 'Failed to update survey status.',
         'arcgis_update_not_supported' => 'ArcGIS does not allow updating this layer. Ask the layer administrator to enable updates or configure the correct editable layer. The survey status was not changed.',
         'missing_arcgis_objectid' => 'This building does not have an ArcGIS Object ID.',

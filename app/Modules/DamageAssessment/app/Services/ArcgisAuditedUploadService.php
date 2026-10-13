@@ -913,6 +913,35 @@ class ArcgisAuditedUploadService
         $this->uploadUnitAuditEdits($globalId, $fields, $summary, false, false, CarbonImmutable::now());
     }
 
+    public function updateBuildingFieldStatus(Building $building, string $status): void
+    {
+        $layerId = $this->layerId('target_buildings_layer');
+        $targetFeature = $this->targetFeatureWithToken($layerId, [
+            'old_objectid_B' => $building->objectid,
+            'old_global_id_B' => $building->globalid,
+        ], quiet: true);
+
+        if ($targetFeature === null) {
+            throw new RuntimeException('Building was not found in the audited ArcGIS layer.');
+        }
+
+        $this->updateFeature(
+            $layerId,
+            $targetFeature['object_id'],
+            $targetFeature['object_id_field'],
+            function (string $token) use ($layerId, $status): array {
+                $metadata = $this->targetLayerMetadata($layerId, $token);
+
+                if (! isset($metadata['fields']['field_status'])) {
+                    throw new RuntimeException('Audited ArcGIS layer is missing the field_status field.');
+                }
+
+                return ['attributes' => ['field_status' => $status]];
+            },
+            quiet: true,
+        );
+    }
+
     public function syncSourceAssessmentAssignment(string $type, string $globalId, mixed $fieldValue): void
     {
         if (! in_array($type, ['building_table', 'housing_table'], true)) {
@@ -1346,8 +1375,9 @@ class ArcgisAuditedUploadService
         int $targetObjectId,
         string $objectIdField,
         Closure $featureFactory,
+        bool $quiet = false,
     ): void {
-        $this->withTokenRetry(function (string $token) use ($layerId, $targetObjectId, $objectIdField, $featureFactory): void {
+        $this->withTokenRetry(function (string $token) use ($layerId, $targetObjectId, $objectIdField, $featureFactory, $quiet): void {
             $feature = $featureFactory($token);
             $feature = $this->targetFeatureForLayer($layerId, $feature, $token);
             $feature['attributes'][$objectIdField] = $targetObjectId;
@@ -1364,8 +1394,10 @@ class ArcgisAuditedUploadService
                 throw new RuntimeException('ArcGIS updateFeatures failed: '.$response->body());
             }
 
-            echo "Feature updated. Target OBJECTID: {$targetObjectId}\n";
-        });
+            if (! $quiet) {
+                echo "Feature updated. Target OBJECTID: {$targetObjectId}\n";
+            }
+        }, quiet: $quiet);
     }
 
     private function updateSourceFeatureField(
@@ -1419,7 +1451,7 @@ class ArcgisAuditedUploadService
     /**
      * @return array{object_id: int, object_id_field: string}|null
      */
-    private function targetFeatureWithToken(int|string $layerId, array $matchCandidates): ?array
+    private function targetFeatureWithToken(int|string $layerId, array $matchCandidates, bool $quiet = false): ?array
     {
         return $this->withTokenRetry(function (string $token) use ($layerId, $matchCandidates): ?array {
             $metadata = $this->targetLayerMetadata($layerId, $token);
@@ -1469,7 +1501,7 @@ class ArcgisAuditedUploadService
             }
 
             return null;
-        });
+        }, quiet: $quiet);
     }
 
     private function targetFeatureForLayer(int|string $layerId, array $feature, string $token): array
@@ -2150,7 +2182,7 @@ class ArcgisAuditedUploadService
             ->withOptions(['verify' => true]);
     }
 
-    private function withTokenRetry(Closure $callback): mixed
+    private function withTokenRetry(Closure $callback, bool $quiet = false): mixed
     {
         if ($this->token === '') {
             $this->refreshToken();
@@ -2163,7 +2195,9 @@ class ArcgisAuditedUploadService
                 throw $exception;
             }
 
-            echo "ArcGIS token expired or invalid. Refreshing token and retrying...\n";
+            if (! $quiet) {
+                echo "ArcGIS token expired or invalid. Refreshing token and retrying...\n";
+            }
             $this->refreshToken();
 
             return $callback($this->token);

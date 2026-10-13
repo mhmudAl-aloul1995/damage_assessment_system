@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateHousingLegalChallengeRequest;
 use App\Models\Assessment;
 use App\Models\AssessmentStatus;
 use App\Models\AssignedAssessmentUser;
+use App\Models\AuditedBuilding;
 use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\BuildingStatus;
@@ -26,6 +27,7 @@ use App\Modules\DamageAssessment\Services\Audit\AuditExportService;
 use App\Modules\DamageAssessment\Services\Audit\AuditTableService;
 use App\services\ArcgisAttachmentBackupService;
 use App\services\ArcgisAuditedRestoreService;
+use App\services\ArcgisAuditedUploadService;
 use App\services\ArcgisService;
 use App\Support\Audit\RestrictedLawyerAuditAccess;
 use Illuminate\Database\Eloquent\Builder;
@@ -3197,7 +3199,7 @@ class auditController extends Controller
             ->all();
     }
 
-    public function completeBuildingFieldStatus(Building $building, ArcgisService $arcgisService): JsonResponse
+    public function completeBuildingFieldStatus(Building $building, ArcgisService $arcgisService, ArcgisAuditedUploadService $auditedUploadService): JsonResponse
     {
         $this->abortRestrictedLawyerAuditWrite(request());
 
@@ -3218,7 +3220,23 @@ class auditController extends Controller
                 ], 502);
             }
 
-            $building->forceFill(['field_status' => 'COMPLETED'])->save();
+            try {
+                $auditedUploadService->updateBuildingFieldStatus($building, 'COMPLETED');
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => __('ui.audit.audited_field_status_update_failed'),
+                ], 502);
+            }
+
+            $building->getConnection()->transaction(function () use ($building): void {
+                $building->forceFill(['field_status' => 'COMPLETED'])->save();
+                AuditedBuilding::query()
+                    ->where('objectid', $building->objectid)
+                    ->update(['field_status' => 'COMPLETED']);
+            });
 
             return response()->json([
                 'success' => true,
