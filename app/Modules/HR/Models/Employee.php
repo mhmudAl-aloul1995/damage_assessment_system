@@ -16,11 +16,11 @@ class Employee extends Model
 
     protected $table = 'hr_employees';
 
-    protected $fillable = ['user_id', 'employee_number', 'display_name', 'starts_on', 'ends_on'];
+    protected $fillable = ['user_id', 'supervisor_user_id', 'employee_number', 'display_name', 'starts_on', 'ends_on'];
 
     protected function casts(): array
     {
-        return ['user_id' => 'integer', 'starts_on' => 'immutable_date', 'ends_on' => 'immutable_date'];
+        return ['user_id' => 'integer', 'supervisor_user_id' => 'integer', 'starts_on' => \App\Modules\HR\Models\Casts\DateOnly::class, 'ends_on' => \App\Modules\HR\Models\Casts\DateOnly::class];
     }
 
     protected static function newFactory(): HrEmployeeFactory
@@ -36,6 +36,21 @@ class Employee extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(ShiftAssignment::class);
+    }
+
+    public function supervisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'supervisor_user_id');
+    }
+
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(AttendanceAdjustment::class);
+    }
+
+    public function scheduleExceptions(): HasMany
+    {
+        return $this->hasMany(ScheduleException::class);
     }
 
     public function events(): HasMany

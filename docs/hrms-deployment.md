@@ -1,12 +1,10 @@
-# HR attendance increment: operation and deployment
+# HR attendance: operation and deployment
 
-## Current deliverable
+## Delivered attendance foundation
 
-The first attendance increment adds an HR module with explicit employee/user mapping (including staff without login), immutable schedule versions, finite effective-dated shift assignments, append-only event/audit models, daily/monthly read models, an Arabic Blade interface and permission-scoped XLSX exports. Legacy attendance/import rows are read without mutation. The timestamp recorder is a local/test simulator; no capture API, biometric enrollment, correction approval workflow or production gateway is implemented in this increment. Phase 1 remains open. The complete scope is in `hrms-architecture-roadmap.md`.
+The HR module reuses users, authentication, Spatie permissions, Blade/Metronic, queues, notifications and Excel. It implements employee identity mapping, attendance supervisor scope, immutable schedules, fixed/flexible and multiple daily shifts, holidays and cancellation history, temporary calendars, daily/monthly attendance and XLSX, correction requests with independent decisions, persistent reconciliation summaries/exceptions, audit screens and queued decision notifications. Raw HR events and legacy attendance/import records are preserved. Employee capture is currently a local/test simulator; production Android/network capture is not activated. The full ten-phase scope remains in hrms-architecture-roadmap.md.
 
-### Configuration
-
-Set these through deployment secrets/environment and rebuild the normal configuration cache as part of an approved deployment:
+## Configuration
 
 ```dotenv
 HR_TIMEZONE=Asia/Hebron
@@ -22,70 +20,81 @@ HR_MIKROTIK_USERNAME=
 HR_MIKROTIK_PASSWORD=
 ```
 
-There are no guessed addresses, ports, CIDRs or router credentials. Device approval is mandatory in configuration; it cannot be disabled by an environment switch. Production capture stays blocked even if `HR_ATTENDANCE_ENABLED=true`. The network services explicitly report unconfigured state and perform no router I/O.
+No addresses, ports, CIDRs or router credentials are guessed. Device approval is mandatory. Gateway/network services currently deny production capture and perform no router writes; flags alone cannot activate it.
 
-Following the owner's explicit request on 12 October 2026, HR web pages allow HTTP by default (`HR_WEB_REQUIRE_HTTPS=false`). Authentication, authorization and CSRF controls still apply. HTTP does not encrypt sessions or HR data. Set `HR_WEB_REQUIRE_HTTPS=true` to restore HTTPS enforcement outside local/testing once TLS is available. Do not change APP_ENV to bypass transport checks or trust caller-supplied proxy headers. This setting applies only to web pages; it does not enable native biometric attendance, gateway verification or disable certificate verification. After pulling this change, clear or rebuild the deployed configuration cache if it is used.
+HR web pages allow HTTP by the owner's explicit instruction. Authentication, permissions and CSRF remain enforced. HR_WEB_REQUIRE_HTTPS=true enables web transport enforcement outside local/testing. This web setting does not relax native attendance TLS or certificate verification. Never change APP_ENV to bypass security.
 
-### Approved deployment sequence (not executed by this change)
+## Installing on the server
 
-1. Back up the database and verify restoration. Review pending migrations with an authorized operator; this repository contains migrations for other modules too.
-2. On an isolated staging database, run only the new migration path first and inspect keys/indexes. After approval, the additive HR migration may be applied with `php artisan migrate --path=app/Modules/HR/database/migrations --no-interaction`. No legacy backfill is automatic. Do not use migrate:fresh, reset or rollback against production.
-3. Run `php artisan db:seed --class=HrPermissionsSeeder --no-interaction` after approval. The seeder adds four permissions and never assigns roles, removes grants or changes existing users.
-4. As explicitly requested by the owner, the existing `Database Officer` role now grants viewing, setup and Excel export for the current attendance module directly, including before the HR permission records are populated. No individual permission assignment or grant command is needed for this role. Other users continue to need `hr.attendance.view` for authorized HR-wide viewing, `hr.attendance.view-own` for self-history, `hr.attendance.setup` for setup and `hr.attendance.export` for exports. Department managers must not receive global viewing while organizational scopes are pending. The role allowance is limited to these four attendance abilities and does not grant future payroll/device approval access.
-5. Use the HR attendance navigation. Setup requires exact account IDs from existing user administration; blank means staff without login. Verify account ID/employee identity before saving. Mapping changes need a future audited remapping workflow; do not update identifiers directly.
-6. Create schedule versions with explicit working days/timezone and finite assignments. Schedules and assignments cannot be edited/deleted through the application. Changes must use a new version/non-overlapping future period. Open-ended assignment retirement and historical correction workflows remain outstanding.
-7. Run staging regression checks and PHC acceptance. Keep capture disabled. No production deployment, migration or router modification was performed during implementation.
+Git transfers code, not database migrations or local grants. Pull the changes, then run:
 
-### Fixing attendance authorization on the deployed server
+```shell
+php artisan hr:install-attendance --no-interaction
+```
 
-After pulling the latest code, accounts with the `Database Officer` role can access the current attendance module directly. Apply the HR migration on the server if its tables are missing; role authorization does not create tables. Refresh the deployed configuration cache if used so the updated sidebar configuration is loaded.
+The command first backs up the actual HR/user database through the existing backup command, ignoring alternate backup connection overrides for that operation. Failure stops migration. It then migrates only app/Modules/HR/database/migrations, verifies storage, seeds HR permissions and clears route/config caches. It does not run unrelated pending module migrations or legacy backfills. Inspect the existing system operation log for the backup result and file. Verify restoration separately on staging. MySQL backup passwords are passed through the child process environment, never command arguments or ordinary failure logs.
 
-Local permissions are not transferred by Git. For accounts without the `Database Officer` role, the optional command `php artisan hr:grant-attendance-view mhmudaloul@gmail.com --no-interaction` creates the viewing permission if needed, grants only attendance viewing to the named active account, preserves all existing roles/grants, records an audit entry and clears the Spatie permission cache. Re-running it is safe. It refuses to grant access when the HR tables are missing and never runs migrations automatically.
+Without SSH, use **الإدارة المركزية → أوامر Artisan → hr:install-attendance** through the existing protected administration screen. Production cannot select --skip-backup. The local/testing-only option was used after verifying the local MySQL phc_new database. No remote migration has been executed by this agent.
 
-If SSH/terminal access is unavailable, a Database Officer can open **الإدارة المركزية → أوامر Artisan**, find `hr:grant-attendance-view`, enter a non-officer target account's email in the `email` argument, and run it. The existing admin authorization and CSRF protections apply. After a successful run, refresh the attendance page. For non-officer accounts, setup and export continue to require their separate permissions.
+Review migrations and staging acceptance before deployment. Never use migrate:fresh, reset or generic rollback against production. Restoring the old per-day unique event index would fail once multiple daily sessions exist; plan a forward repair, not automatic downgrade. Rebuild normal deployment caches after verification.
 
-### Calculation rules in this increment
+## Authorization and operation
 
-- UTC event instants; organization/schedule timezone for presentation and work date. Overnight checkout belongs to the check-in work date, even if the assignment expires at midnight.
-- One check-in/check-out pair per employee/work date. Local simulation admits check-in from two hours before start until shift end. This fixed simulation window is not an approved PHC production policy.
-- Working minutes are elapsed minutes less the configured unpaid break, floored at zero. Breaks are a simple per-shift deduction; timed breaks and partial-shift break rules are pending HR policy.
-- Late minutes exclude configured arrival grace. Early departure is measured against scheduled end. Excess minutes are informational, not approved/paid overtime.
-- Missing checkout appears only after shift end. Absence is only a candidate after shift end, and is not payroll-ready until leave/holiday/exception reconciliation exists.
-- A legacy present/absent day has unknown hours. The UI/export uses null (shown as —), never fabricated timestamps or eight-hour defaults. A legacy absence plus a raw check-in is a conflict. Legacy provenance is labeled `legacy`, not asserted to be an Excel import where row provenance is unavailable.
-- Dashboard cards count the current employee page. Global aggregate analytics and materialized summaries are pending. Month exports are limited to 500 employees; larger requests must be narrowed until queued exports are implemented.
-- The append-only Eloquent models reject instance and bulk update/delete/upsert. Raw SQL/query-builder access can bypass application protection; production database grants must prohibit UPDATE/DELETE on raw event/audit tables for the runtime account and reserve DDL for a separate deployment account. Backups and audit retention remain mandatory.
+The additive seeder creates eleven attendance permissions; it neither grants roles nor removes existing permissions:
 
-## Native Android integration contract to implement in Phase 2
+- hr.attendance.view: global attendance visibility.
+- hr.attendance.view-own: linked employee self history.
+- hr.attendance.view-team: employees whose supervisor_user_id is the current user.
+- hr.attendance.setup and hr.attendance.export.
+- hr.attendance.correct: corrections for visible employees.
+- hr.attendance.correct-own: self corrections, with self visibility.
+- hr.attendance.approve: independent decisions for visible employees.
+- hr.attendance.exceptions.manage, hr.attendance.reconcile and hr.attendance.audit.
 
-Use the existing Compose navigation/Hilt repository pattern in `native-android`. Add a separately qualified HTTPS-only Retrofit/OkHttp client for HR. Never attach HR credentials/tokens or enrollment payloads to the legacy HTTP origin. Reuse Keystore session patterns only after isolating the secure origin and token audience. Do not widen the existing inquiry interceptor's HTTP write allowlist for attendance.
+By the owner's instruction, Database Officer receives the nine administrative attendance abilities directly. It receives no payroll/device grants. Model policies still prohibit approving the reviewer's own attendance or a proposal submitted by that reviewer.
 
-Planned endpoints under the established `/api/v1/hr` version convention: `me`, `attendance/today`, `attendance/history`, `devices/register`, `devices/status`, `attendance/challenge`, `attendance/check-in`, `attendance/check-out`; separate permissioned administrative device approval/revocation. These endpoints do not exist yet.
+For non-officers, the optional hr:grant-attendance-view email command grants only global attendance viewing, preserves existing roles/grants, audits the change and clears the permission cache. It never migrates tables. Missing workflow tables now produce a useful 503 requiring the HR installer instead of a database exception.
 
-Challenge representation must be a documented canonical byte string, returned as base64 with protocol version, challenge ID, employee ID, approved credential ID, action, random nonce and UTC expiry. Android signs the exact returned bytes using an authentication-per-use Keystore key and BiometricPrompt CryptoObject. Server verifies the stored challenge bytes and credential, never reconstructed client claims. Choose and document the signature encoding (e.g. ECDSA P-256 SHA-256 DER) when implementation and interoperability tests are added.
+Use **الموارد البشرية → الحضور والانصراف**. Map employees explicitly using existing account IDs; staff without login may leave user_id blank. Check identity before saving. The supervisor link provides minimum attendance scope; full organization management belongs to Phase 5. Create immutable schedule versions and finite assignments. Future schedule changes use an audited assignment retirement plus replacement. Historical schedules and raw facts are not edited.
 
-Server transaction must lock credential/challenge/employee in consistent order, reject revoked/unapproved keys, consume one unexpired challenge once, enforce authenticated gateway evidence and append event with server time. Device status and account activity must be rechecked at submission, not only challenge creation. Return success only after commit. Retries need a bounded idempotent receipt tied to the same verified request; reusing a nonce for a different request must fail. Enrollment, rejection, approval, replacement, revocation and recovery need an immutable actor/timestamp history and no self approval.
+The calendar accepts global or schedule-specific holidays, immutable cancellation records, and employee leave/excused/off-day/temporary-schedule exceptions. A temporary range is limited to 31 days and honors the selected schedule's weekdays; a single-day work_schedule exception can explicitly override an off day. Calendar exceptions must not be used to approve one's own leave. They are attendance administration, not the completed leave entitlement/workflow subsystem.
 
-## Network information and activation checklist
+Corrections retain the original source fingerprint and optional per-shift intervals. Approving requires a different reviewer, unchanged source data and an authorized employee scope. Imported data changing after approval flags a new conflict; approved facts are not silently rewritten. A final decision is immutable. Unknown times may remain unknown; approval never fabricates hours. Decision notifications use the existing database queue/notification channel.
 
-Obtain from PHC network administrators:
+Reconciliation from the exceptions screen queues a bounded period (at most 31 days) and rechecks the actor's activity and permissions when the job executes. Run the normal queue worker for jobs/notifications. The administrative CLI is:
 
-- Actual RouterOS version and supported authenticated TLS API; management address/port and least-privilege read-only service account.
-- Private server address, office Wi-Fi CIDRs, VLANs, DHCP/NAT/firewall and access point ownership/topology.
-- Internal DNS, trusted TLS certificate and renewal method, gateway service identity and reverse-proxy trust list.
-- VPN/remote-access routes and whether they can reach the attendance segment; public versus internal ingress separation.
+```shell
+php artisan hr:reconcile-attendance --from=2026-10-01 --to=2026-10-12 --no-interaction
+```
 
-Before activation, verify TLS and hostname validation on real Android devices, internal segment restrictions, direct public-route denial, forged proxy/gateway header denial, VPN/NAT bypass resistance, replay/concurrency, device revocation, wrong employee/action/signature, expired challenges and revoked sessions. DHCP/ARP/SSID are supporting diagnostics only. Never modify MikroTik settings automatically. Production rollout requires explicit approval after documented evidence.
+Optional --employee narrows the command. No automatic recurring reconciliation schedule is configured yet. Persisted exception screens show the last completed reconciliation; queued work is not shown as already finished.
 
-## Validation
+## Calculation rules
 
-Run `php artisan test --compact tests/Feature/HR` against the configured SQLite in-memory test database. Tests exercise UI authorization, self scope, setup validation, legacy import compatibility, calculation/overnight/DST rules, sequencing/idempotency, immutability, XLSX string safety and fail-closed capture/HTTP access. Use the existing attendance, authentication, module and mobile/ArcGIS regression tests as listed in the implementation report. `--no-interaction` is not accepted by this repository's test wrapper; tests run without prompts.
+- Event instants are UTC; work date/presentation use schedule timezone. Overnight checkout belongs to the check-in work date, including assignment expiry.
+- One action pair per employee/assignment/work date. Only one open session per employee. Multiple sessions exclude gaps from working hours; submitted correction intervals cannot overlap.
+- Local simulation uses a two-hour early arrival window. This is not an approved production policy. No public simulator route exists.
+- Each completed session subtracts its configured unpaid break, floored at zero. Timed/partial-shift break policies remain pending PHC decisions.
+- Flexible attendance defines an allowed arrival band and preserves the shift's elapsed duration. Late minutes begin after the latest permitted arrival plus grace. Early departure is measured against the employee's arrival-adjusted end.
+- Missing sessions/checkout and absence candidates appear after the relevant window expires. Calendar leave/holidays/off days affect expected work. These are not automatic payroll deductions.
+- Legacy present/absent flags carry unknown hours. Missing check-in/out also leaves total hours unknown. Raw/legacy/calendar disagreements are flagged; row-level Excel workbook provenance is not claimed when unavailable.
+- Cards aggregate all authorized matching employees, not just the page of 25. Excel currently caps requests at 500 employees; queued large exports belong to Phase 4.
+- Immutable Eloquent models block normal and bulk writes/deletes. Raw SQL can bypass them. Use separate deployment DDL credentials and runtime database grants that prohibit UPDATE/DELETE on HR event/audit/decision ledgers.
 
-SQLite checks do not prove MySQL row-lock behavior under parallel workers. Real MySQL concurrency, visual browser/device acceptance, restore drills and secure gateway/Android integration remain required before production use.
+## Secure native Android and network prerequisites
 
-### Recorded verification — 12 October 2026
+Phase 2 extends native-android, not the separate Capacitor shell. It must use a distinct HTTPS-only origin/client/session, Keystore authentication-per-use signing, BiometricPrompt CryptoObject, enrollment approval/revocation, short-lived signed challenges and atomic consumption/event append. Existing HTTP inquiry tokens/client cannot be used as secure HR credentials.
 
-- All 32 new HR tests passed, including a real XLSX download.
-- Combined targeted run: 119 passed, 2 failed, 549 assertions. Included HR, legacy AttendanceSummary, Authentication, ModuleStructure, ModuleServiceProvider, ModuleSwitcher, MobileApi and DamageInquiryApi tests.
-- The two ModuleSwitcher failures concern an existing Borrowers officer also seeing the Damage Assessment building-deletions menu. Both failures were reproduced with the original HEAD versions of `config/modules.php` and `config/sidebar.php`, excluding HR registration/navigation; baseline result: 11 passed, the same 2 failed. HR configurations were restored afterwards. No unrelated navigation change was made.
-- `php vendor/bin/pint --dirty --format agent` completed successfully; `git diff --check` found no whitespace errors.
-- No live database migrations, permission grants, deployments or Android file edits were performed. Native Android and CODEX progress file changes present before this work were preserved.
+An API contract or disabled network adapter does not establish Android completion. Device attestation where feasible and instrumented biometric/integration checks remain necessary. BiometricPrompt verifies an enrolled device user, not a uniquely identified PHC employee. No biometric templates leave Android.
+
+Obtain actual PHC RouterOS version, management TLS service/port, read-only account, office CIDRs/VLANs/AP topology, internal DNS/certificate, gateway identity, proxy trust and VPN/public ingress separation. No MikroTik settings are guessed or modified. DHCP/ARP/SSID are diagnostics only.
+
+Production activation requires real Android TLS tests, internal network restrictions, direct public-route denial, forged gateway/proxy-header denial, VPN bypass tests, signature/expiry/replay/revocation/concurrency evidence, and explicit PHC acceptance.
+
+## Validation checkpoint
+
+Current attendance/workflow/installer/backup/permission run: **105 tests passed, 453 assertions**. Tests cover global/self/team authorization, immutable source preservation, overnight and DST calculations, flexible and multiple sessions, holidays/retirement history, independent correction decisions, stale sources, idempotency, queues, reconciliation, XLSX string safety and fail-closed capture. Tests use SQLite memory; this does not prove production MySQL concurrency.
+
+Formatter: php vendor/bin/pint --dirty --format agent. Tests run with php artisan test --compact and explicit paths; this repository's test wrapper does not accept --no-interaction.
+
+Real device/browser acceptance, staging restore drills, MySQL parallel-worker behavior, network activation and later HRMS phases remain outstanding. Existing unrelated Damage Assessment and Android changes are preserved.

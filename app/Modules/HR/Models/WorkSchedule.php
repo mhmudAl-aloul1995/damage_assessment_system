@@ -12,11 +12,11 @@ class WorkSchedule extends AppendOnlyModel
 
     protected $table = 'hr_work_schedules';
 
-    protected $fillable = ['name', 'timezone', 'working_days', 'starts_at', 'ends_at', 'grace_minutes', 'break_minutes'];
+    protected $fillable = ['name', 'timezone', 'working_days', 'starts_at', 'ends_at', 'grace_minutes', 'break_minutes', 'flexible', 'latest_start_at'];
 
     protected function casts(): array
     {
-        return ['working_days' => 'array', 'grace_minutes' => 'integer', 'break_minutes' => 'integer'];
+        return ['working_days' => 'array', 'grace_minutes' => 'integer', 'break_minutes' => 'integer', 'flexible' => 'boolean'];
     }
 
     protected static function newFactory(): HrWorkScheduleFactory

@@ -3,6 +3,7 @@
 namespace App\Modules\HR\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreWorkScheduleRequest extends FormRequest
@@ -23,6 +24,8 @@ class StoreWorkScheduleRequest extends FormRequest
             'ends_at' => ['required', 'date_format:H:i', 'different:starts_at'],
             'grace_minutes' => ['required', 'integer', 'between:0,120'],
             'break_minutes' => ['required', 'integer', 'between:0,720'],
+            'flexible' => ['sometimes', 'boolean'],
+            'latest_start_at' => ['nullable', Rule::requiredIf($this->boolean('flexible')), Rule::prohibitedIf(! $this->boolean('flexible')), 'date_format:H:i'],
         ];
     }
 
@@ -37,6 +40,13 @@ class StoreWorkScheduleRequest extends FormRequest
             $duration = (($endHour * 60 + $endMinute) - ($startHour * 60 + $startMinute) + 1440) % 1440;
             if ((int) $this->input('break_minutes') >= $duration) {
                 $validator->errors()->add('break_minutes', 'الاستراحة يجب أن تكون أقصر من الوردية.');
+            }
+            if ($this->boolean('flexible')) {
+                [$latestHour, $latestMinute] = array_map('intval', explode(':', $this->input('latest_start_at')));
+                $arrivalWindow = (($latestHour * 60 + $latestMinute) - ($startHour * 60 + $startMinute) + 1440) % 1440;
+                if ($arrivalWindow >= $duration) {
+                    $validator->errors()->add('latest_start_at', 'آخر وقت للحضور يجب أن يقع داخل نافذة الوردية.');
+                }
             }
         }];
     }

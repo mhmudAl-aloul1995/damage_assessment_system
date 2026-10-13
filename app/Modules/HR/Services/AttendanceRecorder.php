@@ -17,18 +17,18 @@ class AttendanceRecorder
     ) {}
 
     /** Local/test simulator only. No ordinary attendance endpoint is exposed in Phase 1. */
-    public function simulate(Employee $employee, string $action, string $idempotencyKey): AttendanceEvent
+    public function simulate(Employee $employee, string $action, string $idempotencyKey, ?int $assignmentId = null): AttendanceEvent
     {
         $this->gateway->assertSimulationAllowed();
         if (! in_array($action, ['check_in', 'check_out'], true) || ! Str::isUuid($idempotencyKey)) {
             throw ValidationException::withMessages(['action' => 'Invalid attendance action or request identifier.']);
         }
 
-        return Employee::query()->getConnection()->transaction(function () use ($employee, $action, $idempotencyKey): AttendanceEvent {
+        return Employee::query()->getConnection()->transaction(function () use ($employee, $action, $idempotencyKey, $assignmentId): AttendanceEvent {
             $employee = Employee::query()->lockForUpdate()->findOrFail($employee->id);
             $prior = AttendanceEvent::query()->where('idempotency_key', $idempotencyKey)->first();
             if ($prior) {
-                if ($prior->employee_id !== $employee->id || $prior->action !== $action) {
+                if ($prior->employee_id !== $employee->id || $prior->action !== $action || ($assignmentId !== null && $prior->shift_assignment_id !== $assignmentId)) {
                     throw ValidationException::withMessages(['action' => 'Request identifier already used.']);
                 }
 
@@ -36,6 +36,9 @@ class AttendanceRecorder
             }
             $now = CarbonImmutable::now('UTC');
             $last = $employee->events()->orderByDesc('id')->first();
+            if ($last && $now->lessThan(CarbonImmutable::parse($last->occurred_at, 'UTC'))) {
+                throw ValidationException::withMessages(['action' => 'وقت الخادم يسبق آخر حدث؛ يلزم التحقق من الساعة قبل التسجيل.']);
+            }
             if ($employee->user !== null && ! $employee->user->is_active) {
                 throw ValidationException::withMessages(['employee' => 'Inactive employee account.']);
             }
@@ -44,6 +47,9 @@ class AttendanceRecorder
                     throw ValidationException::withMessages(['action' => 'Check-in is required before check-out.']);
                 }
                 $assignment = $last->assignment()->with('schedule')->firstOrFail();
+                if ($assignmentId !== null && $assignment->id !== $assignmentId) {
+                    throw ValidationException::withMessages(['action' => 'طلب الانصراف لا يطابق الوردية المفتوحة.']);
+                }
                 $date = $last->work_date->toDateString();
                 if ($now->lessThanOrEqualTo(CarbonImmutable::parse($last->occurred_at, 'UTC'))
                     || CarbonImmutable::parse($last->occurred_at, 'UTC')->diffInHours($now) > 24) {
@@ -55,12 +61,21 @@ class AttendanceRecorder
                 }
                 $assignment = null;
                 $date = null;
-                foreach ($employee->assignments()->with('schedule')->get() as $candidate) {
+                foreach ($employee->assignments()->with(['schedule', 'retirements'])->get() as $candidate) {
+                    if ($assignmentId !== null && $candidate->id !== $assignmentId) {
+                        continue;
+                    }
                     $localDate = $now->setTimezone($candidate->schedule->timezone)->toDateString();
                     foreach ([CarbonImmutable::parse($localDate)->subDay()->toDateString(), $localDate] as $candidateDate) {
-                        [$start, $end] = $this->calculator->window($candidate->schedule, $candidateDate);
+                        $employee->unsetRelation('attendanceHolidays');
+                        $row = $this->calculator->day($employee, $candidateDate, $now);
+                        $exception = $employee->scheduleExceptions->firstWhere('id', $row['schedule_exception_id']);
+                        $effectiveSchedule = $exception?->kind === 'work_schedule' ? $exception->schedule : $candidate->schedule;
+                        [$start, $end] = $this->calculator->window($effectiveSchedule, $candidateDate);
+                        $slot = collect($row['sessions'])->firstWhere('assignment_id', $candidate->id);
                         if ($candidate->covers($candidateDate) && $employee->employedOn($candidateDate)
-                            && in_array($start->isoWeekday(), array_map('intval', $candidate->schedule->working_days), true)
+                            && ($slot['active'] ?? false)
+                            && ! $employee->events()->where('shift_assignment_id', $candidate->id)->where('work_date', $candidateDate)->where('action', 'check_in')->exists()
                             && $now->greaterThanOrEqualTo($start->subHours(2)) && $now->lessThan($end)) {
                             $assignment = $candidate;
                             $date = $candidateDate;
@@ -72,7 +87,7 @@ class AttendanceRecorder
                     throw ValidationException::withMessages(['action' => 'No eligible assigned shift at the current server time.']);
                 }
             }
-            if ($employee->events()->where('work_date', $date)->where('action', $action)->exists()) {
+            if ($employee->events()->where('work_date', $date)->where('shift_assignment_id', $assignment->id)->where('action', $action)->exists()) {
                 throw ValidationException::withMessages(['action' => 'Attendance action already recorded for this shift.']);
             }
             $event = $employee->events()->create([

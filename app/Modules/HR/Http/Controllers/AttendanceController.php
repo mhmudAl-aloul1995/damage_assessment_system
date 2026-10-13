@@ -5,6 +5,7 @@ namespace App\Modules\HR\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\HR\Exports\AttendanceExport;
 use App\Modules\HR\Http\Requests\AttendanceReportRequest;
+use App\Modules\HR\Http\Requests\RetireShiftAssignmentRequest;
 use App\Modules\HR\Http\Requests\StoreEmployeeRequest;
 use App\Modules\HR\Http\Requests\StoreShiftAssignmentRequest;
 use App\Modules\HR\Http\Requests\StoreWorkScheduleRequest;
@@ -32,7 +33,7 @@ class AttendanceController extends Controller
             'rows' => $rows,
             'filters' => $filters,
             'dates' => $report->dates($filters),
-            'totals' => $rows->countBy('status'),
+            'totals' => $report->totals($request->user(), $filters),
         ]);
     }
 
@@ -43,7 +44,7 @@ class AttendanceController extends Controller
         return view('hr::setup', [
             'employees' => Employee::query()->orderBy('employee_number')->paginate(25, ['*'], 'employees_page'),
             'schedules' => WorkSchedule::query()->latest('id')->paginate(25, ['*'], 'schedules_page'),
-            'assignments' => ShiftAssignment::query()->with(['employee', 'schedule'])->latest('id')->paginate(25, ['*'], 'assignments_page'),
+            'assignments' => ShiftAssignment::query()->with(['employee', 'schedule', 'retirements'])->latest('id')->paginate(25, ['*'], 'assignments_page'),
         ]);
     }
 
@@ -66,6 +67,13 @@ class AttendanceController extends Controller
         $setup->assign($request->user(), $request->validated());
 
         return to_route('hr.attendance.setup')->with('success', 'تم إسناد الوردية.');
+    }
+
+    public function retireAssignment(RetireShiftAssignmentRequest $request, ShiftAssignment $assignment, AttendanceSetup $setup): RedirectResponse
+    {
+        $setup->retire($request->user(), $assignment, $request->validated());
+
+        return to_route('hr.attendance.setup')->with('success', 'تم تسجيل نهاية التكليف مع حفظ تاريخه الأصلي.');
     }
 
     public function export(AttendanceReportRequest $request, AttendanceReport $report): BinaryFileResponse

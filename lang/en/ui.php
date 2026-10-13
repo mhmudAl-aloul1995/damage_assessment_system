@@ -633,6 +633,7 @@ return [
         'delete_confirm' => 'Are you sure you want to delete :name?',
     ],
     'permission_groups' => [
+        'hr' => 'Human resources',
         'attendance' => 'Attendance',
         'audit' => 'Audit',
         'building_survey_return_requests' => 'Building survey return requests',

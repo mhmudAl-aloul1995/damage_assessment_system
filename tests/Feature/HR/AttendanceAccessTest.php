@@ -175,7 +175,7 @@ it('exposes no ordinary check-in or check-out endpoint', function (): void {
 it('seeds HR grants idempotently without assigning them to existing roles', function (): void {
     $role = Role::findOrCreate('Database Officer', 'web');
     $this->seed(HrPermissionsSeeder::class);
-    expect(Spatie\Permission\Models\Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(4)
+    expect(Spatie\Permission\Models\Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(11)
         ->and($role->fresh()->permissions)->toHaveCount(0);
 });
 

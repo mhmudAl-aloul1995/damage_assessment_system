@@ -16,6 +16,7 @@ class PermissionCatalog
         'audit' => ['audit.'],
         'committee' => ['committee-', 'view committee', 'create committee', 'edit committee', 'sign committee', 'manage committee', 'sync committee'],
         'attendance' => ['attendance.'],
+        'hr' => ['hr.'],
         'exports' => ['exports.'],
         'inf_audit' => ['inf-audit.'],
         'system' => ['system.', 'system-', 'login-logs.', 'user-activity-logs.', 'arcgis.'],

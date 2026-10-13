@@ -17,8 +17,11 @@ it('creates a sqlite database backup file', function () {
     config()->set('database.connections.sqlite.database', $databasePath);
     config()->set('database_backup.connection', 'sqlite');
     config()->set('database_backup.path', 'app/testing-backups');
+    foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
+        config()->set('database_backup.'.$key, null);
+    }
 
-    Artisan::call('app:backup-database');
+    expect(Artisan::call('app:backup-database'))->toBe(0);
 
     $files = File::files($backupPath);
 
@@ -29,7 +32,7 @@ it('creates a sqlite database backup file', function () {
     File::delete($databasePath);
 });
 
-it('uses mariadb-dump as the default dump binary for mysql connections', function () {
+it('uses the driver specific default dump binary', function () {
     config()->set('database_backup.mariadb_dump_binary', null);
     config()->set('database_backup.mysqldump_binary', null);
 
@@ -37,7 +40,7 @@ it('uses mariadb-dump as the default dump binary for mysql connections', functio
     $method = new ReflectionMethod($command, 'resolveMySqlDumpBinary');
     $method->setAccessible(true);
 
-    expect($method->invoke($command, 'mysql'))->toBe('mariadb-dump');
+    expect($method->invoke($command, 'mysql'))->toBe('mysqldump');
     expect($method->invoke($command, 'mariadb'))->toBe('mariadb-dump');
 });
 
@@ -67,11 +70,17 @@ it('returns a failure code when the dump process fails', function () {
         'username' => 'root',
         'password' => 'secret',
     ]);
+    foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
+        config()->set('database_backup.'.$key, null);
+    }
 
     $exitCode = Artisan::call('app:backup-database');
 
     expect($exitCode)->toBe(1);
     expect(Artisan::output())->toContain('dump failed');
+    expect(Artisan::output())->not->toContain('--password=secret');
+    Process::assertRan(fn ($process): bool => ($process->environment['MYSQL_PWD'] ?? null) === 'secret'
+        && ! collect($process->command)->contains(fn (string $argument): bool => str_starts_with($argument, '--password=')));
 });
 
 it('registers the database backup command in the scheduler', function () {

@@ -2,7 +2,9 @@
 
 namespace App\Modules\HR\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ShiftAssignment extends AppendOnlyModel
 {
@@ -12,7 +14,7 @@ class ShiftAssignment extends AppendOnlyModel
 
     protected function casts(): array
     {
-        return ['starts_on' => 'immutable_date', 'ends_on' => 'immutable_date'];
+        return ['starts_on' => \App\Modules\HR\Models\Casts\DateOnly::class, 'ends_on' => \App\Modules\HR\Models\Casts\DateOnly::class];
     }
 
     public function employee(): BelongsTo
@@ -27,7 +29,19 @@ class ShiftAssignment extends AppendOnlyModel
 
     public function covers(string $date): bool
     {
+        $end = $this->effectiveEndsOn();
+
         return $date >= $this->starts_on->toDateString()
-            && ($this->ends_on === null || $date <= $this->ends_on->toDateString());
+            && ($end === null || $date <= $end->toDateString());
+    }
+
+    public function retirements(): HasMany
+    {
+        return $this->hasMany(AssignmentRetirement::class, 'shift_assignment_id');
+    }
+
+    public function effectiveEndsOn(): ?CarbonImmutable
+    {
+        return $this->retirements->sortByDesc('id')->first()?->ends_on ?? $this->ends_on;
     }
 }

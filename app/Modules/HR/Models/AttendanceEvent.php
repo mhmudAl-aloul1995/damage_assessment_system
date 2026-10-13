@@ -14,7 +14,7 @@ class AttendanceEvent extends AppendOnlyModel
 
     protected function casts(): array
     {
-        return ['employee_id' => 'integer', 'shift_assignment_id' => 'integer', 'work_date' => 'immutable_date'];
+        return ['employee_id' => 'integer', 'shift_assignment_id' => 'integer', 'work_date' => \App\Modules\HR\Models\Casts\DateOnly::class];
     }
 
     public function employee(): BelongsTo

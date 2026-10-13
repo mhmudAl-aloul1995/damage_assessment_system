@@ -17,6 +17,7 @@ it('groups permissions on the role management page', function (): void {
     Permission::findOrCreate('cso-surveys.view', 'web');
     Permission::findOrCreate('reports.export', 'web');
     Permission::findOrCreate('audit.assign', 'web');
+    Permission::findOrCreate('hr.attendance.view', 'web');
 
     Role::findOrCreate('Sample Role', 'web');
     $user->givePermissionTo('roles.view');
@@ -28,8 +29,12 @@ it('groups permissions on the role management page', function (): void {
         ->assertSee(__('ui.permission_groups.cso'), false)
         ->assertSee(__('ui.permission_groups.reports'), false)
         ->assertSee(__('ui.permission_groups.audit'), false)
+        ->assertSee(__('ui.permission_groups.hr'), false)
         ->assertSee('users.view', false)
         ->assertSee('cso-surveys.view', false)
         ->assertSee('reports.export', false)
-        ->assertSee('audit.assign', false);
+        ->assertSee('audit.assign', false)
+        ->assertSee('hr.attendance.view', false);
+    expect(app(App\Support\Access\PermissionCatalog::class)->groupKey('hr.attendance.view'))->toBe('hr')
+        ->and(app(App\Support\Access\PermissionCatalog::class)->groupKey('attendance.view'))->toBe('attendance');
 });

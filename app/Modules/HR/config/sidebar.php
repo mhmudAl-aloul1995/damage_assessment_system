@@ -7,6 +7,6 @@ return [[
     'url' => 'hr/attendance',
     'pattern' => 'hr*',
     'roles' => ['Database Officer'],
-    'permissions' => ['hr.attendance.view', 'hr.attendance.view-own'],
+    'permissions' => ['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.view-team'],
     'active_patterns' => ['hr*'],
 ]];

@@ -30,7 +30,7 @@ class BackupDatabase extends Command
 
         $connection = config("database.connections.{$connectionName}");
 
-        if (!is_array($connection)) {
+        if (! is_array($connection)) {
             $log->update([
                 'status' => 'failed',
                 'finished_at' => now(),
@@ -57,7 +57,6 @@ class BackupDatabase extends Command
                 'pgsql' => $this->backupPostgres($connection, $connectionName, $backupDirectory, $timestamp),
                 default => throw new \RuntimeException("Database driver [{$driver}] is not supported for backups."),
             };
-
 
             $durationSeconds = max(1, now()->diffInSeconds($startedAt));
 
@@ -102,15 +101,15 @@ class BackupDatabase extends Command
     {
         $databasePath = $connection['database'] ?? null;
 
-        if (!$databasePath) {
+        if (! $databasePath) {
             throw new \RuntimeException("SQLite database path is not configured for [{$connectionName}].");
         }
 
-        if (!File::exists($databasePath)) {
+        if (! File::exists($databasePath)) {
             throw new \RuntimeException("SQLite database file was not found at [{$databasePath}].");
         }
 
-        $backupPath = $backupDirectory . DIRECTORY_SEPARATOR . "{$connectionName}_{$timestamp}.sqlite";
+        $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sqlite";
         File::copy($databasePath, $backupPath);
 
         return $backupPath;
@@ -120,25 +119,26 @@ class BackupDatabase extends Command
     {
         $dumpBinary = $this->resolveMySqlDumpBinary($driver);
 
-        $backupPath = $backupDirectory . DIRECTORY_SEPARATOR . "{$connectionName}_{$timestamp}.sql";
+        $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sql";
 
         $arguments = [
             $dumpBinary,
-            '--host=' . ($connection['host'] ?? '127.0.0.1'),
-            '--port=' . ($connection['port'] ?? '3306'),
-            '--user=' . ($connection['username'] ?? 'root'),
+            '--host='.($connection['host'] ?? '127.0.0.1'),
+            '--port='.($connection['port'] ?? '3306'),
+            '--user='.($connection['username'] ?? 'root'),
             '--skip-comments',
             '--single-transaction',
             '--quick',
-            '--result-file=' . $backupPath,
+            '--result-file='.$backupPath,
             $connection['database'] ?? '',
         ];
 
-        if (!empty($connection['password'])) {
-            $arguments[] = '--password=' . $connection['password'];
+        $environment = [];
+        if (! empty($connection['password'])) {
+            $environment['MYSQL_PWD'] = $connection['password'];
         }
 
-        $result = Process::timeout(300)->run($arguments);
+        $result = Process::timeout(300)->env($environment)->run($arguments);
         $result->throw();
 
         return $backupPath;
@@ -146,14 +146,14 @@ class BackupDatabase extends Command
 
     private function resolveMySqlDumpBinary(string $driver): string
     {
-        $mariaDumpBinary = env('DB_BACKUP_MARIADB_DUMP_BINARY');
-        $mysqlDumpBinary = env('DB_BACKUP_MYSQLDUMP_BINARY');
+        $mariaDumpBinary = config('database_backup.mariadb_dump_binary');
+        $mysqlDumpBinary = config('database_backup.mysqldump_binary');
 
-        if (!empty($mariaDumpBinary)) {
+        if (! empty($mariaDumpBinary)) {
             return trim($mariaDumpBinary);
         }
 
-        if (!empty($mysqlDumpBinary)) {
+        if (! empty($mysqlDumpBinary)) {
             return trim($mysqlDumpBinary);
         }
 
@@ -164,21 +164,21 @@ class BackupDatabase extends Command
 
     private function backupPostgres(array $connection, string $connectionName, string $backupDirectory, string $timestamp): string
     {
-        $backupPath = $backupDirectory . DIRECTORY_SEPARATOR . "{$connectionName}_{$timestamp}.sql";
+        $backupPath = $backupDirectory.DIRECTORY_SEPARATOR."{$connectionName}_{$timestamp}.sql";
         $dumpBinary = $this->resolveBinaryPath('pg_dump_binary') ?? 'pg_dump';
 
         $arguments = [
             $dumpBinary,
-            '--host=' . ($connection['host'] ?? '127.0.0.1'),
-            '--port=' . ($connection['port'] ?? '5432'),
-            '--username=' . ($connection['username'] ?? 'postgres'),
-            '--file=' . $backupPath,
+            '--host='.($connection['host'] ?? '127.0.0.1'),
+            '--port='.($connection['port'] ?? '5432'),
+            '--username='.($connection['username'] ?? 'postgres'),
+            '--file='.$backupPath,
             $connection['database'] ?? '',
         ];
 
         $environment = [];
 
-        if (!empty($connection['password'])) {
+        if (! empty($connection['password'])) {
             $environment['PGPASSWORD'] = $connection['password'];
         }
 
@@ -195,7 +195,7 @@ class BackupDatabase extends Command
     {
         $binary = config("database_backup.{$configKey}");
 
-        if (!is_string($binary) || trim($binary) === '') {
+        if (! is_string($binary) || trim($binary) === '') {
             return null;
         }
 

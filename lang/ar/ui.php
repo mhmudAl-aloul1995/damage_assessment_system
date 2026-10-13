@@ -633,6 +633,7 @@ return [
         'delete_confirm' => 'هل أنت متأكد من حذف :name؟',
     ],
     'permission_groups' => [
+        'hr' => 'الموارد البشرية',
         'attendance' => 'الحضور',
         'audit' => 'التدقيق',
         'building_survey_return_requests' => 'طلبات إرجاع مسح المباني',

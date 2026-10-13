@@ -10,7 +10,7 @@ class HrPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.setup', 'hr.attendance.export'] as $permission) {
+        foreach (['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.view-team', 'hr.attendance.setup', 'hr.attendance.export', 'hr.attendance.correct', 'hr.attendance.correct-own', 'hr.attendance.approve', 'hr.attendance.exceptions.manage', 'hr.attendance.reconcile', 'hr.attendance.audit'] as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();

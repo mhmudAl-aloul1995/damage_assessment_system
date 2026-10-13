@@ -50,10 +50,10 @@ it('allows database officers to set up employee identities schedules and assignm
 });
 
 it('limits the role allowance to the current attendance abilities', function (): void {
-    foreach (['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.setup', 'hr.attendance.export'] as $ability) {
+    foreach (['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.setup', 'hr.attendance.export', 'hr.attendance.correct', 'hr.attendance.approve', 'hr.attendance.exceptions.manage', 'hr.attendance.reconcile', 'hr.attendance.audit'] as $ability) {
         expect($this->officer->can($ability))->toBeTrue();
     }
-    foreach (['hr.payroll.view', 'hr.devices.approve', 'hr.attendance.approve', 'users.view'] as $ability) {
+    foreach (['hr.payroll.view', 'hr.devices.approve', 'users.view'] as $ability) {
         expect($this->officer->can($ability))->toBeFalse();
     }
 });
