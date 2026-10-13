@@ -14,6 +14,7 @@
             <div class="row g-5"><div class="col-md-6"><label for="corrected-in" class="form-label">وقت الحضور (اختياري)</label><input id="corrected-in" name="check_in" type="datetime-local" class="form-control" value="{{ old('check_in', $row['check_in'] ? str_replace(' ', 'T', $row['check_in']) : '') }}"></div><div class="col-md-6"><label for="corrected-out" class="form-label">وقت الانصراف (اختياري)</label><input id="corrected-out" name="check_out" type="datetime-local" class="form-control" value="{{ old('check_out', $row['check_out'] ? str_replace(' ', 'T', $row['check_out']) : '') }}"></div></div>
         @endif
         <p class="text-muted">أدخل الوقتين لتصحيح ساعات العمل، أو اتركهما فارغين إذا كان التصحيح للحالة اليومية فقط. عند اختيار الغياب أو العذر يجب ترك الأوقات فارغة.</p>
+        <label class="form-check"><input class="form-check-input" type="checkbox" name="close_open_session" value="1"><span class="form-check-label">طلب تسوية أي جلسة مفتوحة لهذا اليوم حتى يمكن تسجيل حضور لاحق. عند عدم معرفة وقت الانصراف تبقى الساعات غير معلومة، وتحتاج التسوية إلى اعتماد المراجع.</span></label>
         <div><label for="correction-reason" class="form-label">سبب التصحيح</label><textarea id="correction-reason" name="reason" class="form-control" minlength="5" maxlength="2000" required>{{ old('reason') }}</textarea></div>
         <button type="submit" class="btn btn-primary align-self-start">تقديم للمراجعة</button>
     </form></div>

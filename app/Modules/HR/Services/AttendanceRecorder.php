@@ -5,6 +5,7 @@ namespace App\Modules\HR\Services;
 use App\Modules\HR\Models\AttendanceEvent;
 use App\Modules\HR\Models\AuditLog;
 use App\Modules\HR\Models\Employee;
+use App\Modules\HR\Models\AttendanceSessionClosure;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -50,6 +51,7 @@ class AttendanceRecorder
             }
             $now = CarbonImmutable::now('UTC');
             $last = $employee->events()->orderByDesc('id')->first();
+            $openSession = $last?->action === 'check_in' && ! AttendanceSessionClosure::query()->where('check_in_event_id', $last->id)->exists();
             if ($last && $now->lessThan(CarbonImmutable::parse($last->occurred_at, 'UTC'))) {
                 throw ValidationException::withMessages(['action' => 'وقت الخادم يسبق آخر حدث؛ يلزم التحقق من الساعة قبل التسجيل.']);
             }
@@ -57,7 +59,7 @@ class AttendanceRecorder
                 throw ValidationException::withMessages(['employee' => 'Inactive employee account.']);
             }
             if ($action === 'check_out') {
-                if (! $last || $last->action !== 'check_in') {
+                if (! $last || ! $openSession) {
                     throw ValidationException::withMessages(['action' => 'Check-in is required before check-out.']);
                 }
                 $assignment = $last->assignment()->with('schedule')->firstOrFail();
@@ -70,7 +72,7 @@ class AttendanceRecorder
                     throw ValidationException::withMessages(['action' => 'Invalid duration; an attendance correction is required.']);
                 }
             } else {
-                if ($last?->action === 'check_in') {
+                if ($openSession) {
                     throw ValidationException::withMessages(['action' => 'An open attendance session already exists.']);
                 }
                 $assignment = null;

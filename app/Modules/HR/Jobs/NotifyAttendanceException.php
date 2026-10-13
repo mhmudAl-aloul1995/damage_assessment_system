@@ -8,6 +8,7 @@ use App\Modules\HR\Models\AttendanceException;
 use App\Modules\HR\Models\Employee;
 use App\Modules\HR\Notifications\AttendanceExceptionNotification;
 use App\Modules\HR\Policies\EmployeePolicy;
+use App\Modules\HR\Services\EmployeeOrganizationScope;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -32,7 +33,8 @@ class NotifyAttendanceException implements ShouldQueue
             if ($exception->status !== 'open') {
                 return;
             }
-            $recipients = array_unique(array_filter([$employee->user_id, $employee->supervisor_user_id]));
+            app(EmployeeOrganizationScope::class)->forget();
+            $recipients = array_unique(array_filter([$employee->user_id, app(EmployeeOrganizationScope::class)->supervisorId($employee)]));
             foreach (User::query()->whereKey($recipients)->where('is_active', true)->get() as $recipient) {
                 if (! $policy->view($recipient, $employee)) {
                     continue;

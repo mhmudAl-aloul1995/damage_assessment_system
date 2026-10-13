@@ -19,6 +19,7 @@ class StoreAttendanceAdjustmentRequest extends FormRequest
     {
         return ['work_date' => ['required', 'date_format:Y-m-d'],
             'requested_status' => ['required', Rule::in(['present', 'absent', 'excused'])],
+            'close_open_session' => ['sometimes', 'boolean'],
             'check_in' => ['nullable', 'date_format:Y-m-d\\TH:i'],
             'check_out' => ['nullable', 'date_format:Y-m-d\\TH:i', 'required_with:check_in', 'after:check_in'],
             'sessions' => ['nullable', 'array', 'max:20'],

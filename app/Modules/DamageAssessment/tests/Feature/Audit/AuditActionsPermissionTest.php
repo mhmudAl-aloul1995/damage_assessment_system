@@ -4,6 +4,8 @@ use App\Models\Building;
 use App\Models\User;
 use App\services\ArcgisAuditedRestoreService;
 use App\services\ArcgisService;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
 use Spatie\Permission\Models\Permission;
@@ -134,6 +136,81 @@ it('lists the audit actions permission in user and role management', function ()
             ->assertSee(__('ui.permissions.audit_actions'), false);
     }
 });
+
+it('completes the survey using the configured ArcGIS building layer', function (string $layerUrl): void {
+    config(['services.arcgis.buildings_url' => $layerUrl]);
+    Cache::put('arcgis_token', 'test-arcgis-token');
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://example.com/FeatureServer/7/updateFeatures' => Http::response([
+            'updateResults' => [['objectId' => 7901, 'success' => true]],
+        ]),
+    ]);
+
+    $user = User::factory()->create();
+    $user->givePermissionTo('audit.actions');
+
+    $this->actingAs($user)
+        ->postJson(route('audit.building.field-status.completed', $this->building->globalid))
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('field_status', 'COMPLETED');
+
+    expect($this->building->refresh()->field_status)->toBe('COMPLETED');
+
+    Http::assertSent(function (Request $request): bool {
+        return $request->method() === 'POST'
+            && $request->url() === 'https://example.com/FeatureServer/7/updateFeatures'
+            && $request['token'] === 'test-arcgis-token'
+            && $request['f'] === 'json'
+            && json_decode($request['features'], true) === [
+                ['attributes' => ['objectid' => 7901, 'field_status' => 'COMPLETED']],
+            ];
+    });
+    Http::assertSentCount(1);
+})->with([
+    'https://example.com/FeatureServer/7',
+    'https://example.com/FeatureServer/7/',
+]);
+
+it('keeps the survey incomplete and explains ArcGIS update failures', function (array|string $body, int $status, string $expectedMessage): void {
+    config(['services.arcgis.buildings_url' => 'https://example.com/FeatureServer/7']);
+    Cache::put('arcgis_token', 'test-arcgis-token');
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://example.com/FeatureServer/7/updateFeatures' => Http::response($body, $status),
+    ]);
+
+    $user = User::factory()->create();
+    $user->givePermissionTo('audit.actions');
+
+    $this->actingAs($user)
+        ->postJson(route('audit.building.field-status.completed', $this->building->globalid))
+        ->assertStatus(502)
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('message', __($expectedMessage));
+
+    expect($this->building->refresh()->field_status)->toBe('Not_Completed');
+    Http::assertSentCount(1);
+})->with([
+    'unsupported update with blank message' => [
+        ['error' => ['code' => 400, 'message' => '', 'details' => ['This operation is not supported.']]],
+        200,
+        'ui.audit.arcgis_update_not_supported',
+    ],
+    'provider error details' => [
+        ['error' => ['code' => 403, 'message' => '', 'details' => ['Update access denied.']]],
+        403,
+        'Update access denied.',
+    ],
+    'individual feature failure' => [
+        ['updateResults' => [['success' => false, 'error' => ['description' => 'Invalid field status.']]]],
+        200,
+        'Invalid field status.',
+    ],
+    'non-json provider error' => ['<html>Bad gateway</html>', 502, 'ui.audit.field_status_update_failed'],
+    'missing update result' => [[], 200, 'ui.audit.field_status_update_failed'],
+]);
 
 it('grants and revokes the actions menu through user management', function (): void {
     $manager = User::factory()->create();

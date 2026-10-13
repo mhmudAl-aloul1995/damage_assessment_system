@@ -307,12 +307,13 @@ class ArcgisService
     public function updateBuildingFieldStatus(int|string $objectId, string $status = 'Not_Completed'): array
     {
         $token = $this->getToken();
-        $layerId = $this->getLayerId(\App\Models\Building::class);
+        $layerUrl = $this->normalizeLayerUrl((string) config('services.arcgis.buildings_url'));
 
         $response = Http::asForm()
+            ->timeout(30)
             ->withoutVerifying()
             ->acceptJson()
-            ->post("{$this->baseUrl}/{$layerId}/updateFeatures", [
+            ->post($layerUrl.'/updateFeatures', [
                 'f' => 'json',
                 'token' => $token,
                 'features' => json_encode([
@@ -327,11 +328,23 @@ class ArcgisService
 
         $body = $response->json();
         $success = $response->successful() && (bool) data_get($body, 'updateResults.0.success', false);
+        $error = data_get($body, 'error', data_get($body, 'updateResults.0.error', []));
+        $errorMessage = collect([
+            data_get($error, 'message'),
+            data_get($error, 'description'),
+            ...((array) data_get($error, 'details', [])),
+        ])->filter(fn (mixed $message): bool => is_string($message) && trim($message) !== '')
+            ->unique()
+            ->implode(' ');
+
+        if (Str::contains($errorMessage, 'This operation is not supported', ignoreCase: true)) {
+            $errorMessage = __('ui.audit.arcgis_update_not_supported');
+        }
 
         return [
             'success' => $success,
             'status' => $success ? 'synced' : 'failed',
-            'message' => $response->body(),
+            'message' => $success ? $response->body() : ($errorMessage ?: __('ui.audit.field_status_update_failed')),
         ];
     }
 

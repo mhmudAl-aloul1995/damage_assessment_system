@@ -682,6 +682,7 @@ return [
         'all_statuses' => 'All statuses',
         'field_status_completed' => 'Survey status was changed to COMPLETED.',
         'field_status_update_failed' => 'Failed to update survey status.',
+        'arcgis_update_not_supported' => 'ArcGIS does not allow updating this layer. Ask the layer administrator to enable updates or configure the correct editable layer. The survey status was not changed.',
         'missing_arcgis_objectid' => 'This building does not have an ArcGIS Object ID.',
         'from_creation_date' => 'From creation date',
         'to_creation_date' => 'To creation date',

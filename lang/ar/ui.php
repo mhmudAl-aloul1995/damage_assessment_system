@@ -682,6 +682,7 @@ return [
         'all_statuses' => 'كل الحالات',
         'field_status_completed' => 'تم تحويل حالة الاستبيان إلى COMPLETED.',
         'field_status_update_failed' => 'فشل تحديث حالة الاستبيان.',
+        'arcgis_update_not_supported' => 'لا تسمح طبقة ArcGIS بتحديث البيانات. يرجى مراجعة مسؤول الطبقة لتفعيل التعديل أو ضبط عنوان الطبقة الصحيحة القابلة للتعديل. لم يتم تغيير حالة الاستبيان.',
         'missing_arcgis_objectid' => 'لا يوجد رقم Object ID لهذا المبنى في ArcGIS.',
         'from_creation_date' => 'من تاريخ الإنشاء',
         'to_creation_date' => 'إلى تاريخ الإنشاء',

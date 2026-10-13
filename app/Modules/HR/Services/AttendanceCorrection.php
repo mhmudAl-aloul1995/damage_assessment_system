@@ -7,6 +7,7 @@ use App\Modules\HR\Models\AdjustmentDecision;
 use App\Modules\HR\Models\AttendanceAdjustment;
 use App\Modules\HR\Models\AuditLog;
 use App\Modules\HR\Models\Employee;
+use App\Modules\HR\Models\AttendanceSessionClosure;
 use App\Modules\HR\Notifications\AttendanceDecisionNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Gate;
@@ -24,6 +25,7 @@ class AttendanceCorrection
 
         return Employee::query()->getConnection()->transaction(function () use ($actor, $employee, $data): AttendanceAdjustment {
             $employee = Employee::query()->lockForUpdate()->findOrFail($employee->id);
+            app(EmployeeOrganizationScope::class)->forget();
             Gate::forUser($actor)->authorize('requestCorrection', $employee);
             $sessions = $this->sessions($employee, $data['work_date'], $data['sessions'] ?? []);
             $prior = AttendanceAdjustment::query()->where('idempotency_key', $data['idempotency_key'])->first();
@@ -31,6 +33,7 @@ class AttendanceCorrection
                 if ($prior->requested_by !== $actor->id || $prior->employee_id !== $employee->id
                     || $prior->work_date->toDateString() !== $data['work_date'] || $prior->requested_status !== $data['requested_status']
                     || $prior->reason !== $data['reason'] || $prior->basis_fingerprint !== $data['basis_fingerprint'] || ($prior->sessions ?? []) !== $sessions
+                    || $prior->close_open_session !== (bool) ($data['close_open_session'] ?? false)
                     || $prior->check_in_at !== (empty($data['check_in']) ? null : CarbonImmutable::parse($data['check_in'], $prior->timezone)->utc()->format('Y-m-d H:i:s'))
                     || $prior->check_out_at !== (empty($data['check_out']) ? null : CarbonImmutable::parse($data['check_out'], $prior->timezone)->utc()->format('Y-m-d H:i:s'))) {
                     throw ValidationException::withMessages(['idempotency_key' => 'معرّف الطلب مستخدم لطلب مختلف.']);
@@ -66,6 +69,7 @@ class AttendanceCorrection
                 'timezone' => $row['timezone'], 'reason' => $data['reason'], 'basis_fingerprint' => $row['source_fingerprint'],
                 'idempotency_key' => $data['idempotency_key'], 'requested_by' => $actor->id,
                 'sessions' => $sessions,
+                'close_open_session' => (bool) ($data['close_open_session'] ?? false),
             ]);
             $this->audit($actor, 'attendance.correction_requested', $adjustment->id);
 
@@ -81,6 +85,7 @@ class AttendanceCorrection
 
         return Employee::query()->getConnection()->transaction(function () use ($actor, $adjustment, $data): AdjustmentDecision {
             $employee = Employee::query()->lockForUpdate()->findOrFail($adjustment->employee_id);
+            app(EmployeeOrganizationScope::class)->forget();
             $adjustment = AttendanceAdjustment::query()->with('employee')->lockForUpdate()->findOrFail($adjustment->id);
             Gate::forUser($actor)->authorize('decide', $adjustment);
             $prior = $adjustment->decision;
@@ -102,6 +107,9 @@ class AttendanceCorrection
                 'reviewed_by' => $actor->id, 'note' => $data['note'], 'reviewed_at' => now('UTC')->format('Y-m-d H:i:s'),
             ]);
             $this->audit($actor, 'attendance.correction_'.$data['decision'], $adjustment->id);
+            if ($data['decision'] === 'approved') {
+                $this->closeSessions($actor, $employee, $adjustment, $data['note']);
+            }
             app(AttendanceReconciliation::class)->day($employee, $adjustment->work_date->toDateString(), $actor->id);
             $adjustment->requester?->notify(new AttendanceDecisionNotification($adjustment->id, $data['decision']));
 
@@ -147,5 +155,24 @@ class AttendanceCorrection
     private function audit(User $actor, string $action, int $id): void
     {
         AuditLog::query()->create(['actor_id' => $actor->id, 'action' => $action, 'subject_type' => 'hr_attendance_adjustments', 'subject_id' => $id, 'created_at' => now('UTC')->format('Y-m-d H:i:s')]);
+    }
+
+    private function closeSessions(User $actor, Employee $employee, AttendanceAdjustment $adjustment, string $note): void
+    {
+        $checkIns = $employee->events()->where('work_date', $adjustment->work_date->toDateString())->where('action', 'check_in')->get();
+        foreach ($checkIns as $event) {
+            $interval = collect($adjustment->sessions ?? [])->firstWhere('assignment_id', $event->shift_assignment_id);
+            $completed = $adjustment->requested_status === 'present' && ($interval !== null || $adjustment->check_out_at !== null);
+            if ((! $completed && ! $adjustment->close_open_session)
+                || $employee->events()->where('work_date', $event->work_date->toDateString())->where('shift_assignment_id', $event->shift_assignment_id)->where('action', 'check_out')->exists()
+                || AttendanceSessionClosure::query()->where('check_in_event_id', $event->id)->exists()) {
+                continue;
+            }
+            $closure = AttendanceSessionClosure::query()->create([
+                'check_in_event_id' => $event->id, 'adjustment_id' => $adjustment->id, 'closed_by' => $actor->id,
+                'note' => $note, 'resolved_at' => now('UTC')->format('Y-m-d H:i:s'),
+            ]);
+            AuditLog::query()->create(['actor_id' => $actor->id, 'action' => 'attendance.session_resolved', 'subject_type' => 'hr_attendance_session_closures', 'subject_id' => $closure->id, 'created_at' => now('UTC')->format('Y-m-d H:i:s')]);
+        }
     }
 }

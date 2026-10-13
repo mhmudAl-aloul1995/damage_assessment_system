@@ -16,6 +16,10 @@ class HrPermissionsSeeder extends Seeder
         foreach (['hr.attendance.capture', 'hr.devices.register', 'hr.devices.view', 'hr.devices.approve', 'hr.devices.revoke'] as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
+        foreach (['hr.employees.view', 'hr.employees.view-own', 'hr.employees.view-team', 'hr.employees.manage', 'hr.employees.sensitive',
+            'hr.organization.manage', 'hr.documents.view', 'hr.documents.upload', 'hr.documents.sensitive', 'hr.documents.withdraw'] as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

@@ -7,12 +7,19 @@ use App\Modules\HR\Models\AttendanceAdjustment;
 use App\Modules\HR\Models\Employee;
 use App\Modules\HR\Policies\AttendanceAdjustmentPolicy;
 use App\Modules\HR\Policies\EmployeePolicy;
+use App\Modules\HR\Services\EmployeeOrganizationScope;
 use App\Support\Modules\ModuleServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
 class HRServiceProvider extends ModuleServiceProvider
 {
     protected string $module = 'hr';
+
+    public function register(): void
+    {
+        parent::register();
+        $this->app->scoped(EmployeeOrganizationScope::class);
+    }
 
     public function modulePath(string $path = ''): string
     {
@@ -35,6 +42,9 @@ class HRServiceProvider extends ModuleServiceProvider
                 'hr.attendance.exceptions.manage',
                 'hr.attendance.reconcile',
                 'hr.attendance.audit',
+                'hr.employees.view',
+                'hr.employees.manage',
+                'hr.organization.manage',
             ], true) && $user->hasRole('Database Officer')) {
                 return true;
             }
