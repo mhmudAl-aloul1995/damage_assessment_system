@@ -158,7 +158,161 @@
 		}
 
 		#engineerChangeLogModal .modal-dialog {
-			max-width: min(1800px, 96vw);
+			max-width: min(1500px, 96vw);
+		}
+
+		#engineerChangeLogModal .modal-content {
+			border-radius: 18px;
+		}
+
+		.engineer-change-filters {
+			padding: 20px;
+			margin-bottom: 24px;
+			border: 1px solid var(--bs-gray-200);
+			border-radius: 14px;
+			background: var(--bs-gray-100);
+		}
+
+		.engineer-change-filter-heading,
+		.engineer-change-filter-footer {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		.engineer-change-filter-heading {
+			margin-bottom: 18px;
+		}
+
+		.engineer-change-filter-grid {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(280px, 1.4fr);
+			gap: 16px;
+		}
+
+		.engineer-change-filter-grid > div {
+			min-width: 0;
+		}
+
+		.engineer-change-filters .form-label {
+			font-size: 13px;
+			font-weight: 600;
+			color: var(--bs-gray-700);
+		}
+
+		.engineer-change-filters .form-control,
+		.engineer-change-filters .form-select,
+		.engineer-change-filters .select2-selection {
+			min-height: 44px;
+			border: 1px solid var(--bs-gray-300) !important;
+			border-radius: 9px !important;
+			background-color: var(--bs-body-bg) !important;
+		}
+
+		.engineer-change-filters .form-control:focus,
+		.engineer-change-filters .select2-container--focus .select2-selection {
+			border-color: var(--bs-primary) !important;
+			box-shadow: 0 0 0 3px var(--bs-primary-light);
+		}
+
+		.engineer-change-date-control {
+			position: relative;
+		}
+
+		.engineer-change-date-control .flatpickr-wrapper {
+			display: block;
+			width: 100%;
+		}
+
+		.engineer-change-date-control .flatpickr-calendar.static {
+			top: calc(100% + 8px);
+			inset-inline-start: 0;
+			inset-inline-end: auto;
+			z-index: 1060;
+		}
+
+		.engineer-change-date-control .flatpickr-calendar::before,
+		.engineer-change-date-control .flatpickr-calendar::after {
+			display: none;
+		}
+
+		#engineer_change_log_date_range {
+			padding-inline: 40px 38px;
+			cursor: pointer;
+			font-size: 13px;
+		}
+
+		.engineer-change-date-icon,
+		#engineer_change_log_clear_dates {
+			position: absolute;
+			top: 0;
+			height: 44px;
+			width: 38px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 1;
+		}
+
+		.engineer-change-date-icon {
+			inset-inline-start: 0;
+			color: var(--bs-primary);
+			pointer-events: none;
+		}
+
+		#engineer_change_log_clear_dates {
+			inset-inline-end: 0;
+			border: 0;
+			background: transparent;
+			color: var(--bs-gray-600);
+			border-radius: 9px;
+			font-size: 22px;
+		}
+
+		#engineer_change_log_clear_dates:disabled {
+			visibility: hidden;
+		}
+
+		.engineer-change-filter-footer {
+			margin-top: 18px;
+			padding-top: 18px;
+			border-top: 1px solid var(--bs-gray-200);
+		}
+
+		.engineer-change-search {
+			flex: 1 1 260px;
+			max-width: 440px;
+		}
+
+		.engineer-change-filter-actions {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+
+		@media (max-width: 1199.98px) {
+			.engineer-change-filter-grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+		}
+
+		@media (max-width: 575.98px) {
+			#engineerChangeLogModal .modal-body,
+			#engineerChangeLogModal .modal-header {
+				padding: 16px;
+			}
+			.engineer-change-filters {
+				padding: 12px;
+			}
+			.engineer-change-filter-grid {
+				grid-template-columns: minmax(0, 1fr);
+			}
+			.engineer-change-filter-actions {
+				width: 100%;
+				justify-content: space-between;
+			}
 		}
 
 		.engineer-change-log-value {
@@ -1404,48 +1558,58 @@
 				</div>
 
 				<div class="modal-body">
-					<div class="row g-4 mb-6">
-						<div class="col-lg-3 col-md-6">
-							<label class="form-label fw-semibold">اسم المهندس</label>
+					<section class="engineer-change-filters" aria-labelledby="engineer_change_filters_title">
+						<div class="engineer-change-filter-heading">
+							<h3 id="engineer_change_filters_title" class="fs-6 fw-bold mb-0">تصفية سجل التغييرات</h3>
+							<span class="text-muted fs-8">تُحدّث النتائج تلقائيًا عند تغيير الفلاتر</span>
+						</div>
+						<div class="engineer-change-filter-grid">
+						<div>
+							<label for="engineer_change_log_engineer" class="form-label">المهندس</label>
 							<select id="engineer_change_log_engineer" class="form-select form-select-solid"
 								data-control="select2" data-dropdown-parent="#engineerChangeLogModal"
 								data-placeholder="كل المهندسين">
 								<option value="">كل المهندسين</option>
 							</select>
 						</div>
-						<div class="col-lg-3 col-md-6">
-							<label class="form-label fw-semibold">اسم الحقل</label>
+						<div>
+							<label for="engineer_change_log_field" class="form-label">الحقل المعدّل</label>
 							<select id="engineer_change_log_field" class="form-select form-select-solid"
 								data-control="select2" data-dropdown-parent="#engineerChangeLogModal"
 								data-placeholder="كل الحقول">
 								<option value="">كل الحقول</option>
 							</select>
 						</div>
-						<div class="col-lg-3 col-md-6">
-							<label class="form-label fw-semibold">نوع السجل</label>
+						<div>
+							<label for="engineer_change_log_type" class="form-label">نوع السجل</label>
 							<select id="engineer_change_log_type" class="form-select form-select-solid">
 								<option value="">مبنى ووحدة</option>
 								<option value="building_table">مبنى</option>
 								<option value="housing_table">وحدة</option>
 							</select>
 						</div>
-						<div class="col-lg-3 col-md-6">
-							<label class="form-label fw-semibold">بحث</label>
-							<input type="text" id="engineer_change_log_search" class="form-control form-control-solid"
-								placeholder="ابحث في القيم أو رقم السجل">
-						</div>
-						<div class="col-lg-6">
-							<label for="engineer_change_log_date_range" class="form-label fw-semibold">تاريخ التعديل (من - إلى)</label>
-							<div class="input-group">
+						<div>
+							<label for="engineer_change_log_date_range" class="form-label">تاريخ التعديل <span class="text-muted">(من – إلى)</span></label>
+							<div class="engineer-change-date-control">
 								<input type="text" id="engineer_change_log_date_range" class="form-control form-control-solid"
-									placeholder="اختر فترة التعديل" autocomplete="off">
-								<button type="button" id="engineer_change_log_clear_dates" class="btn btn-light">مسح الفترة</button>
+									placeholder="اختر بداية الفترة ونهايتها" autocomplete="off" aria-describedby="engineer_change_date_hint">
+								<span class="engineer-change-date-icon" aria-hidden="true"><i class="ki-duotone ki-calendar fs-4"><span class="path1"></span><span class="path2"></span></i></span>
+								<button type="button" id="engineer_change_log_clear_dates" aria-label="مسح الفترة" title="مسح الفترة" disabled>&times;</button>
+							</div>
+							<div id="engineer_change_date_hint" class="text-muted fs-8 mt-2">يشمل يوم البداية ويوم النهاية</div>
+						</div>
+						</div>
+						<div class="engineer-change-filter-footer">
+							<div class="engineer-change-search">
+								<label for="engineer_change_log_search" class="visually-hidden">بحث في القيم أو رقم السجل</label>
+								<input type="search" id="engineer_change_log_search" class="form-control" placeholder="بحث في القيم أو رقم السجل…" maxlength="255">
+							</div>
+							<div class="engineer-change-filter-actions">
+								<button type="button" id="engineer_change_log_reset" class="btn btn-sm btn-light">إعادة ضبط</button>
+								<button type="button" id="engineer_change_log_export" class="btn btn-sm btn-primary"><i class="ki-duotone ki-file-down fs-4" aria-hidden="true"><span class="path1"></span><span class="path2"></span></i>تصدير إكسل</button>
 							</div>
 						</div>
-						<div class="col-lg-6 d-flex align-items-end justify-content-end">
-							<button type="button" id="engineer_change_log_export" class="btn btn-light-success">تصدير إكسل</button>
-						</div>
-					</div>
+					</section>
 
 					<div class="table-responsive">
 						<table class="table align-middle table-row-dashed fs-6 gy-4" id="engineer_change_log_table">
@@ -2481,19 +2645,39 @@
 			let engineerChangeLogTable = null;
 			let engineerChangeLogOptionsLoaded = false;
 			let engineerChangeLogSearchTimer = null;
+			let engineerChangeLogDateKey = '';
 			const engineerChangeLogRoute = @json(route('audit.engineer-change-log'));
 			const engineerChangeLogExportRoute = @json(route('audit.engineer-change-log.export'));
+			const reloadEngineerChangeLog = function () {
+				clearTimeout(engineerChangeLogSearchTimer);
+				if (engineerChangeLogTable) {
+					engineerChangeLogTable.ajax.reload();
+				}
+			};
+			const applyEngineerChangeLogDates = function (selectedDates, dateStr, instance) {
+				$('#engineer_change_log_clear_dates').prop('disabled', selectedDates.length === 0);
+				$('#engineer_change_date_hint').text(selectedDates.length === 1
+					? 'اختر تاريخ النهاية، أو أغلق التقويم لعرض يوم واحد'
+					: (selectedDates.length === 2 ? 'الفترة المحددة: ' + dateStr : 'يشمل يوم البداية ويوم النهاية'));
+				if (selectedDates.length === 1) {
+					return;
+				}
+				const dateKey = selectedDates.map(date => instance.formatDate(date, 'Y-m-d')).join('|');
+				if (dateKey !== engineerChangeLogDateKey) {
+					engineerChangeLogDateKey = dateKey;
+					reloadEngineerChangeLog();
+				}
+			};
 			const engineerChangeLogDatePicker = flatpickr('#engineer_change_log_date_range', {
 				mode: 'range',
 				dateFormat: 'Y-m-d',
 				locale: { ...flatpickr.l10ns.ar, rangeSeparator: ' إلى ' },
-				appendTo: document.getElementById('engineerChangeLogModal'),
+				static: true,
+				disableMobile: true,
+				onChange: applyEngineerChangeLogDates,
 				onClose: function (selectedDates, dateStr, instance) {
 					if (selectedDates.length === 1) {
-						instance.setDate([selectedDates[0], selectedDates[0]], false);
-					}
-					if (engineerChangeLogTable) {
-						engineerChangeLogTable.ajax.reload();
+						instance.setDate([selectedDates[0], selectedDates[0]], true);
 					}
 				}
 			});
@@ -2512,9 +2696,15 @@
 
 			$('#engineer_change_log_clear_dates').on('click', function () {
 				engineerChangeLogDatePicker.clear();
-				if (engineerChangeLogTable) {
-					engineerChangeLogTable.ajax.reload();
-				}
+			});
+
+			$('#engineer_change_log_reset').on('click', function () {
+				$('#engineer_change_log_engineer, #engineer_change_log_field, #engineer_change_log_type').val('').trigger('change.select2');
+				$('#engineer_change_log_search').val('');
+				engineerChangeLogDatePicker.clear(false);
+				engineerChangeLogDateKey = '';
+				applyEngineerChangeLogDates([], '', engineerChangeLogDatePicker);
+				reloadEngineerChangeLog();
 			});
 
 			$('#engineer_change_log_export').on('click', function () {
@@ -2655,18 +2845,12 @@
 			});
 
 			$('#engineer_change_log_engineer, #engineer_change_log_field, #engineer_change_log_type').on('change', function () {
-				if (engineerChangeLogTable) {
-					engineerChangeLogTable.ajax.reload();
-				}
+				reloadEngineerChangeLog();
 			});
 
 			$('#engineer_change_log_search').on('input', function () {
 				clearTimeout(engineerChangeLogSearchTimer);
-				engineerChangeLogSearchTimer = setTimeout(function () {
-					if (engineerChangeLogTable) {
-						engineerChangeLogTable.ajax.reload();
-					}
-				}, 350);
+				engineerChangeLogSearchTimer = setTimeout(reloadEngineerChangeLog, 350);
 			});
 			@endif
 

@@ -166,3 +166,17 @@ it('requires authentication for the change log and its export', function (): voi
     $this->getJson(route('audit.engineer-change-log'))->assertUnauthorized();
     $this->getJson(route('audit.engineer-change-log.export'))->assertUnauthorized();
 });
+
+it('renders labeled change filters with an accessible date range and reset action', function (): void {
+    $this->viewer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+    Role::findOrCreate('Legal Auditor', 'web');
+
+    $response = $this->actingAs($this->viewer)->get(route('audit.index'))->assertOk()
+        ->assertSee('aria-labelledby="engineer_change_filters_title"', false)
+        ->assertSee('for="engineer_change_log_date_range"', false)
+        ->assertSee('aria-label="مسح الفترة"', false)
+        ->assertSee('id="engineer_change_log_reset"', false)
+        ->assertSee('يشمل يوم البداية ويوم النهاية');
+
+    file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-engineer-change-filters-preview.html', $response->getContent());
+});
