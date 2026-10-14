@@ -22,8 +22,8 @@
                                     <div class="inf-audit-label">الأصل</div>
                                     <div class="inf-audit-original-value">{{ $latestHistory->display_old_value ?? $latestHistory->old_value ?? 'لا يوجد جواب' }}</div>
 
-                                    <div class="inf-audit-label text-warning mt-3">آخر تعديل</div>
-                                    <div class="inf-audit-new-value">{{ $latestHistory->display_field_value ?? $latestHistory->field_value ?? 'لا يوجد جواب' }}</div>
+                                    <div class="inf-audit-label text-warning mt-3">{{ ($row['show_current_value'] ?? false) ? 'القيمة الحالية' : 'آخر تعديل' }}</div>
+                                    <div class="inf-audit-new-value">{{ ($row['show_current_value'] ?? false) ? $row['value'] : ($latestHistory->display_field_value ?? $latestHistory->field_value ?? 'لا يوجد جواب') }}</div>
 
                                     <div class="inf-audit-label text-primary mt-3">اسم المعدّل</div>
                                     <div class="fw-bold">{{ $latestHistory->user?->name ?? '-' }}</div>
@@ -57,6 +57,7 @@
                             @endif
                         </td>
                         <td class="text-end w-150px">
+                            @if ($row['editable'] ?? true)
                             <button type="button"
                                 class="btn btn-sm btn-light-primary edit-field-btn"
                                 data-table-type="{{ $row['table_type'] }}"
@@ -71,6 +72,7 @@
                                 data-options='@json($row['options'] ?? [])'>
                                 تعديل
                             </button>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

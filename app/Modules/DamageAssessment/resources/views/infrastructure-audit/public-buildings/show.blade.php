@@ -318,8 +318,8 @@
                         <div class="inf-audit-label">الأصل</div>
                         <div class="inf-audit-original-value">${escapeHtml(latest.old_value || 'لا يوجد جواب')}</div>
 
-                        <div class="inf-audit-label text-warning mt-3">آخر تعديل</div>
-                        <div class="inf-audit-new-value">${escapeHtml(latest.field_value || 'لا يوجد جواب')}</div>
+                        <div class="inf-audit-label text-warning mt-3">${@json($usesBaseValues ?? false) ? 'القيمة الحالية' : 'آخر تعديل'}</div>
+                        <div class="inf-audit-new-value">${escapeHtml(response.display_value ?? latest.field_value ?? 'لا يوجد جواب')}</div>
 
                         <div class="inf-audit-label text-primary mt-3">اسم المعدّل</div>
                         <div class="fw-bold">${escapeHtml(latest.user_name || '-')}</div>
@@ -389,6 +389,8 @@
             });
 
             $('#saveFieldEdit').on('click', function () {
+                const saveButton = $(this);
+                saveButton.prop('disabled', true);
                 const select = $('#edit_field_select');
                 const fieldValue = select.hasClass('d-none')
                     ? $('#edit_field_value').val()
@@ -400,6 +402,7 @@
                     auditable_id: $('#edit_auditable_id').val(),
                     field_name: $('#edit_field_name').val(),
                     field_value: fieldValue,
+                    expected_value: currentEditButton?.attr('data-raw-value') ?? '',
                     notes: $('#edit_notes').val()
                 }).done(function (response) {
                     toastr.success(response.message || 'تم الحفظ');
@@ -418,6 +421,8 @@
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('fieldEditModal')).hide();
                 }).fail(function (xhr) {
                     toastr.error(xhr.responseJSON?.message || 'حدث خطأ أثناء الحفظ');
+                }).always(function () {
+                    saveButton.prop('disabled', false);
                 });
             });
 

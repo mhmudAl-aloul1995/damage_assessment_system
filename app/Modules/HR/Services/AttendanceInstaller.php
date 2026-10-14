@@ -50,6 +50,9 @@ class AttendanceInstaller
         if (Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\HrPermissionsSeeder', '--force' => true, '--no-interaction' => true]) !== 0) {
             throw new RuntimeException('فشلت تهيئة صلاحيات HR.');
         }
+        if (Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\HrContractTypesSeeder', '--force' => true, '--no-interaction' => true]) !== 0) {
+            throw new RuntimeException('فشلت تهيئة أنواع العقود.');
+        }
         foreach (['route:clear', 'config:clear'] as $command) {
             if (Artisan::call($command, ['--no-interaction' => true]) !== 0) {
                 throw new RuntimeException('لم يكتمل تحديث ذاكرة إعدادات ومسارات التطبيق.');

@@ -16,6 +16,7 @@ it('takes a backup of the HR connection before migrating only HR and restoring b
         '--database' => 'sqlite', '--path' => ['app/Modules/HR/database/migrations'], '--force' => true, '--no-interaction' => true,
     ])->andReturn(0);
     Artisan::shouldReceive('call')->once()->ordered()->with('db:seed', ['--class' => 'Database\\Seeders\\HrPermissionsSeeder', '--force' => true, '--no-interaction' => true])->andReturn(0);
+    Artisan::shouldReceive('call')->once()->ordered()->with('db:seed', ['--class' => 'Database\\Seeders\\HrContractTypesSeeder', '--force' => true, '--no-interaction' => true])->andReturn(0);
     Artisan::shouldReceive('call')->once()->ordered()->with('route:clear', ['--no-interaction' => true])->andReturn(0);
     Artisan::shouldReceive('call')->once()->ordered()->with('config:clear', ['--no-interaction' => true])->andReturn(0);
     app(AttendanceInstaller::class)->install();

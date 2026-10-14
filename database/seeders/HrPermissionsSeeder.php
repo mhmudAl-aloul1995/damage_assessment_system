@@ -21,7 +21,9 @@ class HrPermissionsSeeder extends Seeder
             Permission::findOrCreate($permission, 'web');
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
-        foreach (['hr.contracts.view','hr.contracts.view-own','hr.contracts.view-team','hr.contracts.manage','hr.contracts.approve','hr.contracts.sensitive','hr.contracts.configure','hr.contracts.export'] as $permission) { Permission::findOrCreate($permission,'web'); }
+        foreach (['hr.contracts.view', 'hr.contracts.view-own', 'hr.contracts.view-team', 'hr.contracts.manage', 'hr.contracts.approve', 'hr.contracts.sensitive', 'hr.contracts.configure', 'hr.contracts.export'] as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

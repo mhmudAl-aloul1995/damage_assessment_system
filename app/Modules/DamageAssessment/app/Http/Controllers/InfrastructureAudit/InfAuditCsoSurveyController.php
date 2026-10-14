@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\InfAudit\InfAuditBulkAssignRequest;
 use App\Http\Requests\InfAudit\InfAuditFieldUpdateRequest;
 use App\Http\Requests\InfAudit\InfAuditStatusRequest;
+use App\Models\CsoAuditLog;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyAuditHistory;
 use App\Models\CsoSurveyAuditStatus;
@@ -16,9 +17,9 @@ use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
 use App\Models\InfAuditAssignment;
 use App\Models\InfAuditStatus;
-use App\Models\InfEditAssessment;
 use App\Models\User;
 use App\services\ArcgisService;
+use App\services\CsoAuditService;
 use App\Support\Forms\CsoSurveyLayout;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,9 @@ use Yajra\DataTables\Facades\DataTables;
 
 class InfAuditCsoSurveyController extends Controller
 {
+    /** @var array<string, \Illuminate\Support\Collection>|null */
+    private ?array $auditHistories = null;
+
     private const TABLE_TYPE = 'cso_survey_table';
 
     private const ORGANIZATION_TABLE_TYPE = 'cso_survey_organization_table';
@@ -39,7 +43,7 @@ class InfAuditCsoSurveyController extends Controller
 
     private const FINAL_STATUS_NAMES = ['final_approval', 'accepted_final', 'final'];
 
-    public function __construct()
+    public function __construct(private readonly CsoAuditService $audit)
     {
         $this->middleware('role_or_permission:Inf - QC/QA Engineer|Team Leader -INF|Database Officer|Project Officer|CSO Officer|inf-audit.cso.view');
     }
@@ -150,11 +154,15 @@ class InfAuditCsoSurveyController extends Controller
             'infAuditAssignment.user',
             'infAuditStatus.status',
             'infAuditStatus.assignee',
+            'auditLogs.user',
             'organizations' => fn ($query) => $query->orderBy('objectid'),
             'units' => fn ($query) => $query->orderBy('objectid'),
         ]);
 
         $this->authorizeRecord($cso);
+
+        $this->auditHistories = $cso->auditLogs->sortByDesc('id')
+            ->groupBy(fn (CsoAuditLog $log): string => $log->record_type.'|'.$log->record_id.'|'.$log->field_name)->all();
 
         return view('damage-assessment::infrastructure-audit.public-buildings.show', [
             ...$this->indexData(),
@@ -171,6 +179,7 @@ class InfAuditCsoSurveyController extends Controller
             'title' => 'تدقيق منظمات المجتمع المدني',
             'mainSectionTitle' => 'بيانات استبيان CSO',
             'childSectionTitle' => 'المنظمات والوحدات التابعة',
+            'usesBaseValues' => true,
         ]);
     }
 
@@ -256,23 +265,14 @@ class InfAuditCsoSurveyController extends Controller
         $tableType = $data['table_type'];
         $record = $this->editableRecord($cso, $tableType, (int) $data['auditable_id']);
         $field = $this->fieldMeta($data['field_name'], $tableType);
-        $oldValue = $this->displayValue($record, $field, $tableType);
-
-        InfEditAssessment::query()->create([
-            'auditable_type' => $this->auditableType($tableType),
-            'auditable_id' => $record->id,
-            'global_id' => $record->globalid,
-            'objectid' => $record->objectid,
-            'table_type' => $tableType,
-            'field_name' => $data['field_name'],
-            'field_value' => $data['field_value'] ?? null,
-            'old_value' => $oldValue,
-            'user_id' => Auth::id(),
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $this->audit->save(
+            $cso, $record, $tableType, $data['field_name'], $data['field_value'] ?? null,
+            Auth::id(), $data['notes'] ?? null, $data['expected_value'] ?? null,
+            array_key_exists('expected_value', $data),
+        );
 
         return response()->json([
-            'message' => 'تم حفظ التعديل بنجاح.',
+            'message' => 'تم حفظ القيمة في ArcGIS والبيانات الأساسية وتسجيل التعديل.',
             'display_value' => $this->displayValue($record, $field, $tableType),
             'raw_value' => $this->rawValue($record, $data['field_name'], $tableType),
             'history' => $this->historyPayload($this->fieldHistory($record, $data['field_name'], $tableType)),
@@ -305,20 +305,7 @@ class InfAuditCsoSurveyController extends Controller
 
     private function editHistories(CsoSurvey $survey): array
     {
-        $globalIds = collect([$survey->globalid])
-            ->merge($survey->organizations->pluck('globalid'))
-            ->merge($survey->units->pluck('globalid'))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        return InfEditAssessment::query()
-            ->with('user')
-            ->whereIn('global_id', $globalIds)
-            ->latest()
-            ->get()
-            ->all();
+        return $survey->auditLogs->sortByDesc('id')->values()->all();
     }
 
     private function surveySections(CsoSurvey $survey): array
@@ -396,6 +383,8 @@ class InfAuditCsoSurveyController extends Controller
                     'label' => $field['label'] ?: $field['name'],
                     'value' => $this->formatValue($rawValue, $field),
                     'raw_value' => $rawValue,
+                    'editable' => isset($this->audit->editableFields($tableType)[$field['name']]),
+                    'show_current_value' => true,
                     'has_answer' => filled($rawValue),
                     'is_edited' => $history !== [],
                     'options' => $this->fieldOptions($field['list_name'] ?? null),
@@ -414,22 +403,7 @@ class InfAuditCsoSurveyController extends Controller
 
     private function rawValue(object $record, string $fieldName, string $tableType): ?string
     {
-        $edit = InfEditAssessment::query()
-            ->where('table_type', $tableType)
-            ->where('field_name', $fieldName)
-            ->where(function ($query) use ($record): void {
-                if (filled($record->objectid)) {
-                    $query->where('objectid', $record->objectid);
-                }
-
-                if (filled($record->globalid)) {
-                    $query->orWhere('global_id', $record->globalid);
-                }
-            })
-            ->latest()
-            ->first();
-
-        $value = $edit?->field_value ?? data_get($record, $fieldName) ?? $this->payloadValue($record->raw_payload ?? [], $fieldName);
+        $value = $this->audit->value($record, $fieldName);
 
         if ($value === null || $value === '') {
             return null;
@@ -472,25 +446,21 @@ class InfAuditCsoSurveyController extends Controller
     {
         $field = $this->fieldMeta($fieldName, $tableType);
 
-        return InfEditAssessment::query()
-            ->with('user')
-            ->where('table_type', $tableType)
-            ->where('field_name', $fieldName)
-            ->where(function ($query) use ($record): void {
-                if (filled($record->objectid)) {
-                    $query->where('objectid', $record->objectid);
-                }
+        $historyKey = $this->audit->recordType($tableType).'|'.$record->id.'|'.$fieldName;
+        $histories = $this->auditHistories !== null
+            ? ($this->auditHistories[$historyKey] ?? collect())
+            : CsoAuditLog::query()
+                ->with('user')
+                ->where('record_type', $this->audit->recordType($tableType))
+                ->where('record_id', $record->id)
+                ->where('field_name', $fieldName)
+                ->orderByDesc('id')
+                ->get();
 
-                if (filled($record->globalid)) {
-                    $query->orWhere('global_id', $record->globalid);
-                }
-            })
-            ->latest()
-            ->get()
-            ->each(function (InfEditAssessment $history) use ($field): void {
-                $history->display_field_value = $this->formatValue($history->field_value, $field);
-                $history->display_old_value = $this->formatValue($history->old_value, $field);
-            })
+        return $histories->each(function (CsoAuditLog $history) use ($field): void {
+            $history->display_field_value = $this->formatValue($history->new_value, $field);
+            $history->display_old_value = $this->formatValue($history->old_value, $field);
+        })
             ->all();
     }
 
@@ -535,15 +505,6 @@ class InfAuditCsoSurveyController extends Controller
         };
     }
 
-    private function auditableType(string $tableType): string
-    {
-        return match ($tableType) {
-            self::ORGANIZATION_TABLE_TYPE => 'cso_survey_organization',
-            self::UNIT_TABLE_TYPE => 'cso_survey_unit',
-            default => 'cso_survey',
-        };
-    }
-
     private function formatValue(mixed $value, array $field): string
     {
         if (! filled($value)) {
@@ -576,8 +537,8 @@ class InfAuditCsoSurveyController extends Controller
     private function historyPayload(array $history): array
     {
         return collect($history)
-            ->map(fn (InfEditAssessment $item): array => [
-                'field_value' => $item->display_field_value ?? $item->field_value ?? '-',
+            ->map(fn (CsoAuditLog $item): array => [
+                'field_value' => $item->display_field_value ?? $item->new_value ?? '-',
                 'old_value' => $item->display_old_value ?? $item->old_value ?? '-',
                 'user_name' => $item->user?->name ?? '-',
                 'created_at' => $item->created_at?->format('Y-m-d h:i A') ?? '-',
@@ -753,23 +714,6 @@ class InfAuditCsoSurveyController extends Controller
     private function dateColumn(): string
     {
         return Schema::hasColumn('cso_surveys', 'creationdate') ? 'cso_surveys.creationdate' : 'cso_surveys.created_at';
-    }
-
-    private function payloadValue(array $payload, string $fieldName): mixed
-    {
-        if (array_key_exists($fieldName, $payload)) {
-            return $payload[$fieldName];
-        }
-
-        $lowerFieldName = strtolower($fieldName);
-
-        foreach ($payload as $key => $value) {
-            if (strtolower((string) $key) === $lowerFieldName) {
-                return $value;
-            }
-        }
-
-        return null;
     }
 
     private function featureServerLayerUrl(string $url, int $layer): string

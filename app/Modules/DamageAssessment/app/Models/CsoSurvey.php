@@ -39,6 +39,11 @@ class CsoSurvey extends Model
         return $this->hasOne(CsoSurveyAuditStatus::class)->latestOfMany();
     }
 
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(CsoAuditLog::class, 'cso_survey_id');
+    }
+
     public function organizations(): HasMany
     {
         return $this->hasMany(CsoSurveyOrganization::class, 'parentglobalid', 'globalid');

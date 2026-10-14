@@ -36,7 +36,21 @@ class InfAuditFieldUpdateRequest extends FormRequest
             'auditable_id' => ['required', 'integer'],
             'field_name' => ['required', 'string'],
             'field_value' => ['nullable', 'string'],
+            'expected_value' => ['sometimes', 'nullable', 'string'],
             'notes' => ['nullable', 'string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'table_type.required' => 'يرجى تحديد نوع السجل.',
+            'table_type.in' => 'نوع السجل غير صالح.',
+            'auditable_id.required' => 'يرجى تحديد السجل.',
+            'auditable_id.integer' => 'معرّف السجل غير صالح.',
+            'field_name.required' => 'يرجى تحديد الحقل.',
+            'field_value.string' => 'قيمة الحقل غير صالحة.',
+            'expected_value.string' => 'القيمة السابقة غير صالحة.',
         ];
     }
 }

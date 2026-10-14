@@ -18,7 +18,7 @@
 @can('hr.contracts.manage')<div class="card"><div class="card-header"><h2 class="card-title">مقترح عقد جديد</h2></div><div class="card-body">
 <form method="POST" action="{{ route('hr.contracts.store') }}" class="row g-4">@csrf
 <input type="hidden" name="request_key" value="{{ old('request_key', (string) Illuminate\Support\Str::uuid()) }}">
-<label class="col-md-6">معرف ملف الموظف<input name="employee_id" type="number" min="1" list="contract-employees" class="form-control" required value="{{ old('employee_id') }}"><datalist id="contract-employees">@foreach($employees as $employee)<option value="{{ $employee->id }}">{{ $employee->employee_number }} — {{ $employee->display_name }}</option>@endforeach</datalist></label>
+<label class="col-md-6">الرقم الوظيفي<input name="employee_number" list="contract-employees" class="form-control" required value="{{ old('employee_number') }}"><datalist id="contract-employees">@foreach($employees as $employee)<option value="{{ $employee->employee_number }}">{{ $employee->display_name }}</option>@endforeach</datalist></label>
 <label class="col-md-6">رقم العقد<input name="number" required maxlength="80" class="form-control" value="{{ old('number') }}"></label>
 <label>نوع الارتباط<select name="primary" class="form-select"><option value="1">عقد أساسي</option><option value="0">عقد إضافي / مشروع</option></select></label>
 @include('hr::contract-fields', ['previous'=>null])

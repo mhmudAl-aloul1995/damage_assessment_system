@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\CsoAuditLog;
 use App\Models\CsoSurvey;
 use App\Models\CsoSurveyAuditHistory;
 use App\Models\CsoSurveyAuditStatus;
@@ -9,14 +10,36 @@ use App\Models\CsoSurveyFilter;
 use App\Models\CsoSurveyOrganization;
 use App\Models\CsoSurveyUnit;
 use App\Models\InfAuditAssignment;
-use App\Models\InfEditAssessment;
 use App\Models\User;
+use App\services\ArcgisService;
 use Database\Seeders\InfAuditRolesSeeder;
 use Database\Seeders\InfAuditStatusesSeeder;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 beforeEach(function (): void {
+    Http::preventStrayRequests();
+    $this->mock(ArcgisService::class)->shouldReceive('getToken')->andReturn('test-token');
+    Http::fake(function (Request $request) {
+        if (str_contains($request->url(), '/updateFeatures')) {
+            return Http::response(['updateResults' => [['success' => true]]]);
+        }
+
+        if (str_contains($request->url(), '/attachments')) {
+            return Http::response(['attachmentInfos' => []]);
+        }
+
+        if (str_contains($request->url(), '/query')) {
+            return Http::response(['features' => [['attributes' => ['weather' => '1', 'organization_name_en' => 'Women Support Association Branch']]]]);
+        }
+
+        return Http::response(['objectIdField' => 'objectid', 'fields' => [
+            ['name' => 'weather', 'type' => 'esriFieldTypeString'],
+            ['name' => 'organization_name_en', 'type' => 'esriFieldTypeString'],
+        ]]);
+    });
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     Role::query()->firstOrCreate(['name' => 'Database Officer']);
@@ -133,12 +156,13 @@ test('database officer can assign and inf engineer can audit cso surveys', funct
             'table_type' => 'cso_survey_table',
             'auditable_id' => $survey->id,
             'field_name' => 'weather',
-            'field_value' => '1',
+            'field_value' => '2',
             'notes' => 'Verified from call',
         ])
         ->assertOk();
 
-    expect(InfEditAssessment::query()->where('table_type', 'cso_survey_table')->where('field_name', 'weather')->exists())->toBeTrue();
+    expect(CsoAuditLog::query()->where('record_type', 'cso_survey')->where('field_name', 'weather')->exists())->toBeTrue()
+        ->and($survey->fresh()->raw_payload['weather'])->toBe('2');
 
     $this->actingAs($engineer)
         ->postJson(route('inf-audit.cso.field-update', $survey), [
@@ -150,7 +174,8 @@ test('database officer can assign and inf engineer can audit cso surveys', funct
         ])
         ->assertOk();
 
-    expect(InfEditAssessment::query()->where('table_type', 'cso_survey_organization_table')->where('field_name', 'organization_name_en')->exists())->toBeTrue();
+    expect(CsoAuditLog::query()->where('record_type', 'cso_survey_organization')->where('field_name', 'organization_name_en')->exists())->toBeTrue()
+        ->and($organization->fresh()->organization_name_en)->toBe('Women Support Association Branch Verified');
 
     $this->actingAs($engineer)
         ->postJson(route('inf-audit.cso.status', $survey), [

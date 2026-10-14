@@ -71,6 +71,22 @@ class EmployeeDocuments
         }, $document->original_name, ['Content-Type' => $document->mime, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
+    public function assertIntegrity(EmployeeDocument $document): void
+    {
+        $encrypted = Storage::disk('local')->get($document->path);
+        if ($encrypted === null) {
+            throw ValidationException::withMessages(['document_id' => 'المستند المرفق غير موجود في التخزين الخاص.']);
+        }
+        try {
+            $bytes = Crypt::decryptString($encrypted);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+            throw ValidationException::withMessages(['document_id' => 'تعذر التحقق من تشفير المستند المرفق.']);
+        }
+        if (! hash_equals($document->checksum, hash('sha256', $bytes))) {
+            throw ValidationException::withMessages(['document_id' => 'تغير محتوى المستند المرفق؛ يلزم رفع نسخة سليمة.']);
+        }
+    }
+
     public function withdraw(User $actor, EmployeeDocument $document, string $reason): EmployeeDocumentWithdrawal
     {
         Gate::forUser($actor)->authorize('hr.documents.withdraw');

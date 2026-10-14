@@ -177,11 +177,13 @@ class MobileDamageFormService
     public function answers(string $form, Model $row, array $definition): array
     {
         $config = $this->configurations()[$form];
-        $edits = $this->editRows($form, $row)->get()->unique('field_name')->keyBy('field_name');
+        $edits = $config['sector'] === 'cso-surveys' ? collect() : $this->editRows($form, $row)->get()->unique('field_name')->keyBy('field_name');
         $answers = [];
         foreach ($definition['sections'] as $section) {
             foreach ($section['fields'] as $field) {
-                $value = $edits->get($field['key'])?->field_value ?? (isset($config['layout']) ? $config['layout']::value($row, $field['key']) : $row->getRawOriginal($field['key']));
+                $value = $config['sector'] === 'cso-surveys'
+                    ? app(CsoAuditService::class)->value($row, $field['key'])
+                    : ($edits->get($field['key'])?->field_value ?? (isset($config['layout']) ? $config['layout']::value($row, $field['key']) : $row->getRawOriginal($field['key'])));
                 if ($field['type'] === 'multiselect') {
                     $value = is_array($value) ? $value : (filled($value) ? preg_split('/[,\s]+/u', (string) $value, -1, PREG_SPLIT_NO_EMPTY) : []);
                 }
@@ -194,6 +196,10 @@ class MobileDamageFormService
 
     public function version(string $form, Model $row): string
     {
+        if ($this->configurations()[$form]['sector'] === 'cso-surveys') {
+            return hash('sha256', json_encode($row->getAttributes(), JSON_THROW_ON_ERROR));
+        }
+
         return hash('sha256', json_encode([$row->getAttributes(), $this->editRows($form, $row)->get(['id', 'field_name', 'field_value'])->toArray()], JSON_THROW_ON_ERROR));
     }
 
