@@ -163,11 +163,14 @@ class InfAuditCsoSurveyController extends Controller
         $this->auditHistories = $cso->auditLogs->sortByDesc('id')
             ->groupBy(fn (CsoAuditLog $log): string => $log->record_type.'|'.$log->record_id.'|'.$log->field_name)->all();
 
-        return view('damage-assessment::infrastructure-audit.public-buildings.show', [
+        $childGroups = collect($this->childGroups($cso));
+
+        return view('damage-assessment::infrastructure-audit.cso.show', [
             ...$this->indexData(),
             'survey' => $cso,
             'sections' => $this->surveySections($cso),
-            'childGroups' => $this->childGroups($cso),
+            'organizationGroups' => $childGroups->where('kind', 'organization')->values()->all(),
+            'unitGroups' => $childGroups->where('kind', 'unit')->values()->all(),
             'assignment' => $this->assignment($cso->globalid),
             'editHistories' => $this->editHistories($cso),
             'arcgisAttachments' => $this->arcgisAttachments($cso),
@@ -179,6 +182,7 @@ class InfAuditCsoSurveyController extends Controller
             'mainSectionTitle' => 'بيانات استبيان CSO',
             'childSectionTitle' => 'المنظمات والوحدات التابعة',
             'usesBaseValues' => true,
+            'canEditFields' => Auth::user()?->hasAnyRole(['Database Officer', 'Team Leader -INF', 'CSO Officer', 'Inf - QC/QA Engineer']) ?? false,
         ]);
     }
 
@@ -345,17 +349,27 @@ class InfAuditCsoSurveyController extends Controller
         $unitSections = CsoSurveyLayout::repeatSections('Unit_Information');
 
         $organizations = $survey->organizations
+            ->toBase()
             ->values()
             ->map(fn (CsoSurveyOrganization $organization, int $index): array => [
-                'title' => 'CSO Organization '.($index + 1).' - '.($organization->organization_name_en ?: $organization->organization_name_ar ?: $organization->organization_acronym ?: $organization->objectid),
+                'kind' => 'organization',
+                'record_id' => $organization->id,
+                'objectid' => $organization->objectid,
+                'title' => $organization->organization_name_ar ?: $organization->organization_name_en ?: $organization->organization_acronym ?: 'منظمة '.($index + 1),
+                'title_field' => $organization->organization_name_ar ? 'organization_name_ar' : ($organization->organization_name_en ? 'organization_name_en' : 'organization_acronym'),
                 'sections' => $this->childSections($organization, $organizationSections, self::ORGANIZATION_TABLE_TYPE),
             ])
             ->filter(fn (array $group): bool => $group['sections'] !== []);
 
         $units = $survey->units
+            ->toBase()
             ->values()
             ->map(fn (CsoSurveyUnit $unit, int $index): array => [
-                'title' => 'Unit Information '.($index + 1).' - '.($unit->unit_name ?: $unit->objectid),
+                'kind' => 'unit',
+                'record_id' => $unit->id,
+                'objectid' => $unit->objectid,
+                'title' => $unit->unit_name ?: 'وحدة '.($index + 1),
+                'title_field' => 'unit_name',
                 'sections' => $this->childSections($unit, $unitSections, self::UNIT_TABLE_TYPE),
             ])
             ->filter(fn (array $group): bool => $group['sections'] !== []);
