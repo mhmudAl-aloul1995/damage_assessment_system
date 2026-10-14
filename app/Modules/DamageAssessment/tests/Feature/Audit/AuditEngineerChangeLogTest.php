@@ -171,7 +171,7 @@ it('renders labeled change filters with an accessible date range and reset actio
     $this->viewer->assignRole(Role::findOrCreate('Database Officer', 'web'));
     Role::findOrCreate('Legal Auditor', 'web');
 
-    $response = $this->actingAs($this->viewer)->get(route('audit.index'))->assertOk()
+    $response = $this->actingAs($this->viewer)->withSession(['locale' => 'ar'])->get(route('audit.index'))->assertOk()
         ->assertSee('aria-labelledby="engineer_change_filters_title"', false)
         ->assertSee('for="engineer_change_log_date_range"', false)
         ->assertSee('aria-label="مسح الفترة"', false)

@@ -157,6 +157,14 @@
 			width: 100% !important;
 		}
 
+		#engineer_change_log_table_wrapper table {
+			min-width: 1000px;
+		}
+
+		#engineer_change_log_table_wrapper th {
+			white-space: nowrap;
+		}
+
 		#engineerChangeLogModal .modal-dialog {
 			max-width: min(1500px, 96vw);
 		}
@@ -228,8 +236,8 @@
 
 		.engineer-change-date-control .flatpickr-calendar.static {
 			top: calc(100% + 8px);
-			inset-inline-start: 0;
-			inset-inline-end: auto;
+			left: auto;
+			right: 0;
 			z-index: 1060;
 		}
 
