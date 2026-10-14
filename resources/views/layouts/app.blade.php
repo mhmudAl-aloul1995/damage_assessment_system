@@ -1751,7 +1751,7 @@
 				}
 
 				elements.forEach(function (element) {
-					if ($(element).hasClass('select2-hidden-accessible')) {
+					if (element.closest('.flatpickr-calendar') || $(element).hasClass('select2-hidden-accessible')) {
 						return;
 					}
 

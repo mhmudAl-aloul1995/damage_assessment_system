@@ -60,18 +60,18 @@ test('anchors the calendar to its input inside the modal instead of document scr
     assert.equal(picker.config.disableMobile, true);
 });
 
-test('applies a completed range once and exports the same dates and filters', () => {
+test('applies a range across years once and exports the same dates and filters', () => {
     const ui = setup();
-    ui.picker.setDate(['2026-10-01'], true);
+    ui.picker.setDate(['2025-01-02'], true);
     assert.equal(ui.reloads(), 0);
-    ui.picker.setDate(['2026-10-01', '2026-10-14'], true);
+    ui.picker.setDate(['2025-01-02', '2026-09-20'], true);
     ui.picker.close();
     assert.equal(ui.reloads(), 1);
     ui.controls.get('#engineer_change_log_engineer').value = '12';
     ui.click('engineer_change_log_export');
     const url = new URL(ui.context.window.location.href, 'http://localhost');
-    assert.equal(url.searchParams.get('from_date'), '2026-10-01');
-    assert.equal(url.searchParams.get('to_date'), '2026-10-14');
+    assert.equal(url.searchParams.get('from_date'), '2025-01-02');
+    assert.equal(url.searchParams.get('to_date'), '2026-09-20');
     assert.equal(url.searchParams.get('engineer_id'), '12');
 });
 
@@ -100,4 +100,36 @@ test('reset clears all filters and refreshes the table only once', () => {
     for (const id of ['engineer', 'field', 'type', 'search']) {
         assert.equal(ui.controls.get('#engineer_change_log_' + id).value, '');
     }
+});
+
+test('keeps calendar month selectors native while enhancing regular filters', () => {
+    const layout = readFileSync('resources/views/layouts/app.blade.php', 'utf8');
+    const start = layout.indexOf('const select2Options = function (element)');
+    const end = layout.indexOf('window.initializeSelect2Controls = initializeSelect2;', start)
+        + 'window.initializeSelect2Controls = initializeSelect2;'.length;
+    const enhanced = [];
+    class SelectElement {
+        constructor(inCalendar) {
+            this.inCalendar = inCalendar;
+            this.dataset = {};
+        }
+        closest(selector) { return selector === '.flatpickr-calendar' && this.inCalendar ? {} : null; }
+        setAttribute() {}
+    }
+    const context = {
+        HTMLSelectElement: SelectElement,
+        document: { documentElement: { getAttribute: () => 'rtl' } },
+        window: {},
+        $: element => ({
+            hasClass: () => false,
+            attr() { return this; },
+            select2() { enhanced.push(element); },
+        }),
+    };
+    runInNewContext(layout.slice(start, end), context);
+    const month = new SelectElement(true);
+    const engineerFilter = new SelectElement(false);
+    context.window.initializeSelect2Controls({ querySelectorAll: () => [month, engineerFilter] });
+    context.window.initializeSelect2Controls(month);
+    assert.deepEqual(enhanced, [engineerFilter]);
 });
