@@ -55,17 +55,15 @@ class InfAuditCsoSurveyController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $query = CsoSurvey::query()
+        $query = $this->auditQueueQuery()
             ->with(['infAuditAssignment.user', 'infAuditStatus.status', 'infAuditStatus.assignee'])
             ->select('cso_surveys.*');
 
         $this->joinFieldEngineer($query);
-        $this->scopeVisibleToUser($query);
-        $this->excludeFinalApproved($query);
         $this->applyFilters($query, $request);
 
         return DataTables::eloquent($query)
-            ->addColumn('selection', fn (CsoSurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="'.e((string) $survey->id).'">')
+            ->addColumn('selection', fn (CsoSurvey $survey): string => '<input type="checkbox" class="form-check-input inf-audit-row-check" value="'.e((string) $survey->id).'" aria-label="تحديد الاستبيان '.e((string) $survey->objectid).'">')
             ->addColumn('audit_status', fn (CsoSurvey $survey): string => $this->statusBadge($survey->infAuditStatus?->status))
             ->addColumn('field_engineer', fn (CsoSurvey $survey): string => e($this->fieldEngineerName($survey)))
             ->addColumn('auditor', fn (CsoSurvey $survey): string => e($survey->infAuditAssignment?->user?->name ?? $survey->infAuditStatus?->assignee?->name ?? '-'))
@@ -97,6 +95,7 @@ class InfAuditCsoSurveyController extends Controller
 
         DB::transaction(function () use ($data, $status, &$updatedCount): void {
             CsoSurvey::query()
+                ->where('field_status', 'COMPLETED')
                 ->whereIn('id', $data['ids'])
                 ->lockForUpdate()
                 ->get()
@@ -281,13 +280,26 @@ class InfAuditCsoSurveyController extends Controller
 
     private function indexData(): array
     {
+        $query = $this->auditQueueQuery();
+        $statuses = InfAuditStatus::query()->orderBy('order_step')->get();
+
         return [
-            'statuses' => InfAuditStatus::query()->orderBy('order_step')->get(),
+            'statuses' => $statuses,
+            'filterStatuses' => $statuses->reject(fn (InfAuditStatus $status): bool => in_array($status->name, self::FINAL_STATUS_NAMES, true)),
             'engineers' => User::role('Inf - QC/QA Engineer')->orderBy('name')->get(['id', 'name']),
-            'fieldEngineers' => $this->fieldEngineerOptions(),
-            'municipalities' => CsoSurvey::query()->whereNotNull('municipalitie')->distinct()->orderBy('municipalitie')->pluck('municipalitie'),
-            'neighborhoods' => CsoSurvey::query()->whereNotNull('neighborhood')->distinct()->orderBy('neighborhood')->pluck('neighborhood'),
+            'fieldEngineers' => $this->fieldEngineerOptions(clone $query),
+            'municipalities' => (clone $query)->whereNotNull('municipalitie')->distinct()->orderBy('municipalitie')->pluck('municipalitie'),
+            'neighborhoods' => (clone $query)->whereNotNull('neighborhood')->distinct()->orderBy('neighborhood')->pluck('neighborhood'),
         ];
+    }
+
+    private function auditQueueQuery(): Builder
+    {
+        $query = CsoSurvey::query()->where('field_status', 'COMPLETED');
+        $this->scopeVisibleToUser($query);
+        $this->excludeFinalApproved($query);
+
+        return $query;
     }
 
     private function assignment(?string $globalid): ?InfAuditAssignment
@@ -584,13 +596,13 @@ class InfAuditCsoSurveyController extends Controller
         return $survey->field_engineer_name ?: $survey->field_engineer_name_en ?: $survey->assignedto;
     }
 
-    private function fieldEngineerOptions(): array
+    private function fieldEngineerOptions(Builder $query): array
     {
         if (! Schema::hasColumn('cso_surveys', 'assignedto')) {
             return [];
         }
 
-        $assignedValues = CsoSurvey::query()
+        $assignedValues = $query
             ->whereNotNull('assignedto')
             ->where('assignedto', '<>', '')
             ->distinct()

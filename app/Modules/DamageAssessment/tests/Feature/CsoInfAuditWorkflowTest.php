@@ -77,6 +77,7 @@ test('database officer can assign and inf engineer can audit cso surveys', funct
 
     CsoSurvey::query()->create([
         'objectid' => 7101,
+        'field_status' => 'COMPLETED',
         'globalid' => 'cso-audit-global-id',
         'organization_name' => 'Women Support Association',
         'building_name' => 'Association HQ',
