@@ -356,6 +356,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/audit/floor-area-mismatches/export', AuditFloorAreaMismatchExportController::class)
         ->name('audit.floor-area-mismatches.export');
     Route::get('/audit/engineer-change-log', AuditEngineerChangeLogController::class)->name('audit.engineer-change-log');
+    Route::get('/audit/engineer-change-log/export', [AuditEngineerChangeLogController::class, 'export'])
+        ->name('audit.engineer-change-log.export');
     Route::get('/audit/dashboard', AuditDashboardController::class)->name('audit.dashboard');
     Route::get('/audit/lawyer-assignments', LawyerAuditAssignmentController::class)
         ->name('audit.lawyer-assignments');

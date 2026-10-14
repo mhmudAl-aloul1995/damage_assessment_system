@@ -1434,6 +1434,17 @@
 							<input type="text" id="engineer_change_log_search" class="form-control form-control-solid"
 								placeholder="ابحث في القيم أو رقم السجل">
 						</div>
+						<div class="col-lg-6">
+							<label for="engineer_change_log_date_range" class="form-label fw-semibold">تاريخ التعديل (من - إلى)</label>
+							<div class="input-group">
+								<input type="text" id="engineer_change_log_date_range" class="form-control form-control-solid"
+									placeholder="اختر فترة التعديل" autocomplete="off">
+								<button type="button" id="engineer_change_log_clear_dates" class="btn btn-light">مسح الفترة</button>
+							</div>
+						</div>
+						<div class="col-lg-6 d-flex align-items-end justify-content-end">
+							<button type="button" id="engineer_change_log_export" class="btn btn-light-success">تصدير إكسل</button>
+						</div>
 					</div>
 
 					<div class="table-responsive">
@@ -2471,6 +2482,44 @@
 			let engineerChangeLogOptionsLoaded = false;
 			let engineerChangeLogSearchTimer = null;
 			const engineerChangeLogRoute = @json(route('audit.engineer-change-log'));
+			const engineerChangeLogExportRoute = @json(route('audit.engineer-change-log.export'));
+			const engineerChangeLogDatePicker = flatpickr('#engineer_change_log_date_range', {
+				mode: 'range',
+				dateFormat: 'Y-m-d',
+				locale: { ...flatpickr.l10ns.ar, rangeSeparator: ' إلى ' },
+				appendTo: document.getElementById('engineerChangeLogModal'),
+				onClose: function (selectedDates, dateStr, instance) {
+					if (selectedDates.length === 1) {
+						instance.setDate([selectedDates[0], selectedDates[0]], false);
+					}
+					if (engineerChangeLogTable) {
+						engineerChangeLogTable.ajax.reload();
+					}
+				}
+			});
+
+			const engineerChangeLogFilters = function () {
+				const dates = engineerChangeLogDatePicker.selectedDates;
+				return {
+					engineer_id: $('#engineer_change_log_engineer').val(),
+					field_name: $('#engineer_change_log_field').val(),
+					record_type: $('#engineer_change_log_type').val(),
+					search_value: $('#engineer_change_log_search').val(),
+					from_date: dates.length ? engineerChangeLogDatePicker.formatDate(dates[0], 'Y-m-d') : '',
+					to_date: dates.length ? engineerChangeLogDatePicker.formatDate(dates[1] || dates[0], 'Y-m-d') : ''
+				};
+			};
+
+			$('#engineer_change_log_clear_dates').on('click', function () {
+				engineerChangeLogDatePicker.clear();
+				if (engineerChangeLogTable) {
+					engineerChangeLogTable.ajax.reload();
+				}
+			});
+
+			$('#engineer_change_log_export').on('click', function () {
+				window.location.href = engineerChangeLogExportRoute + '?' + $.param(engineerChangeLogFilters());
+			});
 
 			const renderEngineerChangeLogValue = function (value) {
 				return `<span class="engineer-change-log-value">${escapeAuditCell(value)}</span>`;
@@ -2532,10 +2581,7 @@
 					ajax: {
 						url: engineerChangeLogRoute,
 						data: function (data) {
-							data.engineer_id = $('#engineer_change_log_engineer').val();
-							data.field_name = $('#engineer_change_log_field').val();
-							data.record_type = $('#engineer_change_log_type').val();
-							data.search_value = $('#engineer_change_log_search').val();
+							Object.assign(data, engineerChangeLogFilters());
 						}
 					},
 					columns: [

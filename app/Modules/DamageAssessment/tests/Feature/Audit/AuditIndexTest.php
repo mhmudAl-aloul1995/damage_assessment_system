@@ -857,6 +857,9 @@ it('shows and filters engineer audit questionnaire changes', function () {
         ->assertOk()
         ->assertSee('id="btn_engineer_change_log"', false)
         ->assertSee('id="engineerChangeLogModal"', false)
+        ->assertSee('id="engineer_change_log_date_range"', false)
+        ->assertSee('id="engineer_change_log_clear_dates"', false)
+        ->assertSee('id="engineer_change_log_export"', false)
         ->assertSee('اسم الحقل');
 
     $this->actingAs($user)

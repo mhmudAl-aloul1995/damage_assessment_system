@@ -6,8 +6,10 @@ use App\Models\Assessment;
 use App\Models\AssessmentEditHistory;
 use App\Models\Building;
 use App\Models\HousingUnit;
+use Generator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -88,6 +90,20 @@ class AuditEngineerChangeLogService
         ];
     }
 
+    public function exportRows(Request $request): Generator
+    {
+        $chunks = $this->applyFilters($this->baseQuery(), $request)
+            ->with('user:id,name')
+            ->latest('created_at')
+            ->latest('id')
+            ->lazy(500)
+            ->chunk(500);
+
+        foreach ($chunks as $histories) {
+            yield from $this->formatRows($histories->collect());
+        }
+    }
+
     private function baseQuery(): Builder
     {
         return AssessmentEditHistory::query()
@@ -114,6 +130,11 @@ class AuditEngineerChangeLogService
 
         if (in_array($recordType, self::EDIT_TYPES, true)) {
             $query->where('type', $recordType);
+        }
+
+        if ($request->filled('from_date') && $request->filled('to_date')) {
+            $query->where('created_at', '>=', Carbon::parse($request->input('from_date'))->startOfDay())
+                ->where('created_at', '<', Carbon::parse($request->input('to_date'))->addDay()->startOfDay());
         }
 
         if ($searchValue !== '') {
