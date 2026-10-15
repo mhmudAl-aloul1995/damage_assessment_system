@@ -85,7 +85,7 @@ it('renders separate record browsers with only children of the selected survey a
     file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-cso-workspace-preview.html', $response->getContent());
 });
 
-it('shows a single record directly and provides clear empty states for missing children', function (): void {
+it('keeps the unit selector visible for a single record and shows empty states for missing children', function (): void {
     CsoSurveyUnit::query()->create([
         'objectid' => 3101, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid, 'unit_name' => 'الوحدة الوحيدة',
     ]);
@@ -93,10 +93,21 @@ it('shows a single record directly and provides clear empty states for missing c
         ->assertSee('لا توجد منظمات مرتبطة بهذا الاستبيان')->assertSee('الوحدة الوحيدة')
         ->assertSee('لا توجد صور مرفقة بهذا الاستبيان.');
     $xpath = new DOMXPath(csoWorkspaceDocument($response->getContent()));
-    expect($xpath->query('//*[@id="cso_units_pane"]//button[@data-record-target]')->length)->toBe(0)
+    expect($xpath->query('//*[@id="cso_units_pane"]//button[@data-record-target]')->length)->toBe(1)
         ->and($xpath->query('//*[@id="cso_units_pane"]//*[@data-record-content and not(@hidden)]')->length)->toBe(1);
     expect($xpath->query('//*[@id="cso_gallery_image"]')->length)->toBe(0);
     file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-cso-workspace-empty-preview.html', $response->getContent());
+});
+
+it('keeps the organization selector visible when the survey has only one organization', function (): void {
+    CsoSurveyOrganization::query()->create([
+        'objectid' => 2101, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid, 'organization_name_ar' => 'المنظمة الوحيدة',
+    ]);
+    $response = $this->get(route('inf-audit.cso.show', $this->survey))->assertSuccessful()->assertSee('المنظمة الوحيدة');
+    $xpath = new DOMXPath(csoWorkspaceDocument($response->getContent()));
+    expect($xpath->query('//*[@id="cso_organizations_pane"]//aside//button[@data-record-target and @aria-pressed="true"]')->length)->toBe(1)
+        ->and($xpath->query('//*[@id="cso_organizations_pane"]//*[@data-record-content and not(@hidden)]')->length)->toBe(1);
+    file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-cso-workspace-one-org-preview.html', $response->getContent());
 });
 
 it('renders file attachments as links when no images are available', function (): void {

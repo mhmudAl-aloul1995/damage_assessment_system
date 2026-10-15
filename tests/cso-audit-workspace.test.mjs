@@ -18,6 +18,7 @@ let html;
 let emptyHtml;
 let filesHtml;
 let singleHtml;
+let oneOrganizationHtml;
 
 before(async () => {
     execFileSync('php', ['artisan', 'test', '--compact', 'tests/Feature/CsoAuditWorkspaceTest.php'], { cwd: root, timeout: 120000 });
@@ -25,11 +26,12 @@ before(async () => {
     emptyHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-empty-preview.html'), 'utf8');
     filesHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-files-preview.html'), 'utf8');
     singleHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-single-preview.html'), 'utf8');
+    oneOrganizationHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-one-org-preview.html'), 'utf8');
     server = createServer(async (request, response) => {
         const url = new URL(request.url, origin);
-        if (['/', '/empty', '/files', '/single'].includes(url.pathname)) {
+        if (['/', '/empty', '/files', '/single', '/one-org'].includes(url.pathname)) {
             response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            const fixture = ({ '/empty': emptyHtml, '/files': filesHtml, '/single': singleHtml })[url.pathname] ?? html;
+            const fixture = ({ '/empty': emptyHtml, '/files': filesHtml, '/single': singleHtml, '/one-org': oneOrganizationHtml })[url.pathname] ?? html;
             response.end(fixture.replaceAll('http://localhost', origin).replaceAll('http:\\/\\/localhost', origin));
             return;
         }
@@ -140,13 +142,12 @@ async function editField(page, selector, value) {
 
 async function scrollRecord(page, selector, offset) {
     await page.$eval(selector, (element, offset) => {
-        const readingTop = document.querySelector('#cso_decision_header').getBoundingClientRect().bottom + document.querySelector('.cso-workspace-tabs').getBoundingClientRect().height + 24;
-        window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top + offset - readingTop);
+        (element.closest('.cso-record-details') ?? element).scrollTop = offset;
     }, offset);
 }
 
 async function recordReading(page, selector) {
-    return page.$eval(selector, element => Math.max(0, document.querySelector('#cso_decision_header').getBoundingClientRect().bottom + document.querySelector('.cso-workspace-tabs').getBoundingClientRect().height + 24 - element.getBoundingClientRect().top));
+    return page.$eval(selector, element => (element.closest('.cso-record-details') ?? element).scrollTop);
 }
 
 test('record browsers keep independent selections and reading positions across tabs', async () => {
@@ -169,6 +170,29 @@ test('record browsers keep independent selections and reading positions across t
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-workspace-desktop.png') });
     assert.deepEqual(page.workspaceErrors, []);
     await page.close();
+});
+
+test('a single organization or unit still has a visible side selector beside its scrollable fields', async () => {
+    for (const [path, kind] of [['/one-org', 'organizations'], ['/empty', 'units']]) {
+        const page = await openWorkspace(1600, 1000, path);
+        await openTab(page, kind);
+        const browser = '#cso_' + kind + '_pane';
+        assert.equal(await page.$$eval(browser + ' .cso-record-select', items => items.length), 1);
+        assert.equal(await page.$eval(browser + ' .cso-record-select', element => element.getAttribute('aria-pressed')), 'true');
+        const bounds = await page.$eval(browser, element => ({
+            listLeft: element.querySelector('.cso-record-list').getBoundingClientRect().left,
+            detailsRight: element.querySelector('.cso-record-details').getBoundingClientRect().right,
+        }));
+        assert.ok(bounds.listLeft >= bounds.detailsRight - 1, JSON.stringify(bounds));
+        await scrollRecord(page, browser + ' [data-record-content]', 300);
+        await page.click(browser + ' .cso-record-select');
+        assert.equal(await recordReading(page, browser + ' [data-record-content]'), 300);
+        if (kind === 'organizations') {
+            await page.screenshot({ path: join(tmpdir(), 'phc-cso-one-organization-sidebar.png') });
+        }
+        assert.deepEqual(page.workspaceErrors, []);
+        await page.close();
+    }
 });
 
 test('search, edited and unanswered filters apply only to the open record and show an empty result state', async () => {
@@ -275,7 +299,7 @@ test('status decisions preserve assignment unless assigning and update the summa
     await page.click('#cso_assignment_toggle');
     await page.waitForSelector('#cso_assignment_menu.show');
     await page.click('#cso_assignment_menu .select2-selection');
-    const auditorOption = '#cso_assignment_menu .select2-results__option[role="option"][id$="-' + auditor + '"]';
+    const auditorOption = '#cso_decision_header .select2-results__option[role="option"][id$="-' + auditor + '"]';
     try {
         await page.waitForSelector(auditorOption, { visible: true });
     } catch (error) {
@@ -283,8 +307,23 @@ test('status decisions preserve assignment unless assigning and update the summa
         const options = await page.$$eval('.select2-results__option', elements => elements.map(element => element.outerHTML));
         throw new Error('Auditor options unavailable: ' + JSON.stringify(options), { cause: error });
     }
-    await page.click(auditorOption);
-    assert.equal(await page.$eval('#status_assignee', element => element.value), auditor);
+    await page.waitForFunction(selector => {
+        const option = document.querySelector(selector);
+        if (!option) { return false; }
+        const bounds = option.getBoundingClientRect();
+        const hit = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+        return hit === option || option.contains(hit);
+    }, {}, auditorOption);
+    const optionPosition = await page.$eval(auditorOption, element => {
+        const bounds = element.getBoundingClientRect();
+        return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+    });
+    await page.mouse.click(optionPosition.x, optionPosition.y);
+    const selectedAuditor = await page.$eval('#status_assignee', element => element.value);
+    if (selectedAuditor !== auditor) {
+        await page.screenshot({ path: join(tmpdir(), 'phc-cso-assignment-debug.png') });
+    }
+    assert.equal(selectedAuditor, auditor, JSON.stringify(optionPosition));
     await page.click('[data-status="assigned"]');
     await page.waitForFunction(() => document.querySelector('#cso_current_status').textContent === 'مسند');
     assert.equal(statusRequests.at(-1).assigned_to, auditor);
@@ -304,6 +343,8 @@ test('mobile record browsing fits the viewport and dark mode follows the applica
     }
     const bounds = await page.$eval('#cso_organizations_pane .cso-record-details', element => ({ left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right }));
     assert.ok(bounds.left >= 0 && bounds.right <= 390, JSON.stringify(bounds));
+    const panelBottom = await page.$eval('.cso-audit-data', element => element.getBoundingClientRect().bottom);
+    assert.ok(panelBottom <= 1100, String(panelBottom));
     const lightBackground = await page.$eval('.cso-field-toolbar', element => getComputedStyle(element).backgroundColor);
     await page.evaluate(() => document.documentElement.setAttribute('data-bs-theme', 'dark'));
     assert.notEqual(await page.$eval('.cso-field-toolbar', element => getComputedStyle(element).backgroundColor), lightBackground);
@@ -314,7 +355,7 @@ test('mobile record browsing fits the viewport and dark mode follows the applica
     await page.close();
 });
 
-test('sticky decision and gallery remain visible without overlapping while the survey scrolls', async () => {
+test('only the field pane scrolls while the record list, filters, tabs, decision and gallery stay visible', async () => {
     const page = await openWorkspace(1600, 1000);
     await page.waitForFunction(() => document.querySelector('#cso_gallery_image').naturalWidth > 0);
     const alignment = await page.evaluate(() => {
@@ -324,8 +365,6 @@ test('sticky decision and gallery remain visible without overlapping while the s
     });
     assert.ok(alignment.photoRight < alignment.dataLeft, JSON.stringify(alignment));
     assert.equal(await page.$eval('#cso_decision_header', element => getComputedStyle(element).position), 'sticky');
-    await page.evaluate(() => window.scrollBy(0, 40));
-    await page.waitForFunction(() => Math.abs(document.querySelector('#cso_decision_header').getBoundingClientRect().top - parseFloat(getComputedStyle(document.querySelector('#cso_decision_header')).top)) < 2);
     const positions = await page.evaluate(() => ({
         headerBottom: document.querySelector('#cso_decision_header').getBoundingClientRect().bottom,
         photoTop: document.querySelector('.cso-attachment-column').getBoundingClientRect().top,
@@ -333,8 +372,39 @@ test('sticky decision and gallery remain visible without overlapping while the s
     }));
     assert.ok(positions.photoTop >= positions.headerBottom + 10, JSON.stringify(positions));
     assert.ok(positions.photoBottom <= 1000, JSON.stringify(positions));
-    await scrollRecord(page, '#cso_survey_pane > [data-record-content]', 450);
-    assert.ok(await recordReading(page, '#cso_survey_pane > [data-record-content]') > 400);
+    await openTab(page, 'organizations');
+    const before = await page.evaluate(() => ({
+        window: window.scrollY,
+        list: document.querySelector('#cso_organizations_pane .cso-record-list').getBoundingClientRect().top,
+        filters: document.querySelector('.cso-field-toolbar').getBoundingClientRect().top,
+        tabs: document.querySelector('.cso-workspace-tabs').getBoundingClientRect().top,
+        gallery: document.querySelector('#cso_gallery_panel').getBoundingClientRect().top,
+        decision: document.querySelector('#cso_decision_header').getBoundingClientRect().top,
+    }));
+    await page.hover('#cso_organizations_pane .cso-record-details');
+    await page.mouse.wheel({ deltaY: 550 });
+    await page.waitForFunction(() => document.querySelector('#cso_organizations_pane .cso-record-details').scrollTop > 400);
+    const after = await page.evaluate(() => ({
+        window: window.scrollY,
+        list: document.querySelector('#cso_organizations_pane .cso-record-list').getBoundingClientRect().top,
+        filters: document.querySelector('.cso-field-toolbar').getBoundingClientRect().top,
+        tabs: document.querySelector('.cso-workspace-tabs').getBoundingClientRect().top,
+        gallery: document.querySelector('#cso_gallery_panel').getBoundingClientRect().top,
+        decision: document.querySelector('#cso_decision_header').getBoundingClientRect().top,
+    }));
+    assert.deepEqual(after, before);
+    await page.$eval('#cso_organizations_pane .cso-record-details', element => { element.scrollTop = element.scrollHeight; });
+    await page.mouse.wheel({ deltaY: 400 });
+    await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+    assert.equal(await page.evaluate(() => window.scrollY), before.window);
+    await scrollRecord(page, '#cso_organizations_pane [data-record-content]:not([hidden])', 0);
+    const recordBounds = await page.evaluate(() => ({
+        listLeft: document.querySelector('#cso_organizations_pane .cso-record-list').getBoundingClientRect().left,
+        detailsRight: document.querySelector('#cso_organizations_pane .cso-record-details').getBoundingClientRect().right,
+        dataBottom: document.querySelector('.cso-audit-data').getBoundingClientRect().bottom,
+    }));
+    assert.ok(recordBounds.listLeft >= recordBounds.detailsRight - 1, JSON.stringify(recordBounds));
+    assert.ok(recordBounds.dataBottom <= 1000, JSON.stringify(recordBounds));
     const scroll = await page.$eval('.cso-gallery-scroll', element => ({ height: element.clientHeight, contentHeight: element.scrollHeight }));
     assert.ok(scroll.contentHeight > scroll.height, JSON.stringify(scroll));
     const topBeforeThumbScroll = await page.$eval('#cso_gallery_image', element => element.getBoundingClientRect().top);
@@ -342,6 +412,8 @@ test('sticky decision and gallery remain visible without overlapping while the s
     assert.equal(await page.$eval('#cso_gallery_image', element => element.getBoundingClientRect().top), topBeforeThumbScroll);
     await page.click('#cso_gallery_panel [data-cso-image-step="1"]');
     assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /2\.jpg/);
+    await page.screenshot({ path: join(tmpdir(), 'phc-cso-record-panels-desktop.png') });
+    await (await page.$('#cso_audit_workspace')).screenshot({ path: join(tmpdir(), 'phc-cso-approved-layout.png') });
     await openTab(page, 'units');
     assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /2\.jpg/);
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-sticky-gallery-desktop.png') });
@@ -352,7 +424,7 @@ test('sticky decision and gallery remain visible without overlapping while the s
 test('sticky gaps hide underlying fields in light and dark themes on desktop and mobile', async () => {
     for (const width of [1600, 390]) {
         const page = await openWorkspace(width, 1000);
-        await page.evaluate(() => window.scrollBy(0, 1000));
+        await scrollRecord(page, '#cso_survey_pane > [data-record-content]', 1000);
         for (const theme of ['light', 'dark']) {
             await page.evaluate(theme => document.documentElement.setAttribute('data-bs-theme', theme), theme);
             const coverage = await page.evaluate(() => {
@@ -417,7 +489,7 @@ test('gallery viewer zooms, navigates, handles failed images and restores the re
 
 test('mobile gallery opens full screen and the decision stays below the system header while scrolling', async () => {
     const page = await openWorkspace(390, 844);
-    await page.evaluate(() => window.scrollBy(0, 900));
+    await scrollRecord(page, '#cso_survey_pane > [data-record-content]', 900);
     const dimensions = await page.evaluate(() => {
         const header = document.querySelector('#cso_decision_header').getBoundingClientRect();
         const system = document.querySelector('#kt_app_header').getBoundingClientRect();
@@ -427,6 +499,7 @@ test('mobile gallery opens full screen and the decision stays below the system h
     assert.ok(dimensions.headerBottom < 844 && dimensions.headerHeight < 190, JSON.stringify(dimensions));
     assert.ok(dimensions.scrollWidth <= dimensions.width + 1, JSON.stringify(dimensions));
     assert.equal(await page.$eval('.cso-attachment-column', element => getComputedStyle(element).display), 'none');
+    assert.ok(await page.$eval('.cso-audit-data', element => element.getBoundingClientRect().bottom) <= 844);
     const scrollPosition = await page.evaluate(() => window.scrollY);
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-sticky-gallery-mobile.png') });
     await page.click('.cso-mobile-gallery-trigger');

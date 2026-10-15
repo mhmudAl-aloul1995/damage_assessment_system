@@ -1,5 +1,5 @@
 <style>
-    .cso-detail-workspace { --cso-border: var(--bs-gray-200, #eff2f5); --cso-app-top: 80px; --cso-header-height: 100px; --cso-tabs-height: 64px; --cso-sticky-top: calc(var(--cso-app-top) + var(--cso-header-height) + 12px); color: var(--bs-gray-900, #181c32); min-width: 0; }
+    .cso-detail-workspace { --cso-border: var(--bs-gray-200, #eff2f5); --cso-app-top: 80px; --cso-header-height: 100px; --cso-sticky-top: calc(var(--cso-app-top) + var(--cso-header-height) + 12px); color: var(--bs-gray-900, #181c32); min-width: 0; }
     .cso-detail-workspace .card { border: 1px solid var(--cso-border); box-shadow: 0 2px 8px rgba(0, 0, 0, .025); }
     .cso-detail-workspace .min-w-0 { min-width: 0; }
     .cso-child-title { overflow-wrap: anywhere; }
@@ -17,8 +17,12 @@
     .cso-assignment-menu { width: 320px; max-width: calc(100vw - 24px); max-height: calc(100dvh - var(--cso-sticky-top) - 16px); overflow-y: auto; }
     .cso-audit-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(270px, 25%, 320px); align-items: start; gap: 20px; }
     .cso-audit-data { min-width: 0; }
+    .cso-audit-data > .card-body { display: flex; flex-direction: column; height: max(360px, calc(100dvh - var(--cso-panel-top, var(--cso-sticky-top)) - 16px)); min-height: 0; }
+    .cso-audit-data .tab-content { flex: 1; min-height: 0; overflow: hidden; }
+    .cso-audit-data .tab-pane.active { height: 100%; }
+    #cso_survey_pane > .cso-record-content, .cso-record-details { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
     .cso-attachment-column { position: sticky; top: var(--cso-sticky-top); min-width: 0; }
-    .cso-gallery-panel { display: flex; flex-direction: column; max-height: calc(100dvh - var(--cso-sticky-top) - 16px); overflow: hidden; }
+    .cso-gallery-panel { display: flex; flex-direction: column; max-height: calc(100dvh - var(--cso-panel-top, var(--cso-sticky-top)) - 16px); overflow: hidden; }
     .cso-gallery-header { border-bottom: 1px solid var(--cso-border); }
     .cso-gallery-panel > :not(.cso-gallery-scroll) { flex-shrink: 0; }
     .cso-gallery-preview { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: var(--bs-gray-100, #f9f9f9); cursor: zoom-in; }
@@ -36,18 +40,17 @@
     .cso-attachment-file { display: block; overflow-wrap: anywhere; }
     .cso-mobile-gallery-trigger { display: none; }
     .cso-detail-workspace button, .cso-detail-workspace input, .cso-detail-workspace [role="tabpanel"] { scroll-margin-top: calc(var(--cso-sticky-top) + 16px); }
-    .cso-workspace-tabs { position: sticky; top: var(--cso-sticky-top); z-index: 5; background: var(--bs-body-bg, #fff); border-bottom: 1px solid var(--cso-border); }
+    .cso-workspace-tabs { position: relative; z-index: 5; flex-shrink: 0; background: var(--bs-body-bg, #fff); border-bottom: 1px solid var(--cso-border); }
     .cso-workspace-tabs::before { content: ''; position: absolute; inset-inline: -1px; bottom: 100%; height: 13px; z-index: -1; background: var(--bs-body-bg, #fff); }
     .cso-workspace-tabs .nav { display: flex; flex-wrap: nowrap; gap: 24px; }
     .cso-workspace-tabs .nav-link { border-top: 0; border-left: 0; border-right: 0; border-bottom: 2px solid transparent; color: var(--bs-gray-600, #7e8299); background: transparent; padding: 20px 0; white-space: nowrap; font-size: 1.05rem; }
     .cso-workspace-tabs .nav-link.active { color: var(--bs-primary, #009ef7); border-bottom-color: var(--bs-primary, #009ef7); }
     .cso-workspace-tabs .nav-link:focus-visible { outline: 2px solid var(--bs-primary, #009ef7); outline-offset: -2px; }
-    .cso-field-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: var(--bs-gray-100, #f9f9f9); border-bottom: 1px solid var(--cso-border); }
+    .cso-field-toolbar { display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; gap: 12px; background: var(--bs-gray-100, #f9f9f9); border-bottom: 1px solid var(--cso-border); }
     .cso-field-search { flex: 1 1 260px; max-width: 450px; }
     .cso-field-search input { background: var(--bs-body-bg, #fff); }
-    .cso-record-browser { display: grid; grid-template-columns: 180px minmax(0, 1fr); }
-    .cso-record-browser.cso-single-record { grid-template-columns: minmax(0, 1fr); }
-    .cso-record-list { position: sticky; top: calc(var(--cso-sticky-top) + var(--cso-tabs-height) + 12px); align-self: start; max-height: calc(100dvh - var(--cso-sticky-top) - var(--cso-tabs-height) - 24px); overflow-y: auto; border-inline-end: 1px solid var(--cso-border); background: var(--bs-gray-100, #f9f9f9); }
+    .cso-record-browser { display: grid; grid-template-columns: 180px minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; }
+    .cso-record-list { min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior-y: contain; border-inline-end: 1px solid var(--cso-border); background: var(--bs-gray-100, #f9f9f9); }
     .cso-record-select { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: start; padding: 16px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: inherit; overflow-wrap: anywhere; }
     .cso-record-select:hover { background: var(--bs-body-bg, #fff); }
     .cso-record-select.active { background: var(--bs-primary-light, #eef6ff); border-color: var(--bs-primary, #009ef7); color: var(--bs-primary, #009ef7); }
@@ -90,8 +93,9 @@
         .cso-detail-workspace { padding-bottom: 65px; }
     }
     @media (max-width: 991.98px) {
-        .cso-record-browser { grid-template-columns: minmax(0, 1fr); }
-        .cso-record-list { position: static; max-height: none; overflow-y: visible; border-inline-end: 0; border-bottom: 1px solid var(--cso-border); }
+        .cso-record-browser { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+        .cso-record-list { height: auto; overflow-y: visible; border-inline-end: 0; border-bottom: 1px solid var(--cso-border); }
+        .cso-record-list-help { display: none; }
         .cso-record-list > .d-flex { flex-direction: row !important; overflow-x: auto; padding: 2px; }
         .cso-record-select { flex: 0 0 200px; }
     }

@@ -41,7 +41,7 @@
 
                     <div class="tab-content">
                         <div class="tab-pane active" id="cso_survey_pane" role="tabpanel" aria-labelledby="cso_survey_tab" tabindex="0">
-                            <div class="cso-record-content p-5" data-record-content>
+                            <div class="cso-record-content p-5" data-record-content tabindex="0" aria-label="حقول الاستبيان">
                                 <div class="d-flex align-items-start justify-content-between gap-3 mb-5">
                                     <div><h3 class="fw-bold mb-2">بيانات الاستبيان</h3><p class="text-muted fs-7 mb-0">القيمة الحالية لكل سؤال. يمكنك فتح سجل التعديل بجانب الحقول المعدّلة.</p></div>
                                     <span class="badge badge-light">القيمة الحالية</span>

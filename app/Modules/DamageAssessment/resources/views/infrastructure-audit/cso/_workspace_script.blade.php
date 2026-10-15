@@ -9,23 +9,34 @@
         let savingField = false;
         let changingStatus = false;
 
-        $('#status_assignee').select2({ width: '100%', allowClear: true, dropdownParent: $('#cso_assignment_menu') });
+        $('#status_assignee').select2({ width: '100%', allowClear: true, dropdownParent: $('#cso_decision_header') });
+        $('#cso_assignment_toggle').on('hide.bs.dropdown', function (event) {
+            if ($(event.clickEvent?.target).closest('#cso_decision_header .select2-dropdown').length) { event.preventDefault(); }
+        });
 
         const decisionHeader = document.getElementById('cso_decision_header');
         const appHeader = document.getElementById('kt_app_header');
-        const workspaceTabs = workspace.find('.cso-workspace-tabs')[0];
+        const auditLayout = workspace.find('.cso-audit-layout')[0];
+        let measurementFrame = null;
         function updateStickyMeasurements() {
             const appPosition = appHeader ? getComputedStyle(appHeader).position : '';
             const appBottom = appHeader && ['fixed', 'sticky'].includes(appPosition) ? Math.max(0, appHeader.getBoundingClientRect().bottom) : 0;
             workspace[0].style.setProperty('--cso-app-top', Math.ceil(appBottom + 8) + 'px');
             workspace[0].style.setProperty('--cso-header-height', Math.ceil(decisionHeader.getBoundingClientRect().height) + 'px');
-            workspace[0].style.setProperty('--cso-tabs-height', Math.ceil(workspaceTabs.getBoundingClientRect().height) + 'px');
+            const panelTop = Math.max(auditLayout.getBoundingClientRect().top, decisionHeader.getBoundingClientRect().bottom + 12);
+            workspace[0].style.setProperty('--cso-panel-top', Math.ceil(panelTop) + 'px');
         }
         const stickyObserver = new ResizeObserver(updateStickyMeasurements);
         stickyObserver.observe(decisionHeader);
-        stickyObserver.observe(workspaceTabs);
         if (appHeader) { stickyObserver.observe(appHeader); }
         window.addEventListener('resize', updateStickyMeasurements);
+        window.addEventListener('scroll', function () {
+            if (measurementFrame !== null) { return; }
+            measurementFrame = requestAnimationFrame(function () {
+                measurementFrame = null;
+                updateStickyMeasurements();
+            });
+        }, { passive: true });
         updateStickyMeasurements();
 
         function hasAnswer(value) {
@@ -45,17 +56,17 @@
             return content.attr('id') || content.closest('[role="tabpanel"]').attr('id');
         }
 
-        function readingTop() {
-            return decisionHeader.getBoundingClientRect().bottom + workspaceTabs.getBoundingClientRect().height + 24;
+        function readingScroller(content) {
+            return content.closest('.cso-record-details').length ? content.closest('.cso-record-details') : content;
         }
 
         function rememberReading(content) {
-            if (content.length) { readingPositions.set(readingKey(content), Math.max(0, readingTop() - content[0].getBoundingClientRect().top)); }
+            if (content.length) { readingPositions.set(readingKey(content), readingScroller(content).scrollTop()); }
         }
 
         function restoreReading(content) {
             if (!content.length) { return; }
-            window.scrollTo(0, window.scrollY + content[0].getBoundingClientRect().top + (readingPositions.get(readingKey(content)) ?? 0) - readingTop());
+            readingScroller(content).scrollTop(readingPositions.get(readingKey(content)) ?? 0);
         }
 
         function applyFieldFilter() {
