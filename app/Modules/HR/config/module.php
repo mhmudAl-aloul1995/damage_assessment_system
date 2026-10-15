@@ -2,8 +2,8 @@
 
 return [
     'provider' => App\Modules\HR\Providers\HRServiceProvider::class,
-    'title' => 'الموارد البشرية',
-    'description' => 'الحضور والموظفون والهيكل الإداري',
+    'title' => 'الموارد البشرية HR',
+    'description' => 'متابعة الحضور والانصراف',
     'icon' => 'ki-people',
     'active_patterns' => ['hr', 'hr/*'],
     'central' => false,

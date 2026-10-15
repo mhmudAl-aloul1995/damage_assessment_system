@@ -13,6 +13,9 @@ use App\Modules\HR\Http\Middleware\EnsureEmployeeStorage;
 use App\Modules\HR\Http\Middleware\RequireHrHttps;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', [AttendanceController::class, 'home'])
+    ->middleware([RequireHrHttps::class, 'auth'])->name('hr.home');
+
 Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorage::class])->name('hr.attendance.')->group(function (): void {
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('index');
     Route::get('/attendance/export', [AttendanceController::class, 'export'])->name('export');

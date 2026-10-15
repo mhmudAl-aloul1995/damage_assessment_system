@@ -2,6 +2,14 @@
 
 return [[
     'module' => 'hr',
+    'title' => 'الرئيسية',
+    'icon' => 'ki-home',
+    'url' => 'hr',
+    'roles' => ['Database Officer'],
+    'permissions' => ['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.view-team'],
+    'active_patterns' => ['hr'],
+], [
+    'module' => 'hr',
     'title' => 'الحضور والانصراف',
     'icon' => 'ki-time',
     'url' => 'hr/attendance',

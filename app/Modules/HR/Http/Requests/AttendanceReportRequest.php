@@ -19,6 +19,7 @@ class AttendanceReportRequest extends FormRequest
             'date' => ['nullable', 'date_format:Y-m-d'],
             'month' => ['nullable', 'date_format:Y-m', 'prohibits:date'],
             'employee_id' => ['nullable', 'integer', 'min:1'],
+            'search' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
@@ -30,6 +31,8 @@ class AttendanceReportRequest extends FormRequest
             'month.date_format' => 'اختر شهراً صحيحاً.',
             'month.prohibits' => 'اختر اليوم أو الشهر، وليس كليهما.',
             'employee_id.integer' => 'رقم الموظف غير صالح.',
+            'search.string' => 'أدخل اسم الموظف أو رقمه كنص.',
+            'search.max' => 'يجب ألا يتجاوز البحث 100 حرف.',
         ];
     }
 }

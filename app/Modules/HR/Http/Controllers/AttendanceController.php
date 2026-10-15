@@ -22,6 +22,13 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AttendanceController extends Controller
 {
+    public function home(): View
+    {
+        Gate::authorize('viewAny', Employee::class);
+
+        return view('hr::home');
+    }
+
     public function index(AttendanceReportRequest $request, AttendanceReport $report): View
     {
         $filters = $request->validated();

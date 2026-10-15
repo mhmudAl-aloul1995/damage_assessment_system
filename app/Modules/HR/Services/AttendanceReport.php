@@ -32,7 +32,11 @@ class AttendanceReport
         [$start, $end] = $this->dates($filters);
 
         return $this->relations($this->policy->visibleTo($user)
-            ->when($filters['employee_id'] ?? null, fn ($query, $id) => $query->whereKey($id)), $start, $end)->orderBy('employee_number');
+            ->when($filters['employee_id'] ?? null, fn ($query, $id) => $query->whereKey($id))
+            ->when(isset($filters['search']) && $filters['search'] !== '', fn (Builder $query): Builder => $query
+                ->where(fn (Builder $query): Builder => $query
+                    ->where('display_name', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('employee_number', 'like', '%'.$filters['search'].'%'))), $start, $end)->orderBy('employee_number');
     }
 
     public function relations(Builder $query, string $start, string $end): Builder
