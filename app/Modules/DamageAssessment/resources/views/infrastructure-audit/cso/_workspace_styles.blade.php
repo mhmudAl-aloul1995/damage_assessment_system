@@ -17,7 +17,7 @@
     .cso-assignment-menu { width: 320px; max-width: calc(100vw - 24px); max-height: calc(100dvh - var(--cso-sticky-top) - 16px); overflow-y: auto; }
     .cso-audit-layout { display: grid; grid-template-columns: minmax(0, 1fr) clamp(270px, 25%, 320px); align-items: start; gap: 20px; }
     .cso-audit-data { min-width: 0; }
-    .cso-audit-data > .card-body { display: flex; flex-direction: column; height: max(360px, calc(100dvh - var(--cso-panel-top, var(--cso-sticky-top)) - 16px)); min-height: 0; }
+    .cso-audit-data > .card-body { display: flex; flex-direction: column; height: max(900px, calc(100dvh - var(--cso-panel-top, var(--cso-sticky-top)) - 16px)); min-height: 0; }
     .cso-audit-data .tab-content { flex: 1; min-height: 0; overflow: hidden; }
     .cso-audit-data .tab-pane.active { height: 100%; }
     #cso_survey_pane > .cso-record-content, .cso-record-details { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
@@ -106,6 +106,7 @@
     }
     @media (max-width: 1199.98px) {
         .cso-audit-layout { grid-template-columns: minmax(0, 1fr); }
+        .cso-audit-data > .card-body { height: max(360px, calc(100dvh - var(--cso-panel-top, var(--cso-sticky-top)) - 16px)); }
         .cso-attachment-column { display: none; }
         .cso-mobile-gallery-trigger { display: inline-flex; align-items: center; position: fixed; inset-inline-start: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 94; }
         .cso-detail-workspace { padding-bottom: 65px; }

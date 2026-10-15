@@ -442,7 +442,11 @@ test('only the field pane scrolls while the record list, filters, tabs, decision
         gallery: document.querySelector('#cso_gallery_panel').getBoundingClientRect().top,
         decision: document.querySelector('#cso_decision_header').getBoundingClientRect().top,
     }));
-    await page.hover('#cso_organizations_pane .cso-record-details');
+    const fieldPane = await page.$eval('#cso_organizations_pane .cso-record-details', element => {
+        const bounds = element.getBoundingClientRect();
+        return { x: bounds.left + bounds.width / 2, y: Math.min(bounds.bottom, window.innerHeight) - 30 };
+    });
+    await page.mouse.move(fieldPane.x, fieldPane.y);
     await page.mouse.wheel({ deltaY: 550 });
     await page.waitForFunction(() => document.querySelector('#cso_organizations_pane .cso-record-details').scrollTop > 400);
     const after = await page.evaluate(() => ({
@@ -465,7 +469,8 @@ test('only the field pane scrolls while the record list, filters, tabs, decision
         dataBottom: document.querySelector('.cso-audit-data').getBoundingClientRect().bottom,
     }));
     assert.ok(recordBounds.listLeft >= recordBounds.detailsRight - 1, JSON.stringify(recordBounds));
-    assert.ok(recordBounds.dataBottom <= 1000, JSON.stringify(recordBounds));
+    assert.ok(recordBounds.dataBottom > 1000, JSON.stringify(recordBounds));
+    assert.ok(await page.$eval('.cso-audit-data > .card-body', element => element.getBoundingClientRect().height) >= 900);
     const scroll = await page.$eval('.cso-gallery-scroll', element => ({ height: element.clientHeight, contentHeight: element.scrollHeight }));
     assert.ok(scroll.contentHeight > scroll.height, JSON.stringify(scroll));
     const topBeforeThumbScroll = await page.$eval('#cso_gallery_image', element => element.getBoundingClientRect().top);
@@ -475,6 +480,7 @@ test('only the field pane scrolls while the record list, filters, tabs, decision
     assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /2\.jpg/);
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-record-panels-desktop.png') });
     await (await page.$('#cso_audit_workspace')).screenshot({ path: join(tmpdir(), 'phc-cso-approved-layout.png') });
+    await page.$eval('#cso_units_tab', element => element.scrollIntoView({ block: 'start' }));
     await openTab(page, 'units');
     assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /2\.jpg/);
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-sticky-gallery-desktop.png') });
