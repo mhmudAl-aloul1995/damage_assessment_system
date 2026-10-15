@@ -19,6 +19,8 @@ let emptyHtml;
 let filesHtml;
 let singleHtml;
 let oneOrganizationHtml;
+let groupedHtml;
+let locationHtml;
 
 before(async () => {
     execFileSync('php', ['artisan', 'test', '--compact', 'tests/Feature/CsoAuditWorkspaceTest.php'], { cwd: root, timeout: 120000 });
@@ -27,11 +29,13 @@ before(async () => {
     filesHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-files-preview.html'), 'utf8');
     singleHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-single-preview.html'), 'utf8');
     oneOrganizationHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-one-org-preview.html'), 'utf8');
+    groupedHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-grouped-preview.html'), 'utf8');
+    locationHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-location-preview.html'), 'utf8');
     server = createServer(async (request, response) => {
         const url = new URL(request.url, origin);
-        if (['/', '/empty', '/files', '/single', '/one-org'].includes(url.pathname)) {
+        if (['/', '/empty', '/files', '/single', '/one-org', '/grouped', '/location'].includes(url.pathname)) {
             response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            const fixture = ({ '/empty': emptyHtml, '/files': filesHtml, '/single': singleHtml, '/one-org': oneOrganizationHtml })[url.pathname] ?? html;
+            const fixture = ({ '/empty': emptyHtml, '/files': filesHtml, '/single': singleHtml, '/one-org': oneOrganizationHtml, '/grouped': groupedHtml, '/location': locationHtml })[url.pathname] ?? html;
             response.end(fixture.replaceAll('http://localhost', origin).replaceAll('http:\\/\\/localhost', origin));
             return;
         }
@@ -103,7 +107,7 @@ after(async () => {
     await new Promise(done => server?.close(done));
 });
 
-async function openWorkspace(width = 1600, height = 1800, path = '/') {
+async function openWorkspace(width = 1600, height = 1800, path = '/', allowMaps = false) {
     const page = await browser.newPage();
     page.setDefaultTimeout(7000);
     const errors = [];
@@ -111,8 +115,12 @@ async function openWorkspace(width = 1600, height = 1800, path = '/') {
     page.workspaceErrors = errors;
     await page.setViewport({ width, height });
     await page.setRequestInterception(true);
-    page.on('request', request => request.url().startsWith(origin) ? request.continue() : request.abort());
-    await page.goto(origin + path, { waitUntil: 'networkidle0' });
+    page.on('request', request => {
+        const url = new URL(request.url());
+        const mapHost = allowMaps && ['js.arcgis.com', 'server.arcgisonline.com', 'services.arcgisonline.com', 'www.arcgis.com', 'static.arcgis.com'].includes(url.hostname);
+        return request.url().startsWith(origin) || mapHost ? request.continue() : request.abort();
+    });
+    await page.goto(origin + path, { waitUntil: allowMaps ? 'domcontentloaded' : 'networkidle0', timeout: 30000 });
     await page.waitForFunction(() => document.querySelector('[data-filter-count="all"]')?.textContent !== '0');
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => {
@@ -159,17 +167,70 @@ test('record browsers keep independent selections and reading positions across t
     await page.click('#cso_organizations_pane .cso-record-select:nth-child(2)');
     assert.match(await page.$eval('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-child-title', element => element.textContent), /مركز الدعم/);
     await openTab(page, 'units');
-    await page.click('#cso_units_pane .cso-record-step[data-step="1"]');
-    assert.match(await page.$eval('#cso_units_pane [data-record-content]:not([hidden]) .cso-child-title', element => element.textContent), /غرفة الاستقبال/);
+    assert.equal(await page.$$eval('#cso_units_pane [data-record-content]:not([hidden])', items => items.length), 0);
+    assert.equal(await page.$eval('#cso_units_tab .badge', element => element.textContent), '0');
     await openTab(page, 'organizations');
     assert.match(await page.$eval('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-child-title', element => element.textContent), /مركز الدعم/);
     await page.click('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-record-step[data-step="-1"]');
     assert.ok(Math.abs(await recordReading(page, '#cso_organizations_pane [data-record-content]:not([hidden])') - 220) < 2);
+    await openTab(page, 'units');
+    await page.click('#cso_units_pane [data-record-content]:not([hidden]) .cso-record-step[data-step="1"]');
+    assert.match(await page.$eval('#cso_units_pane [data-record-content]:not([hidden]) .cso-child-title', element => element.textContent), /غرفة الاستقبال/);
+    await openTab(page, 'organizations');
     await scrollRecord(page, '#cso_organizations_pane [data-record-content]:not([hidden])', 0);
     await page.$eval('.cso-detail-workspace', element => element.scrollIntoView({ block: 'start' }));
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-workspace-desktop.png') });
     assert.deepEqual(page.workspaceErrors, []);
     await page.close();
+});
+
+test('organization selection scopes unit lists, counts, navigation, empty states and unassigned records on desktop and mobile', async () => {
+    for (const width of [1600, 390]) {
+        const page = await openWorkspace(width, 1000, '/grouped');
+        await openTab(page, 'units');
+        const visibleUnits = () => page.$$eval('#cso_units_pane .cso-record-select:not([hidden]) .cso-record-select-name', items => items.map(item => item.textContent.trim()));
+        assert.deepEqual(await visibleUnits(), ['وحدة ألف الأولى', 'وحدة ألف الثانية']);
+        assert.equal(await page.$eval('#cso_units_tab .badge', item => item.textContent), '2');
+        await page.click('#cso_units_pane [data-record-content]:not([hidden]) .cso-record-step[data-step="1"]');
+        const secondId = await page.$eval('#cso_units_pane [data-record-content]:not([hidden])', item => item.id);
+        await scrollRecord(page, '#' + secondId, 200);
+        assert.equal(await page.$eval('#' + secondId + ' .cso-record-step[data-step="1"]', item => item.disabled), true);
+        await page.click('#cso_change_organization');
+        await page.waitForSelector('#cso_organizations_pane.active');
+        await page.click('#cso_organizations_pane .cso-record-select:nth-child(2)');
+        await page.click('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-open-units');
+        await page.waitForSelector('#cso_units_pane.active');
+        assert.deepEqual(await visibleUnits(), ['وحدة باء']);
+        assert.equal(await page.$eval('#cso_unit_organization_name', item => item.textContent), 'منظمة باء');
+        assert.equal(await page.$eval('#cso_units_tab .badge', item => item.textContent), '1');
+        assert.equal(await page.$$eval('#cso_units_pane [data-record-content]:not([hidden]) .cso-record-step:not([disabled])', items => items.length), 0);
+        const edit = '#cso_units_pane [data-record-content]:not([hidden]) [data-field-name="unit_name"]';
+        const recordId = await page.$eval(edit, item => item.dataset.recordId);
+        await editField(page, edit, 'وحدة باء بعد التدقيق');
+        assert.equal(fieldRequests.at(-1).auditable_id, recordId);
+        assert.equal(fieldRequests.at(-1).expected_value, 'وحدة باء');
+        await page.click('#cso_unassigned_units');
+        assert.deepEqual(await visibleUnits(), ['وحدة غير مرتبطة', 'وحدة ربط متعارض']);
+        assert.equal(await page.$eval('#cso_unit_organization_name', item => item.textContent), 'وحدات غير مرتبطة');
+        await page.click('#cso_return_organization_units');
+        assert.deepEqual(await visibleUnits(), ['وحدة باء بعد التدقيق']);
+        await page.click('#cso_change_organization');
+        await page.click('#cso_organizations_pane .cso-record-select:nth-child(3)');
+        await openTab(page, 'units');
+        assert.deepEqual(await visibleUnits(), []);
+        assert.equal(await page.$eval('#cso_no_organization_units', item => item.hidden), false);
+        assert.equal(await page.$$eval('#cso_units_pane [data-record-content]:not([hidden])', items => items.length), 0);
+        assert.equal(await page.$eval('[data-filter-count="all"]', item => item.textContent), '0');
+        await page.click('#cso_change_organization');
+        await page.click('#cso_organizations_pane .cso-record-select:first-child');
+        await openTab(page, 'units');
+        assert.equal(await page.$eval('#cso_units_pane [data-record-content]:not([hidden])', item => item.id), secondId);
+        assert.ok(Math.abs(await recordReading(page, '#' + secondId) - 200) < 2);
+        await scrollRecord(page, '#' + secondId, 0);
+        await page.screenshot({ path: join(tmpdir(), 'phc-cso-organization-units-' + width + '.png') });
+        assert.deepEqual(page.workspaceErrors, []);
+        await page.close();
+    }
 });
 
 test('a single organization or unit still has a visible side selector beside its scrollable fields', async () => {
@@ -543,4 +604,68 @@ test('single image gallery keeps navigation disabled in both the sidebar and vie
     assert.equal(await page.$$eval('[data-cso-image-step]', buttons => buttons.every(button => button.disabled)), true);
     assert.deepEqual(page.workspaceErrors, []);
     await page.close();
+});
+
+test('read only location preserves its outline, links and reading position when ArcGIS is unavailable', async () => {
+    for (const width of [1600, 390]) {
+        const page = await openWorkspace(width, 1000, '/location');
+        await page.waitForSelector('[data-location-failed]');
+        const original = await page.$eval('[data-cso-location]', element => element.dataset.csoLocation);
+        const requestCount = fieldRequests.length;
+        assert.equal(await page.$$eval('[data-field-name="location"]', elements => elements.length), 0);
+        assert.equal(await page.$eval('.cso-location-source', element => element.open), false);
+        assert.equal(await page.$eval('.cso-location-outline path', element => element.getAttribute('d').startsWith('M')), true);
+        const link = new URL(await page.$eval('[data-cso-location] a', element => element.href));
+        assert.equal(link.hostname, 'www.google.com');
+        assert.equal(link.searchParams.get('query'), '31.5249759,34.4581619');
+        await page.click('.cso-location-source summary');
+        assert.match(await page.$eval('.cso-location-source pre', element => element.textContent), /"rings"/);
+        await page.click('.cso-location-source summary');
+        await page.click('.cso-open-location');
+        await page.waitForSelector('#cso_location_viewer.show');
+        await page.waitForFunction(() => document.querySelector('#cso_location_status').textContent.includes('تعذّر'));
+        const reading = await recordReading(page, '#cso_survey_pane [data-record-content]');
+        assert.equal(await page.$eval('#cso_location_fallback', element => element.hidden), false);
+        assert.equal(await page.$eval('#cso_location_fit', element => element.disabled), true);
+        assert.equal(await page.$eval('#cso_location_google', element => element.href), link.href);
+        assert.equal(await page.$$eval('#cso_location_viewer input, #cso_location_viewer textarea, #cso_location_viewer [contenteditable]', elements => elements.length), 0);
+        await page.evaluate(() => { document.documentElement.dataset.bsTheme = 'dark'; });
+        assert.equal(await page.$eval('#cso_location_viewer', element => element.scrollWidth <= innerWidth + 1), true);
+        await page.screenshot({ path: join(tmpdir(), 'phc-cso-location-fallback-' + width + '.png') });
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('#cso_location_viewer')).display === 'none' && !document.querySelector('.modal-backdrop'));
+        assert.ok(Math.abs(await recordReading(page, '#cso_survey_pane [data-record-content]') - reading) < 2);
+        assert.equal(await page.$eval('[data-cso-location]', element => element.dataset.csoLocation), original);
+        assert.equal(fieldRequests.length, requestCount);
+        assert.equal(await page.evaluate(() => document.activeElement.classList.contains('cso-open-location')), true);
+        assert.deepEqual(page.workspaceErrors, []);
+        await page.close();
+    }
+});
+
+test('live ArcGIS renders the supplied polygon on satellite imagery with navigation and no editing tools', { skip: process.env.CSO_LIVE_MAP !== '1', timeout: 120000 }, async () => {
+    for (const width of [1600, 390]) {
+        const page = await openWorkspace(width, 1100, '/location', true);
+        await page.waitForSelector('[data-location-ready], [data-location-failed]', { timeout: 45000 });
+        const state = await page.$eval('[data-cso-location]', element => ({ ready: element.dataset.locationReady, message: element.querySelector('.cso-location-status').textContent }));
+        assert.equal(state.ready, 'true', state.message);
+        assert.equal(await page.$$eval('.cso-location-map canvas', elements => elements.length > 0), true);
+        const original = await page.$eval('[data-cso-location]', element => element.dataset.csoLocation);
+        const requestCount = fieldRequests.length;
+        await page.click('.cso-open-location');
+        await page.waitForFunction(() => !document.querySelector('#cso_location_fit').disabled, { timeout: 45000 });
+        assert.equal(await page.$$eval('#cso_location_map .esri-zoom', elements => elements.length), 1);
+        assert.equal(await page.$$eval('#cso_location_map .esri-sketch, #cso_location_map .esri-editor', elements => elements.length), 0);
+        await page.click('#cso_location_map .esri-zoom .esri-widget--button');
+        await page.click('#cso_location_fit');
+        await page.screenshot({ path: join(tmpdir(), 'phc-cso-location-satellite-' + width + '.png') });
+        await page.click('#cso_location_viewer .btn-close');
+        await page.waitForFunction(() => getComputedStyle(document.querySelector('#cso_location_viewer')).display === 'none' && !document.querySelector('.modal-backdrop'));
+        await page.click('.cso-open-location');
+        await page.waitForFunction(() => !document.querySelector('#cso_location_fit').disabled, { timeout: 45000 });
+        assert.equal(await page.$eval('[data-cso-location]', element => element.dataset.csoLocation), original);
+        assert.equal(fieldRequests.length, requestCount);
+        assert.deepEqual(page.workspaceErrors, []);
+        await page.close();
+    }
 });

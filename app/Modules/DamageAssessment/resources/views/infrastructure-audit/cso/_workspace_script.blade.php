@@ -4,6 +4,9 @@
         const statusLabels = @json($statuses->pluck('label', 'name'));
         const statusClasses = @json($statuses->pluck('badge_class', 'name'));
         const readingPositions = new Map();
+        const unitSelections = new Map();
+        let selectedOrganizationKey = @json($initialOrganizationKey);
+        let unitOrganizationKey = selectedOrganizationKey;
         let activeFilter = 'all';
         let currentEditButton = null;
         let savingField = false;
@@ -108,7 +111,7 @@
         workspace.find('[data-bs-toggle="tab"]').on('shown.bs.tab', function () {
             applyFieldFilter();
             const content = activeContent();
-            if (readingPositions.has(readingKey(content))) { restoreReading(content); }
+            restoreReading(content);
         });
 
         function selectRecord(browser, targetId) {
@@ -116,7 +119,10 @@
             const target = records.filter(function () { return this.id === targetId; });
             if (!target.length) { return; }
             const current = records.filter(function () { return !this.hidden; });
-            if (current.attr('id') === targetId) { return; }
+            if (current.attr('id') === targetId) {
+                if (browser.attr('id') === 'cso_organizations_pane') { selectOrganization(target.attr('data-organization-key')); }
+                return;
+            }
 
             rememberReading(current);
             records.prop('hidden', true);
@@ -127,14 +133,66 @@
             });
             applyFieldFilter();
             restoreReading(target);
+            if (browser.attr('id') === 'cso_organizations_pane') { selectOrganization(target.attr('data-organization-key')); }
         }
+
+        function selectOrganization(key) {
+            selectedOrganizationKey = key;
+            showOrganizationUnits(key);
+        }
+
+        function showOrganizationUnits(key) {
+            const browser = $('#cso_units_pane');
+            const current = browser.find('[data-record-content]').filter(function () { return !this.hidden; });
+            if (browser.hasClass('active')) { rememberReading(current); }
+            if (current.length) { unitSelections.set(unitOrganizationKey, current.attr('id')); }
+            unitOrganizationKey = key;
+            const records = browser.find('[data-record-content]');
+            const eligible = records.filter(function () { return this.dataset.organizationKey === key; });
+            const saved = eligible.filter(function () { return this.id === unitSelections.get(key); });
+            const target = saved.length ? saved : eligible.first();
+            records.prop('hidden', true);
+            target.prop('hidden', false);
+            browser.find('.cso-record-select').each(function () {
+                const matches = this.dataset.organizationKey === key;
+                const selected = matches && this.dataset.recordTarget === target.attr('id');
+                this.hidden = !matches;
+                $(this).toggleClass('active', selected).attr('aria-pressed', String(selected));
+            });
+            eligible.each(function (index) {
+                $(this).find('[data-record-position]').text('وحدة ' + (index + 1) + ' من ' + eligible.length);
+                $(this).find('.cso-record-step[data-step="-1"]').prop('disabled', index === 0);
+                $(this).find('.cso-record-step[data-step="1"]').prop('disabled', index === eligible.length - 1);
+            });
+            $('#cso_units_tab .badge').text(eligible.length);
+            const unassigned = key === 'unassigned';
+            const organization = $('#cso_organizations_pane [data-record-content]').filter(function () { return this.dataset.organizationKey === key; });
+            $('#cso_unit_organization_name').text(unassigned ? 'وحدات غير مرتبطة' : organization.find('.cso-child-title').text());
+            $('#cso_no_organization_units').prop('hidden', eligible.length > 0).find('h3').text(unassigned ? 'لا توجد وحدات غير مرتبطة' : 'لا توجد وحدات تابعة لهذه المنظمة');
+            $('#cso_unassigned_units').prop('hidden', unassigned).attr('aria-pressed', String(unassigned));
+            $('#cso_return_organization_units').prop('hidden', !unassigned);
+            applyFieldFilter();
+            restoreReading(target);
+        }
+
+        workspace.on('click', '.cso-open-units', function () {
+            selectOrganization(this.dataset.organizationKey);
+            bootstrap.Tab.getOrCreateInstance(document.getElementById('cso_units_tab')).show();
+        });
+        $('#cso_change_organization').on('click', function () {
+            bootstrap.Tab.getOrCreateInstance(document.getElementById('cso_organizations_tab')).show();
+        });
+        $('#cso_unassigned_units').on('click', function () { showOrganizationUnits('unassigned'); });
+        $('#cso_return_organization_units').on('click', function () { showOrganizationUnits(selectedOrganizationKey); });
 
         workspace.on('click', '.cso-record-select', function () {
             selectRecord($(this).closest('[data-record-browser]'), this.dataset.recordTarget);
         });
         workspace.on('click', '.cso-record-step', function () {
             const browser = $(this).closest('[data-record-browser]');
-            const records = browser.find('[data-record-content]');
+            const records = browser.find('[data-record-content]').filter(function () {
+                return browser.attr('id') !== 'cso_units_pane' || this.dataset.organizationKey === unitOrganizationKey;
+            });
             const index = records.index($(this).closest('[data-record-content]')) + Number(this.dataset.step);
             const target = records.get(index);
             if (target && index >= 0) { selectRecord(browser, target.id); }
@@ -231,6 +289,9 @@
                     const recordId = record.attr('id');
                     record.find('.cso-child-title').text(response.display_value);
                     workspace.find('.cso-record-select').filter(function () { return this.dataset.recordTarget === recordId; }).find('.cso-record-select-name').text(response.display_value);
+                    if (record.closest('#cso_organizations_pane').length && record.attr('data-organization-key') === unitOrganizationKey) {
+                        $('#cso_unit_organization_name').text(response.display_value);
+                    }
                 }
                 applyFieldFilter();
                 savingField = false;

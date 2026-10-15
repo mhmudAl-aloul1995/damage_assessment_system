@@ -217,6 +217,41 @@ it('prevents an unassigned auditor from changing CSO records', function (): void
     expect(CsoAuditLog::query()->count())->toBe(0);
 });
 
+it('edits a unit linked directly to a survey organization and records its survey history', function (): void {
+    $organization = CsoSurveyOrganization::query()->create(['globalid' => 'nested-organization', 'parentglobalid' => $this->survey->globalid]);
+    $unit = CsoSurveyUnit::query()->create([
+        'objectid' => 101, 'globalid' => 'nested-unit', 'parentglobalid' => $organization->globalid, 'unit_name' => 'Original',
+    ]);
+    fakeCsoAuditRemote('unit_name', 'Original');
+    $this->postJson(route('inf-audit.cso.field-update', $this->survey), [
+        'table_type' => 'cso_survey_unit_table', 'auditable_id' => $unit->id,
+        'field_name' => 'unit_name', 'field_value' => 'Verified', 'expected_value' => 'Original',
+    ])->assertOk()->assertJsonPath('history.0.old_value', 'Original');
+    expect($unit->fresh()->unit_name)->toBe('Verified')
+        ->and(CsoAuditLog::query()->sole()->cso_survey_id)->toBe($this->survey->id);
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://cso.test/FeatureServer/2/updateFeatures');
+    Queue::assertNothingPushed();
+});
+
+it('rejects foreign units even if their raw parent references a visible organization', function (): void {
+    $organization = CsoSurveyOrganization::query()->create(['globalid' => 'visible-organization', 'parentglobalid' => $this->survey->globalid]);
+    $foreignOrganization = CsoSurveyOrganization::query()->create(['globalid' => 'foreign-organization', 'parentglobalid' => 'other-survey']);
+    foreach (['other-survey', $foreignOrganization->globalid] as $index => $parent) {
+        $unit = CsoSurveyUnit::query()->create([
+            'objectid' => 101 + $index, 'globalid' => fake()->uuid(), 'parentglobalid' => $parent, 'unit_name' => 'Original',
+            'raw_payload' => ['parentglobalid' => $organization->globalid],
+        ]);
+        $this->postJson(route('inf-audit.cso.field-update', $this->survey), [
+            'table_type' => 'cso_survey_unit_table', 'auditable_id' => $unit->id, 'field_name' => 'unit_name', 'field_value' => 'Unauthorized',
+        ])->assertNotFound();
+        expect(fn () => app(CsoAuditService::class)->save($this->survey, $unit, 'cso_survey_unit_table', 'unit_name', 'Unauthorized', $this->officer->id))
+            ->toThrow(\Symfony\Component\HttpKernel\Exception\HttpException::class, 'السجل غير تابع لهذا الاستبيان.');
+        expect($unit->fresh()->unit_name)->toBe('Original');
+    }
+    Http::assertNothingSent();
+    expect(CsoAuditLog::query()->count())->toBe(0);
+});
+
 it('imports legacy CSO history once and applies the latest value without deleting the original history', function (): void {
     foreach (['First edit', 'Final edit'] as $value) {
         InfEditAssessment::query()->create([
@@ -233,3 +268,28 @@ it('imports legacy CSO history once and applies the latest value without deletin
     expect(CsoAuditLog::query()->count())->toBe(2)->and($this->survey->fresh()->building_name)->toBe('Later value');
     Http::assertNothingSent();
 });
+
+it('rejects direct location edits without changing ArcGIS, base geometry or history', function (string $model, string $tableType, string $fieldName, ?string $value): void {
+    $original = '{"rings":[[[34,31],[35,31],[35,32],[34,31]]]}';
+    $record = $model === CsoSurvey::class ? $this->survey : $model::query()->create([
+        'objectid' => 101, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid,
+        'raw_payload' => ['location' => $original],
+    ]);
+    if ($record instanceof CsoSurvey) {
+        $record->update(['location' => $original]);
+    }
+    $this->postJson(route('inf-audit.cso.field-update', $this->survey), [
+        'table_type' => $tableType, 'auditable_id' => $record->id, 'field_name' => $fieldName, 'field_value' => $value,
+    ])->assertUnprocessable()->assertJsonValidationErrors('field_name')
+        ->assertJsonPath('errors.field_name.0', 'الموقع الجغرافي للعرض فقط ولا يمكن تعديله من شاشة التدقيق.');
+    expect(app(CsoAuditService::class)->value($record->fresh(), 'location'))->toBe($original)
+        ->and(app(CsoAuditService::class)->editableFields($tableType))->not->toHaveKey('location')
+        ->and(CsoAuditLog::query()->count())->toBe(0);
+    Http::assertNothingSent();
+    Queue::assertNothingPushed();
+})->with([
+    [CsoSurvey::class, 'cso_survey_table', 'location', '{"x":34,"y":31}'],
+    [CsoSurvey::class, 'cso_survey_table', 'LOCATION', null],
+    [CsoSurveyOrganization::class, 'cso_survey_organization_table', 'location', '{}'],
+    [CsoSurveyUnit::class, 'cso_survey_unit_table', 'location', '{}'],
+]);

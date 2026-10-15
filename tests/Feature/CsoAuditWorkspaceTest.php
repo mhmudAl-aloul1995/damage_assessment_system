@@ -40,9 +40,10 @@ it('renders separate record browsers with only children of the selected survey a
         ]);
     }
     foreach ([3101 => 'قاعة التدريب', 3102 => 'غرفة الاستقبال'] as $objectid => $name) {
+        $organization = CsoSurveyOrganization::query()->where('objectid', 2101)->firstOrFail();
         CsoSurveyUnit::query()->create([
-            'objectid' => $objectid, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid,
-            'unit_name' => $name,
+            'objectid' => $objectid, 'globalid' => fake()->uuid(), 'parentglobalid' => $objectid === 3101 ? $this->survey->globalid : $organization->globalid,
+            'unit_name' => $name, 'raw_payload' => ['PARENTGLOBALID' => '{'.strtoupper($organization->globalid).'}'],
         ]);
     }
     CsoSurveyOrganization::query()->create(['globalid' => fake()->uuid(), 'parentglobalid' => fake()->uuid(), 'organization_name_ar' => 'منظمة خارجية مخفية']);
@@ -83,6 +84,47 @@ it('renders separate record browsers with only children of the selected survey a
         ->and($xpath->query('//*[@id="cso_attachment_viewer"]')->length)->toBe(1);
     Http::assertNothingSent();
     file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-cso-workspace-preview.html', $response->getContent());
+});
+
+it('groups units by original and direct organization parents and isolates unresolved and foreign units', function (): void {
+    $organizations = collect(['منظمة ألف', 'منظمة باء', 'منظمة بلا وحدات'])->map(
+        fn (string $name, int $index): CsoSurveyOrganization => CsoSurveyOrganization::query()->create([
+            'objectid' => 2101 + $index, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid, 'organization_name_ar' => $name,
+        ]),
+    );
+    $first = CsoSurveyUnit::query()->create([
+        'objectid' => 3101, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid,
+        'unit_name' => 'وحدة ألف الأولى', 'raw_payload' => ['PARENTGLOBALID' => '{'.strtoupper($organizations[0]->globalid).'}'],
+    ]);
+    $second = CsoSurveyUnit::query()->create([
+        'objectid' => 3102, 'globalid' => fake()->uuid(), 'parentglobalid' => $organizations[0]->globalid, 'unit_name' => 'وحدة ألف الثانية',
+    ]);
+    $third = CsoSurveyUnit::query()->create([
+        'objectid' => 3103, 'globalid' => fake()->uuid(), 'parentglobalid' => $organizations[1]->globalid, 'unit_name' => 'وحدة باء',
+    ]);
+    $unassigned = CsoSurveyUnit::query()->create([
+        'objectid' => 3104, 'globalid' => fake()->uuid(), 'parentglobalid' => $this->survey->globalid, 'unit_name' => 'وحدة غير مرتبطة',
+    ]);
+    $conflicting = CsoSurveyUnit::query()->create([
+        'objectid' => 3105, 'globalid' => fake()->uuid(), 'parentglobalid' => $organizations[0]->globalid,
+        'unit_name' => 'وحدة ربط متعارض', 'raw_payload' => ['parentglobalid' => $organizations[1]->globalid],
+    ]);
+    CsoSurveyUnit::query()->create([
+        'globalid' => fake()->uuid(), 'parentglobalid' => 'another-survey', 'unit_name' => 'وحدة خارجية لا تظهر',
+        'raw_payload' => ['parentglobalid' => $organizations[0]->globalid],
+    ]);
+    $response = $this->get(route('inf-audit.cso.show', $this->survey))->assertSuccessful()->assertDontSee('وحدة خارجية لا تظهر')
+        ->assertViewHas('organizationGroups', fn (array $groups): bool => array_column($groups, 'unit_count') === [2, 1, 0]);
+    $groups = collect($response->viewData('unitGroups'))->keyBy('record_id');
+    expect($groups[$first->id]['organization_key'])->toBe('organization-'.$organizations[0]->id)
+        ->and($groups[$second->id]['organization_key'])->toBe('organization-'.$organizations[0]->id)
+        ->and($groups[$third->id]['organization_key'])->toBe('organization-'.$organizations[1]->id)
+        ->and($groups[$unassigned->id]['organization_key'])->toBe('unassigned')
+        ->and($groups[$conflicting->id]['organization_key'])->toBe('unassigned');
+    $xpath = new DOMXPath(csoWorkspaceDocument($response->getContent()));
+    expect($xpath->query('//*[@id="cso_units_pane"]//button[@data-record-target and not(@hidden)]')->length)->toBe(2)
+        ->and($xpath->query('//*[@id="cso_units_pane"]//*[@data-record-content and not(@hidden)]')->length)->toBe(1);
+    file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-cso-workspace-grouped-preview.html', $response->getContent());
 });
 
 it('keeps the unit selector visible for a single record and shows empty states for missing children', function (): void {
@@ -166,6 +208,30 @@ function csoWorkspaceDocument(string $html): DOMDocument
 
     return $document;
 }
+
+it('renders the location as a read only map with collapsed engineering data', function (): void {
+    $source = '{"rings":[[[34.458237535,31.5250917480001],[34.4583436790001,31.5249942890001],[34.4581663660001,31.5248348750001],[34.4579802010001,31.5250013510001],[34.4580732960001,31.5250931890001],[34.4580958970001,31.5250695230001],[34.458146034,31.525116994],[34.4582027000001,31.525067866],[34.458237535,31.5250917480001]]]}';
+    $this->survey->update(['location' => $source]);
+    $response = $this->get(route('inf-audit.cso.show', $this->survey))->assertSuccessful()
+        ->assertSee('الموقع الجغرافي')->assertSee('للعرض فقط')->assertSee('تكبير الخريطة');
+    $xpath = new DOMXPath(csoWorkspaceDocument($response->getContent()));
+    expect($xpath->query('//*[@data-cso-location]')->length)->toBe(1)
+        ->and($xpath->query('//*[@data-cso-location]//details[not(@open)]/pre')->item(0)->textContent)->toBe($source)
+        ->and($xpath->query('//*[@data-cso-location]//*[local-name()="svg"]/*[local-name()="path"]')->length)->toBe(1)
+        ->and($xpath->query('//button[@data-field-name="location"]')->length)->toBe(0)
+        ->and($this->survey->fresh()->location)->toBe($source);
+    Http::assertNothingSent();
+    file_put_contents(sys_get_temp_dir().DIRECTORY_SEPARATOR.'phc-cso-workspace-location-preview.html', $response->getContent());
+});
+
+it('escapes malformed engineering data and never renders it as an editable field', function (): void {
+    $this->survey->update(['location' => '</pre><script id="location-injection">alert(1)</script>']);
+    $response = $this->get(route('inf-audit.cso.show', $this->survey))->assertSuccessful()->assertSee('بيانات الموقع غير صالحة');
+    $xpath = new DOMXPath(csoWorkspaceDocument($response->getContent()));
+    expect($xpath->query('//*[@data-cso-location]')->length)->toBe(0)
+        ->and($xpath->query('//*[@id="location-injection"]')->length)->toBe(0)
+        ->and($xpath->query('//button[@data-field-name="location"]')->length)->toBe(0);
+});
 
 function fakeCsoWorkspaceAttachments(array $attachments): void
 {

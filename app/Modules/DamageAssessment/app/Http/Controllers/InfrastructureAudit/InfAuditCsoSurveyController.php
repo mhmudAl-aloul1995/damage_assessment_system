@@ -20,11 +20,13 @@ use App\Models\InfAuditStatus;
 use App\Models\User;
 use App\services\ArcgisService;
 use App\services\CsoAuditService;
+use App\Support\Forms\CsoAuditLocation;
 use App\Support\Forms\CsoSurveyLayout;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -155,7 +157,6 @@ class InfAuditCsoSurveyController extends Controller
             'infAuditStatus.assignee',
             'auditLogs.user',
             'organizations' => fn ($query) => $query->orderBy('objectid'),
-            'units' => fn ($query) => $query->orderBy('objectid'),
         ]);
 
         $this->authorizeRecord($cso);
@@ -347,12 +348,15 @@ class InfAuditCsoSurveyController extends Controller
     {
         $organizationSections = CsoSurveyLayout::repeatSections('CSO_Organizations');
         $unitSections = CsoSurveyLayout::repeatSections('Unit_Information');
+        $groupedUnits = $survey->unitsGroupedByOrganization();
 
         $organizations = $survey->organizations
             ->toBase()
             ->values()
             ->map(fn (CsoSurveyOrganization $organization, int $index): array => [
                 'kind' => 'organization',
+                'organization_key' => 'organization-'.$organization->id,
+                'unit_count' => $groupedUnits->get('organization-'.$organization->id, collect())->count(),
                 'record_id' => $organization->id,
                 'objectid' => $organization->objectid,
                 'title' => $organization->organization_name_ar ?: $organization->organization_name_en ?: $organization->organization_acronym ?: 'منظمة '.($index + 1),
@@ -361,17 +365,21 @@ class InfAuditCsoSurveyController extends Controller
             ])
             ->filter(fn (array $group): bool => $group['sections'] !== []);
 
-        $units = $survey->units
-            ->toBase()
+        $units = $groupedUnits->flatMap(fn (Collection $units, string $key): array => $units->map(fn (CsoSurveyUnit $unit): array => ['unit' => $unit, 'organization_key' => $key])->all())
             ->values()
-            ->map(fn (CsoSurveyUnit $unit, int $index): array => [
-                'kind' => 'unit',
-                'record_id' => $unit->id,
-                'objectid' => $unit->objectid,
-                'title' => $unit->unit_name ?: 'وحدة '.($index + 1),
-                'title_field' => 'unit_name',
-                'sections' => $this->childSections($unit, $unitSections, self::UNIT_TABLE_TYPE),
-            ])
+            ->map(function (array $item, int $index) use ($unitSections): array {
+                $unit = $item['unit'];
+
+                return [
+                    'kind' => 'unit',
+                    'organization_key' => $item['organization_key'],
+                    'record_id' => $unit->id,
+                    'objectid' => $unit->objectid,
+                    'title' => $unit->unit_name ?: 'وحدة '.($index + 1),
+                    'title_field' => 'unit_name',
+                    'sections' => $this->childSections($unit, $unitSections, self::UNIT_TABLE_TYPE),
+                ];
+            })
             ->filter(fn (array $group): bool => $group['sections'] !== []);
 
         return $organizations
@@ -406,7 +414,8 @@ class InfAuditCsoSurveyController extends Controller
                     'field_name' => $field['name'],
                     'field_type' => $field['type'] ?? null,
                     'list_name' => $field['list_name'] ?? null,
-                    'label' => $field['label'] ?: $field['name'],
+                    'label' => $field['name'] === 'location' ? 'الموقع الجغرافي' : ($field['label'] ?: $field['name']),
+                    'location' => $field['name'] === 'location' ? CsoAuditLocation::present($this->audit->value($record, 'location')) : null,
                     'value' => $this->formatValue($rawValue, $field),
                     'raw_value' => $rawValue,
                     'editable' => isset($this->audit->editableFields($tableType)[$field['name']]),
@@ -433,6 +442,10 @@ class InfAuditCsoSurveyController extends Controller
 
         if ($value === null || $value === '') {
             return null;
+        }
+
+        if ($fieldName === 'location' && is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
         }
 
         return is_array($value) ? implode(',', $value) : (string) $value;
@@ -525,7 +538,7 @@ class InfAuditCsoSurveyController extends Controller
                 ->firstOrFail(),
             self::UNIT_TABLE_TYPE => CsoSurveyUnit::query()
                 ->whereKey($id)
-                ->where('parentglobalid', $survey->globalid)
+                ->forSurvey($survey)
                 ->firstOrFail(),
             default => abort(404),
         };

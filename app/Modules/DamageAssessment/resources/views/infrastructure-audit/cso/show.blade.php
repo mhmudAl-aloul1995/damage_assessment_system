@@ -8,6 +8,9 @@
     @php
         $imageAttachments = collect($arcgisAttachments ?? [])->filter(fn (array $attachment): bool => str_starts_with(strtolower((string) $attachment['content_type']), 'image/'))->values()->all();
         $fileAttachments = collect($arcgisAttachments ?? [])->reject(fn (array $attachment): bool => str_starts_with(strtolower((string) $attachment['content_type']), 'image/'))->values()->all();
+        $initialOrganizationKey = $organizationGroups[0]['organization_key'] ?? 'unassigned';
+        $initialUnitCount = collect($unitGroups)->where('organization_key', $initialOrganizationKey)->count();
+        $unassignedUnitCount = collect($unitGroups)->where('organization_key', 'unassigned')->count();
     @endphp
 
     <div class="cso-detail-workspace" id="cso_audit_workspace">
@@ -18,7 +21,7 @@
                 <div class="card-body p-0">
                     <nav class="cso-workspace-tabs px-5" aria-label="أقسام تدقيق الاستبيان">
                         <div class="nav nav-line-tabs nav-line-tabs-2x border-0" role="tablist">
-                            @foreach (['survey' => ['بيانات الاستبيان', null], 'organizations' => ['المنظمات', count($organizationGroups)], 'units' => ['الوحدات', count($unitGroups)]] as $key => [$label, $count])
+                            @foreach (['survey' => ['بيانات الاستبيان', null], 'organizations' => ['المنظمات', count($organizationGroups)], 'units' => ['الوحدات', $initialUnitCount]] as $key => [$label, $count])
                                 <button type="button" class="nav-link fw-bold {{ $loop->first ? 'active' : '' }}" id="cso_{{ $key }}_tab" data-bs-toggle="tab" data-bs-target="#cso_{{ $key }}_pane" role="tab" aria-controls="cso_{{ $key }}_pane" aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                                     {{ $label }} @if ($count !== null)<span class="badge badge-light ms-2">{{ $count }}</span>@endif
                                 </button>
@@ -59,6 +62,7 @@
     </div>
 
     @include('damage-assessment::infrastructure-audit.cso._attachment_viewer')
+    @include('damage-assessment::infrastructure-audit.cso._location_viewer')
 
     @if ($canEditFields)
         <div class="modal fade" id="fieldEditModal" tabindex="-1" aria-labelledby="fieldEditTitle" aria-hidden="true">
@@ -91,4 +95,5 @@
 @section('script')
     @include('damage-assessment::infrastructure-audit.cso._workspace_script')
     @include('damage-assessment::infrastructure-audit.cso._gallery_script')
+    @include('damage-assessment::infrastructure-audit.cso._location_script')
 @endsection

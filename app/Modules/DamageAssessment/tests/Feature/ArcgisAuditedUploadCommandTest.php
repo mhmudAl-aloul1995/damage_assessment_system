@@ -1,10 +1,135 @@
 <?php
 
+use App\Models\AuditedBuilding;
+use App\Models\AuditedHousingUnit;
+use App\services\ArcgisAuditedCacheService;
 use App\services\ArcgisAuditedUploadService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+
+it('resumes audited uploads after a building object id while preserving the unit scope', function (array $options, array $expectedBuildingIds, array $expectedUnitIds): void {
+    config()->set([
+        'services.arcgis.username' => 'tester',
+        'services.arcgis.password' => 'secret',
+        'services.arcgis.referer' => 'http://localhost',
+        'services.arcgis.target_service' => 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer',
+        'services.arcgis.target_buildings_layer' => 0,
+        'services.arcgis.target_units_layer' => 1,
+        'services.arcgis.source_service' => 'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer',
+        'services.arcgis.source_buildings_layer' => 10,
+        'services.arcgis.source_units_layer' => 11,
+    ]);
+
+    foreach ([26508, 26509, 26510, 26520] as $index => $objectId) {
+        AuditedBuilding::query()->create([
+            'objectid' => $objectId,
+            'globalid' => "building-{$objectId}",
+        ]);
+
+        AuditedHousingUnit::query()->create([
+            'objectid' => 100 + $index,
+            'globalid' => "unit-{$objectId}",
+            'parentglobalid' => "building-{$objectId}",
+        ]);
+    }
+
+    if ($options['--refresh-cache'] ?? false) {
+        $this->mock(ArcgisAuditedCacheService::class)
+            ->shouldReceive('refresh')
+            ->once()
+            ->with(null)
+            ->andReturn(['buildings_cached' => 4, 'housing_units_cached' => 4]);
+    }
+
+    $uploadedBuildingIds = [];
+    $uploadedUnitIds = [];
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://www.arcgis.com/sharing/rest/generateToken' => Http::response(['token' => 'arcgis-token']),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_B'],
+                ['name' => 'old_global_id_B'],
+                ['name' => 'globalid'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1?*' => Http::response([
+            'objectIdField' => 'objectid',
+            'fields' => [
+                ['name' => 'objectid'],
+                ['name' => 'old_objectid_U'],
+                ['name' => 'old_global_id_U'],
+                ['name' => 'parentglobalid'],
+            ],
+        ]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/query*' => function ($request) {
+            return Http::response([
+                'features' => $request['outFields'] === 'globalid'
+                    ? [['attributes' => ['globalid' => 'target-parent-globalid']]]
+                    : [],
+            ]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/query*' => Http::response(['features' => []]),
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures' => function ($request) use (&$uploadedBuildingIds) {
+            $features = json_decode($request['features'], true);
+            $uploadedBuildingIds[] = $features[0]['attributes']['old_objectid_B'];
+
+            return Http::response(['addResults' => [['success' => true, 'objectId' => 9000 + count($uploadedBuildingIds)]]]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/addFeatures' => function ($request) use (&$uploadedUnitIds) {
+            $features = json_decode($request['features'], true);
+            $uploadedUnitIds[] = $features[0]['attributes']['old_objectid_U'];
+
+            return Http::response(['addResults' => [['success' => true, 'objectId' => 9500 + count($uploadedUnitIds)]]]);
+        },
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/*/attachments?*' => Http::response(['attachmentInfos' => []]),
+        'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/*/attachments?*' => Http::response(['attachmentInfos' => []]),
+    ]);
+
+    $this->artisan('arcgis:upload-audited', $options)->assertSuccessful();
+
+    expect($uploadedBuildingIds)->toBe($expectedBuildingIds)
+        ->and($uploadedUnitIds)->toBe($expectedUnitIds);
+
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/FeatureServer/10/26508/')
+        || str_contains($request->url(), '/FeatureServer/10/26509/'));
+})->with([
+    'all units including earlier buildings' => [['--after-building-objectid' => '26509'], [26510, 26520], [100, 101, 102, 103]],
+    'limit applies after the resume point' => [['--after-building-objectid' => '26509', '--buildings-limit' => 1], [26510], [102]],
+    'no remaining buildings still uploads units' => [['--after-building-objectid' => '99999'], [], [100, 101, 102, 103]],
+    'buildings only' => [['--after-building-objectid' => '26509', '--only' => 'buildings'], [26510, 26520], []],
+    'refresh does not limit the cache before resuming' => [['--after-building-objectid' => '26509', '--buildings-limit' => 1, '--refresh-cache' => true], [26510], [102]],
+]);
+
+it('rejects invalid building resume ids before making any arcgis requests', function (string $objectId): void {
+    Http::fake();
+
+    $this->artisan('arcgis:upload-audited', ['--after-building-objectid' => $objectId])
+        ->expectsOutput('The --after-building-objectid option must be a positive integer without separators.')
+        ->assertFailed();
+
+    Http::assertNothingSent();
+})->with(['0', '-1', '', 'invalid', '26,509', '26509.5', '999999999999999999999999']);
+
+it('rejects combining a building resume id with changed since before making arcgis requests', function (): void {
+    Http::fake();
+
+    $this->artisan('arcgis:upload-audited', [
+        '--after-building-objectid' => '26509',
+        '--changed-since' => '2026-10-01',
+    ])
+        ->expectsOutput('The --after-building-objectid option cannot be combined with --changed-since.')
+        ->assertFailed();
+
+    Http::assertNothingSent();
+});
 
 it('uploads cached base table records with the latest audit edit values without audited views', function (): void {
     config()->set('services.arcgis.username', 'tester');

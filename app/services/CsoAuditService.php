@@ -50,7 +50,7 @@ class CsoAuditService
 
         return $this->editableFieldCache[$tableType] = collect($sections)->flatMap(fn (array $section): array => $section['fields'] ?? [])
             ->filter(fn (array $field): bool => in_array($field['type'], ['text', 'integer', 'decimal', 'date', 'select_one', 'select_multiple'], true)
-                && ! in_array(strtolower($field['name']), ['id', 'objectid', 'globalid', 'parentglobalid', 'creationdate', 'creator', 'editdate', 'editor', 'phase_number'], true))
+                && ! in_array(strtolower($field['name']), ['id', 'objectid', 'globalid', 'parentglobalid', 'creationdate', 'creator', 'editdate', 'editor', 'phase_number', 'location'], true))
             ->keyBy('name')->all();
     }
 
@@ -80,6 +80,10 @@ class CsoAuditService
 
     public function save(CsoSurvey $survey, Model $record, string $tableType, string $fieldName, ?string $newValue, int $userId, ?string $notes = null, ?string $expectedValue = null, bool $checkExpectedValue = false): void
     {
+        if (strtolower($fieldName) === 'location') {
+            throw ValidationException::withMessages(['field_name' => 'الموقع الجغرافي للعرض فقط ولا يمكن تعديله من شاشة التدقيق.']);
+        }
+
         if (! isset($this->editableFields($tableType)[$fieldName])) {
             throw ValidationException::withMessages(['field_name' => 'هذا الحقل غير قابل للتعديل.']);
         }
@@ -95,7 +99,11 @@ class CsoAuditService
             $record->getConnection()->transaction(function () use ($survey, $record, $tableType, $fieldName, $newValue, $userId, $notes, $expectedValue, $checkExpectedValue, &$remoteUpdated, &$remote): void {
                 $locked = $record->newQuery()->whereKey($record->getKey())->lockForUpdate()->firstOrFail();
 
-                if (! $locked instanceof CsoSurvey && $locked->parentglobalid !== $survey->globalid) {
+                $belongsToSurvey = $locked instanceof CsoSurveyUnit
+                    ? CsoSurveyUnit::query()->forSurvey($survey)->whereKey($locked->getKey())->exists()
+                    : ($locked instanceof CsoSurvey ? $locked->is($survey) : $locked->parentglobalid === $survey->globalid);
+
+                if (! $belongsToSurvey) {
                     throw new HttpException(404, 'السجل غير تابع لهذا الاستبيان.');
                 }
 

@@ -2,10 +2,14 @@
     <section class="cso-field-section mb-5" data-field-section>
         <h4 class="cso-section-title fs-6 fw-bold mb-0 px-4 py-3">{{ $section['title'] }}</h4>
         @foreach ($section['rows'] as $row)
-            <div class="cso-field-row px-4 py-4" data-field-row="{{ $row['table_type'] }}-{{ $row['record_id'] }}-{{ $row['field_name'] }}" data-has-answer="{{ $row['has_answer'] ? '1' : '0' }}" data-is-edited="{{ $row['is_edited'] ? '1' : '0' }}">
+            <div class="cso-field-row {{ $row['location'] !== null ? 'cso-location-row' : '' }} px-4 py-4" data-field-row="{{ $row['table_type'] }}-{{ $row['record_id'] }}-{{ $row['field_name'] }}" data-has-answer="{{ $row['has_answer'] ? '1' : '0' }}" data-is-edited="{{ $row['is_edited'] ? '1' : '0' }}">
                 <div class="cso-field-label fw-semibold" title="{{ $row['field_name'] }}">{{ $row['label'] }}</div>
                 <div class="cso-field-answer">
-                    <div class="cso-current-value cso-wrap-value {{ $row['has_answer'] ? 'fw-semibold' : 'text-muted' }}">{{ $row['value'] }}</div>
+                    @if ($row['location'] !== null)
+                        @include('damage-assessment::infrastructure-audit.cso._location', ['location' => $row['location']])
+                    @else
+                        <div class="cso-current-value cso-wrap-value {{ $row['has_answer'] ? 'fw-semibold' : 'text-muted' }}">{{ $row['value'] }}</div>
+                    @endif
                     <div class="cso-field-history">
                         @if (count($row['history']))
                             <button type="button" class="btn btn-sm btn-light-primary mt-2 cso-history-toggle" data-bs-toggle="collapse" data-bs-target="#{{ $row['history_id'] }}" aria-controls="{{ $row['history_id'] }}" aria-expanded="false">تم تعديله · السجل ({{ count($row['history']) }})</button>

@@ -185,28 +185,7 @@ class CsoSurveyController extends Controller
         $organizations = $survey->organizations;
         $organizationSections = CsoSurveyLayout::repeatSections('CSO_Organizations');
         $unitSections = CsoSurveyLayout::repeatSections('Unit_Information');
-        $organizationIds = $organizations->pluck('globalid')->filter()->values();
-        $units = $survey->units->concat(
-            CsoSurveyUnit::query()->whereIn('parentglobalid', $organizationIds)->orderBy('objectid')->get()
-        )->unique('id')->sortBy('objectid')->values();
-        $organizationLookup = $organizations->groupBy(
-            fn (CsoSurveyOrganization $organization): string => $this->normalizeGlobalId($organization->globalid)
-        );
-
-        $groupedUnits = $units->groupBy(function (CsoSurveyUnit $unit) use ($organizationLookup): string {
-            // Sync retains the original organization parent in raw_payload when flattening the survey relation.
-            $sourceParent = CsoSurveyLayout::value((object) ['raw_payload' => $unit->raw_payload], 'parentglobalid');
-            $matches = collect([$sourceParent, $unit->parentglobalid])
-                ->map(fn (mixed $parent): string => $this->normalizeGlobalId($parent))
-                ->filter(fn (string $parent): bool => $parent !== '' && $organizationLookup->has($parent))
-                ->unique()->values();
-
-            if ($matches->count() !== 1 || $organizationLookup[$matches->first()]->count() !== 1) {
-                return 'unassigned';
-            }
-
-            return 'organization-'.$organizationLookup[$matches->first()]->first()->id;
-        });
+        $groupedUnits = $survey->unitsGroupedByOrganization();
 
         $groups = $organizations->map(function (CsoSurveyOrganization $organization) use ($groupedUnits, $organizationSections): array {
             $key = 'organization-'.$organization->id;
@@ -257,11 +236,6 @@ class CsoSurveyController extends Controller
 
             return $group;
         })->values();
-    }
-
-    private function normalizeGlobalId(mixed $value): string
-    {
-        return is_scalar($value) ? strtolower(trim(trim((string) $value), '{}')) : '';
     }
 
     private function filteredQuery(Request $request): Builder

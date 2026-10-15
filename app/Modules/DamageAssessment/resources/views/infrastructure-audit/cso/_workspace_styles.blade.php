@@ -50,6 +50,10 @@
     .cso-field-search { flex: 1 1 260px; max-width: 450px; }
     .cso-field-search input { background: var(--bs-body-bg, #fff); }
     .cso-record-browser { display: grid; grid-template-columns: 180px minmax(0, 1fr); height: 100%; min-height: 0; overflow: hidden; }
+    .cso-audit-data .cso-units-pane.active { display: flex; flex-direction: column; }
+    .cso-units-pane > .cso-record-browser { flex: 1; height: auto; }
+    .cso-unit-context { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--cso-border); }
+    #cso_unit_organization_name { overflow-wrap: anywhere; }
     .cso-record-list { min-height: 0; height: 100%; overflow-y: auto; overscroll-behavior-y: contain; border-inline-end: 1px solid var(--cso-border); background: var(--bs-gray-100, #f9f9f9); }
     .cso-record-select { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: start; padding: 16px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: inherit; overflow-wrap: anywhere; }
     .cso-record-select:hover { background: var(--bs-body-bg, #fff); }
@@ -62,6 +66,20 @@
     .cso-field-row { display: grid; grid-template-columns: minmax(130px, .8fr) minmax(0, 1.3fr) auto; gap: 16px; align-items: start; border-top: 1px solid var(--cso-border); }
     .cso-field-label { color: var(--bs-gray-600, #7e8299); overflow-wrap: anywhere; line-height: 1.8; }
     .cso-current-value { line-height: 1.8; }
+    .cso-field-row.cso-location-row { grid-template-columns: minmax(0, 1fr); }
+    .cso-location-row .cso-field-actions { display: none; }
+    .cso-location-card { min-width: 0; }
+    .cso-location-preview, .cso-location-large-stage { position: relative; overflow: hidden; border: 1px solid var(--cso-border); border-radius: 10px; background: var(--bs-gray-100, #f9f9f9); }
+    .cso-location-preview { height: 260px; }
+    .cso-location-outline { display: block; width: 100%; height: 100%; fill: var(--bs-primary-light, #eef6ff); stroke: var(--bs-primary, #009ef7); stroke-width: 3px; }
+    .cso-location-map { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+    [data-location-ready] .cso-location-map { opacity: 1; }
+    .cso-location-source summary { cursor: pointer; }
+    .cso-location-source pre { max-height: 200px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bs-gray-100, #f9f9f9); border-radius: 6px; }
+    .cso-location-viewer .modal-content { background: var(--bs-body-bg, #fff); }
+    .cso-location-large-stage { height: 65dvh; min-height: 280px; }
+    #cso_location_fallback, #cso_location_map { position: absolute; inset: 0; }
+    .cso-location-viewer [hidden] { display: none !important; }
     .cso-wrap-value { overflow-wrap: anywhere; white-space: pre-wrap; }
     .cso-history-item { border-inline-start: 2px solid var(--bs-primary, #009ef7); background: var(--bs-gray-100, #f9f9f9); border-radius: 5px; }
     .cso-detail-workspace [hidden] { display: none !important; }
@@ -100,6 +118,10 @@
         .cso-record-select { flex: 0 0 200px; }
     }
     @media (max-width: 575.98px) {
+        .cso-location-row .cso-field-answer { grid-column: auto; grid-row: auto; }
+        .cso-location-preview { height: 220px; }
+        .cso-location-viewer .modal-body { min-height: 0; }
+        .cso-location-large-stage { flex: 1; height: auto; min-height: 0; }
         .cso-workspace-tabs .nav { gap: 16px; }
         .cso-workspace-tabs .nav-link { font-size: .95rem; }
         .cso-workspace-tabs .badge { margin-inline-start: 3px !important; }

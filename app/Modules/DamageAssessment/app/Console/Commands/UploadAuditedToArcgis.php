@@ -12,6 +12,7 @@ class UploadAuditedToArcgis extends Command
 {
     protected $signature = 'arcgis:upload-audited
         {--buildings-limit= : Upload only the first N audited buildings and their housing units.}
+        {--after-building-objectid= : Resume full uploads after this source building OBJECTID (old_objectid_B); units keep their existing scope.}
         {--only= : Upload only buildings or units.}
         {--changed-since= : Upload only buildings or housing units with editdate or audit edits on or after this date/time.}
         {--only-audit-edits : With --changed-since, ignore editdate and sync only records changed in edit_assessments.}
@@ -43,16 +44,21 @@ class UploadAuditedToArcgis extends Command
             $this->info('Processing...');
             $buildingsLimit = $this->option('buildings-limit');
             $only = $this->onlyOption();
+            $afterBuildingObjectId = $this->afterBuildingObjectIdOption();
+            $changedSince = $this->changedSinceOption();
+
+            if ($afterBuildingObjectId !== null && $changedSince !== null) {
+                throw new \InvalidArgumentException('The --after-building-objectid option cannot be combined with --changed-since.');
+            }
 
             if ((bool) $this->option('refresh-cache')) {
                 $this->info('Refreshing audited cache...');
-                $cacheSummary = $cacheService->refresh(is_numeric($buildingsLimit) ? (int) $buildingsLimit : null);
+                $cacheSummary = $cacheService->refresh($afterBuildingObjectId === null && is_numeric($buildingsLimit) ? (int) $buildingsLimit : null);
                 $this->line('Cached buildings: '.$cacheSummary['buildings_cached']);
                 $this->line('Cached housing units: '.$cacheSummary['housing_units_cached']);
                 $this->newLine();
             }
 
-            $changedSince = $this->changedSinceOption();
             $summary = $arcgisAuditedUploadService->upload(
                 is_numeric($buildingsLimit) ? (int) $buildingsLimit : null,
                 (bool) $this->option('without-attachments'),
@@ -61,6 +67,7 @@ class UploadAuditedToArcgis extends Command
                 (bool) $this->option('skip-counts'),
                 (bool) $this->option('only-audit-edits'),
                 $only,
+                $afterBuildingObjectId,
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');
@@ -102,6 +109,25 @@ class UploadAuditedToArcgis extends Command
         $this->info('Completed successfully.');
 
         return self::SUCCESS;
+    }
+
+    private function afterBuildingObjectIdOption(): ?int
+    {
+        $afterBuildingObjectId = $this->option('after-building-objectid');
+
+        if ($afterBuildingObjectId === null) {
+            return null;
+        }
+
+        $validatedObjectId = filter_var($afterBuildingObjectId, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+
+        if ($validatedObjectId === false) {
+            throw new \InvalidArgumentException('The --after-building-objectid option must be a positive integer without separators.');
+        }
+
+        return $validatedObjectId;
     }
 
     private function changedSinceOption(): ?CarbonImmutable

@@ -50,6 +50,7 @@ class ArcgisAuditedUploadService
         bool $skipCounts = false,
         bool $onlyAuditEdits = false,
         ?string $only = null,
+        ?int $afterBuildingObjectId = null,
     ): array {
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
@@ -59,10 +60,24 @@ class ArcgisAuditedUploadService
             throw new RuntimeException('The only option must be buildings or units.');
         }
 
+        if ($afterBuildingObjectId !== null && $afterBuildingObjectId < 1) {
+            throw new RuntimeException('The building resume object id must be a positive integer.');
+        }
+
+        if ($afterBuildingObjectId !== null && $changedSince !== null) {
+            throw new RuntimeException('The --after-building-objectid option cannot be combined with --changed-since.');
+        }
+
         $summary = $this->emptySummary();
         $summary['without_attachments'] = $withoutAttachments ? 1 : 0;
         $summary['attachments_only'] = $attachmentsOnly ? 1 : 0;
         $summary['only'] = $only ?? 'all';
+
+        if ($afterBuildingObjectId !== null) {
+            $summary['after_building_objectid'] = $afterBuildingObjectId;
+
+            echo "Resuming buildings after source OBJECTID: {$afterBuildingObjectId}\n";
+        }
 
         if ($changedSince !== null) {
             $summary['changed_since'] = $changedSince->format('Y-m-d H:i:s');
@@ -89,6 +104,9 @@ class ArcgisAuditedUploadService
         }
 
         $buildingQuery = AuditedBuilding::query()
+            ->when($afterBuildingObjectId !== null, function (Builder $query) use ($afterBuildingObjectId): void {
+                $query->where('objectid', '>', $afterBuildingObjectId);
+            })
             ->orderBy('objectid');
 
         if ($buildingsLimit !== null) {
