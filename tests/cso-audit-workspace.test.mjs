@@ -275,14 +275,15 @@ test('status decisions preserve assignment unless assigning and update the summa
     await page.click('#cso_assignment_toggle');
     await page.waitForSelector('#cso_assignment_menu.show');
     await page.click('#cso_assignment_menu .select2-selection');
+    const auditorOption = '#cso_assignment_menu .select2-results__option[role="option"][id$="-' + auditor + '"]';
     try {
-        await page.waitForSelector('#cso_assignment_menu .select2-results__option[role="option"]', { visible: true });
+        await page.waitForSelector(auditorOption, { visible: true });
     } catch (error) {
         await page.screenshot({ path: join(tmpdir(), 'phc-cso-assignment-debug.png') });
         const options = await page.$$eval('.select2-results__option', elements => elements.map(element => element.outerHTML));
         throw new Error('Auditor options unavailable: ' + JSON.stringify(options), { cause: error });
     }
-    await page.click('#cso_assignment_menu .select2-results__option[role="option"]');
+    await page.click(auditorOption);
     assert.equal(await page.$eval('#status_assignee', element => element.value), auditor);
     await page.click('[data-status="assigned"]');
     await page.waitForFunction(() => document.querySelector('#cso_current_status').textContent === 'مسند');
@@ -346,6 +347,37 @@ test('sticky decision and gallery remain visible without overlapping while the s
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-sticky-gallery-desktop.png') });
     assert.deepEqual(page.workspaceErrors, []);
     await page.close();
+});
+
+test('sticky gaps hide underlying fields in light and dark themes on desktop and mobile', async () => {
+    for (const width of [1600, 390]) {
+        const page = await openWorkspace(width, 1000);
+        await page.evaluate(() => window.scrollBy(0, 1000));
+        for (const theme of ['light', 'dark']) {
+            await page.evaluate(theme => document.documentElement.setAttribute('data-bs-theme', theme), theme);
+            const coverage = await page.evaluate(() => {
+                const header = document.querySelector('#cso_decision_header');
+                const tabs = document.querySelector('.cso-workspace-tabs');
+                const headerRect = header.getBoundingClientRect();
+                const tabsRect = tabs.getBoundingClientRect();
+                const points = [
+                    { owner: header, x: tabsRect.left + tabsRect.width / 2, y: headerRect.top - 4 },
+                    { owner: tabs, x: tabsRect.left + tabsRect.width / 2, y: (headerRect.bottom + tabsRect.top) / 2 },
+                    { owner: header, x: headerRect.right - 2, y: headerRect.bottom - 2 },
+                ];
+                return points.map(({ owner, x, y }) => {
+                    const hit = document.elementFromPoint(x, y);
+                    const background = getComputedStyle(owner, '::before').backgroundColor;
+                    return { covered: hit === owner || owner.contains(hit), opaque: !['transparent', 'rgba(0, 0, 0, 0)'].includes(background), hit: hit?.className, x, y };
+                });
+            });
+            assert.ok(coverage.every(point => point.covered && point.opaque), JSON.stringify({ width, theme, coverage }));
+        }
+        await page.evaluate(() => document.documentElement.setAttribute('data-bs-theme', 'light'));
+        await page.screenshot({ path: join(tmpdir(), `phc-cso-sticky-gaps-${width}.png`) });
+        assert.deepEqual(page.workspaceErrors, []);
+        await page.close();
+    }
 });
 
 test('gallery viewer zooms, navigates, handles failed images and restores the reading position', async () => {

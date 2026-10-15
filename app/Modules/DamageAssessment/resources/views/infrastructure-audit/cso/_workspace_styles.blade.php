@@ -6,6 +6,7 @@
     .cso-record-identifiers { max-width: 100%; overflow-wrap: anywhere; }
     .cso-record-identifiers summary { cursor: pointer; }
     .cso-decision-header { position: sticky; top: var(--cso-app-top); z-index: 95; background: var(--bs-body-bg, #fff); }
+    .cso-decision-header::before { content: ''; position: absolute; inset: -9px -1px -1px; z-index: -1; background: var(--bs-body-bg, #fff); }
     .cso-decision-content { display: flex; align-items: center; gap: 16px; }
     .cso-decision-identity { flex: 1; min-width: 120px; }
     .cso-decision-identity h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -36,6 +37,7 @@
     .cso-mobile-gallery-trigger { display: none; }
     .cso-detail-workspace button, .cso-detail-workspace input, .cso-detail-workspace [role="tabpanel"] { scroll-margin-top: calc(var(--cso-sticky-top) + 16px); }
     .cso-workspace-tabs { position: sticky; top: var(--cso-sticky-top); z-index: 5; background: var(--bs-body-bg, #fff); border-bottom: 1px solid var(--cso-border); }
+    .cso-workspace-tabs::before { content: ''; position: absolute; inset-inline: -1px; bottom: 100%; height: 13px; z-index: -1; background: var(--bs-body-bg, #fff); }
     .cso-workspace-tabs .nav { display: flex; flex-wrap: nowrap; gap: 24px; }
     .cso-workspace-tabs .nav-link { border-top: 0; border-left: 0; border-right: 0; border-bottom: 2px solid transparent; color: var(--bs-gray-600, #7e8299); background: transparent; padding: 20px 0; white-space: nowrap; font-size: 1.05rem; }
     .cso-workspace-tabs .nav-link.active { color: var(--bs-primary, #009ef7); border-bottom-color: var(--bs-primary, #009ef7); }
