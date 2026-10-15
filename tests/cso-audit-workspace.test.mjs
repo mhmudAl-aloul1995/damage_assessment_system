@@ -15,15 +15,30 @@ let server;
 let browser;
 let origin;
 let html;
+let emptyHtml;
+let filesHtml;
+let singleHtml;
 
 before(async () => {
-    execFileSync('php', ['artisan', 'test', '--compact', 'tests/Feature/CsoAuditWorkspaceTest.php', '--filter=renders separate'], { cwd: root, timeout: 120000 });
+    execFileSync('php', ['artisan', 'test', '--compact', 'tests/Feature/CsoAuditWorkspaceTest.php'], { cwd: root, timeout: 120000 });
     html = await readFile(join(tmpdir(), 'phc-cso-workspace-preview.html'), 'utf8');
+    emptyHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-empty-preview.html'), 'utf8');
+    filesHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-files-preview.html'), 'utf8');
+    singleHtml = await readFile(join(tmpdir(), 'phc-cso-workspace-single-preview.html'), 'utf8');
     server = createServer(async (request, response) => {
         const url = new URL(request.url, origin);
-        if (url.pathname === '/') {
+        if (['/', '/empty', '/files', '/single'].includes(url.pathname)) {
             response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-            response.end(html.replaceAll('http://localhost', origin).replaceAll('http:\\/\\/localhost', origin));
+            const fixture = ({ '/empty': emptyHtml, '/files': filesHtml, '/single': singleHtml })[url.pathname] ?? html;
+            response.end(fixture.replaceAll('http://localhost', origin).replaceAll('http:\\/\\/localhost', origin));
+            return;
+        }
+        const imageMatch = url.pathname.match(/^\/cso-test-media\/(\d+)\.svg$/);
+        if (imageMatch) {
+            if (imageMatch[1] === '12') { response.writeHead(404).end(); return; }
+            response.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+            const color = Number(imageMatch[1]) % 2 ? '#d7e6ed' : '#eadfd0';
+            response.end(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="${color}"/><rect y="680" width="1200" height="220" fill="#c0cac5"/><rect x="220" y="210" width="760" height="480" fill="#e9eceb"/><path d="M190 210L600 70L1010 210Z" fill="#76868d"/><g fill="#879da9"><rect x="300" y="310" width="150" height="140"/><rect x="750" y="310" width="150" height="140"/><rect x="520" y="470" width="160" height="220"/></g><text x="60" y="830" font-family="Arial" font-size="42" fill="#435560">Survey attachment ${imageMatch[1]} · Test image</text></svg>`);
             return;
         }
         if (['/phc/pwa-install.js', '/phc/background-sync.js'].includes(url.pathname)) {
@@ -86,7 +101,7 @@ after(async () => {
     await new Promise(done => server?.close(done));
 });
 
-async function openWorkspace(width = 1600, height = 1800) {
+async function openWorkspace(width = 1600, height = 1800, path = '/') {
     const page = await browser.newPage();
     page.setDefaultTimeout(7000);
     const errors = [];
@@ -95,15 +110,18 @@ async function openWorkspace(width = 1600, height = 1800) {
     await page.setViewport({ width, height });
     await page.setRequestInterception(true);
     page.on('request', request => request.url().startsWith(origin) ? request.continue() : request.abort());
-    await page.goto(origin, { waitUntil: 'networkidle0' });
+    await page.goto(origin + path, { waitUntil: 'networkidle0' });
     await page.waitForFunction(() => document.querySelector('[data-filter-count="all"]')?.textContent !== '0');
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => {
         const modal = document.querySelector('#fieldEditModal');
         modal.addEventListener('shown.bs.modal', () => { modal.dataset.testOpen = 'true'; });
         modal.addEventListener('hide.bs.modal', () => { delete modal.dataset.testOpen; });
+        const viewer = document.querySelector('#cso_attachment_viewer');
+        viewer.addEventListener('shown.bs.modal', () => { viewer.dataset.testOpen = 'true'; });
+        viewer.addEventListener('hide.bs.modal', () => { delete viewer.dataset.testOpen; });
     });
-    await page.$eval('.cso-detail-workspace', element => element.scrollIntoView({ block: 'start', inline: 'nearest' }));
+    await page.$eval('.cso-detail-workspace', element => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - (document.querySelector('#kt_app_header')?.getBoundingClientRect().bottom ?? 0) - 8));
     return page;
 }
 
@@ -120,12 +138,23 @@ async function editField(page, selector, value) {
     await page.waitForFunction(() => getComputedStyle(document.querySelector('#fieldEditModal')).display === 'none' && !document.querySelector('.modal-backdrop'));
 }
 
+async function scrollRecord(page, selector, offset) {
+    await page.$eval(selector, (element, offset) => {
+        const readingTop = document.querySelector('#cso_decision_header').getBoundingClientRect().bottom + document.querySelector('.cso-workspace-tabs').getBoundingClientRect().height + 24;
+        window.scrollTo(0, window.scrollY + element.getBoundingClientRect().top + offset - readingTop);
+    }, offset);
+}
+
+async function recordReading(page, selector) {
+    return page.$eval(selector, element => Math.max(0, document.querySelector('#cso_decision_header').getBoundingClientRect().bottom + document.querySelector('.cso-workspace-tabs').getBoundingClientRect().height + 24 - element.getBoundingClientRect().top));
+}
+
 test('record browsers keep independent selections and reading positions across tabs', async () => {
     const page = await openWorkspace();
     await openTab(page, 'organizations');
     assert.notEqual(await page.$eval('#cso_organizations_tab', element => getComputedStyle(element).borderBottomColor), await page.$eval('#cso_units_tab', element => getComputedStyle(element).borderBottomColor));
     assert.equal(await page.$$eval('#cso_organizations_pane [data-record-content]:not([hidden])', items => items.length), 1);
-    await page.$eval('#cso_organizations_pane .cso-record-details', element => { element.scrollTop = 220; });
+    await scrollRecord(page, '#cso_organizations_pane [data-record-content]:not([hidden])', 220);
     await page.click('#cso_organizations_pane .cso-record-select:nth-child(2)');
     assert.match(await page.$eval('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-child-title', element => element.textContent), /مركز الدعم/);
     await openTab(page, 'units');
@@ -134,10 +163,10 @@ test('record browsers keep independent selections and reading positions across t
     await openTab(page, 'organizations');
     assert.match(await page.$eval('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-child-title', element => element.textContent), /مركز الدعم/);
     await page.click('#cso_organizations_pane [data-record-content]:not([hidden]) .cso-record-step[data-step="-1"]');
-    assert.equal(await page.$eval('#cso_organizations_pane .cso-record-details', element => element.scrollTop), 220);
-    await page.$eval('#cso_organizations_pane .cso-record-details', element => { element.scrollTop = 0; });
+    assert.ok(Math.abs(await recordReading(page, '#cso_organizations_pane [data-record-content]:not([hidden])') - 220) < 2);
+    await scrollRecord(page, '#cso_organizations_pane [data-record-content]:not([hidden])', 0);
     await page.$eval('.cso-detail-workspace', element => element.scrollIntoView({ block: 'start' }));
-    await (await page.$('.cso-detail-workspace')).screenshot({ path: join(tmpdir(), 'phc-cso-workspace-desktop.png') });
+    await page.screenshot({ path: join(tmpdir(), 'phc-cso-workspace-desktop.png') });
     assert.deepEqual(page.workspaceErrors, []);
     await page.close();
 });
@@ -243,7 +272,18 @@ test('status decisions preserve assignment unless assigning and update the summa
     assert.equal(Object.hasOwn(statusRequests.at(-1), 'assigned_to'), false);
     assert.equal(await page.$eval('[data-status="accepted"]', element => element.disabled), true);
     const auditor = await page.$eval('#status_assignee option:nth-child(2)', element => element.value);
-    await page.select('#status_assignee', auditor);
+    await page.click('#cso_assignment_toggle');
+    await page.waitForSelector('#cso_assignment_menu.show');
+    await page.click('#cso_assignment_menu .select2-selection');
+    try {
+        await page.waitForSelector('#cso_assignment_menu .select2-results__option[role="option"]', { visible: true });
+    } catch (error) {
+        await page.screenshot({ path: join(tmpdir(), 'phc-cso-assignment-debug.png') });
+        const options = await page.$$eval('.select2-results__option', elements => elements.map(element => element.outerHTML));
+        throw new Error('Auditor options unavailable: ' + JSON.stringify(options), { cause: error });
+    }
+    await page.click('#cso_assignment_menu .select2-results__option[role="option"]');
+    assert.equal(await page.$eval('#status_assignee', element => element.value), auditor);
     await page.click('[data-status="assigned"]');
     await page.waitForFunction(() => document.querySelector('#cso_current_status').textContent === 'مسند');
     assert.equal(statusRequests.at(-1).assigned_to, auditor);
@@ -269,6 +309,133 @@ test('mobile record browsing fits the viewport and dark mode follows the applica
     await page.evaluate(() => document.documentElement.setAttribute('data-bs-theme', 'light'));
     await page.$eval('.cso-detail-workspace', element => element.scrollIntoView({ block: 'start', inline: 'nearest' }));
     await page.screenshot({ path: join(tmpdir(), 'phc-cso-workspace-mobile.png') });
+    assert.deepEqual(page.workspaceErrors, []);
+    await page.close();
+});
+
+test('sticky decision and gallery remain visible without overlapping while the survey scrolls', async () => {
+    const page = await openWorkspace(1600, 1000);
+    await page.waitForFunction(() => document.querySelector('#cso_gallery_image').naturalWidth > 0);
+    const alignment = await page.evaluate(() => {
+        const data = document.querySelector('.cso-audit-data').getBoundingClientRect();
+        const photos = document.querySelector('.cso-attachment-column').getBoundingClientRect();
+        return { dataLeft: data.left, photoRight: photos.right };
+    });
+    assert.ok(alignment.photoRight < alignment.dataLeft, JSON.stringify(alignment));
+    assert.equal(await page.$eval('#cso_decision_header', element => getComputedStyle(element).position), 'sticky');
+    await page.evaluate(() => window.scrollBy(0, 40));
+    await page.waitForFunction(() => Math.abs(document.querySelector('#cso_decision_header').getBoundingClientRect().top - parseFloat(getComputedStyle(document.querySelector('#cso_decision_header')).top)) < 2);
+    const positions = await page.evaluate(() => ({
+        headerBottom: document.querySelector('#cso_decision_header').getBoundingClientRect().bottom,
+        photoTop: document.querySelector('.cso-attachment-column').getBoundingClientRect().top,
+        photoBottom: document.querySelector('#cso_gallery_panel').getBoundingClientRect().bottom,
+    }));
+    assert.ok(positions.photoTop >= positions.headerBottom + 10, JSON.stringify(positions));
+    assert.ok(positions.photoBottom <= 1000, JSON.stringify(positions));
+    await scrollRecord(page, '#cso_survey_pane > [data-record-content]', 450);
+    assert.ok(await recordReading(page, '#cso_survey_pane > [data-record-content]') > 400);
+    const scroll = await page.$eval('.cso-gallery-scroll', element => ({ height: element.clientHeight, contentHeight: element.scrollHeight }));
+    assert.ok(scroll.contentHeight > scroll.height, JSON.stringify(scroll));
+    const topBeforeThumbScroll = await page.$eval('#cso_gallery_image', element => element.getBoundingClientRect().top);
+    await page.$eval('.cso-gallery-scroll', element => { element.scrollTop = 100; });
+    assert.equal(await page.$eval('#cso_gallery_image', element => element.getBoundingClientRect().top), topBeforeThumbScroll);
+    await page.click('#cso_gallery_panel [data-cso-image-step="1"]');
+    assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /2\.jpg/);
+    await openTab(page, 'units');
+    assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /2\.jpg/);
+    await page.screenshot({ path: join(tmpdir(), 'phc-cso-sticky-gallery-desktop.png') });
+    assert.deepEqual(page.workspaceErrors, []);
+    await page.close();
+});
+
+test('gallery viewer zooms, navigates, handles failed images and restores the reading position', async () => {
+    const page = await openWorkspace(1600, 1000);
+    await page.click('#cso_gallery_panel [data-cso-image-index="1"]');
+    await scrollRecord(page, '#cso_survey_pane > [data-record-content]', 240);
+    const position = await page.evaluate(() => window.scrollY);
+    await page.click('#cso_gallery_panel [data-cso-open-gallery]');
+    await page.waitForFunction(() => document.querySelector('#cso_attachment_viewer').dataset.testOpen === 'true');
+    await page.waitForFunction(() => document.querySelector('#cso_viewer_image').naturalWidth > 0);
+    assert.match(await page.$eval('#cso_viewer_name', element => element.textContent), /2\.jpg/);
+    const originalWidth = await page.$eval('#cso_viewer_image', element => element.clientWidth);
+    await page.click('#cso_zoom_in');
+    assert.equal(await page.$eval('#cso_zoom_reset', element => element.textContent), '150%');
+    assert.ok(await page.$eval('#cso_viewer_image', element => element.clientWidth) > originalWidth);
+    await page.click('#cso_zoom_reset');
+    assert.equal(await page.$eval('#cso_zoom_out', element => element.disabled), true);
+    await page.keyboard.press('ArrowLeft');
+    assert.match(await page.$eval('#cso_viewer_name', element => element.textContent), /3\.jpg/);
+    await page.click('#cso_attachment_viewer [data-cso-image-index="11"]');
+    await page.waitForFunction(() => !document.querySelector('#cso_viewer_error').hidden);
+    await page.waitForFunction(() => document.querySelector('#cso_attachment_viewer [data-cso-image-index="11"] img').hidden);
+    assert.equal(await page.$eval('#cso_attachment_viewer [data-cso-image-step="1"]', element => element.disabled), true);
+    assert.equal(await page.$eval('#cso_zoom_in', element => element.disabled), true);
+    await page.click('#cso_attachment_viewer [data-cso-image-step="-1"]');
+    await page.waitForFunction(() => document.querySelector('#cso_viewer_image').complete && document.querySelector('#cso_viewer_image').naturalWidth > 0);
+    assert.equal(await page.$eval('#cso_viewer_error', element => element.hidden), true);
+    await page.click('#cso_attachment_viewer .btn-close');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#cso_attachment_viewer')).display === 'none' && !document.querySelector('.modal-backdrop'));
+    const returned = await page.evaluate(() => window.scrollY);
+    assert.deepEqual(returned, position);
+    assert.equal(await page.$eval('#cso_gallery_panel [data-cso-open-gallery]', element => element === document.activeElement), true);
+    assert.match(await page.$eval('#cso_gallery_name', element => element.textContent), /11\.jpg/);
+    assert.deepEqual(page.workspaceErrors, []);
+    await page.close();
+});
+
+test('mobile gallery opens full screen and the decision stays below the system header while scrolling', async () => {
+    const page = await openWorkspace(390, 844);
+    await page.evaluate(() => window.scrollBy(0, 900));
+    const dimensions = await page.evaluate(() => {
+        const header = document.querySelector('#cso_decision_header').getBoundingClientRect();
+        const system = document.querySelector('#kt_app_header').getBoundingClientRect();
+        return { headerTop: header.top, headerBottom: header.bottom, headerHeight: header.height, systemBottom: system.bottom, width: document.querySelector('#cso_audit_workspace').clientWidth, scrollWidth: document.querySelector('#cso_audit_workspace').scrollWidth };
+    });
+    assert.ok(dimensions.headerTop >= dimensions.systemBottom, JSON.stringify(dimensions));
+    assert.ok(dimensions.headerBottom < 844 && dimensions.headerHeight < 190, JSON.stringify(dimensions));
+    assert.ok(dimensions.scrollWidth <= dimensions.width + 1, JSON.stringify(dimensions));
+    assert.equal(await page.$eval('.cso-attachment-column', element => getComputedStyle(element).display), 'none');
+    const scrollPosition = await page.evaluate(() => window.scrollY);
+    await page.screenshot({ path: join(tmpdir(), 'phc-cso-sticky-gallery-mobile.png') });
+    await page.click('.cso-mobile-gallery-trigger');
+    await page.waitForFunction(() => document.querySelector('#cso_attachment_viewer').dataset.testOpen === 'true');
+    const viewerSize = await page.$eval('#cso_attachment_viewer .modal-dialog', element => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }));
+    assert.equal(viewerSize.width, 390);
+    assert.equal(viewerSize.height, 844);
+    await page.click('#cso_attachment_viewer [data-cso-image-step="1"]');
+    assert.match(await page.$eval('#cso_viewer_name', element => element.textContent), /2\.jpg/);
+    await page.screenshot({ path: join(tmpdir(), 'phc-cso-image-viewer-mobile.png') });
+    await page.click('#cso_attachment_viewer .btn-close');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#cso_attachment_viewer')).display === 'none' && !document.querySelector('.modal-backdrop'));
+    assert.equal(await page.evaluate(() => window.scrollY), scrollPosition);
+    assert.deepEqual(page.workspaceErrors, []);
+    await page.close();
+});
+
+test('gallery empty and file-only states remain usable on mobile without image controls', async () => {
+    for (const path of ['/empty', '/files']) {
+        const page = await openWorkspace(390, 844, path);
+        assert.equal(await page.$('#cso_gallery_image'), null);
+        await page.click('.cso-mobile-gallery-trigger');
+        await page.waitForFunction(() => document.querySelector('#cso_attachment_viewer').dataset.testOpen === 'true');
+        assert.equal(await page.$('#cso_viewer_image'), null);
+        assert.match(await page.$eval('#cso_attachment_viewer', element => element.textContent), /لا توجد صور مرفقة/);
+        if (path === '/files') {
+            assert.match(await page.$eval('#cso_attachment_viewer .cso-viewer-files a', element => element.href), /100\.pdf$/);
+        }
+        assert.deepEqual(page.workspaceErrors, []);
+        await page.close();
+    }
+});
+
+test('single image gallery keeps navigation disabled in both the sidebar and viewer', async () => {
+    const page = await openWorkspace(1600, 1000, '/single');
+    assert.equal(await page.$$eval('[data-cso-image-step]', buttons => buttons.every(button => button.disabled)), true);
+    await page.click('#cso_gallery_panel [data-cso-open-gallery]');
+    await page.waitForFunction(() => document.querySelector('#cso_attachment_viewer').dataset.testOpen === 'true');
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(await page.$eval('#cso_attachment_viewer [data-cso-image-counter]', element => element.textContent), '1 من 1');
+    assert.equal(await page.$$eval('[data-cso-image-step]', buttons => buttons.every(button => button.disabled)), true);
     assert.deepEqual(page.workspaceErrors, []);
     await page.close();
 });

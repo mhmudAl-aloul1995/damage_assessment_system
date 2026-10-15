@@ -9,7 +9,24 @@
         let savingField = false;
         let changingStatus = false;
 
-        $('#status_assignee').select2({ width: '230px', allowClear: true });
+        $('#status_assignee').select2({ width: '100%', allowClear: true, dropdownParent: $('#cso_assignment_menu') });
+
+        const decisionHeader = document.getElementById('cso_decision_header');
+        const appHeader = document.getElementById('kt_app_header');
+        const workspaceTabs = workspace.find('.cso-workspace-tabs')[0];
+        function updateStickyMeasurements() {
+            const appPosition = appHeader ? getComputedStyle(appHeader).position : '';
+            const appBottom = appHeader && ['fixed', 'sticky'].includes(appPosition) ? Math.max(0, appHeader.getBoundingClientRect().bottom) : 0;
+            workspace[0].style.setProperty('--cso-app-top', Math.ceil(appBottom + 8) + 'px');
+            workspace[0].style.setProperty('--cso-header-height', Math.ceil(decisionHeader.getBoundingClientRect().height) + 'px');
+            workspace[0].style.setProperty('--cso-tabs-height', Math.ceil(workspaceTabs.getBoundingClientRect().height) + 'px');
+        }
+        const stickyObserver = new ResizeObserver(updateStickyMeasurements);
+        stickyObserver.observe(decisionHeader);
+        stickyObserver.observe(workspaceTabs);
+        if (appHeader) { stickyObserver.observe(appHeader); }
+        window.addEventListener('resize', updateStickyMeasurements);
+        updateStickyMeasurements();
 
         function hasAnswer(value) {
             return value !== null && value !== undefined && String(value).trim() !== '';
@@ -22,6 +39,23 @@
 
         function activeContent() {
             return workspace.find('.tab-pane.active [data-record-content]').filter(function () { return !this.hidden; }).first();
+        }
+
+        function readingKey(content) {
+            return content.attr('id') || content.closest('[role="tabpanel"]').attr('id');
+        }
+
+        function readingTop() {
+            return decisionHeader.getBoundingClientRect().bottom + workspaceTabs.getBoundingClientRect().height + 24;
+        }
+
+        function rememberReading(content) {
+            if (content.length) { readingPositions.set(readingKey(content), Math.max(0, readingTop() - content[0].getBoundingClientRect().top)); }
+        }
+
+        function restoreReading(content) {
+            if (!content.length) { return; }
+            window.scrollTo(0, window.scrollY + content[0].getBoundingClientRect().top + (readingPositions.get(readingKey(content)) ?? 0) - readingTop());
         }
 
         function applyFieldFilter() {
@@ -59,17 +93,21 @@
             applyFieldFilter();
         });
         $('#cso_field_search').on('input', applyFieldFilter);
-        workspace.find('[data-bs-toggle="tab"]').on('shown.bs.tab', applyFieldFilter);
+        workspace.find('[data-bs-toggle="tab"]').on('show.bs.tab', function () { rememberReading(activeContent()); });
+        workspace.find('[data-bs-toggle="tab"]').on('shown.bs.tab', function () {
+            applyFieldFilter();
+            const content = activeContent();
+            if (readingPositions.has(readingKey(content))) { restoreReading(content); }
+        });
 
         function selectRecord(browser, targetId) {
             const records = browser.find('[data-record-content]');
             const target = records.filter(function () { return this.id === targetId; });
             if (!target.length) { return; }
             const current = records.filter(function () { return !this.hidden; });
-            const details = browser.find('.cso-record-details');
             if (current.attr('id') === targetId) { return; }
 
-            readingPositions.set(current.attr('id'), details.scrollTop());
+            rememberReading(current);
             records.prop('hidden', true);
             target.prop('hidden', false);
             browser.find('.cso-record-select').each(function () {
@@ -77,7 +115,7 @@
                 $(this).toggleClass('active', selected).attr('aria-pressed', String(selected));
             });
             applyFieldFilter();
-            details.scrollTop(readingPositions.get(targetId) ?? 0);
+            restoreReading(target);
         }
 
         workspace.on('click', '.cso-record-select', function () {
