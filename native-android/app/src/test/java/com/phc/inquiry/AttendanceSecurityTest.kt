@@ -13,8 +13,8 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AttendanceSecurityTest {
-    @Test fun noCredentialCanLeaveTheDedicatedHttpsAudience() {
-        for (url in listOf("", "http://213.6.135.115/damage_assessment_system/", "https://user:pass@example.test/", "https://example.test/?q=x", "https://example.test")) {
+    @Test fun noCredentialCanLeaveTheConfiguredAudience() {
+        for (url in listOf("", "ftp://example.test/", "https://user:pass@example.test/", "https://example.test/?q=x", "https://example.test")) {
             assertFalse(AttendanceTransport(url).configured)
             assertThrows(InquiryFailure::class.java) { AttendanceTransport(url).base() }
         }
@@ -32,6 +32,21 @@ class AttendanceSecurityTest {
         assertThrows(InquiryFailure::class.java) { client.newCall(Request.Builder().url("https://gateway.example.test/system/api/v1/hr/devices/register").header("Authorization", "Bearer other-account").post("{}".toRequestBody()).build()).execute() }
         client.newCall(Request.Builder().url("https://gateway.example.test/system/api/v1/hr/auth/login").header("Authorization", "Bearer old-token").post("{}".toRequestBody()).build()).execute().close()
         assertNull(received?.header("Authorization"))
+    }
+
+    @Test fun httpWorksOnlyForTheExactConfiguredOriginAndHrPaths() {
+        val policy = AttendanceTransport("http://attendance.example.test:8080/system/")
+        assertTrue(policy.configured)
+        assertTrue(policy.accepts("http://attendance.example.test:8080/system/api/v1/hr/me".toHttpUrl()))
+        for (url in listOf("https://attendance.example.test:8080/system/api/v1/hr/me", "http://attendance.example.test/system/api/v1/hr/me", "http://other.example.test:8080/system/api/v1/hr/me", "http://attendance.example.test:8080/system/api/v1/me")) {
+            assertFalse(policy.accepts(url.toHttpUrl()))
+        }
+    }
+
+    @Test fun receiptTimesUseTheEmployeeTimezone() {
+        assertEquals("08:10", com.phc.inquiry.feature.attendance.attendanceReceiptTime("2026-10-12 05:10:00", "Asia/Hebron"))
+        assertEquals("05:10", com.phc.inquiry.feature.attendance.attendanceReceiptTime("2026-10-12T05:10:00Z", "UTC"))
+        assertEquals("معتمد", com.phc.inquiry.feature.attendance.attendanceDeviceStatus("approved"))
     }
 
     @Test fun exactChallengeBytesAreBoundToEmployeeCredentialActionAndExpiry() {

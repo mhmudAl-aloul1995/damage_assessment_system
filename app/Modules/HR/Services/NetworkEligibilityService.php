@@ -8,11 +8,11 @@ class NetworkEligibilityService
 {
     public function verified(?Request $request = null): bool
     {
-        return false;
+        return config('hr.network_mode') === 'unrestricted';
     }
 
     public function blockers(): array
     {
-        return ['Authenticated internal HTTPS gateway is not configured and verified.'];
+        return $this->verified() ? [] : ['تسجيل الحضور مقيد بالشبكة الداخلية، ولم يكتمل إعداد التحقق منها.'];
     }
 }

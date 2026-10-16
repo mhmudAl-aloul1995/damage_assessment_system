@@ -2,15 +2,16 @@
 
 ## Delivered attendance foundation
 
-The HR module reuses users, authentication, Spatie permissions, Blade/Metronic, queues, notifications and Excel. It implements employee identity mapping, attendance supervisor scope, immutable schedules, fixed/flexible and multiple daily shifts, holidays and cancellation history, temporary calendars, daily/monthly attendance and XLSX, correction requests with independent decisions, persistent reconciliation summaries/exceptions, audit screens and queued decision notifications. Raw HR events and legacy attendance/import records are preserved. Employee capture is currently a local/test simulator; production Android/network capture is not activated. The full ten-phase scope remains in hrms-architecture-roadmap.md.
+The HR module reuses users, authentication, Spatie permissions, Blade/Metronic, queues, notifications and Excel. It implements employee identity mapping, attendance supervisor scope, immutable schedules, fixed/flexible and multiple daily shifts, holidays and cancellation history, temporary calendars, daily/monthly attendance and XLSX, correction requests with independent decisions, persistent reconciliation summaries/exceptions, audit screens and queued decision notifications. Raw HR events and legacy attendance/import records are preserved. Native signed capture supports HTTP(S) with independent device approval. Physical office-network verification remains a separate pending integration. The full ten-phase scope remains in hrms-architecture-roadmap.md.
 
 ## Configuration
 
 ```dotenv
 HR_TIMEZONE=Asia/Hebron
 HR_WEB_REQUIRE_HTTPS=false
-HR_ATTENDANCE_ENABLED=false
-HR_ATTENDANCE_NETWORK_MODE=disabled
+HR_NATIVE_REQUIRE_HTTPS=false
+HR_ATTENDANCE_ENABLED=true
+HR_ATTENDANCE_NETWORK_MODE=unrestricted
 HR_EXPORT_TTL_HOURS=24
 HR_ATTENDANCE_GATEWAY_URL=
 HR_ALLOWED_NETWORKS=
@@ -21,9 +22,9 @@ HR_MIKROTIK_USERNAME=
 HR_MIKROTIK_PASSWORD=
 ```
 
-No addresses, ports, CIDRs or router credentials are guessed. Device approval is mandatory. Gateway/network services currently deny production capture and perform no router writes; flags alone cannot activate it.
+No addresses, ports, CIDRs or router credentials are guessed. Device approval is mandatory. The default unrestricted mode allows capture from any network reaching the server. Restricted network modes deny capture until actual verification is implemented. No router writes occur.
 
-HR web pages allow HTTP by the owner's explicit instruction. Authentication, permissions and CSRF remain enforced. HR_WEB_REQUIRE_HTTPS=true enables web transport enforcement outside local/testing. This web setting does not relax native attendance TLS or certificate verification. Never change APP_ENV to bypass security.
+HR web pages allow HTTP by the owner's explicit instruction. Authentication, permissions and CSRF remain enforced. HR_WEB_REQUIRE_HTTPS=true enables web transport enforcement outside local/testing. The owner's subsequent instruction also permits native attendance over HTTP: HR_NATIVE_REQUIRE_HTTPS=false is independent of the web setting. HTTP does not encrypt credentials or tokens; signing is not transport encryption. Never change APP_ENV to bypass configuration. Existing deployments must update older HR_ATTENDANCE_ENABLED=false / HR_ATTENDANCE_NETWORK_MODE=disabled values and clear the configuration cache to use the new mode.
 
 ## Installing on the server
 
@@ -94,13 +95,13 @@ Optional --employee narrows the command. No automatic recurring reconciliation s
 
 ## Secure native Android and network prerequisites
 
-Phase 2 extends native-android, not the separate Capacitor shell. The implementation uses a distinct HTTPS-only origin/client/session, Keystore authentication-per-use signing, BiometricPrompt CryptoObject, enrollment approval/revocation, short-lived signed challenges and atomic consumption/event append. Existing inquiry tokens, wildcard tokens and mixed HR/inquiry audience tokens are rejected by the HR API. Native HR login issues an eight-hour hr:native token, checks the employee mapping and preserves account separation when switching/logging out.
+Phase 2 extends native-android, not the separate Capacitor shell. The implementation uses a distinct configured HTTP(S) origin/client/session, Keystore authentication-per-use signing, BiometricPrompt CryptoObject, enrollment approval/revocation, short-lived signed challenges and atomic consumption/event append. Existing inquiry tokens, wildcard tokens and mixed HR/inquiry audience tokens are rejected by the HR API. Native HR login issues an eight-hour hr:native token, checks the employee mapping and preserves account separation when switching/logging out.
 
-All native endpoints are under /api/v1/hr and require HTTPS even when web HTTP is allowed. Available endpoints: auth/login, auth/logout, me, attendance/today, attendance/history, devices/challenge, devices/register, devices/status, devices/{credential}/revoke, attendance/challenge, attendance/check-in and attendance/check-out. The protected HR web devices screen provides scoped approval, rejection, revocation and immutable decision history. No public administrative device API is exposed.
+All native endpoints are under /api/v1/hr. HTTPS enforcement is optional via HR_NATIVE_REQUIRE_HTTPS=true. The default unrestricted network mode does not verify office presence; other modes remain blocked pending an actual network verifier. Available endpoints: auth/login, auth/logout, me, attendance/today, attendance/history, devices/challenge, devices/register, devices/status, devices/{credential}/revoke, attendance/challenge, attendance/check-in and attendance/check-out. The protected HR web devices screen provides scoped approval, rejection, revocation and immutable decision history. No public administrative device API is exposed.
 
 Registration proof expires after five minutes. Attendance challenges expire after 60 seconds and include PHC-HR-1 protocol, purpose, UUID, employee, credential, action, resolved assignment and work date, random 32-byte nonce and Unix UTC expiry. payload is base64 of the exact stored UTF-8 JSON bytes. Android signs those bytes with SHA256withECDSA; signatures are base64 of ASN.1 DER ECDSA P-256 signatures. The server never rebuilds signed client claims. Employee lock precedes credential and challenge locks. Revocation/activity are rechecked, and event append plus challenge consumption commit together. An identical verified request has a ten-minute receipt retry window; other replay/change attempts fail. Client timestamps, IP/SSID assertions and success messages are not trusted.
 
-Build HR origin is intentionally blank until supplied by PHC. Configure Gradle property phcHrBaseUrl with the approved HTTPS application/gateway base ending in /. No HTTP fallback or redirect following exists. Android 28+ is required for native biometric signing; older/unsupported devices use the audited HR correction workflow. The generated P-256 key requires authentication for each use and is invalidated on biometric enrollment changes. Available certificate chains are sent as unverified evidence. Enrollment proves key possession; trusted hardware attestation validation remains outstanding and is not implied by approval. See the Android documentation for [CryptoObject keys](https://developer.android.com/reference/android/hardware/biometrics/BiometricPrompt.CryptoObject) and [server-side attestation verification](https://developer.android.com/privacy-and-security/security-key-attestation).
+The HR origin defaults to the application's phcBaseUrl; override phcHrBaseUrl with an HTTP(S) application base ending in /. The build generates Android cleartext exceptions only for configured HTTP hosts. There is no automatic HTTPS downgrade, redirect following, or certificate-validation bypass. Android 28+ is required for native biometric signing; older/unsupported devices use the audited HR correction workflow. The generated P-256 key requires authentication for each use and is invalidated on biometric enrollment changes. Available certificate chains are sent as unverified evidence. Enrollment proves key possession; trusted hardware attestation validation remains outstanding and is not implied by approval. See the Android documentation for [CryptoObject keys](https://developer.android.com/reference/android/hardware/biometrics/BiometricPrompt.CryptoObject) and [server-side attestation verification](https://developer.android.com/privacy-and-security/security-key-attestation).
 
 An API contract or disabled network adapter does not establish Android completion. Device attestation where feasible and instrumented biometric/integration checks remain necessary. BiometricPrompt verifies an enrolled device user, not a uniquely identified PHC employee. No biometric templates leave Android.
 

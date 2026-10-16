@@ -64,13 +64,59 @@ beforeEach(function (): void {
     $this->assignment = app(AttendanceSetup::class)->assign($this->admin, ['employee_id' => $this->employee->id, 'work_schedule_id' => $this->schedule->id, 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31']);
 });
 
-it('separates secure HR tokens and refuses HTTP without minting credentials', function (): void {
+it('can require HTTPS explicitly without minting credentials on HTTP', function (): void {
+    config(['hr.native_require_https' => true, 'hr.attendance_enabled' => false]);
     $data = ['email' => $this->staff->email, 'password' => '123456', 'device_name' => 'Android'];
     $this->postJson('/api/v1/hr/auth/login', $data)->assertStatus(426);
     expect($this->staff->tokens()->count())->toBe(0);
     $response = $this->postJson('https://localhost/api/v1/hr/auth/login', $data)->assertOk()->assertJsonMissingPath('employee.id_no');
     expect($this->staff->tokens()->first()->abilities)->toBe(['hr:native']);
     $this->withToken($response->json('access_token'))->getJson('https://localhost/api/v1/hr/me')->assertOk()->assertJsonPath('data.capture_enabled', false);
+});
+
+it('records signed attendance over the selected transport without an internal gateway', function (string $scheme): void {
+    config(['hr.native_require_https' => false, 'hr.attendance_enabled' => true, 'hr.network_mode' => 'unrestricted']);
+    $base = $scheme.'://localhost/api/v1/hr/';
+    $login = $this->postJson($base.'auth/login', ['email' => $this->staff->email, 'password' => '123456', 'device_name' => 'Android'])->assertOk();
+    $this->withToken($login->json('access_token'))->getJson($base.'me')
+        ->assertOk()->assertJsonPath('data.capture_enabled', true)->assertJsonPath('data.blockers', []);
+    $credential = ($this->register)();
+    $this->postJson($base.'attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertForbidden();
+    $this->enrollment->decide($this->admin, $credential, ['decision' => 'approved', 'reason' => 'Device approved independently']);
+    $challenge = $this->postJson($base.'attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertCreated()->json('data');
+    $data = ['challenge_id' => $challenge['id'], 'signature' => ($this->sign)(base64_decode($challenge['payload']).'altered')];
+    $this->postJson($base.'attendance/check-in', $data)->assertUnprocessable();
+    $data['signature'] = ($this->sign)(base64_decode($challenge['payload']));
+    $receipt = $this->postJson($base.'attendance/check-in', $data)->assertOk()->assertJsonPath('data.confirmed', true)->json('data.event_id');
+    $this->postJson($base.'attendance/check-in', $data)->assertOk()->assertJsonPath('data.event_id', $receipt);
+    $this->travel(1)->hours();
+    $checkout = $this->postJson($base.'attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_out'])->assertCreated()->json('data');
+    $this->postJson($base.'attendance/check-out', ['challenge_id' => $checkout['id'], 'signature' => ($this->sign)(base64_decode($checkout['payload']))])
+        ->assertOk()->assertJsonPath('data.action', 'check_out');
+    $this->assertDatabaseCount('hr_attendance_events', 2);
+})->with(['http', 'https']);
+
+it('reports and enforces an administrative pause even on unrestricted networks', function (): void {
+    config(['hr.native_require_https' => false, 'hr.attendance_enabled' => false, 'hr.network_mode' => 'unrestricted']);
+    $credential = ($this->approved)();
+    $this->withToken($this->staff->createToken('HR', ['hr:native'])->plainTextToken)
+        ->getJson('/api/v1/hr/me')->assertOk()->assertJsonPath('data.capture_enabled', false)->assertJsonCount(1, 'data.blockers');
+    $this->postJson('/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertServiceUnavailable();
+    $this->assertDatabaseCount('hr_attendance_challenges', 0);
+});
+
+it('keeps the signed action rate limit separate from attendance screen reads', function (): void {
+    config(['hr.native_require_https' => false, 'hr.attendance_enabled' => true, 'hr.network_mode' => 'unrestricted']);
+    $credential = ($this->register)();
+    $this->withToken($this->staff->createToken('HR', ['hr:native'])->plainTextToken);
+    for ($request = 0; $request < 5; $request++) {
+        $this->getJson('/api/v1/hr/me')->assertOk();
+    }
+    for ($request = 0; $request < 10; $request++) {
+        $this->postJson('/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertForbidden();
+    }
+    $this->postJson('/api/v1/hr/attendance/challenge', ['credential_id' => $credential->id, 'action' => 'check_in'])->assertTooManyRequests();
+    $this->assertDatabaseCount('hr_attendance_events', 0);
 });
 
 it('rejects inquiry and unrestricted tokens on the secure HR audience', function (array $abilities): void {

@@ -167,9 +167,10 @@ it('downloads a real Excel workbook for authorized attendance readers', function
         ->assertOk()->assertDownload('hr-attendance.xlsx');
 });
 
-it('exposes no ordinary check-in or check-out endpoint', function (): void {
-    $this->actingAs($this->viewer)->postJson('/api/v1/hr/attendance/check-in', [])->assertStatus(426);
-    $this->postJson('/api/v1/hr/attendance/check-out', [])->assertStatus(426);
+it('rejects ordinary web sessions on signed native attendance endpoints', function (): void {
+    config(['hr.native_require_https' => false]);
+    $this->actingAs($this->viewer)->postJson('/api/v1/hr/attendance/check-in', [])->assertForbidden();
+    $this->postJson('/api/v1/hr/attendance/check-out', [])->assertForbidden();
 });
 
 it('seeds HR grants idempotently without assigning them to existing roles', function (): void {

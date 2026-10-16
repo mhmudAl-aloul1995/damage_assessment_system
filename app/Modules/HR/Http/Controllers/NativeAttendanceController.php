@@ -16,10 +16,10 @@ use App\Modules\HR\Http\Resources\NativeAttendanceResource;
 use App\Modules\HR\Models\DeviceCredential;
 use App\Modules\HR\Models\Employee;
 use App\Modules\HR\Services\AttendanceCalculator;
+use App\Modules\HR\Services\AttendanceGatewayService;
 use App\Modules\HR\Services\AttendanceRecorder;
 use App\Modules\HR\Services\AttendanceReport;
 use App\Modules\HR\Services\DeviceEnrollment;
-use App\Modules\HR\Services\NetworkEligibilityService;
 use App\Modules\HR\Services\SecureAttendance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,14 +44,18 @@ class NativeAttendanceController extends Controller
         return response()->json(['access_token' => $token->plainTextToken, 'expires_at' => $expires->toIso8601String(), 'employee' => ['id' => $employee->id, 'user_id' => $user->id, 'name' => $employee->display_name]]);
     }
 
-    public function me(Request $request, NetworkEligibilityService $network): JsonResponse
+    public function me(Request $request, AttendanceGatewayService $gateway): JsonResponse
     {
         $employee = $this->employee($request->user());
+        $blockers = $gateway->blockers($request);
+        if (! $request->user()->can('hr.attendance.capture')) {
+            $blockers[] = 'تحتاج صلاحية تسجيل الحضور؛ راجع الموارد البشرية.';
+        }
 
         return response()->json(['data' => [
             'id' => $employee->id, 'name' => $employee->display_name, 'employee_number' => $employee->employee_number,
-            'capture_enabled' => (bool) config('hr.attendance_enabled') && $network->verified(),
-            'blockers' => $network->blockers(),
+            'capture_enabled' => $blockers === [],
+            'blockers' => $blockers,
         ]]);
     }
 

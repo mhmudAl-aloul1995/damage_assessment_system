@@ -82,9 +82,9 @@ class AttendanceRepository @Inject constructor(private val store: AttendanceSess
                 403 -> "لا تتوفر صلاحية العملية أو اعتماد الجهاز لهذا الحساب."
                 422 -> validation?.take(180) ?: "تغيّرت حالة الحضور أو بيانات الطلب؛ حدّث الصفحة."
                 429 -> "طلبات كثيرة؛ انتظر دقيقة وأعد المحاولة."
-                503 -> "التسجيل غير متاح حتى تهيئة بوابة الحضور والتحقق منها."
+                503 -> "خدمة الحضور غير متاحة حاليًا؛ حدّث الحالة أو راجع مسؤول النظام."
                 else -> "تعذّر تأكيد العملية من خادم الحضور."
             }, failure.code())
-        } catch (failure: java.io.IOException) { throw InquiryFailure(failure.message?.take(180) ?: "تعذّر الوصول إلى بوابة الحضور الآمنة.") }
+        } catch (failure: java.io.IOException) { throw InquiryFailure("تعذّر الاتصال بخدمة الحضور. تحقق من الإنترنت وأعد المحاولة.") }
     }
 }

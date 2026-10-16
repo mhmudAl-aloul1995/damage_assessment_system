@@ -9,9 +9,23 @@ class AttendanceGatewayService
 {
     public function assertCaptureAllowed(Request $request): void
     {
-        if (! $request->isSecure() || ! config('hr.attendance_enabled') || ! app(NetworkEligibilityService::class)->verified($request)) {
-            throw new ServiceUnavailableHttpException(null, 'بوابة الحضور الداخلية لم تُهيأ وتُختبر بعد؛ التسجيل الإنتاجي معطل.');
+        $blockers = $this->blockers($request);
+        if ($blockers !== []) {
+            throw new ServiceUnavailableHttpException(null, $blockers[0]);
         }
+    }
+
+    public function blockers(Request $request): array
+    {
+        $blockers = [];
+        if (! config('hr.attendance_enabled')) {
+            $blockers[] = 'أوقف مسؤول النظام تسجيل الحضور مؤقتًا.';
+        }
+        if (config('hr.native_require_https') && ! $request->isSecure()) {
+            $blockers[] = 'إعدادات النظام تشترط HTTPS لخدمة الحضور.';
+        }
+
+        return [...$blockers, ...app(NetworkEligibilityService::class)->blockers()];
     }
 
     public function assertSimulationAllowed(): void

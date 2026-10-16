@@ -2,6 +2,10 @@ package com.phc.inquiry
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.test.platform.app.InstrumentationRegistry
+import android.graphics.Bitmap
+import java.io.File
 import com.phc.inquiry.core.ui.DesignPreviewFrame
 import com.phc.inquiry.data.*
 import com.phc.inquiry.feature.attendance.*
@@ -12,6 +16,22 @@ class AttendanceScreenTest {
     @get:Rule val compose = createComposeRule()
     private fun render(state: AttendanceState) {
         compose.setContent { DesignPreviewFrame { AttendanceScreen(state, {}, {}, {}, { error("Capture must stay disabled") }, {}, {}, { _, _ -> }, {}, {}) } }
+    }
+
+    private fun snapshot(name: String) {
+        compose.waitForIdle()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        File(context.getExternalFilesDir(null), "attendance-$name.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+    }
+
+    @Test fun androidPermitsHttpOnlyForConfiguredHosts() {
+        val base = java.net.URI(BuildConfig.HR_API_BASE_URL)
+        if (base.scheme == "http") {
+            org.junit.Assert.assertTrue(android.security.NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted(base.host))
+        }
+        org.junit.Assert.assertFalse(android.security.NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted("unconfigured.invalid"))
     }
 
     @Test fun serverActivationAndDeviceApprovalAreRequiredBeforeCapture() {
@@ -52,7 +72,23 @@ class AttendanceScreenTest {
 
     @Test fun aReplacementPhoneCanReportThePreviousApprovedDeviceAsLost() {
         render(AttendanceState(configured = true, signedIn = true, devices = listOf(HrDevice(9, "lost-device", "الهاتف السابق", "approved"))))
-        compose.onNodeWithText("إلغاء / فقدان الهاتف السابق — #9").performClick()
+        compose.onNodeWithText("جهازي").performClick()
+        compose.onNodeWithText("إلغاء / فقدان الهاتف السابق — #9").performScrollTo().performClick()
         compose.onNodeWithText("إلغاء الجهاز #9").assertExists()
+    }
+
+    @Test fun approvedDeviceCanStartBiometricCheckinAndBrowseHistory() {
+        var action: String? = null
+        val day = HrAttendanceDay("2026-10-12", "pending", schedule = "الوردية الصباحية", timezone = "Asia/Hebron", captureState = HrCaptureState(options = listOf(HrCaptureOption("check_in", 2, "2026-10-12", "صباحي", "Asia/Hebron"))))
+        val state = AttendanceState(configured = true, signedIn = true, name = "موظف تجريبي", employee = HrEmployee(1, name = "موظف", captureEnabled = true), currentDevice = HrDevice(1, "device", "Android", "approved"), selectedShift = 2, today = day, history = listOf(day))
+        compose.setContent { DesignPreviewFrame { AttendanceScreen(state, {}, {}, {}, { action = it }, {}, {}, { _, _ -> }, {}, {}) } }
+        snapshot("today")
+        compose.onNodeWithTag("attendance-check-in").performScrollTo().assertIsEnabled().performClick()
+        org.junit.Assert.assertEquals("check_in", action)
+        compose.onNodeWithText("سجلي").performScrollTo().performClick()
+        compose.onNodeWithText("السابق").assertExists()
+        compose.onNodeWithText("التالي").assertExists()
+        compose.onNodeWithTag("attendance-check-in").assertDoesNotExist()
+        snapshot("history")
     }
 }

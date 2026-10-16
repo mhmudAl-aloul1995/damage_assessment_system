@@ -11,7 +11,7 @@
         <div><h1 class="fs-2 fw-bold">متابعة الحضور والانصراف</h1><p class="text-muted mb-0">{{ $dates[0] }} — {{ $dates[1] }} · {{ $employees->total() }} موظف ضمن نطاق الصلاحية</p></div>
         @can('hr.attendance.setup')<a class="btn btn-light-primary" href="{{ route('hr.attendance.setup') }}">إعداد الحضور والورديات</a>@endcan
     </div>
-    <p class="text-muted mb-0" role="status">هذه الشاشة لمتابعة السجلات. تسجيل الحضور عبر الهاتف غير مفعّل حاليًا.</p>
+    <p class="text-muted mb-0" role="status">هذه الشاشة لمتابعة السجلات. تسجيل الحضور والانصراف بالبصمة متاح من تطبيق PHC بعد اعتماد الجهاز ومنح صلاحية التسجيل.</p>
     @if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
     <div class="card"><div class="card-body">
         <div class="row g-5">

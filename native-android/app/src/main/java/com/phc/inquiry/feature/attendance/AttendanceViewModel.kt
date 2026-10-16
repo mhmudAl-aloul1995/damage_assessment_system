@@ -76,7 +76,7 @@ class AttendanceViewModel @Inject constructor(private val repository: Attendance
     fun prepare(action: String) = run {
         if (action !in setOf("check_in", "check_out")) throw InquiryFailure("عملية غير صالحة.")
         val session = repository.session() ?: throw InquiryFailure("سجّل الدخول إلى الحضور.")
-        if (mutable.value.employee?.captureEnabled != true) throw InquiryFailure("التسجيل الإنتاجي غير مفعل حتى التحقق من بوابة الحضور.")
+        if (mutable.value.employee?.captureEnabled != true) throw InquiryFailure(mutable.value.employee?.blockers?.firstOrNull() ?: "التسجيل غير متاح حاليًا؛ حدّث الحالة.")
         val device = mutable.value.currentDevice?.takeIf { it.status == "approved" } ?: throw InquiryFailure("يلزم اعتماد الجهاز لدى HR.")
         val key = keys.current(session.employee.id, session.origin) ?: throw InquiryFailure("مفتاح الجهاز غير متاح؛ اطلب الاستبدال لدى HR.")
         val option = mutable.value.today?.captureState?.options?.firstOrNull {

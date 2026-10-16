@@ -8,13 +8,29 @@ plugins {
 }
 
 def apiBase = providers.gradleProperty('phcBaseUrl').getOrElse('http://213.6.135.115/damage_assessment_system/').trim()
-def hrApiBase = providers.gradleProperty('phcHrBaseUrl').getOrElse('').trim()
+def hrApiBase = providers.gradleProperty('phcHrBaseUrl').getOrElse(apiBase).trim()
 def javaString = { String value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' }
 if (!apiBase.endsWith('/') || !(apiBase.startsWith('https://') || apiBase.startsWith('http://'))) {
     throw new GradleException('phcBaseUrl must be an HTTP(S) URL ending in /')
 }
-if (hrApiBase && (!hrApiBase.startsWith('https://') || !hrApiBase.endsWith('/'))) {
-    throw new GradleException('phcHrBaseUrl must be an approved HTTPS URL ending in /')
+def hrUri = new URI(hrApiBase)
+if (!(hrUri.scheme in ['http', 'https']) || !hrUri.host || hrUri.userInfo || hrUri.query || hrUri.fragment || !hrApiBase.endsWith('/')) {
+    throw new GradleException('phcHrBaseUrl must be an HTTP(S) URL ending in / without credentials, query or fragment')
+}
+
+def attendanceNetworkResources = layout.buildDirectory.dir('generated/res/attendanceNetwork')
+def generateAttendanceNetworkConfig = tasks.register('generateAttendanceNetworkConfig') {
+    inputs.property('attendanceBaseUrl', hrApiBase)
+    inputs.property('applicationBaseUrl', apiBase)
+    outputs.dir(attendanceNetworkResources)
+    doLast {
+        def hosts = [new URI(apiBase), hrUri].findAll { it.scheme == 'http' }.collect { it.host }.unique()
+        def destination = attendanceNetworkResources.get().file('xml/phc_network_security_config.xml').asFile
+        destination.parentFile.mkdirs()
+        destination.text = '<network-security-config><base-config cleartextTrafficPermitted="false" />' +
+            hosts.collect { '<domain-config cleartextTrafficPermitted="true"><domain includeSubdomains="false">' + it + '</domain></domain-config>' }.join('') +
+            '</network-security-config>'
+    }
 }
 
 android {
@@ -39,10 +55,11 @@ android {
         }
         release {
             minifyEnabled false
-            buildConfigField 'boolean', 'ALLOW_HTTP', 'false'
+            buildConfigField 'boolean', 'ALLOW_HTTP', 'true'
         }
     }
     buildFeatures { compose true; buildConfig true }
+    sourceSets.main.res.srcDir(attendanceNetworkResources)
     bundle { language { enableSplit = false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = '17' }
@@ -51,6 +68,8 @@ android {
         resources.excludes += '/META-INF/{AL2.0,LGPL2.1}'
     }
 }
+
+tasks.named('preBuild').configure { dependsOn(generateAttendanceNetworkConfig) }
 
 dependencies {
     def composeBom = platform('androidx.compose:compose-bom:2024.12.01')
