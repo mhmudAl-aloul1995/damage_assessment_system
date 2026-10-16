@@ -8,6 +8,7 @@ use App\Models\HousingUnit;
 use App\services\ArcgisAuditedUploadService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 beforeEach(function (): void {
     config()->set([
@@ -27,6 +28,7 @@ beforeEach(function (): void {
     $this->queryResponse = null;
     $this->attachmentResponse = null;
     $this->supportsPartialEdits = true;
+    $this->fieldDefinitions = [];
     $this->tokens = 0;
 
     Http::preventStrayRequests();
@@ -51,10 +53,10 @@ beforeEach(function (): void {
             return Http::response([
                 'objectIdField' => 'OBJECTID',
                 'supportsRollbackOnFailureParameter' => $this->supportsPartialEdits,
-                'fields' => array_map(fn (string $name): array => ['name' => $name], [
+                'fields' => array_merge(array_map(fn (string $name): array => ['name' => $name], [
                     'OBJECTID', 'objectid', 'globalid', 'old_objectid_'.$suffix, 'old_global_id_'.$suffix,
                     'parentglobalid', 'is_audited', 'building_damage_status', 'unit_damage_status',
-                ]),
+                ]), $this->fieldDefinitions),
             ]);
         }
 
@@ -534,3 +536,69 @@ it('does not retain skip existing mode for later uploads on the same service', f
     $summary = $service->uploadObjectIds(buildingObjectIds: [1], withoutAttachments: true);
     expect($summary['buildings_updated'])->toBe(1)->and($summary['existing_features_skipped'])->toBe(0);
 });
+
+it('encodes date fields as unix milliseconds when reconciling building 9414', function (mixed $value, ?int $expected): void {
+    config()->set('app.timezone', 'UTC');
+    $this->fieldDefinitions = [['name' => 'EditDate', 'type' => 'esriFieldTypeDate']];
+    AuditedBuilding::query()->create(['objectid' => 9414, 'globalid' => 'building-9414', 'editdate' => $value]);
+    $summary = app(ArcgisAuditedUploadService::class)->uploadObjectIds(buildingObjectIds: [9414], withoutAttachments: true);
+
+    expect($summary['errors'])->toBe(0)->and($summary['buildings_uploaded'])->toBe(1)
+        ->and($this->writes[0]['features'][0]['attributes']['EditDate'])->toBe($expected);
+})->with([
+    'sql date time' => ['2024-01-01 00:00:00', 1704067200000],
+    'explicit timezone' => ['2024-01-01T03:00:00+03:00', 1704067200000],
+    'fractional seconds' => ['2024-01-01T00:00:00.123Z', 1704067200123],
+    'date only' => ['2024-01-01', 1704067200000],
+    'milliseconds' => [1704067200000, 1704067200000],
+    'string milliseconds' => ['1704067200000', 1704067200000],
+    'epoch' => [0, 0],
+    'before epoch' => [-1000, -1000],
+    'null' => [null, null],
+    'empty' => ['', null],
+    'whitespace' => ['  ', null],
+    'zero date' => ['0000-00-00', null],
+    'zero date time' => ['0000-00-00 00:00:00', null],
+]);
+
+it('normalizes dates for bulk additions and updates without changing text fields', function (): void {
+    config()->set('app.timezone', 'Asia/Jerusalem');
+    $this->fieldDefinitions = [
+        ['name' => 'EditDate', 'type' => 'esriFieldTypeDate'],
+        ['name' => 'submission_date', 'type' => 'esriFieldTypeString', 'length' => 255],
+    ];
+    createAuditedBatchBuildings(3);
+    AuditedBuilding::query()->update(['editdate' => '2024-01-01 00:00:00', 'submission_date' => '2024-01-01 00:00:00']);
+    $this->remote[0][91] = ['OBJECTID' => 91, 'old_objectid_B' => 1];
+    $summary = app(ArcgisAuditedUploadService::class)->upload(withoutAttachments: true, batchSize: 100);
+
+    expect($summary['errors'])->toBe(0)->and($summary['buildings_uploaded'])->toBe(2)->and($summary['buildings_updated'])->toBe(1);
+
+    foreach ($this->writes as $write) {
+        foreach ($write['features'] as $feature) {
+            expect($feature['attributes']['EditDate'])->toBe(1704060000000)
+                ->and($feature['attributes']['submission_date'])->toBe('2024-01-01 00:00:00');
+        }
+    }
+});
+
+it('normalizes housing unit dates and date objects in partial audit edits', function (): void {
+    $this->fieldDefinitions = [['name' => 'EditDate', 'type' => 'esriFieldTypeDate']];
+    $this->remote[1][191] = ['OBJECTID' => 191, 'old_global_id_U' => 'unit-globalid'];
+    app(ArcgisAuditedUploadService::class)->syncAuditEditField(
+        'housing_table', 'unit-globalid', 'editdate', new DateTimeImmutable('2024-01-01T03:00:00+03:00'),
+    );
+    expect($this->writes[0]['features'][0]['attributes']['EditDate'])->toBe(1704067200000);
+});
+
+it('identifies malformed date fields before sending a rejected feature to arcgis', function (mixed $value): void {
+    $this->fieldDefinitions = [['name' => 'EditDate', 'type' => 'esriFieldTypeDate']];
+    AuditedBuilding::query()->create(['objectid' => 9414, 'globalid' => 'building-9414', 'editdate' => $value]);
+    Log::spy();
+    $summary = app(ArcgisAuditedUploadService::class)->uploadObjectIds(buildingObjectIds: [9414], withoutAttachments: true);
+    expect($summary['errors'])->toBe(1)->and($this->writes)->toBe([]);
+    Log::shouldHaveReceived('error')->once()->with('Failed uploading reconciled audited building to ArcGIS.', \Mockery::on(
+        fn (array $context): bool => (int) $context['objectid'] === 9414
+            && str_contains($context['message'], 'Invalid date value for ArcGIS field "EditDate"'),
+    ));
+})->with(['not-a-date', '2024-02-30', 'tomorrow', '2024-01-01 +1 day', '99999999999999999999999']);

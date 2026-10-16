@@ -12,6 +12,7 @@ use App\Models\HousingUnit;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Closure;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\PendingRequest;
@@ -2173,6 +2174,12 @@ class ArcgisAuditedUploadService
                 continue;
             }
 
+            if ($definition['type'] === 'esriFieldTypeDate') {
+                $attributes[$field] = $this->normalizeArcgisDateValue($value, $definition['name']);
+
+                continue;
+            }
+
             if ($this->isNumericArcgisField($definition['type'])) {
                 $attributes[$field] = $this->normalizeArcgisNumericValue($value);
 
@@ -2256,6 +2263,54 @@ class ArcgisAuditedUploadService
         }
 
         return null;
+    }
+
+    private function normalizeArcgisDateValue(mixed $value, string $field): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return CarbonImmutable::instance($value)->getTimestampMs();
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            if ($value === '' || preg_match('/^0000-00-00(?:[ T]00:00:00(?:\.0+)?)?$/', $value) === 1) {
+                return null;
+            }
+        }
+
+        if (is_int($value) || (is_string($value) && preg_match('/^-?\d+$/', $value) === 1)) {
+            $milliseconds = filter_var($value, FILTER_VALIDATE_INT);
+
+            if ($milliseconds !== false) {
+                return $milliseconds;
+            }
+        }
+
+        if (is_string($value)) {
+            $parts = date_parse($value);
+
+            if (
+                $parts['error_count'] === 0
+                && $parts['warning_count'] === 0
+                && $parts['year'] !== false
+                && $parts['month'] !== false
+                && $parts['day'] !== false
+                && ! array_key_exists('relative', $parts)
+            ) {
+                try {
+                    return CarbonImmutable::parse($value, config('app.timezone', 'UTC'))->getTimestampMs();
+                } catch (Throwable $exception) {
+                    throw new RuntimeException('Invalid date value for ArcGIS field "'.$field.'". Use an absolute date/time or Unix milliseconds.', previous: $exception);
+                }
+            }
+        }
+
+        throw new RuntimeException('Invalid date value for ArcGIS field "'.$field.'". Use an absolute date/time or Unix milliseconds.');
     }
 
     private function isNumericArcgisField(?string $type): bool
