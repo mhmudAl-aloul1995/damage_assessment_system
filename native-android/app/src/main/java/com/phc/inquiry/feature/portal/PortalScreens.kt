@@ -34,7 +34,7 @@ fun moduleTitle(key: String): String = when(key) {
     "administration" -> "الإدارة"
     else -> key
 }
-private fun moduleIcon(key: String): ImageVector = when(key) { "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks" -> Icons.Default.Favorite; else -> Icons.Default.AccountCircle }
+private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Default.CheckCircle; "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks" -> Icons.Default.Favorite; else -> Icons.Default.AccountCircle }
 @Composable private fun PortalCard(title: String, subtitle: String, action: () -> Unit, modifier: Modifier = Modifier, tag: String = "", icon: ImageVector = Icons.Default.List) {
     Card(onClick = action, modifier = modifier.fillMaxWidth().testTag(tag), shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

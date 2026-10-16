@@ -10,10 +10,27 @@ beforeEach(function (): void {
     $this->portalUser->assignRole(Role::findOrCreate('Database Officer', 'web'));
     $this->portalToken = $this->portalUser->createToken('portal-test', ['mobile:read', 'mobile:submit'])->plainTextToken;
 });
-it('exposes four enabled modules without internal routes or provider configuration', function (): void {
-    $response = $this->withToken($this->portalToken)->getJson('/api/v1/portal/modules')->assertOk()->assertJsonCount(4, 'data');
-    expect(collect($response->json('data'))->pluck('key')->all())->toBe(['damage_assessment', 'damage_assessment_borrowers', 'heks', 'administration']);
+it('exposes HR and the existing enabled modules without internal routes or provider configuration', function (): void {
+    $response = $this->withToken($this->portalToken)->getJson('/api/v1/portal/modules')->assertOk()->assertJsonCount(5, 'data');
+    expect(collect($response->json('data'))->pluck('key')->all())->toBe(['damage_assessment', 'damage_assessment_borrowers', 'heks', 'hr', 'administration']);
+    expect(collect($response->json('data'))->firstWhere('key', 'hr')['record_search'])->toBeFalse();
     $response->assertJsonMissingPath('data.0.provider')->assertJsonMissingPath('data.0.sections.0.url');
+});
+
+it('discovers HR only while the employee has attendance access and the module is enabled', function (): void {
+    $this->portalUser->removeRole('Database Officer');
+    $this->withToken($this->portalToken)->getJson('/api/v1/portal/modules')->assertOk()->assertJsonMissing(['key' => 'hr']);
+    $permission = \Spatie\Permission\Models\Permission::findOrCreate('hr.attendance.view-own', 'web');
+    $this->portalUser->givePermissionTo($permission);
+    $this->getJson('/api/v1/portal/modules')->assertOk()->assertJsonFragment(['key' => 'hr', 'record_search' => false]);
+    $this->getJson('/api/v1/portal/hr/records')->assertNotFound();
+    $this->getJson('/api/v1/portal/hr/records/'.$this->portalUser->id)->assertNotFound();
+    config(['modules.hr.enabled' => false]);
+    $this->getJson('/api/v1/portal/modules')->assertOk()->assertJsonMissing(['key' => 'hr']);
+    config(['modules.hr.enabled' => true]);
+    $this->portalUser->revokePermissionTo($permission);
+    $this->app['auth']->forgetGuards();
+    $this->withToken($this->portalToken)->getJson('/api/v1/portal/modules')->assertOk()->assertJsonMissing(['key' => 'hr']);
 });
 it('searches borrowers literally and returns safe paginated records', function (): void {
     DamageAssessmentBorrower::query()->create(['borrower_name' => 'برج الأمل', 'borrower_id_number' => 'fixture-1', 'is_borrower_alive' => true]);

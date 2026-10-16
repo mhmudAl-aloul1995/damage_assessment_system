@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MobilePortalService
 {
-    public const MODULES = ['damage_assessment', 'damage_assessment_borrowers', 'heks', 'administration'];
+    public const MODULES = ['damage_assessment', 'damage_assessment_borrowers', 'heks', 'hr', 'administration'];
 
     public function authorize(User $user, string $module): void
     {
@@ -30,7 +30,7 @@ class MobilePortalService
                 'key' => $module['key'], 'title' => __($module['title']),
                 'description' => __($module['description'] ?? ''),
                 'sections' => collect($module['sections'])->map(fn (array $section): string => __($section['title']))->values()->all(),
-                'record_search' => $module['key'] !== 'damage_assessment',
+                'record_search' => in_array($module['key'], ['damage_assessment_borrowers', 'heks', 'administration'], true),
             ])->values()->all();
     }
 

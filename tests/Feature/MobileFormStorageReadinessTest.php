@@ -45,7 +45,7 @@ it('reports missing storage without blocking catalogs or writing business record
     ], ['Accept' => 'application/json'])->assertStatus(503);
     $this->postJson('/api/v1/forms/borrower-survey/attachments/1/discard', ['submission_uuid' => $uuid])->assertStatus(503);
     expect(DamageAssessmentBorrower::query()->count())->toBe(0);
-    $this->getJson('/api/v1/portal/modules')->assertOk()->assertJsonCount(4, 'data');
+    $this->getJson('/api/v1/portal/modules')->assertOk()->assertJsonCount(5, 'data')->assertJsonFragment(['key' => 'hr']);
     $this->getJson('/api/v1/forms')->assertOk();
     $this->getJson('/api/v1/forms/borrower-survey/schema')->assertOk();
     $this->postJson('/api/v1/forms/unknown/submissions', [

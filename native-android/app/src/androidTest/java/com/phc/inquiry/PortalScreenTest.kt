@@ -17,6 +17,16 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PortalScreenTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun homeShowsThePermittedHrCardAndOpensAttendanceModule() {
+        var opened: String? = null
+        compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
+            PortalHome("حساب اختبار", PortalState(loading = false, modules = listOf(PortalModule("hr", "الموارد البشرية · الحضور", "الحضور والانصراف بالبصمة"))),
+                { opened = it }, {}, {}, {}, {})
+        } } }
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag("module-hr"))
+        compose.onNodeWithTag("module-hr").assertExists().performClick()
+        compose.runOnIdle { assertEquals("hr", opened) }
+    }
     @Test fun workspaceTasksShowsPendingReceiptAndOpensTheSameDraft() {
         val pending = DraftSummary("pending-fixture", "borrower-survey", "مسودة متابعة", "damage_assessment_borrowers", null, "2026-10-11T10:00:00Z", true, null)
         var opened: String? = null

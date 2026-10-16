@@ -28,8 +28,9 @@ class PortalRepositoryTest {
         var received = ReceiptPage(emptyList())
         var onModules: () -> Unit = {}
         var body: ResponseBody = "fixture".toResponseBody()
+        var permittedModules = listOf(PortalModule("heks", "HEKS"), PortalModule("unexpected", "hidden"))
         private fun check(auth: String) { authorization = auth; failure?.let { throw it } }
-        override suspend fun modules(authorization: String): DataResponse<List<PortalModule>> { check(authorization); onModules(); return DataResponse(listOf(PortalModule("heks", "HEKS"), PortalModule("unexpected", "hidden"))) }
+        override suspend fun modules(authorization: String): DataResponse<List<PortalModule>> { check(authorization); onModules(); return DataResponse(permittedModules) }
         override suspend fun forms(authorization: String): DataResponse<List<PublishedForm>> { check(authorization); return DataResponse(publishedForms) }
         override suspend fun records(authorization: String, module: String, search: String, page: Int) = PortalPage(emptyList())
         override suspend fun record(authorization: String, module: String, id: Long) = DataResponse(PortalRecord(id, module))
@@ -46,6 +47,15 @@ class PortalRepositoryTest {
         override suspend fun discard(authorization: String, form: String, id: Long, request: DiscardFileRequest): JsonObject { check(authorization); return JsonObject(mapOf("discarded" to JsonPrimitive(true))) }
     }
     private fun state() = SessionState().apply { set(Session("fixture-owner-token", "2099-01-01T00:00:00Z", User(1, "fixture", "fixture@example.test"))) }
+    @Test fun attendanceModuleSurvivesCatalogFilteringOnlyWhenReturnedByTheServer() = runTest {
+        val api = FakeApi()
+        api.permittedModules = listOf(PortalModule("hr", "الموارد البشرية", recordSearch = false), PortalModule("heks", "HEKS"), PortalModule("unexpected", "hidden"))
+        val repository = PortalRepository(api, state(), MemoryStore())
+        assertEquals(listOf("hr", "heks"), repository.modules().map { it.key })
+        assertFalse(repository.modules().first().recordSearch)
+        api.permittedModules = listOf(PortalModule("heks", "HEKS"))
+        assertEquals(listOf("heks"), repository.modules().map { it.key })
+    }
     @Test fun connectionFailuresIdentifyTheCategoryWithoutLeakingDetailsOrLosingSession() = runTest {
         val api = FakeApi(); val state = state(); val store = MemoryStore()
         store.save(state.session.value!!)
