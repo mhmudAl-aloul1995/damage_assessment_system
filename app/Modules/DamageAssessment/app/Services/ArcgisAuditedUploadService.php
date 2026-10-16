@@ -15,6 +15,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,12 +29,12 @@ class ArcgisAuditedUploadService
     private string $token = '';
 
     /**
-     * @var array<string, array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}>
+     * @var array<string, array{object_id_field: string|null, supports_partial_edits: bool, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}>
      */
     private array $targetLayerMetadata = [];
 
     /**
-     * @var array<string, array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}>
+     * @var array<string, array{object_id_field: string|null, supports_partial_edits: bool, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}>
      */
     private array $sourceLayerMetadata = [];
 
@@ -41,6 +42,18 @@ class ArcgisAuditedUploadService
      * @var array<string, string>
      */
     private array $targetBuildingGlobalIdsBySourceGlobalId = [];
+
+    private int $batchSize = 1;
+
+    private int $attachmentConcurrency = 1;
+
+    private bool $skipExisting = false;
+
+    /** @var array<string, array|null> */
+    private array $batchGeometries = [];
+
+    /** @var array<string, Building|null> */
+    private array $batchParentBuildings = [];
 
     public function upload(
         ?int $buildingsLimit = null,
@@ -51,7 +64,18 @@ class ArcgisAuditedUploadService
         bool $onlyAuditEdits = false,
         ?string $only = null,
         ?int $afterBuildingObjectId = null,
+        int $batchSize = 1,
+        int $attachmentConcurrency = 1,
+        bool $skipExisting = false,
     ): array {
+        if ($batchSize < 1 || $batchSize > 500 || $attachmentConcurrency < 1 || $attachmentConcurrency > 10) {
+            throw new RuntimeException('Batch size must be between 1 and 500 and attachment concurrency between 1 and 10.');
+        }
+
+        $this->batchSize = $batchSize;
+        $this->attachmentConcurrency = $attachmentConcurrency;
+        $this->skipExisting = $skipExisting;
+        $this->targetBuildingGlobalIdsBySourceGlobalId = [];
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
         }
@@ -72,6 +96,9 @@ class ArcgisAuditedUploadService
         $summary['without_attachments'] = $withoutAttachments ? 1 : 0;
         $summary['attachments_only'] = $attachmentsOnly ? 1 : 0;
         $summary['only'] = $only ?? 'all';
+        $summary['batch_size'] = $batchSize;
+        $summary['attachment_concurrency'] = $attachmentConcurrency;
+        $summary['skip_existing'] = $skipExisting ? 1 : 0;
 
         if ($afterBuildingObjectId !== null) {
             $summary['after_building_objectid'] = $afterBuildingObjectId;
@@ -141,6 +168,22 @@ class ArcgisAuditedUploadService
 
             echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
+        }
+
+        if ($batchSize > 1) {
+            if ($only !== 'units') {
+                foreach ($buildingQuery->cursor()->chunk($batchSize) as $records) {
+                    $this->uploadBatch(collect($records->all()), false, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
+                }
+            }
+
+            if ($only !== 'buildings') {
+                foreach ($unitQuery->cursor()->chunk($batchSize) as $records) {
+                    $this->uploadBatch(collect($records->all()), true, $summary, ! $withoutAttachments, $attachmentsOnly, $changedSince);
+                }
+            }
+
+            return $summary;
         }
 
         if ($only !== 'units') {
@@ -247,6 +290,19 @@ class ArcgisAuditedUploadService
 
             echo 'Buildings to sync: '.$summary['buildings_to_sync']."\n";
             echo 'Units to sync: '.$summary['units_to_sync']."\n";
+        }
+
+        if ($this->batchSize > 1) {
+            foreach ([false, true] as $isUnit) {
+                $globalIds = $isUnit ? $unitGlobalIds : $buildingGlobalIds;
+
+                foreach (array_chunk($globalIds, $this->batchSize) as $ids) {
+                    $query = $isUnit ? AuditedHousingUnit::query() : AuditedBuilding::query();
+                    $this->uploadBatch($query->whereIn('globalid', $ids)->orderBy('objectid')->get(), $isUnit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                }
+            }
+
+            return;
         }
 
         if ($only !== 'units') {
@@ -511,7 +567,9 @@ class ArcgisAuditedUploadService
 
         echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
 
-        if (! $attachmentsOnly) {
+        $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
+
+        if (! $attachmentsOnly && ! $skipFeatureUpdate) {
             echo 'Updating building audit fields: '.implode(', ', array_keys($fields))."\n";
 
             $this->updateFeature(
@@ -573,7 +631,9 @@ class ArcgisAuditedUploadService
 
         echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
 
-        if (! $attachmentsOnly) {
+        $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
+
+        if (! $attachmentsOnly && ! $skipFeatureUpdate) {
             echo 'Updating unit audit fields: '.implode(', ', array_keys($fields))."\n";
 
             $this->updateFeature(
@@ -998,6 +1058,7 @@ class ArcgisAuditedUploadService
         bool $withoutAttachments = false,
         bool $dryRun = false,
     ): array {
+        $this->skipExisting = false;
         $summary = $this->emptySummary();
         $summary['dry_run'] = $dryRun ? 1 : 0;
 
@@ -1184,9 +1245,10 @@ class ArcgisAuditedUploadService
             return $attributes;
         }
 
-        $building = Building::query()
-            ->where('globalid', $parentGlobalId)
-            ->first(['governorate', 'municipalitie', 'neighborhood', 'building_name']);
+        $building = array_key_exists($parentGlobalId, $this->batchParentBuildings)
+            ? $this->batchParentBuildings[$parentGlobalId]
+            : Building::query()->where('globalid', $parentGlobalId)
+                ->first(['governorate', 'municipalitie', 'neighborhood', 'building_name']);
 
         if ($building === null) {
             return $attributes;
@@ -1208,6 +1270,393 @@ class ArcgisAuditedUploadService
         return $attributes;
     }
 
+    /** @param Collection<int, Model> $records */
+    private function uploadBatch(Collection $records, bool $isUnit, array &$summary, bool $copyAttachments, bool $attachmentsOnly, ?CarbonInterface $changedSince): void
+    {
+        if ($records->isEmpty()) {
+            return;
+        }
+
+        $type = $isUnit ? 'unit' : 'building';
+        $targetLayerId = $this->layerId($isUnit ? 'target_units_layer' : 'target_buildings_layer');
+        $sourceLayerId = $this->layerId($isUnit ? 'source_units_layer' : 'source_buildings_layer');
+        echo 'Processing '.$type.' batch: '.$records->count()." records...\n";
+
+        try {
+            if ($records->count() === 1) {
+                if ($isUnit) {
+                    $this->uploadUnit($records->first(), $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                } else {
+                    $this->uploadBuilding($records->first(), $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                }
+
+                return;
+            }
+
+            $metadata = $this->targetLayerMetadata($targetLayerId, $this->token);
+            $objectIdField = $metadata['object_id_field'];
+
+            if ($objectIdField === null) {
+                throw new RuntimeException('Target layer is missing its object ID field.');
+            }
+
+            $targets = $this->batchTargets($records, $isUnit, $metadata);
+            $partialFields = [];
+            $fullRecords = collect();
+            $featureRecords = collect();
+
+            foreach ($records as $record) {
+                $id = (string) $record->getAttribute('objectid');
+                $skipFeature = $attachmentsOnly || ($this->skipExisting && isset($targets[$id]));
+                $partialFields[$id] = ! $skipFeature && isset($targets[$id])
+                    ? $this->partialAuditFieldNames($isUnit ? 'housing_table' : 'building_table', $record->getAttribute('globalid'), $record, $changedSince)
+                    : [];
+
+                if (! $skipFeature) {
+                    $featureRecords->push($record);
+                }
+
+                if (! $skipFeature && $partialFields[$id] === []) {
+                    $fullRecords->push($record);
+                }
+            }
+
+            if ($fullRecords->isNotEmpty()) {
+                $this->prefetchGeometries($fullRecords, $sourceLayerId);
+            }
+
+            if ($isUnit && $featureRecords->isNotEmpty()) {
+                $this->prefetchParentBuildings($featureRecords);
+            }
+        } catch (Throwable $exception) {
+            $summary['errors'] += $records->count();
+            $this->reportBatchFailure($type, $records->pluck('objectid')->all(), $exception);
+            $this->batchGeometries = [];
+            $this->batchParentBuildings = [];
+
+            return;
+        } finally {
+            if ($records->count() === 1) {
+                $this->batchGeometries = [];
+                $this->batchParentBuildings = [];
+            }
+        }
+
+        $adds = [];
+        $updates = [];
+        $successful = [];
+
+        try {
+            foreach ($records as $record) {
+                $id = (string) $record->getAttribute('objectid');
+                $targetObjectId = $targets[$id] ?? null;
+                $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
+
+                if ($attachmentsOnly || $skipFeatureUpdate) {
+                    if ($targetObjectId === null) {
+                        $summary['features_skipped']++;
+                    } else {
+                        $successful[$id] = $targetObjectId;
+                    }
+
+                    continue;
+                }
+
+                try {
+                    $fields = $partialFields[$id];
+                    $feature = $isUnit
+                        ? ($fields === [] ? $this->unitFeature($record, $this->token) : $this->unitPartialFeature($record, $fields, $this->token))
+                        : ($fields === [] ? $this->buildingFeature($record, $this->token) : $this->buildingPartialFeature($record, $fields));
+                    $feature = $this->targetFeatureForLayer($targetLayerId, $feature, $this->token);
+
+                    if ($targetObjectId === null) {
+                        $adds[$id] = $feature;
+                    } else {
+                        $feature['attributes'][$objectIdField] = $targetObjectId;
+                        $updates[$id] = $feature;
+                    }
+                } catch (Throwable $exception) {
+                    $summary['errors']++;
+                    $this->reportBatchFailure($type, [$id], $exception);
+                }
+            }
+
+            foreach (['add' => $adds, 'update' => $updates] as $operation => $features) {
+                $results = $this->submitFeatureBatch($targetLayerId, $operation, $features, $summary);
+
+                foreach ($results as $id => $targetObjectId) {
+                    $successful[$id] = $targetObjectId;
+                    $summary[($isUnit ? 'units_' : 'buildings_').($operation === 'add' ? 'uploaded' : 'updated')]++;
+                    $summary['features_partially_updated'] += $partialFields[$id] === [] ? 0 : 1;
+                }
+            }
+
+            if ($copyAttachments) {
+                foreach ($successful as $sourceObjectId => $targetObjectId) {
+                    try {
+                        $this->copyAuditEditAttachments($sourceLayerId, $targetLayerId, $sourceObjectId, $targetObjectId, true, $summary, $type);
+                    } catch (Throwable $exception) {
+                        $summary['errors']++;
+                        $this->reportBatchFailure($type.' attachments', [$sourceObjectId], $exception);
+                    }
+                }
+            }
+
+            echo ucfirst($type).' batch completed: '.count($successful)." successful.\n";
+        } finally {
+            $this->batchGeometries = [];
+            $this->batchParentBuildings = [];
+        }
+    }
+
+    /** @return array<string, int> */
+    private function batchTargets(Collection $records, bool $isUnit, array $metadata): array
+    {
+        $targets = [];
+        $layerId = $this->layerId($isUnit ? 'target_units_layer' : 'target_buildings_layer');
+        $suffix = $isUnit ? 'U' : 'B';
+
+        foreach (['old_objectid_'.$suffix => 'objectid', 'old_global_id_'.$suffix => 'globalid'] as $targetName => $sourceName) {
+            $field = $metadata['fields'][strtolower($targetName)] ?? null;
+            $remaining = $records->reject(fn (Model $record): bool => isset($targets[(string) $record->getAttribute('objectid')]));
+
+            if ($field === null || $remaining->isEmpty()) {
+                continue;
+            }
+
+            $features = $this->queryBatchValues($this->targetLayerUrl($layerId), $field, $remaining->pluck($sourceName)->all(), [
+                'outFields' => $metadata['object_id_field'].','.$field,
+                'returnGeometry' => 'false',
+            ]);
+            $matches = [];
+
+            foreach ($features as $feature) {
+                $attributes = array_change_key_case($feature['attributes'] ?? [], CASE_LOWER);
+                $value = $attributes[strtolower($field)] ?? null;
+                $objectId = $attributes[strtolower($metadata['object_id_field'])] ?? null;
+
+                if ($value === null || ! is_numeric($objectId)) {
+                    throw new RuntimeException('ArcGIS target lookup is missing requested identifiers; no records will be added from this batch.');
+                }
+
+                $matches[$this->matchKey($value)] ??= (int) $objectId;
+            }
+
+            foreach ($remaining as $record) {
+                $match = $matches[$this->matchKey($record->getAttribute($sourceName))] ?? null;
+
+                if ($match !== null) {
+                    $targets[(string) $record->getAttribute('objectid')] = $match;
+                }
+            }
+        }
+
+        return $targets;
+    }
+
+    private function matchKey(mixed $value): string
+    {
+        return strtolower(trim((string) $value, '{}'));
+    }
+
+    /** @return list<array> */
+    private function queryBatchValues(string $layerUrl, string $field, array $values, array $parameters): array
+    {
+        $values = array_values(array_unique(array_filter($values, fn (mixed $value): bool => $value !== null && $value !== '')));
+
+        if ($values === []) {
+            return [];
+        }
+
+        $response = $this->withTokenRetry(function (string $token) use ($layerUrl, $field, $values, $parameters): Response {
+            $response = $this->http()->post($layerUrl.'/query', array_merge($parameters, [
+                'f' => 'json',
+                'token' => $token,
+                'where' => $field.' IN ('.implode(',', array_map(fn (int|string $value): string => $this->whereValue($value), $values)).')',
+            ]));
+            $this->throwIfArcgisError($response, 'ArcGIS batch lookup failed');
+
+            if (! $response->successful() || ! is_array($response->json('features'))) {
+                throw new RuntimeException('ArcGIS batch lookup failed: '.$response->body());
+            }
+
+            return $response;
+        });
+
+        if ($response->json('exceededTransferLimit') === true) {
+            if (count($values) === 1) {
+                throw new RuntimeException('ArcGIS batch lookup returned incomplete results for '.$field.'.');
+            }
+
+            $features = [];
+
+            foreach (array_chunk($values, (int) ceil(count($values) / 2)) as $subset) {
+                $features = array_merge($features, $this->queryBatchValues($layerUrl, $field, $subset, $parameters));
+            }
+
+            return $features;
+        }
+
+        return $response->json('features');
+    }
+
+    private function prefetchGeometries(Collection $records, int|string $layerId): void
+    {
+        $geometries = $this->queryBatchValues($this->sourceLayerUrl($layerId), 'objectid', $records->pluck('objectid')->all(), [
+            'outFields' => 'objectid', 'returnGeometry' => 'true', 'outSR' => 4326,
+        ]);
+
+        foreach ($records as $record) {
+            $this->batchGeometries[$layerId.':'.$record->getAttribute('objectid')] = null;
+        }
+
+        foreach ($geometries as $feature) {
+            $attributes = array_change_key_case($feature['attributes'] ?? [], CASE_LOWER);
+
+            if (isset($attributes['objectid'])) {
+                $this->batchGeometries[$layerId.':'.$attributes['objectid']] = $feature['geometry'] ?? null;
+            }
+        }
+    }
+
+    private function prefetchParentBuildings(Collection $records): void
+    {
+        $parentIds = $records->pluck('parentglobalid')->filter()->unique()->values()->all();
+        $buildings = Building::query()->whereIn('globalid', $parentIds)->get(['globalid', 'governorate', 'municipalitie', 'neighborhood', 'building_name'])->keyBy('globalid');
+
+        foreach ($parentIds as $parentId) {
+            $this->batchParentBuildings[$parentId] = $buildings->get($parentId);
+        }
+
+        $layerId = $this->layerId('target_buildings_layer');
+        $metadata = $this->targetLayerMetadata($layerId, $this->token);
+        $globalIdField = $metadata['fields']['globalid'] ?? null;
+
+        if ($globalIdField === null) {
+            return;
+        }
+
+        foreach (['old_global_id_b', 'globalid'] as $matchField) {
+            $field = $metadata['fields'][$matchField] ?? null;
+            $missing = array_values(array_filter($parentIds, fn (string $id): bool => ! isset($this->targetBuildingGlobalIdsBySourceGlobalId[$id])));
+
+            if ($field === null || $missing === []) {
+                continue;
+            }
+
+            $features = $this->queryBatchValues($this->targetLayerUrl($layerId), $field, $missing, [
+                'outFields' => implode(',', array_unique([$field, $globalIdField])), 'returnGeometry' => 'false',
+            ]);
+            $matches = [];
+
+            foreach ($features as $feature) {
+                $attributes = array_change_key_case($feature['attributes'] ?? [], CASE_LOWER);
+
+                if (isset($attributes[strtolower($field)], $attributes[strtolower($globalIdField)])) {
+                    $matches[$this->matchKey($attributes[strtolower($field)])] = $attributes[strtolower($globalIdField)];
+                }
+            }
+
+            foreach ($missing as $id) {
+                if (isset($matches[$this->matchKey($id)])) {
+                    $this->targetBuildingGlobalIdsBySourceGlobalId[$id] = $matches[$this->matchKey($id)];
+                }
+            }
+        }
+    }
+
+    /** @return array<string, int> */
+    private function submitFeatureBatch(int|string $layerId, string $operation, array $features, array &$summary, bool $retryFailed = true): array
+    {
+        if ($features === []) {
+            return [];
+        }
+
+        $metadata = $this->targetLayerMetadata($layerId, $this->token);
+
+        if (count($features) > 1 && ! $metadata['supports_partial_edits']) {
+            $successful = [];
+            echo "Target layer does not support partial batch success; submitting individual edits.\n";
+
+            foreach (array_chunk($features, 1, true) as $feature) {
+                $successful += $this->submitFeatureBatch($layerId, $operation, $feature, $summary, $retryFailed);
+            }
+
+            return $successful;
+        }
+
+        $successful = [];
+        $retry = [];
+        $reportedErrors = 0;
+
+        try {
+            $response = $this->withTokenRetry(function (string $token) use ($layerId, $operation, $features): Response {
+                $response = $this->http()->retry(1, 0, throw: false)->post($this->targetLayerUrl($layerId).'/'.$operation.'Features', [
+                    'f' => 'json', 'token' => $token, 'rollbackOnFailure' => 'false',
+                    'features' => json_encode(array_values($features), JSON_THROW_ON_ERROR),
+                ]);
+                $this->throwIfArcgisError($response, 'ArcGIS batch '.$operation.' failed');
+
+                if (! $response->successful()) {
+                    throw new RuntimeException('ArcGIS batch '.$operation.' failed: '.$response->body());
+                }
+
+                return $response;
+            });
+            $results = $response->json($operation.'Results');
+
+            if (! is_array($results) || count($results) !== count($features)) {
+                throw new RuntimeException('ArcGIS returned incomplete batch edit results; rerun to reconcile target records.');
+            }
+
+            foreach (array_keys($features) as $index => $sourceId) {
+                $result = $results[$index];
+
+                if (($result['success'] ?? false) === true && is_numeric($result['objectId'] ?? null)) {
+                    $successful[$sourceId] = (int) $result['objectId'];
+                } elseif ($retryFailed && ($result['success'] ?? null) === false && in_array((int) data_get($result, 'error.code'), [429, 498, 499, 500, 502, 503, 504], true)) {
+                    $retry[$sourceId] = $features[$sourceId];
+                } else {
+                    $summary['errors']++;
+                    $reportedErrors++;
+                    $this->reportBatchFailure($operation, [$sourceId], new RuntimeException(json_encode($result, JSON_THROW_ON_ERROR)));
+                }
+            }
+
+            if ($retry !== []) {
+                if (collect($results)->contains(fn (array $result): bool => in_array((int) data_get($result, 'error.code'), [498, 499], true))) {
+                    $this->refreshToken();
+                }
+
+                $successful += $this->submitFeatureBatch($layerId, $operation, $retry, $summary, false);
+            }
+        } catch (Throwable $exception) {
+            $summary['errors'] += count($features) - count($successful) - $reportedErrors;
+            $this->reportBatchFailure($operation, array_keys($features), $exception);
+        }
+
+        return $successful;
+    }
+
+    private function reportBatchFailure(string $type, array $objectIds, Throwable $exception): void
+    {
+        echo 'Failed '.$type.' OBJECTIDs: '.implode(', ', $objectIds).'. '.$exception->getMessage()."\n";
+        Log::error('Audited ArcGIS batch failed.', ['type' => $type, 'objectids' => $objectIds, 'message' => $exception->getMessage()]);
+    }
+
+    private function skipExistingFeature(?int $targetObjectId, array &$summary): bool
+    {
+        if (! $this->skipExisting || $targetObjectId === null) {
+            return false;
+        }
+
+        $summary['features_skipped']++;
+        $summary['existing_features_skipped']++;
+        echo "Skipping existing feature data. Target OBJECTID: {$targetObjectId}\n";
+
+        return true;
+    }
+
     private function uploadBuilding(
         Model $building,
         array &$summary,
@@ -1227,6 +1676,7 @@ class ArcgisAuditedUploadService
             'old_global_id_B' => $building->getAttribute('globalid'),
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
+        $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
 
         if ($attachmentsOnly && $targetObjectId === null) {
             echo "Building not found in target. Skipping attachments.\n";
@@ -1240,7 +1690,7 @@ class ArcgisAuditedUploadService
 
             $targetObjectId = $this->addFeature($targetLayerId, fn (string $token): array => $this->buildingFeature($building, $token));
             $summary['buildings_uploaded']++;
-        } elseif (! $attachmentsOnly) {
+        } elseif (! $attachmentsOnly && ! $skipFeatureUpdate) {
             echo "Building already exists. Target OBJECTID: {$targetObjectId}\n";
 
             $partialFieldNames = $this->partialAuditFieldNames('building_table', $building->getAttribute('globalid'), $building, $changedSince);
@@ -1303,6 +1753,7 @@ class ArcgisAuditedUploadService
             'old_global_id_U' => $unit->getAttribute('globalid'),
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
+        $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
 
         if ($attachmentsOnly && $targetObjectId === null) {
             echo "Unit not found in target. Skipping attachments.\n";
@@ -1319,7 +1770,7 @@ class ArcgisAuditedUploadService
 
             $summary['units_uploaded']++;
 
-        } elseif (! $attachmentsOnly) {
+        } elseif (! $attachmentsOnly && ! $skipFeatureUpdate) {
 
             echo "Unit already exists. Target OBJECTID: {$targetObjectId}\n";
 
@@ -1368,7 +1819,7 @@ class ArcgisAuditedUploadService
     {
         return $this->withTokenRetry(function (string $token) use ($layerId, $featureFactory): int {
             $feature = $this->targetFeatureForLayer($layerId, $featureFactory($token), $token);
-            $response = $this->http()->post($this->targetLayerUrl($layerId).'/addFeatures', [
+            $response = $this->http()->retry(1, 0, throw: false)->post($this->targetLayerUrl($layerId).'/addFeatures', [
                 'f' => 'json',
                 'token' => $token,
                 'features' => json_encode([$feature], JSON_THROW_ON_ERROR),
@@ -1598,7 +2049,7 @@ class ArcgisAuditedUploadService
     }
 
     /**
-     * @return array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
+     * @return array{object_id_field: string|null, supports_partial_edits: bool, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
      */
     private function targetLayerMetadata(int|string $layerId, string $token): array
     {
@@ -1623,7 +2074,7 @@ class ArcgisAuditedUploadService
     }
 
     /**
-     * @return array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
+     * @return array{object_id_field: string|null, supports_partial_edits: bool, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
      */
     private function sourceLayerMetadata(int|string $layerId, string $token): array
     {
@@ -1648,7 +2099,7 @@ class ArcgisAuditedUploadService
     }
 
     /**
-     * @return array{object_id_field: string|null, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
+     * @return array{object_id_field: string|null, supports_partial_edits: bool, fields: array<string, string>, definitions: array<string, array{name: string, type: string|null, length: int|null}>}
      */
     private function layerMetadataFromResponse(Response $response): array
     {
@@ -1702,6 +2153,7 @@ class ArcgisAuditedUploadService
             'object_id_field' => is_string($objectIdField) && $objectIdField !== '' ? $objectIdField : null,
             'fields' => $fields,
             'definitions' => $definitions,
+            'supports_partial_edits' => $response->json('supportsRollbackOnFailureParameter') === true,
         ];
     }
 
@@ -1879,6 +2331,12 @@ class ArcgisAuditedUploadService
 
     private function sourceGeometry(int|string $layerId, int|string $objectId, string $token): ?array
     {
+        $key = $layerId.':'.$objectId;
+
+        if (array_key_exists($key, $this->batchGeometries)) {
+            return $this->batchGeometries[$key];
+        }
+
         $response = $this->http()->get($this->sourceLayerUrl($layerId).'/query', [
             'f' => 'json',
             'token' => $token,
@@ -1923,6 +2381,10 @@ class ArcgisAuditedUploadService
         }
 
         $targetAttachments = $this->targetAttachmentInfos($targetLayerId, $targetObjectId);
+
+        if ($this->attachmentConcurrency > 1) {
+            return $this->copyAttachmentsConcurrently($attachments, $targetAttachments, $sourceLayerId, $sourceObjectId, $targetLayerId, $targetObjectId);
+        }
 
         foreach ($attachments as $attachmentInfo) {
             try {
@@ -2001,6 +2463,134 @@ class ArcgisAuditedUploadService
             'skipped' => $skipped,
             'errors' => $errors,
         ];
+    }
+
+    private function copyAttachmentsConcurrently(array $attachments, array $targetAttachments, int|string $sourceLayerId, int|string $sourceObjectId, int|string $targetLayerId, int $targetObjectId): array
+    {
+        $summary = ['uploaded' => 0, 'skipped' => 0, 'errors' => 0];
+        $pending = [];
+
+        foreach ($attachments as $attachment) {
+            $id = $attachment['id'] ?? null;
+            $name = (string) ($attachment['name'] ?? 'attachment-'.$id);
+            $size = isset($attachment['size']) && is_numeric($attachment['size']) ? (int) $attachment['size'] : null;
+
+            if ($id === null) {
+                continue;
+            }
+
+            if ($this->attachmentExists($targetAttachments, $name, $size)) {
+                $summary['skipped']++;
+
+                continue;
+            }
+
+            $pending[(string) $id] = ['name' => $name, 'url' => $this->sourceLayerUrl($sourceLayerId).'/'.$sourceObjectId.'/attachments/'.$id];
+        }
+
+        foreach (array_chunk($pending, $this->attachmentConcurrency, true) as $chunk) {
+            $downloads = $this->attachmentPool($chunk, false);
+            $uploads = [];
+
+            foreach ($downloads as $id => $response) {
+                if ($response instanceof Throwable) {
+                    $this->recordAttachmentFailure($response, $id, $summary);
+
+                    continue;
+                }
+
+                $uploads[$id] = [
+                    'name' => $chunk[$id]['name'],
+                    'url' => $this->targetLayerUrl($targetLayerId).'/'.$targetObjectId.'/addAttachment',
+                    'contents' => $response->body(),
+                ];
+            }
+
+            unset($downloads);
+
+            foreach ($this->attachmentPool($uploads, true) as $id => $response) {
+                if ($response instanceof Throwable) {
+                    $this->recordAttachmentFailure($response, $id, $summary);
+                } else {
+                    $summary['uploaded']++;
+                    echo 'Attachment uploaded successfully: '.$uploads[$id]['name']."\n";
+                }
+            }
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param  array<array-key, array{name: string, url: string, contents?: string}>  $jobs
+     * @return array<array-key, Response|Throwable>
+     */
+    private function attachmentPool(array $jobs, bool $upload): array
+    {
+        $completed = [];
+
+        for ($attempt = 0; $attempt < 2 && $jobs !== []; $attempt++) {
+            $responses = Http::pool(function (Pool $pool) use ($jobs, $upload): void {
+                foreach ($jobs as $id => $job) {
+                    $request = $pool->as((string) $id)->acceptJson()
+                        ->withHeaders(['Referer' => $this->requiredConfig('referer')])
+                        ->timeout(120)->connectTimeout(30)
+                        ->withOptions(['verify' => true]);
+
+                    if ($upload) {
+                        $request->attach('attachment', $job['contents'], $job['name'])
+                            ->post($job['url'].'?'.http_build_query(['f' => 'json', 'token' => $this->token]));
+                    } else {
+                        $request->retry(2, 1000, throw: false)->get($job['url'], ['token' => $this->token]);
+                    }
+                }
+            }, concurrency: $this->attachmentConcurrency);
+            $retry = [];
+
+            foreach ($jobs as $id => $job) {
+                $response = $responses[$id] ?? new RuntimeException('Missing ArcGIS attachment response.');
+
+                if ($response instanceof Response) {
+                    $errorCode = (int) ($response->json('error.code') ?? $response->json('addAttachmentResult.error.code'));
+
+                    if ($attempt === 0 && in_array($errorCode, [498, 499], true)) {
+                        $retry[$id] = $job;
+
+                        continue;
+                    }
+
+                    if (! $response->successful() || $response->json('error') !== null || ($upload && $response->json('addAttachmentResult.success') !== true)) {
+                        $response = new RuntimeException('ArcGIS '.($upload ? 'addAttachment' : 'attachment download').' failed: '.$response->body().($response->status() === 404 ? ' {"code":404}' : ''));
+                    }
+                }
+
+                $completed[$id] = $response;
+            }
+
+            if ($retry !== []) {
+                try {
+                    $this->refreshToken();
+                } catch (Throwable $exception) {
+                    foreach ($retry as $id => $job) {
+                        $completed[$id] = $exception;
+                    }
+
+                    break;
+                }
+            }
+
+            $jobs = $retry;
+        }
+
+        return $completed;
+    }
+
+    private function recordAttachmentFailure(Throwable $exception, int|string $id, array &$summary): void
+    {
+        $missing = $this->isMissingSourceAttachmentException($exception);
+        $summary[$missing ? 'skipped' : 'errors']++;
+        echo ($missing ? 'Skipped missing source attachment: ' : 'Failed attachment: ').$id.'. '.$exception->getMessage()."\n";
+        Log::log($missing ? 'warning' : 'error', 'Audited ArcGIS attachment transfer failed.', ['attachment_id' => $id, 'message' => $exception->getMessage()]);
     }
 
     private function attachmentInfos(int|string $layerId, int|string $objectId): array
@@ -2098,8 +2688,7 @@ class ArcgisAuditedUploadService
                 ->withHeaders(['Referer' => $this->requiredConfig('referer')])
                 ->timeout(120)
                 ->connectTimeout(30)
-                ->retry(2, 1000, throw: false)
-                ->withoutVerifying()
+                ->withOptions(['verify' => true])
                 ->attach('attachment', $contents, $name)
                 ->post($url.'?'.http_build_query([
                     'f' => 'json',
@@ -2253,6 +2842,7 @@ class ArcgisAuditedUploadService
             'attachments_uploaded' => 0,
             'attachments_skipped' => 0,
             'features_skipped' => 0,
+            'existing_features_skipped' => 0,
             'features_partially_updated' => 0,
             'errors' => 0,
         ];

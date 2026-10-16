@@ -19,6 +19,9 @@ class UploadAuditedToArcgis extends Command
         {--skip-counts : Start syncing immediately without counting candidates first.}
         {--without-attachments : Upload or update features without copying attachments.}
         {--attachments-only : Copy missing attachments for existing uploaded features only.}
+        {--skip-existing : Skip feature updates for existing source IDs while still copying their missing attachments.}
+        {--batch-size=100 : Number of features per batch (1 to 500; 1 uses individual requests).}
+        {--attachment-concurrency=3 : Maximum simultaneous attachment transfers (1 to 10).}
         {--refresh-cache : Refresh audited cache tables before uploading.}';
 
     protected $description = 'Upload audited building and housing unit cache tables to ArcGIS and copy attachments.';
@@ -46,6 +49,8 @@ class UploadAuditedToArcgis extends Command
             $only = $this->onlyOption();
             $afterBuildingObjectId = $this->afterBuildingObjectIdOption();
             $changedSince = $this->changedSinceOption();
+            $batchSize = $this->positiveIntegerOption('batch-size', 500);
+            $attachmentConcurrency = $this->positiveIntegerOption('attachment-concurrency', 10);
 
             if ($afterBuildingObjectId !== null && $changedSince !== null) {
                 throw new \InvalidArgumentException('The --after-building-objectid option cannot be combined with --changed-since.');
@@ -68,6 +73,9 @@ class UploadAuditedToArcgis extends Command
                 (bool) $this->option('only-audit-edits'),
                 $only,
                 $afterBuildingObjectId,
+                $batchSize,
+                $attachmentConcurrency,
+                (bool) $this->option('skip-existing'),
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');
@@ -128,6 +136,19 @@ class UploadAuditedToArcgis extends Command
         }
 
         return $validatedObjectId;
+    }
+
+    private function positiveIntegerOption(string $name, int $maximum): int
+    {
+        $value = filter_var($this->option($name), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1, 'max_range' => $maximum],
+        ]);
+
+        if ($value === false) {
+            throw new \InvalidArgumentException("The --{$name} option must be an integer between 1 and {$maximum}.");
+        }
+
+        return $value;
     }
 
     private function changedSinceOption(): ?CarbonImmutable

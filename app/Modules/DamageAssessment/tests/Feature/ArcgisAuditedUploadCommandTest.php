@@ -93,7 +93,7 @@ it('resumes audited uploads after a building object id while preserving the unit
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/*/attachments?*' => Http::response(['attachmentInfos' => []]),
     ]);
 
-    $this->artisan('arcgis:upload-audited', $options)->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', $options + ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 
     expect($uploadedBuildingIds)->toBe($expectedBuildingIds)
         ->and($uploadedUnitIds)->toBe($expectedUnitIds);
@@ -111,7 +111,7 @@ it('resumes audited uploads after a building object id while preserving the unit
 it('rejects invalid building resume ids before making any arcgis requests', function (string $objectId): void {
     Http::fake();
 
-    $this->artisan('arcgis:upload-audited', ['--after-building-objectid' => $objectId])
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1, '--after-building-objectid' => $objectId])
         ->expectsOutput('The --after-building-objectid option must be a positive integer without separators.')
         ->assertFailed();
 
@@ -121,7 +121,7 @@ it('rejects invalid building resume ids before making any arcgis requests', func
 it('rejects combining a building resume id with changed since before making arcgis requests', function (): void {
     Http::fake();
 
-    $this->artisan('arcgis:upload-audited', [
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1,
         '--after-building-objectid' => '26509',
         '--changed-since' => '2026-10-01',
     ])
@@ -276,7 +276,7 @@ it('uploads cached base table records with the latest audit edit values without 
         },
     ]);
 
-    $this->artisan('arcgis:upload-audited', [
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1,
         '--refresh-cache' => true,
         '--without-attachments' => true,
     ])->assertSuccessful();
@@ -353,7 +353,7 @@ it('uploads only audited housing units when only units option is used', function
         },
     ]);
 
-    $this->artisan('arcgis:upload-audited', [
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1,
         '--refresh-cache' => true,
         '--without-attachments' => true,
         '--only' => 'units',
@@ -421,7 +421,7 @@ it('syncs the submitted audit field value directly to the audited arcgis layer',
     Http::assertSentCount(4);
 });
 
-it('uploads audited views to arcgis and copies attachments', function () {
+it('uploads audited cache records to arcgis and copies attachments', function () {
     config()->set('services.arcgis.username', 'tester');
     config()->set('services.arcgis.password', 'secret');
     config()->set('services.arcgis.referer', 'http://localhost');
@@ -437,7 +437,8 @@ it('uploads audited views to arcgis and copies attachments', function () {
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('building_damage_status')->nullable();
@@ -448,7 +449,8 @@ it('uploads audited views to arcgis and copies attachments', function () {
         $table->decimal('y', 10, 7)->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('parentglobalid')->nullable();
@@ -475,7 +477,7 @@ it('uploads audited views to arcgis and copies attachments', function () {
         }
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 100,
         'globalid' => 'building-globalid',
         'building_damage_status' => 'major',
@@ -486,7 +488,7 @@ it('uploads audited views to arcgis and copies attachments', function () {
         'y' => 31.5123450,
     ]);
 
-    DB::table('v_housing_units_audited')->insert([
+    DB::table('audited_housing_units')->insert([
         'objectid' => 200,
         'globalid' => 'unit-globalid',
         'parentglobalid' => 'building-globalid',
@@ -649,7 +651,7 @@ it('uploads audited views to arcgis and copies attachments', function () {
         ]),
     ]);
 
-    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures');
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/updateFeatures');
@@ -673,11 +675,13 @@ it('refreshes the arcgis token and retries when adding a feature fails with an i
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('unit_damage_status')->nullable();
@@ -685,7 +689,7 @@ it('refreshes the arcgis token and retries when adding a feature fails with an i
         $table->decimal('latitude', 10, 7)->nullable();
     });
 
-    DB::table('v_housing_units_audited')->insert([
+    DB::table('audited_housing_units')->insert([
         'objectid' => 12074,
         'globalid' => 'unit-globalid',
         'unit_damage_status' => 'minor',
@@ -747,7 +751,7 @@ it('refreshes the arcgis token and retries when adding a feature fails with an i
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/11/12074/attachments?*' => Http::response(['attachmentInfos' => []]),
     ]);
 
-    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 
     expect($tokenRequests)->toBe(2);
     expect($addFeatureRequests)->toBe(2);
@@ -769,24 +773,26 @@ it('can upload only a limited number of buildings with their housing units', fun
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('parentglobalid')->nullable();
     });
 
     foreach (range(1, 6) as $index) {
-        DB::table('v_buildings_audited')->insert([
+        DB::table('audited_buildings')->insert([
             'objectid' => $index,
             'globalid' => "building-{$index}",
         ]);
 
-        DB::table('v_housing_units_audited')->insert([
+        DB::table('audited_housing_units')->insert([
             'objectid' => 100 + $index,
             'globalid' => "unit-{$index}",
             'parentglobalid' => "building-{$index}",
@@ -867,7 +873,7 @@ it('can upload only a limited number of buildings with their housing units', fun
         'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/1/*/attachments*' => Http::response(['attachmentInfos' => []]),
     ]);
 
-    $this->artisan('arcgis:upload-audited', ['--buildings-limit' => 5])->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1, '--buildings-limit' => 5])->assertSuccessful();
 
     expect($buildingUploads)->toBe(5);
     expect($unitUploads)->toBe(5);
@@ -889,14 +895,16 @@ it('uploads only records edited on or after the changed since date', function ()
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('building_damage_status')->nullable();
         $table->dateTime('editdate')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('parentglobalid')->nullable();
@@ -904,7 +912,7 @@ it('uploads only records edited on or after the changed since date', function ()
         $table->dateTime('editdate')->nullable();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         [
             'objectid' => 100,
             'globalid' => 'building-edited-on-boundary',
@@ -925,7 +933,7 @@ it('uploads only records edited on or after the changed since date', function ()
         ],
     ]);
 
-    DB::table('v_housing_units_audited')->insert([
+    DB::table('audited_housing_units')->insert([
         [
             'objectid' => 200,
             'globalid' => 'unit-under-edited-building-without-own-edit',
@@ -1127,14 +1135,16 @@ it('can ignore editdate and sync only audit edits', function () {
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('building_damage_status')->nullable();
         $table->dateTime('editdate')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('unit_damage_status')->nullable();
@@ -1153,7 +1163,7 @@ it('can ignore editdate and sync only audit edits', function () {
         'editdate' => '2026-07-28 00:00:00',
     ]);
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         [
             'objectid' => 900,
             'globalid' => 'building-audit-edit',
@@ -1168,7 +1178,7 @@ it('can ignore editdate and sync only audit edits', function () {
         ],
     ]);
 
-    DB::table('v_housing_units_audited')->insert([
+    DB::table('audited_housing_units')->insert([
         [
             'objectid' => 901,
             'globalid' => 'unit-audit-edit',
@@ -1268,7 +1278,8 @@ it('partially updates existing target features from audit edits and still copies
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('building_damage_status')->nullable();
@@ -1276,7 +1287,8 @@ it('partially updates existing target features from audit edits and still copies
         $table->dateTime('editdate')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('parentglobalid')->nullable();
@@ -1285,7 +1297,7 @@ it('partially updates existing target features from audit edits and still copies
         $table->dateTime('editdate')->nullable();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 700,
         'globalid' => 'existing-building-audit-only',
         'building_damage_status' => 'major',
@@ -1293,7 +1305,7 @@ it('partially updates existing target features from audit edits and still copies
         'editdate' => '2026-07-27 10:00:00',
     ]);
 
-    DB::table('v_housing_units_audited')->insert([
+    DB::table('audited_housing_units')->insert([
         'objectid' => 800,
         'globalid' => 'existing-unit-audit-only',
         'parentglobalid' => 'existing-building-audit-only',
@@ -1440,17 +1452,19 @@ it('uses building old global id when the target layer does not have building old
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->string('building_damage_status')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 1000,
         'globalid' => 'existing-building-globalid',
         'building_damage_status' => 'updated',
@@ -1498,7 +1512,7 @@ it('uses building old global id when the target layer does not have building old
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/1000/attachments?*' => Http::response(['attachmentInfos' => []]),
     ]);
 
-    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/updateFeatures');
 });
@@ -1519,16 +1533,18 @@ it('skips source attachments that arcgis reports but cannot download', function 
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 300,
         'globalid' => 'building-with-missing-attachment',
     ]);
@@ -1566,7 +1582,7 @@ it('skips source attachments that arcgis reports but cannot download', function 
         ], 404),
     ]);
 
-    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addAttachment'));
 });
@@ -1587,17 +1603,19 @@ it('moves comments recommendations into the v1 field before uploading', function
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
         $table->text('Comments_Recommendations')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 400,
         'globalid' => 'building-with-comments',
         'Comments_Recommendations' => str_repeat('Long comment ', 80),
@@ -1634,7 +1652,7 @@ it('moves comments recommendations into the v1 field before uploading', function
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/400/attachments?*' => Http::response(['attachmentInfos' => []]),
     ]);
 
-    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 });
 
 it('keeps target object id while replacing target objectid attribute with the old source objectid', function (): void {
@@ -1692,7 +1710,7 @@ it('keeps target object id while replacing target objectid attribute with the ol
         'https://services.example.test/ArcGIS/rest/services/SOURCE/FeatureServer/10/1234/attachments?*' => Http::response(['attachmentInfos' => []]),
     ]);
 
-    $this->artisan('arcgis:upload-audited')->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1])->assertSuccessful();
 });
 
 it('can upload features without copying attachments', function () {
@@ -1711,16 +1729,18 @@ it('can upload features without copying attachments', function () {
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 500,
         'globalid' => 'building-without-attachments',
     ]);
@@ -1745,7 +1765,7 @@ it('can upload features without copying attachments', function () {
         ]),
     ]);
 
-    $this->artisan('arcgis:upload-audited', ['--without-attachments' => true])->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1, '--without-attachments' => true])->assertSuccessful();
 
     Http::assertSent(fn ($request): bool => $request->url() === 'https://services.example.test/ArcGIS/rest/services/TARGET/FeatureServer/0/addFeatures');
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/attachments'));
@@ -1768,11 +1788,13 @@ it('can skip candidate counts before syncing', function () {
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
@@ -1803,16 +1825,18 @@ it('can copy attachments only for existing target features', function () {
     Schema::dropIfExists('v_buildings_audited');
     Schema::dropIfExists('v_housing_units_audited');
 
-    Schema::create('v_buildings_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_buildings');
+    Schema::create('audited_buildings', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
         $table->string('globalid')->nullable();
     });
 
-    Schema::create('v_housing_units_audited', function (Blueprint $table): void {
+    Schema::dropIfExists('audited_housing_units');
+    Schema::create('audited_housing_units', function (Blueprint $table): void {
         $table->integer('objectid')->primary();
     });
 
-    DB::table('v_buildings_audited')->insert([
+    DB::table('audited_buildings')->insert([
         'objectid' => 600,
         'globalid' => 'building-attachments-only',
     ]);
@@ -1845,7 +1869,7 @@ it('can copy attachments only for existing target features', function () {
         ]),
     ]);
 
-    $this->artisan('arcgis:upload-audited', ['--attachments-only' => true])->assertSuccessful();
+    $this->artisan('arcgis:upload-audited', ['--batch-size' => 1, '--attachment-concurrency' => 1, '--attachments-only' => true])->assertSuccessful();
 
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/addFeatures'));
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/updateFeatures'));
