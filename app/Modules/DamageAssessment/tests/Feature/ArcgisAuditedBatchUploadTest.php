@@ -602,3 +602,96 @@ it('identifies malformed date fields before sending a rejected feature to arcgis
             && str_contains($context['message'], 'Invalid date value for ArcGIS field "EditDate"'),
     ));
 })->with(['not-a-date', '2024-02-30', 'tomorrow', '2024-01-01 +1 day', '99999999999999999999999']);
+
+it('updates existing features without adding missing rows or transferring attachments', function (int $batchSize): void {
+    createAuditedBatchBuildings(3, true);
+
+    foreach ([1, 2] as $id) {
+        $this->remote[0][90 + $id] = ['OBJECTID' => 90 + $id, 'old_objectid_B' => $id, 'old_global_id_B' => 'building-'.$id, 'globalid' => 'existing-building-'.$id];
+    }
+
+    $this->remote[1][191] = ['OBJECTID' => 191, 'old_objectid_U' => 1001];
+    $summary = app(ArcgisAuditedUploadService::class)->upload(withoutAttachments: true, batchSize: $batchSize, existingOnly: true);
+
+    expect($summary['errors'])->toBe(0)->and($summary['buildings_updated'])->toBe(2)
+        ->and($summary['units_updated'])->toBe(1)->and($summary['missing_features_skipped'])->toBe(3)
+        ->and($summary['buildings_uploaded'])->toBe(0)->and($summary['units_uploaded'])->toBe(0);
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/addFeatures')
+        || str_contains($request->url(), '/attachments') || str_contains($request->url(), '/addAttachment'));
+})->with(['individual' => 1, 'batches' => 100]);
+
+it('supports a separate command for existing unit data while attachments are handled separately', function (): void {
+    createAuditedBatchBuildings(3, true);
+
+    foreach ([1, 2] as $id) {
+        $this->remote[0][90 + $id] = ['OBJECTID' => 90 + $id, 'old_global_id_B' => 'building-'.$id, 'globalid' => 'existing-building-'.$id];
+        $this->remote[1][190 + $id] = ['OBJECTID' => 190 + $id, 'old_objectid_U' => 1000 + $id];
+    }
+
+    $this->artisan('arcgis:upload-audited', [
+        '--only' => 'units', '--existing-only' => true, '--without-attachments' => true, '--skip-counts' => true,
+    ])->assertSuccessful();
+
+    expect($this->writes)->toHaveCount(1)->and($this->writes[0]['layer'])->toBe(1)
+        ->and($this->writes[0]['operation'])->toBe('update')
+        ->and($this->writes[0]['features'])->toHaveCount(2);
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/addFeatures')
+        || str_contains($request->url(), '/attachments') || str_contains($request->url(), '/addAttachment'));
+});
+
+it('skips missing units without preparing their geometry or looking up their parents', function (): void {
+    createAuditedBatchBuildings(3, true);
+    $summary = app(ArcgisAuditedUploadService::class)->upload(only: 'units', withoutAttachments: true, batchSize: 100, existingOnly: true);
+    expect($summary['errors'])->toBe(0)->and($summary['missing_features_skipped'])->toBe(3)->and($this->writes)->toBe([]);
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/SOURCE/') || str_contains($request->url(), '/TARGET/0'));
+});
+
+it('keeps existing only behavior for changed records and audit edits', function (bool $onlyAuditEdits, int $batchSize): void {
+    createAuditedBatchBuildings(2, true);
+
+    foreach ([1, 2] as $id) {
+        Building::query()->create(['objectid' => $id, 'globalid' => 'building-'.$id, 'editdate' => '2026-09-01']);
+        HousingUnit::query()->create(['objectid' => 1000 + $id, 'globalid' => 'unit-'.$id, 'editdate' => '2026-09-01']);
+        EditAssessment::query()->create([
+            'global_id' => 'building-'.$id, 'type' => 'building_table', 'field_name' => 'building_damage_status',
+            'field_value' => 'major', 'updated_at' => '2026-10-15',
+        ]);
+        EditAssessment::query()->create([
+            'global_id' => 'unit-'.$id, 'type' => 'housing_table', 'field_name' => 'unit_damage_status',
+            'field_value' => 'major', 'updated_at' => '2026-10-15',
+        ]);
+    }
+
+    $this->remote[0][91] = ['OBJECTID' => 91, 'old_objectid_B' => 1];
+    $this->remote[1][191] = ['OBJECTID' => 191, 'old_objectid_U' => 1001];
+    $summary = app(ArcgisAuditedUploadService::class)->upload(
+        withoutAttachments: true, changedSince: \Carbon\CarbonImmutable::parse('2026-10-01'),
+        onlyAuditEdits: $onlyAuditEdits, batchSize: $batchSize, existingOnly: true,
+    );
+    expect($summary['errors'])->toBe(0)->and($summary['buildings_updated'])->toBe(1)
+        ->and($summary['units_updated'])->toBe(1)->and($summary['missing_features_skipped'])->toBe(2);
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/addFeatures') || str_contains($request->url(), '/attachments'));
+})->with(['changes' => [false, 100], 'individual changes' => [false, 1], 'audit edits' => [true, 100]]);
+
+it('rejects conflicting skip existing and existing only options before contacting arcgis', function (): void {
+    $this->artisan('arcgis:upload-audited', ['--skip-existing' => true, '--existing-only' => true])
+        ->expectsOutput('The --skip-existing and --existing-only options cannot be used together.')
+        ->assertFailed();
+    expect(fn () => app(ArcgisAuditedUploadService::class)->upload(skipExisting: true, existingOnly: true))
+        ->toThrow(RuntimeException::class, 'The --skip-existing and --existing-only options cannot be used together.');
+    Http::assertNothingSent();
+});
+
+it('does not retain existing only mode for later reconciliation or normal uploads', function (): void {
+    createAuditedBatchBuildings(2);
+    $this->remote[0][91] = ['OBJECTID' => 91, 'old_objectid_B' => 1];
+    $service = app(ArcgisAuditedUploadService::class);
+    $service->upload(withoutAttachments: true, existingOnly: true);
+    $summary = $service->uploadObjectIds(buildingObjectIds: [2], withoutAttachments: true);
+    expect($summary['errors'])->toBe(0)->and($summary['buildings_uploaded'])->toBe(1);
+    $service->upload(withoutAttachments: true, existingOnly: true);
+    AuditedBuilding::query()->create(['objectid' => 3, 'globalid' => 'building-3']);
+    $summary = $service->upload(withoutAttachments: true);
+    expect($summary['errors'])->toBe(0)->and($summary['buildings_uploaded'])->toBe(1)
+        ->and($summary['missing_features_skipped'])->toBe(0);
+});

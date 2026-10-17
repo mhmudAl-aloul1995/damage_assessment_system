@@ -50,6 +50,8 @@ class ArcgisAuditedUploadService
 
     private bool $skipExisting = false;
 
+    private bool $existingOnly = false;
+
     /** @var array<string, array|null> */
     private array $batchGeometries = [];
 
@@ -68,7 +70,12 @@ class ArcgisAuditedUploadService
         int $batchSize = 1,
         int $attachmentConcurrency = 1,
         bool $skipExisting = false,
+        bool $existingOnly = false,
     ): array {
+        if ($skipExisting && $existingOnly) {
+            throw new RuntimeException('The --skip-existing and --existing-only options cannot be used together.');
+        }
+
         if ($batchSize < 1 || $batchSize > 500 || $attachmentConcurrency < 1 || $attachmentConcurrency > 10) {
             throw new RuntimeException('Batch size must be between 1 and 500 and attachment concurrency between 1 and 10.');
         }
@@ -76,6 +83,7 @@ class ArcgisAuditedUploadService
         $this->batchSize = $batchSize;
         $this->attachmentConcurrency = $attachmentConcurrency;
         $this->skipExisting = $skipExisting;
+        $this->existingOnly = $existingOnly;
         $this->targetBuildingGlobalIdsBySourceGlobalId = [];
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
@@ -100,6 +108,7 @@ class ArcgisAuditedUploadService
         $summary['batch_size'] = $batchSize;
         $summary['attachment_concurrency'] = $attachmentConcurrency;
         $summary['skip_existing'] = $skipExisting ? 1 : 0;
+        $summary['existing_only'] = $existingOnly ? 1 : 0;
 
         if ($afterBuildingObjectId !== null) {
             $summary['after_building_objectid'] = $afterBuildingObjectId;
@@ -544,6 +553,10 @@ class ArcgisAuditedUploadService
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
 
+        if ($this->skipMissingFeature($targetObjectId, $summary)) {
+            return;
+        }
+
         if ($targetObjectId === null) {
             if ($attachmentsOnly) {
                 echo "Building not found in target. Skipping attachments.\n";
@@ -607,6 +620,10 @@ class ArcgisAuditedUploadService
             'old_global_id_U' => $globalId,
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
+
+        if ($this->skipMissingFeature($targetObjectId, $summary)) {
+            return;
+        }
 
         if ($targetObjectId === null) {
             if ($attachmentsOnly) {
@@ -1060,6 +1077,7 @@ class ArcgisAuditedUploadService
         bool $dryRun = false,
     ): array {
         $this->skipExisting = false;
+        $this->existingOnly = false;
         $summary = $this->emptySummary();
         $summary['dry_run'] = $dryRun ? 1 : 0;
 
@@ -1308,7 +1326,9 @@ class ArcgisAuditedUploadService
 
             foreach ($records as $record) {
                 $id = (string) $record->getAttribute('objectid');
-                $skipFeature = $attachmentsOnly || ($this->skipExisting && isset($targets[$id]));
+                $skipFeature = $attachmentsOnly
+                    || ($this->skipExisting && isset($targets[$id]))
+                    || ($this->existingOnly && ! isset($targets[$id]));
                 $partialFields[$id] = ! $skipFeature && isset($targets[$id])
                     ? $this->partialAuditFieldNames($isUnit ? 'housing_table' : 'building_table', $record->getAttribute('globalid'), $record, $changedSince)
                     : [];
@@ -1351,6 +1371,11 @@ class ArcgisAuditedUploadService
             foreach ($records as $record) {
                 $id = (string) $record->getAttribute('objectid');
                 $targetObjectId = $targets[$id] ?? null;
+
+                if ($this->skipMissingFeature($targetObjectId, $summary)) {
+                    continue;
+                }
+
                 $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
 
                 if ($attachmentsOnly || $skipFeatureUpdate) {
@@ -1645,6 +1670,19 @@ class ArcgisAuditedUploadService
         Log::error('Audited ArcGIS batch failed.', ['type' => $type, 'objectids' => $objectIds, 'message' => $exception->getMessage()]);
     }
 
+    private function skipMissingFeature(?int $targetObjectId, array &$summary): bool
+    {
+        if (! $this->existingOnly || $targetObjectId !== null) {
+            return false;
+        }
+
+        $summary['features_skipped']++;
+        $summary['missing_features_skipped']++;
+        echo "Skipping missing feature in existing-only mode.\n";
+
+        return true;
+    }
+
     private function skipExistingFeature(?int $targetObjectId, array &$summary): bool
     {
         if (! $this->skipExisting || $targetObjectId === null) {
@@ -1677,6 +1715,11 @@ class ArcgisAuditedUploadService
             'old_global_id_B' => $building->getAttribute('globalid'),
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
+
+        if ($this->skipMissingFeature($targetObjectId, $summary)) {
+            return;
+        }
+
         $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
 
         if ($attachmentsOnly && $targetObjectId === null) {
@@ -1754,6 +1797,11 @@ class ArcgisAuditedUploadService
             'old_global_id_U' => $unit->getAttribute('globalid'),
         ]);
         $targetObjectId = $targetFeature['object_id'] ?? null;
+
+        if ($this->skipMissingFeature($targetObjectId, $summary)) {
+            return;
+        }
+
         $skipFeatureUpdate = $this->skipExistingFeature($targetObjectId, $summary);
 
         if ($attachmentsOnly && $targetObjectId === null) {
@@ -2898,6 +2946,7 @@ class ArcgisAuditedUploadService
             'attachments_skipped' => 0,
             'features_skipped' => 0,
             'existing_features_skipped' => 0,
+            'missing_features_skipped' => 0,
             'features_partially_updated' => 0,
             'errors' => 0,
         ];
