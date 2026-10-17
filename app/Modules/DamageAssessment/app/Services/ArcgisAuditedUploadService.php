@@ -85,10 +85,11 @@ class ArcgisAuditedUploadService
         $partitionParts = $this->partitionParts($partition);
 
         if ($partitionParts !== null && (
-            $only !== 'units' || (! $existingOnly && ! $skipExisting) || ! $withoutAttachments
+            $only !== 'units'
+            || (! $attachmentsOnly && (! $withoutAttachments || (! $existingOnly && ! $skipExisting)))
             || $changedSince !== null || $buildingsLimit !== null || $afterBuildingObjectId !== null
         )) {
-            throw new RuntimeException('The --partition option requires --only=units --without-attachments and either --skip-existing or --existing-only, and cannot be combined with --changed-since, --buildings-limit or --after-building-objectid.');
+            throw new RuntimeException('The --partition option requires --only=units and either --attachments-only or --without-attachments with --skip-existing or --existing-only, and cannot be combined with --changed-since, --buildings-limit or --after-building-objectid.');
         }
 
         if ($skipExisting && $existingOnly) {
@@ -134,7 +135,7 @@ class ArcgisAuditedUploadService
         echo 'Processing source OBJECTIDs in '.$summary['order']." order.\n";
 
         if ($partition !== null) {
-            echo 'Unit data partition: '.$partition."\n";
+            echo ($attachmentsOnly ? 'Unit attachments partition: ' : 'Unit data partition: ').$partition."\n";
         }
 
         if ($afterBuildingObjectId !== null) {

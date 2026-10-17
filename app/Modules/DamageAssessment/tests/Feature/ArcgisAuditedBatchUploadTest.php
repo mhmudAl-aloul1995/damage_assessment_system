@@ -844,6 +844,123 @@ it('supports two commands that add missing unit data in separate partitions', fu
         || str_contains($request->url(), '/attachments') || str_contains($request->url(), '/addAttachment'));
 });
 
+it('copies missing unit attachments in disjoint partitions and resumes without duplicate transfers', function (int $batchSize, int $attachmentConcurrency): void {
+    $this->remote[1] = createExistingAuditedUnitTargets([1, 2, 8, 9, 51, 73, 100]);
+    unset($this->remote[1][10051]);
+    $existingTargets = $this->remote;
+    $targetAttachments = array_fill_keys(array_keys($this->remote[1]), ['existing.jpg']);
+    $sourceIds = [];
+    $uploadedFiles = [];
+    $downloads = [];
+    $this->attachmentResponse = function (Request $request) use (&$targetAttachments, &$sourceIds, &$uploadedFiles, &$downloads) {
+        $url = $request->url();
+
+        if (preg_match('~/SOURCE/11/(\d+)/attachments\?~', $url, $matches)) {
+            $sourceIds[] = (int) $matches[1];
+
+            return Http::response(['attachmentInfos' => [
+                ['id' => 1, 'name' => 'existing.jpg', 'size' => 3],
+                ['id' => 2, 'name' => 'missing-2.jpg', 'size' => 3],
+                ['id' => 3, 'name' => 'missing-3.jpg', 'size' => 3],
+            ]]);
+        }
+
+        if (preg_match('~/TARGET/1/(\d+)/attachments\?~', $url, $matches)) {
+            return Http::response(['attachmentInfos' => array_map(
+                fn (string $name): array => ['name' => $name, 'size' => 3], $targetAttachments[(int) $matches[1]],
+            )]);
+        }
+
+        if (preg_match('~/SOURCE/11/(\d+)/attachments/(\d+)\?~', $url, $matches)) {
+            $downloads[] = $matches[1].'/'.$matches[2];
+
+            return Http::response('img');
+        }
+
+        if (preg_match('~/TARGET/1/(\d+)/addAttachment\?~', $url, $matches)) {
+            $file = collect($request->data())->first(fn (array $part): bool => ($part['name'] ?? null) === 'attachment');
+            $targetAttachments[(int) $matches[1]][] = $file['filename'];
+            $uploadedFiles[] = $matches[1].'/'.$file['filename'];
+
+            return Http::response(['addAttachmentResult' => ['success' => true]]);
+        }
+
+        throw new RuntimeException('Unexpected attachment request: '.$url);
+    };
+    $service = app(ArcgisAuditedUploadService::class);
+
+    foreach ([1, 2] as $index) {
+        $start = count($sourceIds);
+        $summary = $service->upload(
+            only: 'units', attachmentsOnly: true, batchSize: $batchSize, attachmentConcurrency: $attachmentConcurrency,
+            descending: $index === 2, partition: $index.'/2',
+        );
+
+        expect($summary['errors'])->toBe(0)->and($summary['attachments_uploaded'])->toBe(6)
+            ->and($summary['units_uploaded'])->toBe(0)->and($summary['units_updated'])->toBe(0)
+            ->and($summary['features_skipped'])->toBe($index === 1 ? 0 : 1)
+            ->and(array_slice($sourceIds, $start))->toBe($index === 1 ? [2, 8, 100] : [73, 9, 1]);
+    }
+
+    expect($downloads)->toHaveCount(12)->and(array_unique($downloads))->toHaveCount(12)
+        ->and($uploadedFiles)->toHaveCount(12)->and(array_unique($uploadedFiles))->toHaveCount(12);
+
+    foreach ([1, 2] as $index) {
+        $summary = $service->upload(
+            only: 'units', attachmentsOnly: true, batchSize: $batchSize, attachmentConcurrency: $attachmentConcurrency,
+            descending: $index === 2, partition: $index.'/2',
+        );
+        expect($summary['errors'])->toBe(0)->and($summary['attachments_uploaded'])->toBe(0);
+    }
+
+    expect($downloads)->toHaveCount(12)->and($uploadedFiles)->toHaveCount(12)
+        ->and($this->remote)->toBe($existingTargets)->and($this->writes)->toBe([]);
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/addFeatures')
+        || str_contains($request->url(), '/updateFeatures') || str_contains($request->url(), '/SOURCE/11/query')
+        || str_contains($request->url(), '/SOURCE/11/51/') || str_contains($request->url(), '/TARGET/0'));
+})->with(['individual' => [1, 1], 'pooled individual' => [1, 5], 'small batches' => [2, 5], 'batches' => [100, 5]]);
+
+it('supports two attachments only commands with separate ascending and descending partitions', function (): void {
+    $this->remote[1] = createExistingAuditedUnitTargets([1, 2, 8, 9, 51, 73, 100]);
+    $seen = [];
+    $this->attachmentResponse = function (Request $request) use (&$seen) {
+        if (preg_match('~/SOURCE/11/(\d+)/attachments\?~', $request->url(), $matches)) {
+            $seen[] = (int) $matches[1];
+        }
+
+        return Http::response(['attachmentInfos' => []]);
+    };
+
+    foreach ([1, 2] as $index) {
+        ob_start();
+
+        try {
+            $this->artisan('arcgis:upload-audited', [
+                '--only' => 'units', '--attachments-only' => true, '--skip-counts' => true,
+                '--attachment-concurrency' => 5, '--partition' => $index.'/2', '--descending' => $index === 2,
+            ])->assertSuccessful();
+            $output = ob_get_contents();
+        } finally {
+            ob_end_clean();
+        }
+
+        expect($output)->toContain('Unit attachments partition: '.$index.'/2');
+    }
+
+    expect($seen)->toBe([2, 8, 100, 73, 51, 9, 1])->and($this->writes)->toBe([]);
+});
+
+it('rejects incompatible attachment partitions before contacting arcgis', function (array $options): void {
+    $this->artisan('arcgis:upload-audited', array_replace([
+        '--only' => 'units', '--attachments-only' => true, '--partition' => '1/2',
+    ], $options))->assertFailed();
+    Http::assertNothingSent();
+})->with([
+    [['--only' => 'buildings']], [['--only' => null]], [['--without-attachments' => true]],
+    [['--changed-since' => '2026-10-01']], [['--buildings-limit' => 1]],
+    [['--after-building-objectid' => 2]], [['--refresh-cache' => true]], [['--partition' => '3/2']],
+]);
+
 it('rejects malformed partitions before contacting arcgis', function (string $partition): void {
     $this->artisan('arcgis:upload-audited', [
         '--only' => 'units', '--existing-only' => true, '--without-attachments' => true, '--partition' => $partition,
