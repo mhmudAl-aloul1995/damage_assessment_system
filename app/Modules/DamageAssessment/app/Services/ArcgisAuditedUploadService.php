@@ -52,6 +52,8 @@ class ArcgisAuditedUploadService
 
     private bool $existingOnly = false;
 
+    private bool $descending = false;
+
     /** @var array<string, array|null> */
     private array $batchGeometries = [];
 
@@ -71,7 +73,18 @@ class ArcgisAuditedUploadService
         int $attachmentConcurrency = 1,
         bool $skipExisting = false,
         bool $existingOnly = false,
+        bool $descending = false,
+        ?string $partition = null,
     ): array {
+        $partitionParts = $this->partitionParts($partition);
+
+        if ($partitionParts !== null && (
+            $only !== 'units' || ! $existingOnly || ! $withoutAttachments
+            || $changedSince !== null || $buildingsLimit !== null || $afterBuildingObjectId !== null
+        )) {
+            throw new RuntimeException('The --partition option requires --only=units --existing-only --without-attachments and cannot be combined with --changed-since, --buildings-limit or --after-building-objectid.');
+        }
+
         if ($skipExisting && $existingOnly) {
             throw new RuntimeException('The --skip-existing and --existing-only options cannot be used together.');
         }
@@ -84,6 +97,7 @@ class ArcgisAuditedUploadService
         $this->attachmentConcurrency = $attachmentConcurrency;
         $this->skipExisting = $skipExisting;
         $this->existingOnly = $existingOnly;
+        $this->descending = $descending;
         $this->targetBuildingGlobalIdsBySourceGlobalId = [];
         if ($withoutAttachments && $attachmentsOnly) {
             throw new RuntimeException('The --without-attachments and --attachments-only options cannot be used together.');
@@ -109,6 +123,13 @@ class ArcgisAuditedUploadService
         $summary['attachment_concurrency'] = $attachmentConcurrency;
         $summary['skip_existing'] = $skipExisting ? 1 : 0;
         $summary['existing_only'] = $existingOnly ? 1 : 0;
+        $summary['order'] = $descending ? 'descending' : 'ascending';
+        $summary['partition'] = $partition ?? 'all';
+        echo 'Processing source OBJECTIDs in '.$summary['order']." order.\n";
+
+        if ($partition !== null) {
+            echo 'Unit data partition: '.$partition."\n";
+        }
 
         if ($afterBuildingObjectId !== null) {
             $summary['after_building_objectid'] = $afterBuildingObjectId;
@@ -144,7 +165,7 @@ class ArcgisAuditedUploadService
             ->when($afterBuildingObjectId !== null, function (Builder $query) use ($afterBuildingObjectId): void {
                 $query->where('objectid', '>', $afterBuildingObjectId);
             })
-            ->orderBy('objectid');
+            ->orderBy('objectid', $descending ? 'desc' : 'asc');
 
         if ($buildingsLimit !== null) {
             $buildingQuery->limit($buildingsLimit);
@@ -161,10 +182,13 @@ class ArcgisAuditedUploadService
                 ->all();
 
         $unitQuery = AuditedHousingUnit::query()
+            ->when($partitionParts !== null, function (Builder $query) use ($partitionParts): void {
+                $query->whereRaw('objectid % ? = ?', [$partitionParts[1], $partitionParts[0] - 1]);
+            })
             ->when($buildingsLimit !== null, function (Builder $query) use ($buildingGlobalIds): void {
                 $query->whereIn('parentglobalid', $buildingGlobalIds);
             })
-            ->orderBy('objectid');
+            ->orderBy('objectid', $descending ? 'desc' : 'asc');
 
         if ($skipCounts) {
             $summary['candidate_counts_skipped'] = 1;
@@ -308,7 +332,7 @@ class ArcgisAuditedUploadService
 
                 foreach (array_chunk($globalIds, $this->batchSize) as $ids) {
                     $query = $isUnit ? AuditedHousingUnit::query() : AuditedBuilding::query();
-                    $this->uploadBatch($query->whereIn('globalid', $ids)->orderBy('objectid')->get(), $isUnit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+                    $this->uploadBatch($query->whereIn('globalid', $ids)->orderBy('objectid', $this->descending ? 'desc' : 'asc')->get(), $isUnit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
                 }
             }
 
@@ -376,6 +400,47 @@ class ArcgisAuditedUploadService
         }
     }
 
+    /** @return array{int, int}|null */
+    private function partitionParts(?string $partition): ?array
+    {
+        if ($partition === null) {
+            return null;
+        }
+
+        if (preg_match('/^([1-9]\d*)\/([1-9]\d*)$/', $partition, $matches) !== 1) {
+            throw new RuntimeException('The --partition option must use N/TOTAL, with 1 <= N <= TOTAL <= 32 (for example 1/2).');
+        }
+
+        $index = (int) $matches[1];
+        $total = (int) $matches[2];
+
+        if ($total > 32 || $index > $total) {
+            throw new RuntimeException('The --partition option must use N/TOTAL, with 1 <= N <= TOTAL <= 32 (for example 1/2).');
+        }
+
+        return [$index, $total];
+    }
+
+    /**
+     * @param  list<string>  $globalIds
+     * @return list<string>
+     */
+    private function orderedGlobalIds(array $globalIds, string $type): array
+    {
+        $objectIds = [];
+
+        foreach (array_chunk($globalIds, 500) as $ids) {
+            $sourceQuery = $type === 'housing_table' ? HousingUnit::query() : Building::query();
+            $cacheQuery = $type === 'housing_table' ? AuditedHousingUnit::query() : AuditedBuilding::query();
+            $objectIds += $sourceQuery->whereIn('globalid', $ids)->whereNotNull('objectid')->pluck('objectid', 'globalid')->all();
+            $objectIds += $cacheQuery->whereIn('globalid', $ids)->whereNotNull('objectid')->pluck('objectid', 'globalid')->all();
+        }
+
+        usort($globalIds, fn (string $first, string $second): int => ($objectIds[$second] ?? PHP_INT_MIN) <=> ($objectIds[$first] ?? PHP_INT_MIN));
+
+        return $globalIds;
+    }
+
     private function changedCandidateGlobalIds(
         Builder $sourceQuery,
         string $type,
@@ -401,6 +466,10 @@ class ArcgisAuditedUploadService
             ->filter(fn (mixed $globalId): bool => is_string($globalId) && $globalId !== '')
             ->unique()
             ->values();
+
+        if ($this->descending) {
+            $globalIds = collect($this->orderedGlobalIds($globalIds->all(), $type));
+        }
 
         if ($limit !== null) {
             $globalIds = $globalIds->take($limit)->values();
@@ -510,6 +579,16 @@ class ArcgisAuditedUploadService
 
                 $edits[$globalId][$fieldName] = $edit->getAttribute('field_value');
             });
+
+        if ($this->descending) {
+            $orderedEdits = [];
+
+            foreach ($this->orderedGlobalIds(array_keys($edits), $type) as $globalId) {
+                $orderedEdits[$globalId] = $edits[$globalId];
+            }
+
+            $edits = $orderedEdits;
+        }
 
         if ($limit === null) {
             return $edits;
@@ -1300,6 +1379,7 @@ class ArcgisAuditedUploadService
         $targetLayerId = $this->layerId($isUnit ? 'target_units_layer' : 'target_buildings_layer');
         $sourceLayerId = $this->layerId($isUnit ? 'source_units_layer' : 'source_buildings_layer');
         echo 'Processing '.$type.' batch: '.$records->count()." records...\n";
+        echo 'Source OBJECTIDs: '.$records->first()->getAttribute('objectid').' -> '.$records->last()->getAttribute('objectid')."\n";
 
         try {
             if ($records->count() === 1) {

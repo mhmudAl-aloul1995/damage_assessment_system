@@ -5,6 +5,7 @@ use App\Models\AuditedHousingUnit;
 use App\Models\Building;
 use App\Models\EditAssessment;
 use App\Models\HousingUnit;
+use App\services\ArcgisAuditedCacheService;
 use App\services\ArcgisAuditedUploadService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -695,3 +696,128 @@ it('does not retain existing only mode for later reconciliation or normal upload
     expect($summary['errors'])->toBe(0)->and($summary['buildings_uploaded'])->toBe(1)
         ->and($summary['missing_features_skipped'])->toBe(0);
 });
+
+/** @return array<int, array<string, mixed>> */
+function createExistingAuditedUnitTargets(array $objectIds): array
+{
+    $targets = [];
+
+    foreach ($objectIds as $id) {
+        AuditedHousingUnit::query()->create(['objectid' => $id, 'globalid' => 'unit-'.$id]);
+        $targets[10000 + $id] = ['OBJECTID' => 10000 + $id, 'old_objectid_U' => $id];
+    }
+
+    return $targets;
+}
+
+it('updates units in descending source object id order across batches', function (int $batchSize): void {
+    $this->remote[1] = createExistingAuditedUnitTargets([2, 100, 10, 51, 73]);
+    $summary = app(ArcgisAuditedUploadService::class)->upload(
+        only: 'units', withoutAttachments: true, existingOnly: true, batchSize: $batchSize, descending: true,
+    );
+    $ids = collect($this->writes)->pluck('features')->flatten(1)->pluck('attributes.old_objectid_U')->all();
+    expect($summary['errors'])->toBe(0)->and($summary['order'])->toBe('descending')
+        ->and($summary['units_updated'])->toBe(5)->and($ids)->toBe([100, 73, 51, 10, 2]);
+})->with(['individual' => 1, 'small batches' => 2, 'single batch' => 100]);
+
+it('applies descending building limits after the resume filter and preserves their unit scope', function (): void {
+    createAuditedBatchBuildings(5, true);
+    $summary = app(ArcgisAuditedUploadService::class)->upload(
+        buildingsLimit: 2, withoutAttachments: true, afterBuildingObjectId: 2, batchSize: 100, descending: true,
+    );
+    expect($summary['errors'])->toBe(0)
+        ->and(array_column($this->writes[0]['features'], 'attributes'))->sequence(
+            fn ($attributes) => $attributes->old_objectid_B->toBe(5),
+            fn ($attributes) => $attributes->old_objectid_B->toBe(4),
+        );
+    $units = collect($this->writes)->where('layer', 1)->pluck('features')->flatten(1)->pluck('attributes.old_objectid_U')->all();
+    expect($units)->toBe([1005, 1004]);
+});
+
+it('divides gapped unit object ids into complete disjoint partitions', function (int $total): void {
+    $allIds = [1, 2, 8, 9, 51, 73, 100];
+    $this->remote[1] = createExistingAuditedUnitTargets($allIds);
+    $seen = [];
+    $service = app(ArcgisAuditedUploadService::class);
+
+    foreach (range(1, $total) as $index) {
+        $start = count($this->writes);
+        $summary = $service->upload(
+            only: 'units', withoutAttachments: true, existingOnly: true, batchSize: 2,
+            descending: $index > 1, partition: $index.'/'.$total,
+        );
+        $ids = collect($this->writes)->slice($start)->pluck('features')->flatten(1)->pluck('attributes.old_objectid_U')->all();
+        $expectedOrder = $ids;
+
+        if ($index > 1) {
+            rsort($expectedOrder);
+        } else {
+            sort($expectedOrder);
+        }
+
+        expect($summary['errors'])->toBe(0)->and($summary['units_to_sync'])->toBe(count($ids))
+            ->and($summary['units_updated'])->toBe(count($ids))->and(array_intersect($seen, $ids))->toBe([])
+            ->and($ids)->toBe($expectedOrder);
+        $seen = array_merge($seen, $ids);
+    }
+
+    sort($seen);
+    expect($seen)->toBe($allIds);
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/addFeatures')
+        || str_contains($request->url(), '/attachments') || str_contains($request->url(), '/addAttachment'));
+})->with([2, 3]);
+
+it('supports the descending partition command for a third data process', function (): void {
+    $this->remote[1] = createExistingAuditedUnitTargets([1, 2, 3, 4, 5, 6]);
+    $this->artisan('arcgis:upload-audited', [
+        '--only' => 'units', '--existing-only' => true, '--without-attachments' => true,
+        '--skip-counts' => true, '--partition' => '2/2', '--descending' => true,
+    ])->assertSuccessful();
+    $ids = collect($this->writes)->pluck('features')->flatten(1)->pluck('attributes.old_objectid_U')->all();
+    expect($ids)->toBe([5, 3, 1]);
+});
+
+it('rejects malformed partitions before contacting arcgis', function (string $partition): void {
+    $this->artisan('arcgis:upload-audited', [
+        '--only' => 'units', '--existing-only' => true, '--without-attachments' => true, '--partition' => $partition,
+    ])->assertFailed();
+    Http::assertNothingSent();
+})->with(['', '0/2', '3/2', '1/0', '1/33', '1', '1/2/3', '-1/2', '1.5/2', '1/999999999999999999999']);
+
+it('restricts parallel partitions to complete existing unit data uploads', function (array $overrides): void {
+    $options = array_replace(['only' => 'units', 'existingOnly' => true, 'withoutAttachments' => true, 'partition' => '1/2'], $overrides);
+    expect(fn () => app(ArcgisAuditedUploadService::class)->upload(...$options))->toThrow(RuntimeException::class, 'The --partition option requires');
+    Http::assertNothingSent();
+})->with([
+    [['only' => 'buildings']], [['existingOnly' => false]], [['withoutAttachments' => false]],
+    [['changedSince' => \Carbon\CarbonImmutable::parse('2026-10-01')]],
+    [['buildingsLimit' => 1]], [['afterBuildingObjectId' => 2]],
+]);
+
+it('rejects cache refreshes in partitioned uploads before refreshing shared cache', function (): void {
+    $this->mock(ArcgisAuditedCacheService::class)->shouldNotReceive('refresh');
+    $this->artisan('arcgis:upload-audited', [
+        '--only' => 'units', '--existing-only' => true, '--without-attachments' => true, '--partition' => '1/2', '--refresh-cache' => true,
+    ])->expectsOutput('The --partition option cannot be combined with --refresh-cache. Refresh the cache before starting parallel uploads.')
+        ->assertFailed();
+    Http::assertNothingSent();
+});
+
+it('orders changed units and audit edits by descending source object id', function (bool $onlyAuditEdits, int $batchSize): void {
+    $this->remote[1] = createExistingAuditedUnitTargets([10, 2, 100]);
+
+    foreach ([10, 2, 100] as $id) {
+        HousingUnit::query()->create(['objectid' => $id, 'globalid' => 'unit-'.$id, 'editdate' => '2026-09-01']);
+        EditAssessment::query()->create([
+            'global_id' => 'unit-'.$id, 'type' => 'housing_table', 'field_name' => 'unit_damage_status',
+            'field_value' => 'major', 'updated_at' => '2026-10-17',
+        ]);
+    }
+
+    $summary = app(ArcgisAuditedUploadService::class)->upload(
+        only: 'units', withoutAttachments: true, existingOnly: true, batchSize: $batchSize, descending: true,
+        changedSince: \Carbon\CarbonImmutable::parse('2026-10-16'), onlyAuditEdits: $onlyAuditEdits,
+    );
+    $ids = collect($this->writes)->pluck('features')->flatten(1)->pluck('attributes.OBJECTID')->all();
+    expect($summary['errors'])->toBe(0)->and($ids)->toBe([10100, 10010, 10002]);
+})->with(['changed batches' => [false, 2], 'changed records' => [false, 1], 'audit edits' => [true, 100]]);

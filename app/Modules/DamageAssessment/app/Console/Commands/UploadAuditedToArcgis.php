@@ -21,6 +21,8 @@ class UploadAuditedToArcgis extends Command
         {--attachments-only : Copy missing attachments for existing uploaded features only.}
         {--skip-existing : Skip feature updates for existing source IDs while still copying their missing attachments.}
         {--existing-only : Update existing target features only; skip missing features instead of adding them.}
+        {--descending : Process source OBJECTIDs from highest to lowest.}
+        {--partition= : Disjoint unit data partition N/TOTAL, e.g. 1/2; requires --only=units --existing-only --without-attachments.}
         {--batch-size=100 : Number of features per batch (1 to 500; 1 uses individual requests).}
         {--attachment-concurrency=3 : Maximum simultaneous attachment transfers (1 to 10).}
         {--refresh-cache : Refresh audited cache tables before uploading.}';
@@ -52,6 +54,11 @@ class UploadAuditedToArcgis extends Command
             $changedSince = $this->changedSinceOption();
             $batchSize = $this->positiveIntegerOption('batch-size', 500);
             $attachmentConcurrency = $this->positiveIntegerOption('attachment-concurrency', 10);
+            $partition = $this->option('partition');
+
+            if ($partition !== null && $this->option('refresh-cache')) {
+                throw new \InvalidArgumentException('The --partition option cannot be combined with --refresh-cache. Refresh the cache before starting parallel uploads.');
+            }
 
             if ($this->option('skip-existing') && $this->option('existing-only')) {
                 throw new \InvalidArgumentException('The --skip-existing and --existing-only options cannot be used together.');
@@ -82,6 +89,8 @@ class UploadAuditedToArcgis extends Command
                 $attachmentConcurrency,
                 (bool) $this->option('skip-existing'),
                 (bool) $this->option('existing-only'),
+                (bool) $this->option('descending'),
+                $partition,
             );
         } catch (\Throwable $e) {
             $this->error('Upload failed.');
