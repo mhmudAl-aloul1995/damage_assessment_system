@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +55,11 @@ class ArcgisAuditedUploadService
 
     private bool $descending = false;
 
+    private int $httpRequestCount = 0;
+
+    /** @var array<string, float> */
+    private array $batchStageSeconds = [];
+
     /** @var array<string, array|null> */
     private array $batchGeometries = [];
 
@@ -79,10 +85,10 @@ class ArcgisAuditedUploadService
         $partitionParts = $this->partitionParts($partition);
 
         if ($partitionParts !== null && (
-            $only !== 'units' || ! $existingOnly || ! $withoutAttachments
+            $only !== 'units' || (! $existingOnly && ! $skipExisting) || ! $withoutAttachments
             || $changedSince !== null || $buildingsLimit !== null || $afterBuildingObjectId !== null
         )) {
-            throw new RuntimeException('The --partition option requires --only=units --existing-only --without-attachments and cannot be combined with --changed-since, --buildings-limit or --after-building-objectid.');
+            throw new RuntimeException('The --partition option requires --only=units --without-attachments and either --skip-existing or --existing-only, and cannot be combined with --changed-since, --buildings-limit or --after-building-objectid.');
         }
 
         if ($skipExisting && $existingOnly) {
@@ -1375,6 +1381,45 @@ class ArcgisAuditedUploadService
             return;
         }
 
+        $started = hrtime(true);
+        $requestsBefore = $this->httpRequestCount;
+        $this->batchStageSeconds = $records->count() > 1
+            ? array_fill_keys(['lookup', 'geometry', 'parents', 'prepare', 'write', 'attachments'], 0.0)
+            : [];
+
+        try {
+            $this->processBatch($records, $isUnit, $summary, $copyAttachments, $attachmentsOnly, $changedSince);
+        } finally {
+            $timings = [];
+
+            foreach ($this->batchStageSeconds as $stage => $seconds) {
+                $timings[] = $stage.'='.number_format($seconds, 3, '.', '').'s';
+            }
+
+            $timings[] = 'total='.number_format((hrtime(true) - $started) / 1_000_000_000, 3, '.', '').'s';
+            $timings[] = 'HTTP='.($this->httpRequestCount - $requestsBefore);
+            echo 'Batch timing ['.($isUnit ? 'unit' : 'building').']: '.implode(', ', $timings)."\n";
+        }
+    }
+
+    private function measureBatchStage(string $stage, Closure $callback): mixed
+    {
+        $started = hrtime(true);
+
+        try {
+            return $callback();
+        } finally {
+            $this->batchStageSeconds[$stage] += (hrtime(true) - $started) / 1_000_000_000;
+        }
+    }
+
+    /** @param Collection<int, Model> $records */
+    private function processBatch(Collection $records, bool $isUnit, array &$summary, bool $copyAttachments, bool $attachmentsOnly, ?CarbonInterface $changedSince): void
+    {
+        if ($records->isEmpty()) {
+            return;
+        }
+
         $type = $isUnit ? 'unit' : 'building';
         $targetLayerId = $this->layerId($isUnit ? 'target_units_layer' : 'target_buildings_layer');
         $sourceLayerId = $this->layerId($isUnit ? 'source_units_layer' : 'source_buildings_layer');
@@ -1392,14 +1437,14 @@ class ArcgisAuditedUploadService
                 return;
             }
 
-            $metadata = $this->targetLayerMetadata($targetLayerId, $this->token);
+            $metadata = $this->measureBatchStage('lookup', fn (): array => $this->targetLayerMetadata($targetLayerId, $this->token));
             $objectIdField = $metadata['object_id_field'];
 
             if ($objectIdField === null) {
                 throw new RuntimeException('Target layer is missing its object ID field.');
             }
 
-            $targets = $this->batchTargets($records, $isUnit, $metadata);
+            $targets = $this->measureBatchStage('lookup', fn (): array => $this->batchTargets($records, $isUnit, $metadata));
             $partialFields = [];
             $fullRecords = collect();
             $featureRecords = collect();
@@ -1423,11 +1468,15 @@ class ArcgisAuditedUploadService
             }
 
             if ($fullRecords->isNotEmpty()) {
-                $this->prefetchGeometries($fullRecords, $sourceLayerId);
+                $this->measureBatchStage('geometry', function () use ($fullRecords, $sourceLayerId): void {
+                    $this->prefetchGeometries($fullRecords, $sourceLayerId);
+                });
             }
 
             if ($isUnit && $featureRecords->isNotEmpty()) {
-                $this->prefetchParentBuildings($featureRecords);
+                $this->measureBatchStage('parents', function () use ($featureRecords): void {
+                    $this->prefetchParentBuildings($featureRecords);
+                });
             }
         } catch (Throwable $exception) {
             $summary['errors'] += $records->count();
@@ -1448,6 +1497,8 @@ class ArcgisAuditedUploadService
         $successful = [];
 
         try {
+            $prepareStarted = hrtime(true);
+
             foreach ($records as $record) {
                 $id = (string) $record->getAttribute('objectid');
                 $targetObjectId = $targets[$id] ?? null;
@@ -1487,8 +1538,12 @@ class ArcgisAuditedUploadService
                 }
             }
 
+            $this->batchStageSeconds['prepare'] += (hrtime(true) - $prepareStarted) / 1_000_000_000;
+
             foreach (['add' => $adds, 'update' => $updates] as $operation => $features) {
-                $results = $this->submitFeatureBatch($targetLayerId, $operation, $features, $summary);
+                $results = $this->measureBatchStage('write', function () use ($targetLayerId, $operation, $features, &$summary): array {
+                    return $this->submitFeatureBatch($targetLayerId, $operation, $features, $summary);
+                });
 
                 foreach ($results as $id => $targetObjectId) {
                     $successful[$id] = $targetObjectId;
@@ -1498,6 +1553,8 @@ class ArcgisAuditedUploadService
             }
 
             if ($copyAttachments) {
+                $attachmentsStarted = hrtime(true);
+
                 foreach ($successful as $sourceObjectId => $targetObjectId) {
                     try {
                         $this->copyAuditEditAttachments($sourceLayerId, $targetLayerId, $sourceObjectId, $targetObjectId, true, $summary, $type);
@@ -1506,6 +1563,8 @@ class ArcgisAuditedUploadService
                         $this->reportBatchFailure($type.' attachments', [$sourceObjectId], $exception);
                     }
                 }
+
+                $this->batchStageSeconds['attachments'] += (hrtime(true) - $attachmentsStarted) / 1_000_000_000;
             }
 
             echo ucfirst($type).' batch completed: '.count($successful)." successful.\n";
@@ -2716,6 +2775,7 @@ class ArcgisAuditedUploadService
             $responses = Http::pool(function (Pool $pool) use ($jobs, $upload): void {
                 foreach ($jobs as $id => $job) {
                     $request = $pool->as((string) $id)->acceptJson()
+                        ->beforeSending($this->countHttpRequest(...))
                         ->withHeaders(['Referer' => $this->requiredConfig('referer')])
                         ->timeout(120)->connectTimeout(30)
                         ->withOptions(['verify' => true]);
@@ -2868,6 +2928,7 @@ class ArcgisAuditedUploadService
             $url = $this->targetLayerUrl($layerId).'/'.$objectId.'/addAttachment';
 
             $response = Http::acceptJson()
+                ->beforeSending($this->countHttpRequest(...))
                 ->withHeaders(['Referer' => $this->requiredConfig('referer')])
                 ->timeout(120)
                 ->connectTimeout(30)
@@ -2964,12 +3025,18 @@ class ArcgisAuditedUploadService
     private function http(): PendingRequest
     {
         return Http::asForm()
+            ->beforeSending($this->countHttpRequest(...))
             ->acceptJson()
             ->withHeaders(['Referer' => $this->requiredConfig('referer')])
             ->timeout(120)
             ->connectTimeout(30)
             ->retry(2, 1000, throw: false)
             ->withOptions(['verify' => true]);
+    }
+
+    private function countHttpRequest(Request $request, array $options): void
+    {
+        $this->httpRequestCount++;
     }
 
     private function withTokenRetry(Closure $callback, bool $quiet = false): mixed

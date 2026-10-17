@@ -22,7 +22,7 @@ class UploadAuditedToArcgis extends Command
         {--skip-existing : Skip feature updates for existing source IDs while still copying their missing attachments.}
         {--existing-only : Update existing target features only; skip missing features instead of adding them.}
         {--descending : Process source OBJECTIDs from highest to lowest.}
-        {--partition= : Disjoint unit data partition N/TOTAL, e.g. 1/2; requires --only=units --existing-only --without-attachments.}
+        {--partition= : Disjoint unit data partition N/TOTAL, e.g. 1/2; requires --only=units --without-attachments and either --skip-existing or --existing-only.}
         {--batch-size=100 : Number of features per batch (1 to 500; 1 uses individual requests).}
         {--attachment-concurrency=3 : Maximum simultaneous attachment transfers (1 to 10).}
         {--refresh-cache : Refresh audited cache tables before uploading.}';
