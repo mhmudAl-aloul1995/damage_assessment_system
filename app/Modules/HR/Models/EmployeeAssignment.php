@@ -29,21 +29,6 @@ class EmployeeAssignment extends AppendOnlyModel
         return $this->belongsTo(Department::class);
     }
 
-    public function jobTitle(): BelongsTo
-    {
-        return $this->belongsTo(JobTitle::class);
-    }
-
-    public function office(): BelongsTo
-    {
-        return $this->belongsTo(OfficeLocation::class, 'office_location_id');
-    }
-
-    public function costCenter(): BelongsTo
-    {
-        return $this->belongsTo(CostCenter::class);
-    }
-
     public function manager(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'manager_employee_id');

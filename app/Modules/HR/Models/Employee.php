@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
 {
@@ -59,29 +58,9 @@ class Employee extends Model
         return $this->hasMany(AttendanceEvent::class);
     }
 
-    public function profile(): HasOne
-    {
-        return $this->hasOne(EmployeeProfile::class);
-    }
-
     public function organizationAssignments(): HasMany
     {
         return $this->hasMany(EmployeeAssignment::class);
-    }
-
-    public function currentOrganizationAssignment(): HasOne
-    {
-        return $this->hasOne(EmployeeAssignment::class)->ofMany(['id' => 'max'], fn ($query) => $query->where('primary', true)->effectiveOn(now(config('hr.timezone'))->toDateString()));
-    }
-
-    public function employmentHistory(): HasMany
-    {
-        return $this->hasMany(EmploymentHistory::class);
-    }
-
-    public function documents(): HasMany
-    {
-        return $this->hasMany(EmployeeDocument::class);
     }
 
     public function legacyAttendances(): HasMany

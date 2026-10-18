@@ -15,7 +15,7 @@ it('opens the HR home from the workspace picker for database officers without se
     $module = Sidebar::forUser($officer)->firstWhere('key', 'hr');
     expect($module['url'])->toBe('hr');
     $this->actingAs($officer)->get(route('hr.home'))->assertOk()
-        ->assertSee('أهلاً بك في الموارد البشرية')
+        ->assertSee('متابعة الحضور والانصراف')
         ->assertSee(route('hr.attendance.index'), false)
         ->assertSee(route('hr.attendance.setup'), false);
     $this->get(route('hr.attendance.index'))->assertOk()->assertSee('اسم الموظف أو رقمه');

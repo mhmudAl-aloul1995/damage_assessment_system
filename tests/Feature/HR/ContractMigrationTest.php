@@ -3,16 +3,40 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use App\Modules\HR\Models\ContractAlert;
-use App\Modules\HR\Models\ContractDecision;
-use App\Modules\HR\Models\ContractRevision;
-use App\Modules\HR\Models\ContractType;
-use App\Modules\HR\Models\EmploymentContract;
+use App\Modules\HR\Models\Employee;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+
+function hrArchivedContractRecord(string $table, array $attributes): Model
+{
+    $record = new class extends Model
+    {
+        public $timestamps = false;
+    };
+    $record->setTable($table);
+    $record->forceFill($attributes)->save();
+
+    return $record;
+}
+
+function hrArchivedContractType(array $attributes = []): Model
+{
+    return hrArchivedContractRecord('hr_contract_types', array_replace([
+        'code' => 'ARCHIVE-'.Str::random(12), 'name' => 'Archived contract type',
+        'reminder_days' => json_encode([30, 7]),
+    ], $attributes));
+}
+
+function hrArchivedContract(): Model
+{
+    return hrArchivedContractRecord('hr_contracts', [
+        'employee_id' => Employee::factory()->create()->id,
+        'number' => 'ARCHIVE-'.Str::random(12), 'created_by' => User::factory()->create()->id,
+    ]);
+}
 
 function hrContractMigration(): Migration
 {
@@ -32,19 +56,19 @@ it('creates the contract schema on a fresh database', function (): void {
 });
 
 it('registers a previously unrecorded migration without changing existing contract records', function (): void {
-    $type = ContractType::factory()->create();
-    $contract = EmploymentContract::factory()->create();
+    $type = hrArchivedContractType();
+    $contract = hrArchivedContract();
     $reviewer = User::factory()->create();
-    $revision = ContractRevision::query()->create([
+    $revision = hrArchivedContractRecord('hr_contract_revisions', [
         'contract_id' => $contract->id, 'contract_type_id' => $type->id,
         'request_key' => (string) Str::uuid(), 'request_fingerprint' => hash('sha256', 'existing revision'),
         'kind' => 'initial', 'effective_on' => '2026-01-01', 'starts_on' => '2026-01-01', 'ends_on' => '2026-12-31',
-        'type_snapshot' => ['code' => $type->code], 'reason' => 'Existing contract agreement', 'created_by' => $contract->created_by,
+        'type_snapshot' => json_encode(['code' => $type->code]), 'reason' => 'Existing contract agreement', 'created_by' => $contract->created_by,
     ]);
-    $decision = ContractDecision::query()->create([
+    $decision = hrArchivedContractRecord('hr_contract_approvals', [
         'revision_id' => $revision->id, 'reviewed_by' => $reviewer->id, 'decision' => 'approved', 'reason' => 'Existing approval',
     ]);
-    $alert = ContractAlert::query()->create([
+    $alert = hrArchivedContractRecord('hr_contract_alerts', [
         'revision_id' => $revision->id, 'recipient_id' => $reviewer->id, 'threshold_days' => 30,
         'expires_on' => '2026-12-31', 'created_at' => now(),
     ]);
@@ -67,7 +91,7 @@ it('registers a previously unrecorded migration without changing existing contra
 });
 
 it('resumes a partial installation and preserves the existing contract types', function (): void {
-    $type = ContractType::factory()->create(['code' => 'EXISTING', 'reminder_days' => [30, 7]]);
+    $type = hrArchivedContractType(['code' => 'EXISTING']);
     $original = $type->fresh()->getAttributes();
     foreach (['hr_contract_alerts', 'hr_contract_approvals', 'hr_contract_revisions', 'hr_contracts'] as $table) {
         Schema::drop($table);
@@ -82,11 +106,11 @@ it('resumes a partial installation and preserves the existing contract types', f
     foreach (['hr_contracts', 'hr_contract_revisions', 'hr_contract_approvals', 'hr_contract_alerts'] as $table) {
         expect(Schema::hasTable($table))->toBeTrue();
     }
-    expect(EmploymentContract::factory()->create()->exists)->toBeTrue();
+    expect(hrArchivedContract()->exists)->toBeTrue();
 });
 
 it('reports incompatible existing columns without replacing the existing table', function (): void {
-    $type = ContractType::factory()->create(['code' => 'LEGACY', 'name' => 'Preserved legacy type']);
+    $type = hrArchivedContractType(['code' => 'LEGACY', 'name' => 'Preserved legacy type']);
     Schema::table('hr_contract_types', function (Blueprint $table): void {
         $table->dropColumn('requires_end');
     });

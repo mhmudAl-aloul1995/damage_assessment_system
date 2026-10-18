@@ -143,4 +143,3 @@ Schedule::command('app:backup-database')
     ->appendOutputTo(storage_path('logs/schedule.log'));
 
 Schedule::command('hr:prune-attendance-exports')->daily()->withoutOverlapping()->name('hr-expired-attendance-exports');
-Schedule::command('hr:notify-contract-expiry')->dailyAt('08:00')->timezone(config('hr.timezone'))->withoutOverlapping()->name('hr-contract-expiry-reminders');

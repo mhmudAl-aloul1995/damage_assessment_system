@@ -176,7 +176,7 @@ it('rejects ordinary web sessions on signed native attendance endpoints', functi
 it('seeds HR grants idempotently without assigning them to existing roles', function (): void {
     $role = Role::findOrCreate('Database Officer', 'web');
     $this->seed(HrPermissionsSeeder::class);
-    expect(Spatie\Permission\Models\Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(34)
+    expect(Spatie\Permission\Models\Permission::query()->where('name', 'like', 'hr.%')->count())->toBe(16)
         ->and($role->fresh()->permissions)->toHaveCount(0);
 });
 

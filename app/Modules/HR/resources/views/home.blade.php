@@ -1,12 +1,12 @@
 @extends('layouts.app')
-@section('title', 'الموارد البشرية HR')
-@section('pageName', 'الرئيسية — الموارد البشرية')
+@section('title', 'الحضور والانصراف HR')
+@section('pageName', 'الرئيسية — الحضور والانصراف')
 @section('content')
 <div dir="rtl" lang="ar" class="d-flex flex-column gap-6">
     <div class="card">
         <div class="card-body p-lg-10">
-            <span class="badge badge-light-primary mb-4">الموارد البشرية HR</span>
-            <h1 class="fs-2 fw-bold mb-3">أهلاً بك في الموارد البشرية</h1>
+            <span class="badge badge-light-primary mb-4">الحضور والانصراف HR</span>
+            <h1 class="fs-2 fw-bold mb-3">متابعة الحضور والانصراف</h1>
             <p class="text-muted fs-5 mb-6">ابدأ بمتابعة حضور الموظفين وانصرافهم من مكان واحد.</p>
             <a class="btn btn-primary" href="{{ route('hr.attendance.index') }}">فتح شاشة الحضور</a>
         </div>
