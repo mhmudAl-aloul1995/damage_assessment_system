@@ -28,12 +28,13 @@ it('boots each module from its own provider and resources', function (string $ke
     ['damage_assessment', 'DamageAssessment', 'damage-assessment::dashboard.damageAssessment'],
     ['damage_assessment_borrowers', 'DamageAssessmentBorrowers', 'damage-assessment-borrowers::index'],
     ['heks', 'Heks', 'heks::dashboard'],
+    ['reh', 'Reh', 'reh::workspace'],
 ]);
 
 it('loads all module migration paths without duplicate migration names', function (): void {
     $paths = app('migrator')->paths();
 
-    foreach (['DamageAssessment', 'DamageAssessmentBorrowers', 'Heks'] as $module) {
+    foreach (['DamageAssessment', 'DamageAssessmentBorrowers', 'Heks', 'Reh'] as $module) {
         expect(array_map(fn (string $path): string => str_replace('\\', '/', $path), $paths))
             ->toContain(str_replace('\\', '/', app_path('Modules/'.$module.'/database/migrations')));
     }
@@ -99,7 +100,7 @@ it('loads module configuration and merges navigation into the shared sidebar', f
     expect(config('heks_kobo.services.heks_main.normalized_handler'))->toBe('main');
 
     $sidebar = collect(config('sidebar'));
-    foreach (['damage_assessment', 'damage_assessment_borrowers', 'heks', 'administration'] as $module) {
+    foreach (['damage_assessment', 'damage_assessment_borrowers', 'heks', 'reh', 'administration'] as $module) {
         expect($sidebar->where('module', $module))->not->toBeEmpty();
     }
 
@@ -162,7 +163,7 @@ it('keeps module routes available when configuration and routes are cached', fun
 
         expect($cached)->toHaveCount(count($uncached));
 
-        foreach (['damageAssessment.index', 'damage-assessment-borrowers.index', 'heks.dashboard', 'api.heks.kobo-webhook.store', 'api.arcgis.csos.webhook'] as $name) {
+        foreach (['damageAssessment.index', 'damage-assessment-borrowers.index', 'heks.dashboard', 'reh.index', 'reh.data', 'api.heks.kobo-webhook.store', 'api.arcgis.csos.webhook'] as $name) {
             expect(collect($cached)->firstWhere('name', $name))
                 ->toBe(collect($uncached)->firstWhere('name', $name));
         }

@@ -1,0 +1,2756 @@
+{
+  "fields": {
+    "Field_status": {
+      "type": "calculate",
+      "label": "Field_status",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "AssignedTo": {
+      "type": "text",
+      "label": "المستخدم المسند إليه المبنى",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "Old_objectID": {
+      "type": "integer",
+      "label": "معرّف المبنى السابق",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "objectid": {
+      "type": "text",
+      "label": "معرّف السجل في الطبقة",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "longitude": {
+      "type": "decimal",
+      "label": "خط الطول",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "latitude": {
+      "type": "decimal",
+      "label": "دائرة العرض",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "area_m2": {
+      "type": "decimal",
+      "label": "مساحة المبنى بالمتر المربع",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "collected_by_ip": {
+      "type": "text",
+      "label": "البيانات مجمعة من",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "collector_display_ip": {
+      "type": "calculate",
+      "label": "collector_display_ip",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "submission_date": {
+      "type": "dateTime",
+      "label": "تاريخ وصول الإرسال للخادم",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "form_start_time": {
+      "type": "dateTime",
+      "label": "وقت بدء التعبئة من سؤال السلامة الإنشائية",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "form_end_time": {
+      "type": "end",
+      "label": "وقت إنهاء النموذج",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "form_duration_minutes": {
+      "type": "calculate",
+      "label": "مدة تعبئة النموذج بالدقائق",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_instructions",
+        "label": "📋 تعليمات الزيارة"
+      }
+    },
+    "engineer_name": {
+      "type": "select_one engineer",
+      "label": "اسم المهندس",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_details",
+        "label": "1 · بيانات الزيارة"
+      }
+    },
+    "social_worker_name": {
+      "type": "select_one researcher",
+      "label": "اسم الباحث/ة الاجتماعي/ة",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_details",
+        "label": "1 · بيانات الزيارة"
+      }
+    },
+    "visit_date": {
+      "type": "date",
+      "label": "تاريخ الزيارة",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_visit_details",
+        "label": "1 · بيانات الزيارة"
+      }
+    },
+    "governorate": {
+      "type": "select_one governorate",
+      "label": "المحافظة",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "neighborhood": {
+      "type": "select_one neighborhood",
+      "label": "الحي",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "building_name": {
+      "type": "text",
+      "label": "اسم المبنى",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "location": {
+      "type": "geoshape",
+      "label": "حدود المبنى",
+      "hint": "حدود المبنى؛ يمكن رسمها أو تعديلها على الخريطة.",
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "building_floor_count": {
+      "type": "integer",
+      "label": "عدد طوابق المبنى",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "target_unit_count": {
+      "type": "integer",
+      "label": "عدد الوحدات السكنية المستهدفة بهذا المبنى",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "building_photo": {
+      "type": "image",
+      "label": "صورة عامة للمبنى",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_details",
+        "label": "2 · تعريف المبنى"
+      }
+    },
+    "building_structurally_safe": {
+      "type": "select_one yes_no",
+      "label": "هل المبنى آمن إنشائيًا للدخول؟",
+      "hint": "تصدعات خطيرة، خطر انهيار في الأعمدة أو الجسور أو الاسقف",
+      "scope": "building",
+      "group": {
+        "name": "group_building_safety",
+        "label": "3 · بوابات سلامة المبنى"
+      }
+    },
+    "building_uxo_present": {
+      "type": "select_one yes_no",
+      "label": "هل توجد مؤشرات على ذخائر غير منفجرة أو مخلفات حرب؟",
+      "hint": "أجسام مشبوهة، ذخائر ظاهرة، مخلفات حرب",
+      "scope": "building",
+      "group": {
+        "name": "group_building_safety",
+        "label": "3 · بوابات سلامة المبنى"
+      }
+    },
+    "building_dangerous_debris": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد ركام ضخم أو خطر يمنع الوصول للمبنى؟",
+      "hint": "ركام آيل للسقوط فوق المدخل/الممر، خطر انهيار مبنى مجاور، ركام يعيق الوصول الآمن",
+      "scope": "building",
+      "group": {
+        "name": "group_building_safety",
+        "label": "3 · بوابات سلامة المبنى"
+      }
+    },
+    "building_exclusion_photo": {
+      "type": "image",
+      "label": "صورة توثّق سبب الاستبعاد",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_excl_photo",
+        "label": "توثيق استبعاد المبنى"
+      }
+    },
+    "building_exclusion_reason": {
+      "type": "text",
+      "label": "بيان سبب الاستبعاد",
+      "hint": "الحد الأقصى 2000 حرف.",
+      "scope": "building",
+      "group": {
+        "name": "group_building_safety",
+        "label": "3 · بوابات سلامة المبنى"
+      }
+    },
+    "building_referral_types": {
+      "type": "select_multiple referral_type",
+      "label": "نوع الإحالة المطلوبة",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_building_safety",
+        "label": "3 · بوابات سلامة المبنى"
+      }
+    },
+    "water_network_connected": {
+      "type": "select_one yes_no_unknown",
+      "label": "شبكة المياه متصلة؟",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_neighborhood_services",
+        "label": "4 · البنية التحتية للحي"
+      }
+    },
+    "sewage_network_connected": {
+      "type": "select_one yes_no_unknown",
+      "label": "شبكة الصرف الصحي متصلة؟",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_neighborhood_services",
+        "label": "4 · البنية التحتية للحي"
+      }
+    },
+    "electricity_available": {
+      "type": "select_one yes_no_unknown",
+      "label": "التيار الكهربائي متوفر؟",
+      "hint": null,
+      "scope": "building",
+      "group": {
+        "name": "group_neighborhood_services",
+        "label": "4 · البنية التحتية للحي"
+      }
+    },
+    "unit_selection": {
+      "type": "select_one_from_file prior_units.csv",
+      "label": "اختر الوحدة",
+      "hint": "★ وحدة مستهدفة ذات أولوية.",
+      "scope": "unit",
+      "group": null
+    },
+    "floor_number": {
+      "type": "integer",
+      "label": "رقم الطابق (0 = أرضي)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_identification",
+        "label": "5.1 · تعريف الوحدة  🔧"
+      }
+    },
+    "apartment_number": {
+      "type": "integer",
+      "label": "رقم الشقة في هذا الطابق",
+      "hint": "تحقّق يدويًا أنك لم تسجّل هذه الوحدة سابقًا ضمن نفس زيارة المبنى.",
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_identification",
+        "label": "5.1 · تعريف الوحدة  🔧"
+      }
+    },
+    "consent_given": {
+      "type": "select_one yes_no",
+      "label": "هل تمت الموافقة على المشاركة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_informed_consent",
+        "label": "5.2 · الموافقة المستنيرة"
+      }
+    },
+    "refusal_reason": {
+      "type": "select_one refusal_reason",
+      "label": "سبب عدم الموافقة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_informed_consent",
+        "label": "5.2 · الموافقة المستنيرة"
+      }
+    },
+    "refusal_reason_other": {
+      "type": "text",
+      "label": "اذكر السبب",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_informed_consent",
+        "label": "5.2 · الموافقة المستنيرة"
+      }
+    },
+    "consent_provider_role": {
+      "type": "select_one consent_by",
+      "label": "من أعطى الموافقة؟",
+      "hint": "وثّق صفة المتحدث إن غاب المالك",
+      "scope": "unit",
+      "group": {
+        "name": "group_informed_consent",
+        "label": "5.2 · الموافقة المستنيرة"
+      }
+    },
+    "consent_provider_name": {
+      "type": "text",
+      "label": "اسم من أعطى الموافقة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_informed_consent",
+        "label": "5.2 · الموافقة المستنيرة"
+      }
+    },
+    "consent_provider_mobile": {
+      "type": "text",
+      "label": "رقم جوال من أعطى الموافقة",
+      "hint": "10 أرقام تبدأ بـ 059 أو 056، مثل 0591234567.",
+      "scope": "unit",
+      "group": {
+        "name": "group_informed_consent",
+        "label": "5.2 · الموافقة المستنيرة"
+      }
+    },
+    "power_of_attorney_photo": {
+      "type": "image",
+      "label": "صورة وثيقة التوكيل القانوني",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_attorney_photo",
+        "label": "توثيق الوكالة"
+      }
+    },
+    "accommodation_type": {
+      "type": "select_one accommodation",
+      "label": "نوع المسكن",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_characteristics",
+        "label": "5.3 · خصائص الوحدة  🔧"
+      }
+    },
+    "accommodation_type_other": {
+      "type": "text",
+      "label": "اذكر نوع المسكن",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_characteristics",
+        "label": "5.3 · خصائص الوحدة  🔧"
+      }
+    },
+    "unit_needs_intervention": {
+      "type": "select_one yes_no",
+      "label": "هل الوحدة تحتاج إلى تدخل؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "prior_project_assistance": {
+      "type": "select_one yes_no",
+      "label": "هل استفاد المستفيد أو الوحدة سابقًا من هذا المشروع أو مشروع آخر؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "prior_assistance_notes": {
+      "type": "text",
+      "label": "ملاحظة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_safe_to_enter": {
+      "type": "select_one yes_no",
+      "label": "هل الوحدة آمنة إنشائيًا للدخول؟",
+      "hint": "تصدعات خطيرة، خطر انهيار في الأعمدة أو الجسور أو الاسقف",
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_structural_classification": {
+      "type": "select_one structural_classification",
+      "label": "تصنيف الحالة الإنشائية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_uxo_present": {
+      "type": "select_one yes_no",
+      "label": "هل توجد مؤشرات ذخائر غير منفجرة داخل الوحدة أو محيطها؟",
+      "hint": "أجسام مشبوهة، ذخائر ظاهرة، مخلفات حرب",
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_dangerous_debris_present": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد ركام ضخم أو خطر يمنع الوصول للوحدة؟",
+      "hint": "ركام يسد المدخل أو الدرج ويمنع الوصول الآمن للوحدة",
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "demolished_units_above": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد وحدات هدم كلي فوق الوحدة المستهدفة؟",
+      "hint": "يوجد وحدة هدم كلي فوق الوحدة",
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_exclusion_photo": {
+      "type": "image",
+      "label": "صور توثّق حالة الوحدة / سبب الاستبعاد",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_excl_photo",
+        "label": "توثيق حالة الوحدة عند توقف التقييم"
+      }
+    },
+    "unit_exclusion_reason": {
+      "type": "text",
+      "label": "ملاحظات توقف تقييم الوحدة / سبب الاستبعاد",
+      "hint": "الحد الأقصى 2000 حرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_referral_types": {
+      "type": "select_multiple referral_type",
+      "label": "نوع الإحالة المطلوبة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_safety",
+        "label": "5.4 · بوابات سلامة الوحدة  🔧"
+      }
+    },
+    "unit_area_sqm": {
+      "type": "decimal",
+      "label": "مساحة الوحدة (م²)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_area_occupancy",
+        "label": "5.5 · مساحة الوحدة وإشغالها  🔧"
+      }
+    },
+    "current_unit_occupancy": {
+      "type": "select_one occupancy_now",
+      "label": "من يسكن الوحدة حاليًا؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_area_occupancy",
+        "label": "5.5 · مساحة الوحدة وإشغالها  🔧"
+      }
+    },
+    "hosts_other_households": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد أسر/أفراد في الوحدة غير أسرة المالك؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_area_occupancy",
+        "label": "5.5 · مساحة الوحدة وإشغالها  🔧"
+      }
+    },
+    "tenant_full_name": {
+      "type": "text",
+      "label": "اسم المستأجر",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_tenant_details",
+        "label": "بيانات المستأجر"
+      }
+    },
+    "tenant_mobile": {
+      "type": "text",
+      "label": "رقم جوال المستأجر",
+      "hint": "10 أرقام تبدأ بـ 059 أو 056، مثل 0591234567.",
+      "scope": "unit",
+      "group": {
+        "name": "group_tenant_details",
+        "label": "بيانات المستأجر"
+      }
+    },
+    "tenant_household_size": {
+      "type": "integer",
+      "label": "عدد أفراد أسرة المستأجر",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_tenant_details",
+        "label": "بيانات المستأجر"
+      }
+    },
+    "vacancy_reason": {
+      "type": "select_one vacancy_reason",
+      "label": "ما سبب خلو الوحدة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_area_occupancy",
+        "label": "5.5 · مساحة الوحدة وإشغالها  🔧"
+      }
+    },
+    "vacancy_reason_other": {
+      "type": "text",
+      "label": "اذكر السبب",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_area_occupancy",
+        "label": "5.5 · مساحة الوحدة وإشغالها  🔧"
+      }
+    },
+    "resident_role": {
+      "type": "select_one resident_role",
+      "label": "من هو المقيم؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_unit_area_occupancy",
+        "label": "5.5 · مساحة الوحدة وإشغالها  🔧"
+      }
+    },
+    "resident_relation_auto": {
+      "type": "text",
+      "label": "صلة المقيم بالمالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_relationship": {
+      "type": "text",
+      "label": "حدد صلة المقيم بالمالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_full_name": {
+      "type": "text",
+      "label": "اسم المقيم الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_identity_number": {
+      "type": "text",
+      "label": "رقم هوية المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_identity_photo": {
+      "type": "image",
+      "label": "صورة هوية المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_mobile": {
+      "type": "text",
+      "label": "رقم جوال المقيم",
+      "hint": "10 أرقام تبدأ بـ 059 أو 056، مثل 0591234567.",
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_sex": {
+      "type": "select_one sex",
+      "label": "جنس المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_age": {
+      "type": "integer",
+      "label": "عمر المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "resident_marital_status": {
+      "type": "select_one marital_status",
+      "label": "الحالة الاجتماعية للمقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_resident_details",
+        "label": "بيانات المقيم"
+      }
+    },
+    "owner_full_name": {
+      "type": "text",
+      "label": "اسم المالك الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_identity_number": {
+      "type": "text",
+      "label": "رقم هوية المالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_sex": {
+      "type": "select_one sex",
+      "label": "جنس المالك/المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_marital_status": {
+      "type": "select_one marital_status",
+      "label": "الحالة الاجتماعية للمالك/المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_wives_count": {
+      "type": "select_one owner_wives_count",
+      "label": "عدد زوجات المالك",
+      "hint": "اختر 0 إذا لم يكن للمالك زوجات.",
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife1_full_name": {
+      "type": "text",
+      "label": "اسم الزوجة الأولى الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife1_identity_number": {
+      "type": "text",
+      "label": "رقم هوية الزوجة الأولى",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife2_full_name": {
+      "type": "text",
+      "label": "اسم الزوجة الثانية الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife2_identity_number": {
+      "type": "text",
+      "label": "رقم هوية الزوجة الثانية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife3_full_name": {
+      "type": "text",
+      "label": "اسم الزوجة الثالثة الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife3_identity_number": {
+      "type": "text",
+      "label": "رقم هوية الزوجة الثالثة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife4_full_name": {
+      "type": "text",
+      "label": "اسم الزوجة الرابعة الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "wife4_identity_number": {
+      "type": "text",
+      "label": "رقم هوية الزوجة الرابعة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "husband_full_name": {
+      "type": "text",
+      "label": "اسم زوج المالكة الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "husband_identity_number": {
+      "type": "text",
+      "label": "رقم هوية زوج المالكة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_identity_photo": {
+      "type": "image",
+      "label": "صورة هوية المالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_id_photo",
+        "label": "هوية المالك"
+      }
+    },
+    "owner_mobile": {
+      "type": "text",
+      "label": "رقم جوال المالك",
+      "hint": "10 أرقام تبدأ بـ 059 أو 056، مثل 0591234567.",
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_age": {
+      "type": "integer",
+      "label": "عمر المالك/المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_residence_status": {
+      "type": "select_one owner_residing",
+      "label": "وضع سكن المالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_other_residence": {
+      "type": "text",
+      "label": "حدد مكان إقامة المالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "ownership_proof_status": {
+      "type": "select_one hlp_proof_status",
+      "label": "إثبات الملكية / حقوق السكن (HLP)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "ownership_proof_photo": {
+      "type": "image",
+      "label": "صورة إثبات الملكية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_ownership_photo",
+        "label": "وثائق الملكية"
+      }
+    },
+    "owner_has_chronic_disease": {
+      "type": "select_one yes_no",
+      "label": "هل لدى المالك مرض مزمن؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_chronic_disease_name": {
+      "type": "text",
+      "label": "اسم المرض المزمن",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_has_disability": {
+      "type": "select_one yes_no",
+      "label": "هل لدى المالك إعاقة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_disability_types": {
+      "type": "select_multiple disability_type",
+      "label": "نوع الإعاقة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "owner_pregnant_or_lactating": {
+      "type": "select_one yes_no",
+      "label": "هل المالكة حامل أو مرضع؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "breadwinner_male_owner": {
+      "type": "select_one breadwinner_m",
+      "label": "معيل الأسرة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "breadwinner_female_owner": {
+      "type": "select_one breadwinner_f",
+      "label": "معيل الأسرة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "breadwinner_child_age": {
+      "type": "hidden",
+      "label": "عمر الابن/الابنة المعيل/ة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_owner_details",
+        "label": "5.6 · بيانات المالك (المستفيد)  👤"
+      }
+    },
+    "household_size": {
+      "type": "integer",
+      "label": "إجمالي عدد أفراد أسرة المالك (شاملًا المالك)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_males_under5": {
+      "type": "integer",
+      "label": "عدد الذكور دون سن 5 سنوات",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_males_age5_17": {
+      "type": "integer",
+      "label": "عدد الذكور من 5 إلى 17 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_males_age18_60": {
+      "type": "integer",
+      "label": "عدد الذكور من 18 إلى 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_males_over60": {
+      "type": "integer",
+      "label": "عدد الذكور فوق 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_females_under5": {
+      "type": "integer",
+      "label": "عدد الإناث دون سن 5 سنوات",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_females_age5_17": {
+      "type": "integer",
+      "label": "عدد الإناث من 5 إلى 17 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_females_age18_60": {
+      "type": "integer",
+      "label": "عدد الإناث من 18 إلى 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_females_over60": {
+      "type": "integer",
+      "label": "عدد الإناث فوق 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_chronic_count": {
+      "type": "integer",
+      "label": "كم عدد أفراد الأسرة (شاملاً المالك) المصابين بمرض مزمن؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "household_pregnant_lactating": {
+      "type": "integer",
+      "label": "كم عدد الحوامل أو المرضعات في الأسرة (شاملة المالكة إن انطبق)؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_household_composition",
+        "label": "5.7 · تركيبة الأسرة  👤"
+      }
+    },
+    "other_members_have_disability": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد بالأسرة (باستثناء المالك) أفراد ذوو إعاقة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "other_vision_difficulty_count": {
+      "type": "integer",
+      "label": "بصرية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "other_hearing_difficulty_count": {
+      "type": "integer",
+      "label": "سمعية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "other_walking_difficulty_count": {
+      "type": "integer",
+      "label": "حركية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "other_memory_difficulty_count": {
+      "type": "integer",
+      "label": "إدراكية (تركيز وتذكر)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "other_selfcare_diff_count": {
+      "type": "integer",
+      "label": "عناية ذاتية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "other_communication_diff_count": {
+      "type": "integer",
+      "label": "تواصل",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "nonfood_assistance_recency": {
+      "type": "select_one shelter_assist",
+      "label": "آخر مساعدة مواد غير غذائية (NFI) تلقّتها الأسرة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "shelter_assistance_recency": {
+      "type": "select_one shelter_assist",
+      "label": "آخر مساعدة مأوى تلقّتها الأسرة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "unaccompanied_child_count": {
+      "type": "integer",
+      "label": "عدد الأطفال غير المصحوبين أو المنفصلين عن ذويهم في الأسرة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "household_has_stable_income": {
+      "type": "select_one yes_no",
+      "label": "هل للأسرة دخل ثابت؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "household_protection_risks": {
+      "type": "select_multiple protection_risks",
+      "label": "مخاطر الحماية الناتجة عن الضائقة الاقتصادية (اختر ما ينطبق)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "social_worker_notes_long": {
+      "type": "text",
+      "label": "ملاحظات الباحث/ة الاجتماعي/ة",
+      "hint": "الحد الأقصى 2000 حرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_social_vulnerability",
+        "label": "5.8 · مؤشرات الضعف الاجتماعي  👤"
+      }
+    },
+    "hosted_relationship": {
+      "type": "text",
+      "label": "صلة المستضاف بالمالك",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_full_name": {
+      "type": "text",
+      "label": "اسم المستضاف الرباعي",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_identity_number": {
+      "type": "text",
+      "label": "رقم هوية المستضاف",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_identity_photo": {
+      "type": "image",
+      "label": "صورة هوية المستضاف",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_mobile": {
+      "type": "text",
+      "label": "رقم جوال المستضاف",
+      "hint": "10 أرقام تبدأ بـ 059 أو 056، مثل 0591234567.",
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_sex": {
+      "type": "select_one sex",
+      "label": "جنس المستضاف",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_age": {
+      "type": "integer",
+      "label": "عمر المستضاف",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_marital_status": {
+      "type": "select_one marital_status",
+      "label": "الحالة الاجتماعية للمستضاف",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_hosted_person",
+        "label": "5.9 · بيانات ممثل الأسرة المستضافة (غير أسرة المالك)"
+      }
+    },
+    "hosted_families_count": {
+      "type": "integer",
+      "label": "عدد الأسر المستضافة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "hosted_individuals_count": {
+      "type": "integer",
+      "label": "عدد أفراد الأسرة المستضافة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "displaced_families_count": {
+      "type": "integer",
+      "label": "عدد الأسر النازحة المقيمة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "displaced_individuals_count": {
+      "type": "integer",
+      "label": "عدد أفراد الأسرة النازحة (شاملًا المقيم)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_has_chronic": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد في أسرة المقيم أفراد مصابون بأمراض مزمنة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_chronic_count": {
+      "type": "integer",
+      "label": "عدد الأفراد المصابين بأمراض مزمنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_has_disability": {
+      "type": "select_one yes_no",
+      "label": "هل يوجد في أسرة المقيم أفراد ذوو إعاقة؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_disability_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الإعاقة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_vision_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الصعوبة: بصرية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_hearing_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الصعوبة: سمعية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_walking_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الصعوبة: حركية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_memory_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الصعوبة: إدراكية (تركيز وتذكر)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_selfcare_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الصعوبة: عناية ذاتية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_communication_count": {
+      "type": "integer",
+      "label": "عدد الأفراد ذوي الصعوبة: تواصل",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_breadwinner_m": {
+      "type": "select_one breadwinner_m",
+      "label": "من معيل أسرة المقيم؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_breadwinner_f": {
+      "type": "select_one breadwinner_f",
+      "label": "من معيل أسرة المقيم؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_males_under5": {
+      "type": "integer",
+      "label": "عدد الذكور دون سن 5 سنوات",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_males_age5_17": {
+      "type": "integer",
+      "label": "عدد الذكور من 5 إلى 17 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_males_age18_60": {
+      "type": "integer",
+      "label": "عدد الذكور من 18 إلى 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_males_over60": {
+      "type": "integer",
+      "label": "عدد الذكور فوق 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_females_under5": {
+      "type": "integer",
+      "label": "عدد الإناث دون سن 5 سنوات",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_females_age5_17": {
+      "type": "integer",
+      "label": "عدد الإناث من 5 إلى 17 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_females_age18_60": {
+      "type": "integer",
+      "label": "عدد الإناث من 18 إلى 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_females_over60": {
+      "type": "integer",
+      "label": "عدد الإناث فوق 60 سنة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_composition",
+        "label": "5.10.1 · تركيبة أسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_pregnant_lactating": {
+      "type": "integer",
+      "label": "عدد الحوامل أو المرضعات في أسرة المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_family",
+        "label": "5.10 · بيانات أسرة المقيم / المستضاف (غير أسرة المالك)"
+      }
+    },
+    "nonowner_nfi_recency": {
+      "type": "select_one nonowner_aid_recency",
+      "label": "آخر مساعدة مواد غير غذائية تلقّتها أسرة المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_vulnerability",
+        "label": "5.10.2 · مؤشرات الضعف الاجتماعي لأسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_shelter_recency": {
+      "type": "select_one nonowner_aid_recency",
+      "label": "آخر مساعدة مأوى تلقّتها أسرة المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_vulnerability",
+        "label": "5.10.2 · مؤشرات الضعف الاجتماعي لأسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_unaccompanied_count": {
+      "type": "integer",
+      "label": "عدد الأطفال غير المصحوبين أو المنفصلين عن ذويهم في أسرة المقيم",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_vulnerability",
+        "label": "5.10.2 · مؤشرات الضعف الاجتماعي لأسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_has_stable_income": {
+      "type": "select_one yes_no",
+      "label": "هل لأسرة المقيم دخل ثابت؟",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_vulnerability",
+        "label": "5.10.2 · مؤشرات الضعف الاجتماعي لأسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_protection_risks": {
+      "type": "select_multiple nonowner_protection_risks",
+      "label": "مخاطر الحماية الناتجة عن الضائقة الاقتصادية لأسرة المقيم (اختر ما ينطبق)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_vulnerability",
+        "label": "5.10.2 · مؤشرات الضعف الاجتماعي لأسرة المقيم / المستضاف"
+      }
+    },
+    "nonowner_social_notes": {
+      "type": "text",
+      "label": "ملاحظات الباحث/ة الاجتماعي/ة عن أسرة المقيم",
+      "hint": "الحد الأقصى 2000 حرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_nonowner_vulnerability",
+        "label": "5.10.2 · مؤشرات الضعف الاجتماعي لأسرة المقيم / المستضاف"
+      }
+    },
+    "boq_1_1_water_tank_repair_qty": {
+      "type": "integer",
+      "label": "1.1 — صيانة خزان المياه",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tank_sewer_repairs",
+        "label": "5.12 · أعمال التأهيل والصيانة  🔧"
+      }
+    },
+    "boq_1_2_sewer_cleaning_qty": {
+      "type": "integer",
+      "label": "1.2 — تنظيف تمديدات شبكة الصرف الصحي الداخلية والخارجية",
+      "hint": "الوحدة: مقطوعية",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tank_sewer_repairs",
+        "label": "5.12 · أعمال التأهيل والصيانة  🔧"
+      }
+    },
+    "boq_2_1_pallet_wall_qty": {
+      "type": "decimal",
+      "label": "2.1 — توريد وتركيب حائط مؤقت من المشاطيح الخشبية (بدون شادر) (EX-WALL)",
+      "hint": "الوحدة: م.ط\n\nتوريد وتركيب حائط مؤقت من المشاطيح الخشبية (بدون شادر) (EX-WALL)\nتوريد وتركيب حائط قاطع مؤقت بارتفاع لا يقل عن 1.20 م باستخدام مشاطيح خشبية معتمدة وفق نموذج (EX-Wall). ويشمل العمل: رص وتجميع المشاطيح وتثبيت قوائم رأسية مقطع (5 × 5 سم) بين الوحدات (وفي حال التدبيل للوصول لمقطع (5 × 5 سم) يتم الربط بالغراء ودبابيس بطول لا يقل عن 3.5 سم مع ضمان تداخل لا يقل عن 30 سم عند الوصل)، وتثبيت ما لا يقل عن 3 سكك/ألواح شد أفقية مقطع (2.5 × 5.0 سم) لتدعيم الجدار، والتثبيت بالأرضيات والجدران والأسقف بالبراغي والزوايا المعدنية مع ضبط الشاقولية والاستواء. الكيل هندسياً بالمتر الطولي (م.ط) للارتفاع المعتمد. ويشمل السعر المشاطيح، القوائم، ألواح الشد، الزوايا، البراغي والمثبتات، المصنعيات، والعدد، وكافة ما يلزم لإتمام العمل حسب الأصول الفنية والمخططات وتعليمات المهندس المشرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_2_2_pallet_tarp_wall_qty": {
+      "type": "decimal",
+      "label": "2.2 — حائط مؤقت من المشاطيح الخشبية مع شادر (EX-WALL)",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_2_3_partition_wall_qty": {
+      "type": "decimal",
+      "label": "2.3 — توريد وتنفيذ وتركيب حائط مؤقت نموذج (بدون شادر) (EX-IN Wall)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_2_4_tarp_partition_qty": {
+      "type": "decimal",
+      "label": "2.4 — حائط مؤقت نموذج (EX-IN Wall) مع شادر",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_2_5_used_block_20cm_qty": {
+      "type": "decimal",
+      "label": "2.5 — توريد وبناء حائط بلوك إسمنتي مستخدم (40×20×20 سم)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_2_6_used_block_15cm_qty": {
+      "type": "decimal",
+      "label": "2.6 — كالسابق ولكن بلوك اسمنتي مستخدم (40×20×15 سم)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_2_7_wall_rebuild_qty": {
+      "type": "decimal",
+      "label": "2.7 — إعادة بناء حائط بلوك إسمنتي",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_walls",
+        "label": "5.13 · أعمال الحوائط والقواطع  🔧"
+      }
+    },
+    "boq_3_1_wood_door_frame_qty": {
+      "type": "integer",
+      "label": "3.1 — توريد وتركيب باب خشبي كبس داخلي مع حلق نموذج (W-DOOR)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_2_used_door_leaf_qty": {
+      "type": "integer",
+      "label": "3.2 — توريد وتركيب ضلفة باب خشب كبس مستخدم بحالة جيدة",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_6_door_leaf_repair_qty": {
+      "type": "integer",
+      "label": "3.3 — توريد وتركيب ضلفة باب كبس نموذج (W-DOOR) جديدة مع صيانة ودهان الحلق القائم",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_3_wood_door_frame_qty": {
+      "type": "integer",
+      "label": "3.4 — توريد وتركيب حلق باب خشبي",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_4_used_door_frame_qty": {
+      "type": "integer",
+      "label": "3.5 — توريد وتركيب حلق باب خشب مستخدم بحالة جيدة",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_5_wood_door_repair_qty": {
+      "type": "integer",
+      "label": "3.6 — صيانة وتأهيل باب خشبي قائم",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_7_pallet_wood_door_qty": {
+      "type": "integer",
+      "label": "3.7 — توريد وتركيب باب خشبي مع الحلق من خشب المشاطيح (PW-DOOR)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_8_tarp_wood_door_qty": {
+      "type": "decimal",
+      "label": "3.8 — توريد وتركيب باب خشبي مكسو بالشادر (TR-DOOR)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_9_steel_door_qty": {
+      "type": "decimal",
+      "label": "3.9 — توريد وتصنيع ودهان وتركيب باب صاج حديد مقوّى (MTL-DOOR)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_10_metal_door_repair_qty": {
+      "type": "integer",
+      "label": "3.10 — صيانة وتأهيل الأبواب المعدنية القائمة (عرض 80–100 سم، ارتفاع 2.1–2.3 م)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_11_alum_fiber_door_qty": {
+      "type": "integer",
+      "label": "3.11 — توريد وتركيب باب ألمنيوم مقطع (1080) مع حشوات فيبرجلاس (AL-DOOR)",
+      "hint": "الوحدة: عدد\n\nتوريد وتصنيع وتركيب باب ألمنيوم مقطع معتمد (نوع 1080) باللون المعتمد، بمقاس تقريبي (70–90 × 220 سم) أو حسب الموقع، مزود بحشوات ألواح فيبرجلاس (Fiberglass Panels) وزجاج مبزر بسمك لا يقل عن 4 ملم، ويشمل العمل: فك وإزالة الحلق والباب القائم (إن وجد) وترحيل المخلفات، ومعالجة وتهيئة الفتحة الإنشائية، وتثبيت الإطار ببراغي مجلفنة، وتوريد وتركيب عدد (3) مفصلات ألمنيوم ثقيلة، ومقبضي إغلاق ألمونيوم، وتوريد وتركيب القشاط المطاطي، وتسكيك وضبط حركة الضلفة لضمان الإغلاق والانطباق التام، وحقن الفواصل من الداخل والخارج، والتنظيف والتشطيب النهائي، ويشمل السعر مقاطع الألمنيوم، ألواح الفيبرجلاس/الزجاج، المقابض والإكسسوارات، براغي التثبيت، القشاط، أعمال الفك والترميم، المصنعيات، والعدد، وكل ما يلزم لإتمام العمل وفقاً للأصول الفنية وتعليمات المهندس المشرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_12_alum_fiber_repair_qty": {
+      "type": "integer",
+      "label": "3.12 — صيانة وتأهيل باب ألمنيوم قائم وتكسيته بألواح فيبرجلاس",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_3_13_alum_tarp_repair_qty": {
+      "type": "integer",
+      "label": "3.13 — صيانة وتأهيل باب ألمنيوم قائم وتكسيته بقماش مشمع (شادر)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_doors",
+        "label": "5.14 · أعمال الأبواب  🔧"
+      }
+    },
+    "boq_4_1_tarp_wood_window_qty": {
+      "type": "decimal",
+      "label": "4.1 — توريد وتركيب شباك خشبي مكسو بالشادر والنايلون (CV-WINDOW)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_windows",
+        "label": "5.15 · أعمال الشبابيك  🔧"
+      }
+    },
+    "boq_4_2_tarp_alum_window_qty": {
+      "type": "decimal",
+      "label": "4.2 — توريد وتصنيع وتركيب شباك ألمنيوم مكسو بقماش مشمع (شادر) أو نايلون",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_windows",
+        "label": "5.15 · أعمال الشبابيك  🔧"
+      }
+    },
+    "boq_4_3_louver_repair_qty": {
+      "type": "decimal",
+      "label": "4.3 — صيانة وتأهيل شبابيك ألمنيوم شرائح قلاب (لوفر) لزوم الأدراج والحمامات",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_windows",
+        "label": "5.15 · أعمال الشبابيك  🔧"
+      }
+    },
+    "boq_4_4_nylon_win_repair_qty": {
+      "type": "decimal",
+      "label": "4.4 — صيانة شباك ألمنيوم قائم مع توريد وتثبيت نايلون مقوّى غير كاشف",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_windows",
+        "label": "5.15 · أعمال الشبابيك  🔧"
+      }
+    },
+    "boq_4_5_alum_louver_qty": {
+      "type": "decimal",
+      "label": "4.5 — توريد وتركيب شبابيك ألمنيوم مقطع لوفر لزوم الحمامات",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_windows",
+        "label": "5.15 · أعمال الشبابيك  🔧"
+      }
+    },
+    "boq_5_1_wall_roof_tarp_qty": {
+      "type": "decimal",
+      "label": "5.1 — توريد وتركيب قماش مشمّع (شوادر) للحوائط والأسقف",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_5_2_fabric_cladding_qty": {
+      "type": "decimal",
+      "label": "5.2 — توريد وتركيب كسوة قماش للحوائط والأسقف (مع التوصيل بالخياطة)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_5_3_roof_tarp_drain_qty": {
+      "type": "decimal",
+      "label": "5.3 — تبطين الأسقف بشادر قماش مشمع وتصريف المياه بسيفون زنبركي 2 إنش",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_5_4_wood_closure_qty": {
+      "type": "decimal",
+      "label": "5.4 — إغلاق وسد الفتحات والثغرات بالحوائط والأرضيات بالألواح الخشبية",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_5_5_roof_gap_sealing_qty": {
+      "type": "decimal",
+      "label": "5.5 — إغلاق فتحات الأسقف وحمايتها من تسرب المياه",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_5_6_timber_support_qty": {
+      "type": "decimal",
+      "label": "5.6 — توريد وتركيب هيكل خشبي لتدعيم القواطع والعناصر المختلفة",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_5_7_timber_5x5cm_qty": {
+      "type": "decimal",
+      "label": "5.7 — كالسابق ولكن مقطع 5*5 سم",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_coverings_timber",
+        "label": "5.16 · أعمال التبطين وإغلاق الفتحات والتدعيم  🔧"
+      }
+    },
+    "boq_6_1_marble_counter_qty": {
+      "type": "decimal",
+      "label": "6.1 — توريد وتركيب طاولة للمطبخ (KIT-MRBL)",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_2_kitchen_counter_qty": {
+      "type": "decimal",
+      "label": "6.2 — توريد وتركيب طاولة للمطبخ",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_3_stone_2cm_qty": {
+      "type": "decimal",
+      "label": "6.3 — توريد وتركيب جرانيت روزابيتا أو رخام خليلي بسمك 2 سم (جلسات، عتبات، أسطح)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_4_metal_counter_qty": {
+      "type": "decimal",
+      "label": "6.4 — توريد وتركيب سطح مطبخ رخام/جرانيت على هيكل معدني مجلفن (KIT-MTL)",
+      "hint": "الوحدة: م.ط\n\nتوريد وتركيب سطح مطبخ رخام/جرانيت على هيكل معدني مجلفن (KIT-MTL)\nتوريد وتصنيع وتركيب أسطح مطابخ ومجالي بسمك 2 سم من جرانيت روزابيتا أو رخام خليلي نخب أول وفق نموذج (Drawing)، مثبتة على هيكل وحامل معدني بارتفاع 90 سم أو بالارتفاع القائم، ويشمل العمل: تصنيع الهيكل الحامل من زوايا حديد مجلفن بمقطع لا يقل عن (40× 40×3 ملم) بأرجل وقوائم رأسية لا تزيد المسافة بينها عن 1م وعوارض ودعامات أفقية وتكتيف لضمان الصلابة والثبات، يشمل أعمال القص، اللحام ومعالجة أماكن اللحام بدهان برايمر بالزنك ودهان زيتي معتمد وجهين، وتثبيت الأرجل بالأرضيات والجدران بإحكام باستخدام براغي، وشطف وبرم وصقل الحواف الخارجية البارزة للسطح وتزويده بحافة صد للمياه في محيط السطح بعرض لا يقل عن 3 سم، وتجهيز فتحات الأحواض والخلاطات وتثبيت الحوض وتوصيل الخلاط بمصدر التغذية والحوض بنقطة التصريف، وتثبيت وإسناد الرخام على الهيكل المعدني باستخدام مواد لاصقة مرنة لضمان التثبيت المحكم وامتصاص الإجهادات والصدمات وتشكيل حماية فعالة للسطح من الكسر والتخلخل، وترويب وسد الفواصل بملتينة مطابقة للون مع المعالجة حول الأحواض والتلميع، ويشمل السعر الحديد المجلفن، الرخام، الدهانات، اللواصق، الخردوات، المصنعيات، والعدد، وكل ما يلزم لإتمام العمل بالكامل وفقاً للأصول وتعليمات المهندس المشرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_5_alum_counter_qty": {
+      "type": "decimal",
+      "label": "6.5 — توريد وتصنيع وتركيب طاولات مطبخ بهيكل ألمنيوم وسطح بورسلان (KIT-AL)",
+      "hint": "الوحدة: م.ط\n\nتوريد وتصنيع وتركيب طاولات مطبخ بهيكل ألمنيوم وسطح بورسلان (KIT-AL)\nتوريد وتصنيع وتركيب طاولات ومجالي مطابخ بعرض قياسي (55–60 سم) وارتفاع (90 سم)، تتكون من هيكل حامل وقواطع وعوارض من قضبان وتيوبات ألمنيوم مقطع (2 × 4 سم) باللون المعتمد ومثبتة بالأرضيات والجدران بإحكام، مع سطح علوي مصنع من بلاط بورسلان نخب أول بقياس (60×120سم)، وتزويد السطح بحافة أمامية لصد المياه ووزرة حماية خلفية علوية (Backsplash) مصنعة من زوايا أو قضبان ألمنيوم، مع إضافة وتدعيم بروفيل ألمنيوم خلف الحوض مخصص لتثبيت الحنفية/الخلاط عليه، ويشمل العمل: فك المجلى/الرخام القائم بعناية في حال الاستبدال وترحيل المخلفات، وتثبيت البورسلان على الهيكل بلواصق مرنة لامتصاص الإجهادات، وتجهيز وقص فتحات الأحواض والخلاطات بدقة، وتركيب وتثبيت الحوض (إن وجد) ومعالجة محيطه، وتثبيت الحنفية/الخلاط (إن وجدت) على البروفيل الخلفي أو السطح وربطها بأقرب مصدر تغذية، وتوصيل سيفونات الحوض بشبكة التصريف واختبار التوصيلات من أي تسريب، وسد وترويب الفواصل بروبة للعزل، والتنظيف والتلميع، ويشمل السعر مقاطع وزوايا وبروفيلات الألمنيوم، بلاط البورسلان، اللواصق، مثبتات، أعمال الفك والتفريغ والتركيب، المصنعيات، والعدد، وكل ما يلزم لإتمام العمل بالكامل وفقاً للمخططات والتفاصيل المعتمدة والأصول الفنية وتعليمات المهندس المشرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_6_sink_repair_qty": {
+      "type": "decimal",
+      "label": "6.6 — صيانة وتأهيل مجلى المطبخ القائم وإعادة تثبيت الحوض والملحقات",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_7_porcelain_tiles_qty": {
+      "type": "decimal",
+      "label": "6.7 — توريد وتركيب بلاط بورسلان للأرضيات أو الحوائط (بالمونة الإسمنتية)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_6_8_mosaic_floor_tiles_qty": {
+      "type": "decimal",
+      "label": "6.8 — توريد وتركيب بلاط موزايكو (بلدي) للأرضيات",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_kitchen_tiles",
+        "label": "5.17 · أعمال الرخام والبلاط  🔧"
+      }
+    },
+    "boq_7_1_interior_paint_qty": {
+      "type": "decimal",
+      "label": "7.1 — توريد وتنفيذ أعمال الدهان الداخلي للأسقف والجدران والأحزمة الخرسانية",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_painting",
+        "label": "5.18 · أعمال الدهانات  🔧"
+      }
+    },
+    "boq_7_2_door_oil_paint_qty": {
+      "type": "integer",
+      "label": "7.2 — تنفيذ أعمال الدهان الزيتي للأبواب الخشبية",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_painting",
+        "label": "5.18 · أعمال الدهانات  🔧"
+      }
+    },
+    "boq_8_1_roof_metal_sheets_qty": {
+      "type": "decimal",
+      "label": "8.1 — توريد وتركيب ألواح (زينكو / سكوريت)",
+      "hint": "الوحدة: م²",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_metal_structures",
+        "label": "5.19 · الأعمال المعدنية الإنشائية  🔧"
+      }
+    },
+    "boq_8_2_steel_80x40mm_qty": {
+      "type": "decimal",
+      "label": "8.2 — توريد وتصنيع وتركيب بروفيلات حديد (80×40) وهياكل معدنية (Shop Drawing)",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_metal_structures",
+        "label": "5.19 · الأعمال المعدنية الإنشائية  🔧"
+      }
+    },
+    "boq_8_3_steel_40x40mm_qty": {
+      "type": "decimal",
+      "label": "8.3 — توريد وتصنيع وتركيب بروفيلات (40*40) وهياكل معدنية (Shop Drawing)",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_metal_structures",
+        "label": "5.19 · الأعمال المعدنية الإنشائية  🔧"
+      }
+    },
+    "boq_8_4_steel_20x20mm_qty": {
+      "type": "decimal",
+      "label": "8.4 — توريد وتصنيع وتركيب بروفيلات (20×20) وهياكل معدنية (Shop Drawing)",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_metal_structures",
+        "label": "5.19 · الأعمال المعدنية الإنشائية  🔧"
+      }
+    },
+    "boq_9_1_complete_toilet_qty": {
+      "type": "integer",
+      "label": "9.1 — توريد وتركيب مرحاض إفرنجي مع كامل التوصيلات والملحقات (W.C)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_2_toilet_pan_only_qty": {
+      "type": "integer",
+      "label": "9.2 — كرسي مرحاض إفرنجي فقط",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_3_toilet_cistern_qty": {
+      "type": "integer",
+      "label": "9.3 — صندوق طرد (سيفون) بلاستيكي",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_4_toilet_seat_cover_qty": {
+      "type": "integer",
+      "label": "9.4 — غطاء ومقعد مرحاض بلاستيكي ثقيل",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_5_toilet_spray_qty": {
+      "type": "integer",
+      "label": "9.5 — شطّاف يدوي مع محبس وعلاقة",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_6_toilet_trap_4in_qty": {
+      "type": "integer",
+      "label": "9.6 — توريد وتركيب سيفون زنبركي مرن 4 إنش لكرسي الحمام",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_7_plastic_toilet_qty": {
+      "type": "integer",
+      "label": "9.7 — توريد وتركيب كرسي مرحاض بلاستيكي",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_8_aluminum_toilet_qty": {
+      "type": "integer",
+      "label": "9.8 — توريد وتركيب كرسي مرحاض ألمنيوم",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_9_9_squat_toilet_qty": {
+      "type": "integer",
+      "label": "9.9 — توريد وتركيب مرحاض عربي",
+      "hint": "الوحدة: عدد\n\nتوريد وتركيب وتشغيل مرحاض عربي (أرضي) نخب أول؛ يشمل العمل تهيئة مكان التركيب وقص وإزالة البلاط الزائد بحذر للمحافظة على البلاط القائم، وضبط الميول والمنسوب، والربط المحكم بنقطة التصريف من خلال تركيب كوع تصريف قطر 4 انش (S) مع الجلد المطاطية والربط باستخدام أنابيب UPVC قطر 4 انش شاملة الأكواع والجلد والقطع اللازمة للربط بأقرب خط صرف رأسي أو منهل أرضي ووصلات مناسبة مانعة للتسريب والروائح، والتثبيت بالمونة بمستوى سطح الأرضية (Flush)، ومعالجة الفواصل والمحيط، واختبار الصرف؛ ويشمل السعر المرحاض وأعمال القص والتهيئة والمونة والوصلات والجلد والمعالجة والمصنعيات والعدد وكافة ما يلزم لإتمام العمل حسب الأصول وتعليمات المهندس المشرف",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_toilets",
+        "label": "5.20 · أعمال المراحيض  🔧"
+      }
+    },
+    "boq_10_1_steel_sink_qty": {
+      "type": "integer",
+      "label": "10.1 — توريد وتركيب حوض مجلى مفرد من الستانلس ستيل (Grade 304)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_sinks_taps",
+        "label": "5.21 · أعمال المغاسل والحنفيات  🔧"
+      }
+    },
+    "boq_10_2_ceramic_washbasin_qty": {
+      "type": "integer",
+      "label": "10.2 — توريد وتركيب وفحص وتشغيل مغسلة خزف صيني نخب أول",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_sinks_taps",
+        "label": "5.21 · أعمال المغاسل والحنفيات  🔧"
+      }
+    },
+    "boq_10_3_flex_sink_trap_qty": {
+      "type": "integer",
+      "label": "10.3 — توريد وتركيب سيفون مرن (Flexible Sink Trap)",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_sinks_taps",
+        "label": "5.21 · أعمال المغاسل والحنفيات  🔧"
+      }
+    },
+    "boq_10_4_water_tap_0_5in_qty": {
+      "type": "integer",
+      "label": "10.4 — توريد وتركيب حنفية مياه قطر ½ بوصة مع خط التوصيل",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_sinks_taps",
+        "label": "5.21 · أعمال المغاسل والحنفيات  🔧"
+      }
+    },
+    "boq_10_5_mixer_tap_qty": {
+      "type": "integer",
+      "label": "10.5 — توريد وتركيب خلاط مياه مع خط التوصيل",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_sinks_taps",
+        "label": "5.21 · أعمال المغاسل والحنفيات  🔧"
+      }
+    },
+    "boq_10_6_tap_repair_qty": {
+      "type": "integer",
+      "label": "10.6 — صيانة وتأهيل وتشغيل خلاط مياه أو حنفية قائمة",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_sinks_taps",
+        "label": "5.21 · أعمال المغاسل والحنفيات  🔧"
+      }
+    },
+    "boq_11_1_metal_water_valve_qty": {
+      "type": "integer",
+      "label": "11.1 — توريد وتركيب محبس معدني (قطر ½ أو ¾ بوصة) مع الربط بخط التغذية",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_pipes_valves",
+        "label": "5.22 · التمديدات والمحابس (مواسير وخراطيم)  🔧"
+      }
+    },
+    "boq_11_2_manifold_repair_qty": {
+      "type": "integer",
+      "label": "11.2 — صيانة وتأهيل واختبار مجمع/طبلون توزيع المياه",
+      "hint": "الوحدة: مقطوعية",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_pipes_valves",
+        "label": "5.22 · التمديدات والمحابس (مواسير وخراطيم)  🔧"
+      }
+    },
+    "boq_11_3_upvc_pipe_4in_qty": {
+      "type": "decimal",
+      "label": "11.3 — توريد وتركيب مواسير تصريف UPVC قطر 4 بوصة (110 ملم)",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_pipes_valves",
+        "label": "5.22 · التمديدات والمحابس (مواسير وخراطيم)  🔧"
+      }
+    },
+    "boq_11_4_upvc_pipe_2in_qty": {
+      "type": "decimal",
+      "label": "11.4 — كالسابق ولكن بقطر 2 انش أينما يلزم.",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_pipes_valves",
+        "label": "5.22 · التمديدات والمحابس (مواسير وخراطيم)  🔧"
+      }
+    },
+    "boq_11_5_hose_0_75in_qty": {
+      "type": "decimal",
+      "label": "11.5 — توريد وتركيب خرطوم مرن (بربيش) قطر ¾ بوصة لشبكة المياه",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_pipes_valves",
+        "label": "5.22 · التمديدات والمحابس (مواسير وخراطيم)  🔧"
+      }
+    },
+    "boq_11_6_hose_0_5in_qty": {
+      "type": "decimal",
+      "label": "11.6 — كالسابق ولكن بقطر ½ بوصة.",
+      "hint": "الوحدة: م.ط",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_pipes_valves",
+        "label": "5.22 · التمديدات والمحابس (مواسير وخراطيم)  🔧"
+      }
+    },
+    "boq_12_1_water_tank_1000l_qty": {
+      "type": "integer",
+      "label": "12.1 — توريد وتركيب وتشغيل واختبار وتعقيم خزان مياه سعة 1000 لتر",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tanks_drainage",
+        "label": "5.23 · الخزانات وأعمال الصرف الأرضي  🔧"
+      }
+    },
+    "boq_12_2_water_tank_500l_qty": {
+      "type": "integer",
+      "label": "12.2 — كالسابق ولكن بسعة 500 لتر",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tanks_drainage",
+        "label": "5.23 · الخزانات وأعمال الصرف الأرضي  🔧"
+      }
+    },
+    "boq_12_3_steel_floor_drain_qty": {
+      "type": "integer",
+      "label": "12.3 — توريد وتركيب مصفاة أرضية (صفاية) ستانلس ستيل مع معالجة الأرضيات",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tanks_drainage",
+        "label": "5.23 · الخزانات وأعمال الصرف الأرضي  🔧"
+      }
+    },
+    "boq_12_4_gully_trap_4in_qty": {
+      "type": "integer",
+      "label": "12.4 — توريد وتركيب علبة تجميع (جيلتراب) قطر 4 بوصة لزوم التصريف",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tanks_drainage",
+        "label": "5.23 · الخزانات وأعمال الصرف الأرضي  🔧"
+      }
+    },
+    "boq_12_5_manhole_60cm_qty": {
+      "type": "integer",
+      "label": "12.5 — توريد وتركيب وتشغيل منهل خرساني (منزلي) مسبق الصنع بقطر داخلي 60 سم",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tanks_drainage",
+        "label": "5.23 · الخزانات وأعمال الصرف الأرضي  🔧"
+      }
+    },
+    "boq_12_6_manhole_40cm_qty": {
+      "type": "integer",
+      "label": "12.6 — كالسابق ولكن بقطر داخلي 40 سم أينما يلزم.",
+      "hint": "الوحدة: عدد",
+      "scope": "unit",
+      "group": {
+        "name": "group_boq_tanks_drainage",
+        "label": "5.23 · الخزانات وأعمال الصرف الأرضي  🔧"
+      }
+    },
+    "additional_item_description_1": {
+      "type": "text",
+      "label": "وصف البند الإضافي 1",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "additional_item_quantity_1": {
+      "type": "decimal",
+      "label": "الكمية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "additional_item_description_2": {
+      "type": "text",
+      "label": "وصف البند الإضافي 2",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "additional_item_quantity_2": {
+      "type": "decimal",
+      "label": "الكمية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "additional_item_description_3": {
+      "type": "text",
+      "label": "وصف البند الإضافي 3",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "additional_item_quantity_3": {
+      "type": "decimal",
+      "label": "الكمية",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "intervention_area_sqm": {
+      "type": "decimal",
+      "label": "مساحة التدخل (م²)",
+      "hint": "المساحة القابلة للتدخل حسب التقييم الهندسي",
+      "scope": "unit",
+      "group": {
+        "name": "group_additional_work_items",
+        "label": "5.24 · بنود إضافية غير مدرجة  🔧"
+      }
+    },
+    "unit_overview_photo": {
+      "type": "image",
+      "label": "صورة عامة للوحدة",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "kitchen_photo": {
+      "type": "image",
+      "label": "صورة للمطبخ",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "bathroom_photo": {
+      "type": "image",
+      "label": "صورة للحمام",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "entrance_photo": {
+      "type": "image",
+      "label": "صورة لباب المدخل",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "damaged_walls_photo_1": {
+      "type": "image",
+      "label": "صورة الجدران المتضررة 1",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "damaged_walls_photo_2": {
+      "type": "image",
+      "label": "صورة الجدران المتضررة 2",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "additional_photo_1": {
+      "type": "image",
+      "label": "صورة إضافية (اختياري)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "additional_photo_2": {
+      "type": "image",
+      "label": "صورة إضافية (اختياري)",
+      "hint": null,
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    },
+    "engineer_technical_notes": {
+      "type": "text",
+      "label": "ملاحظات المهندس الفنية",
+      "hint": "الحد الأقصى 2000 حرف.",
+      "scope": "unit",
+      "group": {
+        "name": "group_photo_documentation",
+        "label": "5.25 · التوثيق المصوّر  🔧"
+      }
+    }
+  },
+  "choices": {
+    "yes_no": {
+      "yes": "نعم",
+      "no": "لا"
+    },
+    "governorate": {
+      "khan_younis": "خانيونس",
+      "middle_area": "المحافظة الوسطى"
+    },
+    "engineer": {
+      "eng1": "علاء صافي",
+      "eng2": "محمد الحاج",
+      "eng3": "ابراهيم الحلاق",
+      "eng4": "خالد ابو توهة",
+      "eng5": "حاتم مطر"
+    },
+    "researcher": {
+      "res1": "غادة الهباش",
+      "res2": "صفية الاسطل",
+      "res3": "رانيا شعث",
+      "res4": "أماني مقبل",
+      "res5": "ربا العيلة"
+    },
+    "sex": {
+      "male": "ذكر",
+      "female": "أنثى"
+    },
+    "shelter_assist": {
+      "recent": "تلقّت مساعدة مأوى خلال آخر 6 شهور",
+      "m6_12": "لم تتلقَّ منذ 6 – 12 شهرًا",
+      "m12_plus": "لم تتلقَّ منذ أكثر من 12 شهرًا"
+    },
+    "protection_risks": {
+      "eviction": "خطر الإخلاء",
+      "child_labour": "عمالة أطفال",
+      "asset_selling": "بيع أصول أو ممتلكات",
+      "debt": "ديون متراكمة",
+      "no_medical": "حرمان من رعاية طبية أساسية",
+      "harmful_coping": "استراتيجيات تكيّف ضارة أخرى"
+    },
+    "owner_residing": {
+      "lives_here": "يسكن الوحدة",
+      "other_place": "مكان آخر"
+    },
+    "marital_status": {
+      "single": "أعزب/عزباء",
+      "married": "متزوج/ة",
+      "widowed": "أرمل/ة",
+      "divorced": "مطلّق/ة"
+    },
+    "consent_by": {
+      "owner": "المالك نفسه",
+      "spouse": "زوج/ة المالك",
+      "relative": "قريب مفوَّض من المالك",
+      "agent": "وكيل قانوني"
+    },
+    "refusal_reason": {
+      "not_interested": "غير مهتم بالمشاركة",
+      "no_time": "لا يملك الوقت الآن",
+      "privacy": "تحفّظ على طبيعة الأسئلة",
+      "owner_absent": "المالك غير موجود ولا يوجد مفوَّض",
+      "other_reason": "سبب آخر"
+    },
+    "accommodation": {
+      "apartment": "شقة",
+      "house": "منزل مستقل",
+      "storage_unit": "حاصل",
+      "rooftop_unit": "روف",
+      "mezzanine": "سدة",
+      "shelter": "مظلة",
+      "other_acc": "أخرى"
+    },
+    "occupancy_now": {
+      "owner_family": "المالك وأسرته",
+      "displaced_family": "أسرة نازحة",
+      "rented": "مؤجّرة",
+      "empty": "خالية"
+    },
+    "vacancy_reason": {
+      "displaced_alt": "نازحون لسكن بديل",
+      "displaced_tent": "يقيمون في خيمة",
+      "cant_afford": "عدم القدرة على الإصلاح ماليًا",
+      "under_repair_sale": "قيد الإصلاح أو البيع",
+      "ownership_dispute": "نزاع ملكية/إرث",
+      "other_vacancy": "أخرى"
+    },
+    "yes_no_unknown": {
+      "yes": "نعم",
+      "no": "لا",
+      "unknown": "غير معروف"
+    },
+    "referral_type": {
+      "uxo": "ذخائر غير منفجرة",
+      "debris": "إزالة ركام",
+      "structural": "تقييم إنشائي",
+      "other": "أخرى"
+    },
+    "structural_classification": {
+      "final_exclusion": "استبعاد نهائي",
+      "needs_second_eval": "يحتاج تقييم هندسي ثاني"
+    },
+    "disability_type": {
+      "see": "بصرية",
+      "hear": "سمعية",
+      "walk": "حركية",
+      "remember": "إدراكية (تركيز وتذكر)",
+      "selfcare": "عناية ذاتية",
+      "communicate": "تواصل"
+    },
+    "hlp_proof_status": {
+      "yes": "نعم",
+      "yes_unavailable": "نعم، غير متاح",
+      "no": "لا"
+    },
+    "breadwinner_m": {
+      "owner": "المقيم نفسه",
+      "wife": "الزوجة",
+      "minor_child": "ابن/ة أقل من 18",
+      "adult_son": "ابن 18 فأكثر",
+      "adult_daughter": "ابنة 18 فأكثر",
+      "relative": "قريب آخر",
+      "other": "أخرى"
+    },
+    "breadwinner_f": {
+      "owner": "المقيم نفسه",
+      "husband": "الزوج",
+      "minor_child": "ابن/ة أقل من 18",
+      "adult_son": "ابن 18 فأكثر",
+      "adult_daughter": "ابنة 18 فأكثر",
+      "relative": "قريب آخر",
+      "other": "أخرى"
+    },
+    "neighborhood": {
+      "al_daraj": "الدرج",
+      "al_sabra": "الصبرة",
+      "al_zaytoun_north": "الزيتون الشمالي",
+      "al_zaytoun_south": "الزيتون الجنوبي",
+      "old_city": "البلدة القديمة",
+      "al_qarara_western_zone": "القرارة – المنطقة الغربية",
+      "al_amal": "الأمل",
+      "al_batn_al_sameen": "البطن السمين",
+      "al_katiba": "الكتيبة",
+      "al_mahata": "المحطة",
+      "city_center": "مركز المدينة",
+      "khan_younis_ref_camp": "مخيم خان يونس",
+      "abu_muhadi_north": "أبو مهدي – شمال",
+      "abu_muhadi_south": "أبو مهدي – جنوب",
+      "block_f": "بلوك F",
+      "abu_saleem_east": "أبو سليم – شرق",
+      "new_ref_camp": "المخيم الجديد",
+      "sarsour": "صرصور",
+      "abu_saleem_west": "أبو سليم – غرب",
+      "west_al_hasaina_east": "غرب الحساينة – شرق",
+      "west_al_hasaina_west": "غرب الحساينة – غرب"
+    },
+    "resident_role": {
+      "owner": "المالك نفسه",
+      "child": "ابن/ابنة",
+      "brother": "أخ",
+      "sister": "أخت",
+      "friend": "صديق",
+      "other": "أخرى"
+    },
+    "owner_wives_count": {
+      "0": "0",
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4"
+    },
+    "nonowner_aid_recency": {
+      "recent": "خلال آخر 6 أشهر",
+      "m6_12": "منذ 6 إلى 12 شهرًا",
+      "m12_plus": "منذ أكثر من 12 شهرًا"
+    },
+    "nonowner_protection_risks": {
+      "eviction": "خطر الإخلاء",
+      "child_labour": "عمالة أطفال",
+      "asset_selling": "بيع أصول أو ممتلكات",
+      "debt": "ديون متراكمة",
+      "no_medical": "حرمان من رعاية طبية أساسية",
+      "harmful_coping": "استراتيجيات تكيّف ضارة أخرى",
+      "none": "لا يوجد"
+    }
+  }
+}

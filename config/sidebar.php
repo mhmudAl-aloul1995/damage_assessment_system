@@ -5,6 +5,7 @@ return [
     ...require __DIR__.'/../app/Modules/DamageAssessment/config/sidebar.php',
     ...require __DIR__.'/../app/Modules/DamageAssessmentBorrowers/config/sidebar.php',
     ...require __DIR__.'/../app/Modules/Heks/config/sidebar.php',
+    ...require __DIR__.'/../app/Modules/Reh/config/sidebar.php',
     [
         'module' => 'administration',
         'title' => 'menu.user_management.title',

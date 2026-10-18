@@ -19,6 +19,7 @@ it('selects the module from a nested page URL', function (string $path, string $
     'shared decisions' => ['/damage-assessment/committee-decisions?sector=housing-units', 'damage_assessment'],
     'borrower record' => ['/damage-assessment-borrowers/10/edit', 'damage_assessment_borrowers'],
     'heks beneficiary' => ['/heks/beneficiaries/10', 'heks'],
+    'reh unit' => ['/reh/units/10', 'reh'],
     'user permissions' => ['/user-management/permissions', 'administration'],
     'administration tool' => ['/admin/dashboard-cards', 'administration'],
 ]);
@@ -29,6 +30,7 @@ it('opens each module on a destination visible to the user', function () {
     expect($modules['damage_assessment']['url'])->toBe('damage-assessment/damageAssessment')
         ->and($modules['damage_assessment_borrowers']['url'])->toBe('damage-assessment-borrowers')
         ->and($modules['heks']['url'])->toBe('heks')
+        ->and($modules['reh']['url'])->toBe('reh')
         ->and($modules['administration']['url'])->toBe('user-management/user');
 
     $specialist = User::factory()->create();
