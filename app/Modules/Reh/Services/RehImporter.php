@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 
 class RehImporter
 {
+    public function __construct(private RehScoring $scoring) {}
+
     public function building(array $feature): RehBuilding
     {
         $source = $feature['attributes'];
@@ -46,8 +48,11 @@ class RehImporter
 
         return (new RehUnit)->getConnection()->transaction(function () use ($source, $id, $building, $hash): RehUnit {
             $unit = RehUnit::query()->where('global_id', $id)->lockForUpdate()->first() ?? new RehUnit(['global_id' => $id]);
+            $scoreBefore = null;
+            $review = null;
             if ($unit->exists && ($unit->source_hash !== $hash || $unit->source_missing)) {
-                $this->invalidate($unit, 'تغيّرت بيانات الوحدة في المصدر؛ راجع البيانات والكميات قبل إعادة الاعتماد.');
+                $scoreBefore = $this->scoring->snapshot($unit);
+                $review = $this->invalidate($unit, 'تغيّرت بيانات الوحدة في المصدر؛ راجع البيانات والكميات قبل إعادة الاعتماد.');
             }
             $unit->fill([
                 'building_id' => $building->id, 'object_id' => $source['objectid'], 'code' => $source['unit_code'] ?? $source['unit_selection'] ?? null,
@@ -55,6 +60,8 @@ class RehImporter
                 'floor_number' => $source['floor_number'] ?? null, 'apartment_number' => $source['apartment_number'] ?? null,
                 'source' => $source, 'source_hash' => $hash, 'source_missing' => false, 'synced_at' => now(),
             ])->save();
+
+            $review?->update(['changes' => ['scoring' => ['before' => $scoreBefore, 'after' => $this->scoring->snapshot($unit)]]]);
 
             return $unit;
         });
@@ -74,10 +81,11 @@ class RehImporter
         });
     }
 
-    private function invalidate(RehUnit $unit, string $note, string $action = 'source_changed'): void
+    private function invalidate(RehUnit $unit, string $note, string $action = 'source_changed'): \App\Modules\Reh\Models\RehReview
     {
         $unit->update(['workflow_status' => 'source_changed', 'engineering_status' => 'pending', 'social_status' => 'pending', 'decision' => 'pending', 'version' => $unit->version + 1]);
-        $unit->reviews()->create(['action' => $action, 'note' => $note]);
+
+        return $unit->reviews()->create(['action' => $action, 'note' => $note]);
     }
 
     private function identifier(mixed $value): string

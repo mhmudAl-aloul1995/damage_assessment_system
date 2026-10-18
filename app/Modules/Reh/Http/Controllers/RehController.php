@@ -12,6 +12,7 @@ use App\Modules\Reh\Models\RehSyncRun;
 use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehArcgisClient;
 use App\Modules\Reh\Services\RehReviewService;
+use App\Modules\Reh\Services\RehScoring;
 use App\Modules\Reh\Services\RehSurvey;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ use Throwable;
 
 class RehController extends Controller
 {
-    public function __construct(private RehSurvey $survey) {}
+    public function __construct(private RehSurvey $survey, private RehScoring $scoring) {}
 
     public function index(RehFilterRequest $request): View
     {
@@ -55,7 +56,8 @@ class RehController extends Controller
         $lastSync = RehSyncRun::query()->whereIn('status', ['completed', 'completed_with_warnings'])->latest('finished_at')->first();
         $issueCount = RehSyncIssue::query()->whereNull('resolved_at')->count();
         $syncIssues = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->select(['id', 'object_id', 'reason'])->orderBy('id')->limit(100)->get() : collect();
-        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'runs', 'lastSync', 'issueCount', 'syncIssues') + ['survey' => $this->survey])->render();
+        $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $this->scoring->engineering($unit)]) ?? collect();
+        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores') + ['survey' => $this->survey])->render();
 
         return response()->json(['html' => $view, 'sync_active' => $runs->contains(fn (RehSyncRun $run): bool => in_array($run->status, ['queued', 'running'], true))])->header('Cache-Control', 'private, no-store');
     }
@@ -63,7 +65,8 @@ class RehController extends Controller
     public function unit(Request $request, RehUnit $unit): View|JsonResponse
     {
         $unit->load(['building', 'reviewer:id,name', 'reviews' => fn ($query) => $query->with('user:id,name')->latest('id')->limit(100)]);
-        $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit)])->render();
+        $score = $request->user()->can('reh.sensitive') ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)];
+        $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit), 'score' => $score])->render();
 
         return $request->expectsJson() ? response()->json(['html' => $html])->header('Cache-Control', 'private, no-store') : $this->workspace($html, ['tab' => 'units']);
     }
@@ -151,9 +154,11 @@ class RehController extends Controller
         return response()->streamDownload(function () use ($query, $sensitive): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['رقم الوحدة', 'المبنى', 'المالك', 'الهوية', 'المحافظة', 'الحي', 'التدقيق', 'القرار', 'التسعير', 'آخر مزامنة']);
+            fputcsv($output, ['رقم الوحدة', 'المبنى', 'المالك', 'الهوية', 'المحافظة', 'الحي', 'التدقيق', 'القرار', 'التسعير', 'آخر مزامنة', 'نقاط هندسية محسومة', 'فئات هندسية معلقة', 'الدرجة النهائية', 'الأولوية', 'إصدار قواعد الحساب']);
             foreach ($query->lazyById(200) as $unit) {
                 $row = [$unit->code ?? $unit->id, $unit->building->name, $unit->owner_name, $sensitive ? $unit->owner_identity : 'محجوب', $this->survey->value('governorate', $unit->building->governorate), $this->survey->value('neighborhood', $unit->building->neighborhood), RehSurvey::WORKFLOW[$unit->workflow_status], ['pending' => 'لم يُقرر', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision], 'بانتظار الأسعار', $unit->synced_at?->toDateTimeString()];
+                $engineering = $this->scoring->engineering($unit);
+                $row = [...$row, $engineering['subtotal'], $engineering['pending_count'], 'بانتظار اعتماد القواعد واستكمال البيانات', 'غير مصنفة', RehScoring::VERSION];
                 fputcsv($output, array_map(static fn (mixed $value): string => preg_match('/^[\s]*[=+@\-]/u', (string) $value) ? "'".$value : (string) $value, $row));
             }
             fclose($output);

@@ -55,7 +55,7 @@ class RehSurvey
                 continue;
             }
             $sections[$group]['label'] = $definition['group']['label'] ?? 'بيانات عامة';
-            $sections[$group]['fields'][] = ['label' => $definition['label'], 'value' => $this->value($field, $source[$field])];
+            $sections[$group]['fields'][] = ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field])];
         }
 
         return $sections;

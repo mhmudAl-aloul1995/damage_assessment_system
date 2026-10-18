@@ -85,7 +85,26 @@
         return true;
     }
 
-    async function openDetail(url, push = true) {
+    function selectDetailTab(name) {
+        detailBody.querySelectorAll('[data-detail-tab]').forEach(tab => {
+            const active = tab.dataset.detailTab === name;
+            tab.classList.toggle('active', active);
+            tab.setAttribute('aria-pressed', String(active));
+        });
+        detailBody.querySelectorAll('[data-detail-panel]').forEach(panel => { panel.hidden = panel.dataset.detailPanel !== name; });
+    }
+
+    function selectScoreTab(name) {
+        detailBody.querySelectorAll('[data-score-tab]').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.scoreTab === name)));
+        detailBody.querySelectorAll('[data-score-panel]').forEach(panel => { panel.hidden = panel.dataset.scorePanel !== name; });
+    }
+
+    function selectScoreFamily(name) {
+        detailBody.querySelectorAll('[data-score-family]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.scoreFamily === name)));
+        detailBody.querySelectorAll('[data-score-family-panel]').forEach(panel => { panel.hidden = panel.dataset.scoreFamilyPanel !== name; });
+    }
+
+    async function openDetail(url, push = true, section = 'summary') {
         if (!canLeave()) return;
         detailRequest?.abort();
         const controller = new AbortController();
@@ -98,6 +117,7 @@
             const data = await request(url, { signal: controller.signal });
             if (controller.signal.aborted) return;
             detailBody.innerHTML = data.html;
+            selectDetailTab(section);
             if (push) history.pushState({ filters: { ...state }, detailUrl: url }, '', url);
         } catch (error) {
             if (error.name !== 'AbortError') notify(error.message, detailMessage);
@@ -141,15 +161,38 @@
     root.addEventListener('click', async event => {
         const button = event.target.closest('a, button, input');
         if (!button || button.disabled) return;
-        if (button.matches('[data-detail]')) { event.preventDefault(); event.stopPropagation(); await openDetail(button.href); }
+        if (button.matches('[data-detail]')) { event.preventDefault(); event.stopPropagation(); await openDetail(button.href, true, button.dataset.detailSection || 'summary'); }
         else if (button.matches('[data-close-detail]')) { if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); }
         else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; } await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
         else if (button.matches('[data-page]')) { state.page = button.dataset.page; await load(); }
         else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', building_id: button.dataset.buildingUnits, page: 1 }; await load(); }
         else if (button.matches('[data-detail-tab]')) {
-            detailBody.querySelectorAll('[data-detail-tab]').forEach(tab => { const active = tab === button; tab.classList.toggle('active', active); tab.setAttribute('aria-pressed', String(active)); });
-            detailBody.querySelectorAll('[data-detail-panel]').forEach(panel => { panel.hidden = panel.dataset.detailPanel !== button.dataset.detailTab; });
+            selectDetailTab(button.dataset.detailTab);
+        } else if (button.matches('[data-score-tab], [data-score-jump]')) {
+            selectScoreTab(button.dataset.scoreTab || button.dataset.scoreJump);
+            if (button.dataset.scoreSelectFamily) selectScoreFamily(button.dataset.scoreSelectFamily);
+            if (button.dataset.scoreTarget) {
+                const panels = [...detailBody.querySelectorAll('[data-score-panel]:not([hidden])')];
+                const row = panels.flatMap(panel => [...panel.querySelectorAll(`[data-score-row="${CSS.escape(button.dataset.scoreTarget)}"]`)])
+                    .find(candidate => !candidate.closest('[data-score-family-panel][hidden]'));
+                if (row) { row.open = true; row.querySelector('summary').focus(); row.scrollIntoView({ block: 'nearest' }); }
+            }
+        } else if (button.matches('[data-score-family]')) {
+            selectScoreFamily(button.dataset.scoreFamily);
+        } else if (button.matches('[data-score-quantities], [data-score-quantity]')) {
+            selectDetailTab('quantities');
+            if (button.dataset.scoreQuantity) {
+                const input = detailBody.querySelector(`[name="quantities[${CSS.escape(button.dataset.scoreQuantity)}]"]`);
+                if (input) {
+                    input.closest('[data-quantity-row]').hidden = false;
+                    input.focus();
+                    input.scrollIntoView({ block: 'center' });
+                }
+            }
+        } else if (button.matches('[data-score-source]')) {
+            selectDetailTab('data');
+            detailBody.querySelector(`[data-source-field="${CSS.escape(button.dataset.scoreSource)}"]`)?.scrollIntoView({ block: 'center' });
         } else if (button.matches('[data-show-all-quantities]')) {
             detailBody.querySelectorAll('[data-quantity-row]').forEach(row => { row.hidden = !button.checked && row.dataset.hasQuantity !== '1'; });
         } else if (button.matches('[data-export]')) {
@@ -176,6 +219,16 @@
         }
     });
 
+    detailBody.addEventListener('keydown', event => {
+        if (!event.target.matches('[data-score-tab]') || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const tabs = [...detailBody.querySelectorAll('[data-score-tab]')];
+        const index = tabs.indexOf(event.target);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowLeft' ? 1 : -1) + tabs.length) % tabs.length;
+        tabs[next].focus();
+        selectScoreTab(tabs[next].dataset.scoreTab);
+    });
+
     detailBody.addEventListener('submit', async event => {
         const form = event.target.closest('[data-review-form]');
         if (!form) return;
@@ -195,7 +248,7 @@
             detailBody.innerHTML = data.html;
             dirty = false;
             detailBody.querySelector(`[data-detail-tab="${activeTab}"]`)?.click();
-            notify('تم حفظ الإجراء وتحديث سجل الوحدة.', detailMessage, true);
+            notify('تم حفظ الإجراء وتحديث النقاط المحسومة وسجل الوحدة.', detailMessage, true);
             await load(false, true);
         } catch (error) { notify(error.message, detailMessage); detailMessage.scrollIntoView({ block: 'nearest' }); }
         finally { saving = false; submit.disabled = false; submit.textContent = payload.action === 'quantities' ? 'حفظ مراجعة الكميات' : 'حفظ الإجراء'; }

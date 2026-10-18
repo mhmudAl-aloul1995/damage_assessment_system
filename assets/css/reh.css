@@ -1,5 +1,43 @@
 #reh-workspace{--reh-ink:#173f44;--reh-accent:#167b7c;--reh-line:var(--bs-gray-200,#e5eaea);--reh-surface:var(--bs-body-bg,#fff);--reh-muted:var(--bs-gray-600,#647879);color:var(--bs-body-color,#223d42);line-height:1.8}
 #reh-workspace [hidden]{display:none!important}
+#reh-workspace .reh-score-metrics{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px;margin-bottom:18px}
+#reh-workspace .reh-score-metric{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:20px;border:1px solid var(--reh-line);border-radius:12px;background:var(--reh-surface);min-width:0}
+#reh-workspace .reh-score-total{background:var(--bs-gray-100,#f3f7f6)}
+#reh-workspace .reh-score-metric>strong{font-size:32px;line-height:1.3;font-variant-numeric:tabular-nums}
+#reh-workspace .reh-score-metric strong small{font-size:12px;font-weight:400;color:var(--reh-muted)}
+#reh-workspace .reh-score-metric p{font-size:12px;color:var(--reh-muted);margin:0}
+#reh-workspace .reh-score-metric progress{width:100%;height:6px;accent-color:var(--reh-accent)}
+#reh-workspace .reh-score-link{border:0;background:transparent;color:var(--reh-accent);padding:6px 0;text-align:start;font-size:12px}
+#reh-workspace .reh-score-notice{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;background:var(--bs-gray-100,#f5f7f7);border-inline-start:3px solid #c58c23;border-radius:8px;margin-bottom:20px}
+#reh-workspace .reh-score-notice p{font-size:12px;margin:4px 0 0;color:var(--reh-muted)}
+#reh-workspace .reh-score-tabs{display:flex;flex-wrap:wrap;gap:16px;border-bottom:1px solid var(--reh-line);margin-bottom:20px}
+#reh-workspace .reh-score-tabs button{padding:10px 0;background:transparent;color:var(--reh-muted);border:0;border-bottom:3px solid transparent;font-size:13px}
+#reh-workspace .reh-score-tabs button[aria-selected=true]{color:var(--reh-accent);border-bottom-color:var(--reh-accent)}
+#reh-workspace .reh-score-families{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+#reh-workspace .reh-score-families button{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border:1px solid var(--reh-line);border-radius:9px;background:var(--reh-surface);color:inherit;text-align:start}
+#reh-workspace .reh-score-families button[aria-pressed=true]{border-color:var(--reh-accent);background:var(--bs-gray-100,#f2f8f6)}
+#reh-workspace .reh-score-families small{display:block;font-size:11px;color:var(--reh-muted);font-weight:400}
+#reh-workspace .reh-score-families strong{font-size:24px;font-variant-numeric:tabular-nums}
+#reh-workspace .reh-score-rows{border:1px solid var(--reh-line);border-radius:10px;overflow:hidden}
+#reh-workspace .reh-score-row+.reh-score-row{border-top:1px solid var(--reh-line)}
+#reh-workspace .reh-score-row summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;cursor:pointer;list-style:none}
+#reh-workspace .reh-score-row summary>span:before{content:'＋';margin-inline-end:8px;color:var(--reh-muted)}
+#reh-workspace .reh-score-row[open] summary>span:before{content:'−'}
+#reh-workspace .reh-score-row summary>span small{display:block;color:var(--reh-muted);font-size:11px;padding-inline-start:23px}
+#reh-workspace .reh-score-row summary strong{white-space:nowrap;font-size:18px;font-variant-numeric:tabular-nums}
+#reh-workspace .reh-score-row summary strong small{font-size:11px;font-weight:400;color:var(--reh-muted)}
+#reh-workspace .reh-score-row[data-score-status=policy] summary>span small{color:var(--bs-warning-text-emphasis,#895f10)}
+#reh-workspace .reh-score-row-body{background:var(--bs-gray-100,#f6f8f8);padding:14px 18px;font-size:12px}
+#reh-workspace .reh-score-row-body>p{margin:0 0 12px}
+#reh-workspace .reh-score-source{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:10px 0;border-top:1px solid var(--reh-line);overflow-wrap:anywhere}
+#reh-workspace .reh-score-source small{color:var(--reh-muted)}
+#reh-workspace .reh-score-rule{padding:16px 0;border-bottom:1px solid var(--reh-line)}
+#reh-workspace .reh-score-rule p,#reh-workspace .reh-score-explainer{font-size:12px;color:var(--reh-muted);margin:8px 0}
+#reh-workspace .reh-score-diff{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+#reh-workspace .reh-score-diff dt{font-size:12px;font-weight:400;color:var(--reh-muted)}
+#reh-workspace .reh-score-diff dd{display:flex;gap:16px;font-variant-numeric:tabular-nums;margin:4px 0}
+#reh-workspace .reh-scoring button:focus-visible,#reh-workspace .reh-score-row summary:focus-visible{outline:2px solid var(--reh-accent);outline-offset:3px}
+@media(max-width:700px){#reh-workspace .reh-score-metrics{grid-template-columns:1fr 1fr}#reh-workspace .reh-score-total{grid-column:1/-1}#reh-workspace .reh-score-families,#reh-workspace .reh-score-diff{grid-template-columns:1fr}#reh-workspace .reh-score-notice{align-items:flex-start;flex-direction:column}#reh-workspace .reh-score-metric{padding:14px}#reh-workspace .reh-score-tabs{gap:12px}#reh-workspace .reh-scoring .reh-section-heading{flex-wrap:wrap}#reh-workspace .reh-score-source{grid-template-columns:1fr}#reh-workspace .reh-score-source strong{text-align:start}}
 .reh-hero{display:flex;justify-content:space-between;align-items:center;gap:24px;background:#123e43;border-radius:16px;padding:30px 32px;color:#e0f1ee;margin-bottom:20px;border-inline-start:6px solid #8bc6ae}
 .reh-hero h2{color:#fff;font-size:26px;margin:10px 0}.reh-hero p{margin:0;color:#c2dcda}.reh-eyebrow{font-size:11px;letter-spacing:.1em;font-weight:700}.reh-hero-note{display:flex;flex-direction:column;align-items:flex-start;gap:12px;font-size:12px;white-space:nowrap}
 .reh-tabs{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--reh-line);margin-bottom:20px;padding:0 0 8px}.reh-tabs a,.reh-detail-tabs button{padding:10px 16px;color:var(--reh-muted);white-space:nowrap;border:0;background:transparent;border-radius:8px;font-weight:600}.reh-tabs a.active,.reh-detail-tabs button.active{background:#e2f2ed;color:#195c53}.reh-tabs a:focus-visible,.reh-detail-tabs button:focus-visible{outline:2px solid var(--reh-accent)}

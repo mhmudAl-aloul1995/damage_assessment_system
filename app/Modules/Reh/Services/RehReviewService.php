@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 
 class RehReviewService
 {
-    public function __construct(private RehSurvey $survey) {}
+    public function __construct(private RehSurvey $survey, private RehScoring $scoring) {}
 
     public function apply(RehUnit $record, User $user, array $data): RehUnit
     {
@@ -20,6 +20,7 @@ class RehReviewService
                 throw ValidationException::withMessages(['action' => 'أعد فتح التدقيق قبل تعديل ملف صدر بشأنه قرار.']);
             }
             $before = $unit->only(['workflow_status', 'engineering_status', 'social_status', 'decision', 'reviewer_id', 'quantity_overrides']);
+            $scoreBefore = $this->scoring->snapshot($unit);
             if ($action === 'claim') {
                 if ($unit->reviewer_id && $unit->reviewer_id !== $user->id) {
                     throw ValidationException::withMessages(['action' => 'الملف مسند بالفعل إلى مراجع آخر.']);
@@ -69,7 +70,7 @@ class RehReviewService
             }
             $unit->version++;
             $unit->save();
-            $unit->reviews()->create(['user_id' => $user->id, 'action' => $action, 'note' => $data['note'], 'changes' => ['before' => $before, 'after' => $unit->only(array_keys($before))]]);
+            $unit->reviews()->create(['user_id' => $user->id, 'action' => $action, 'note' => $data['note'], 'changes' => ['before' => $before, 'after' => $unit->only(array_keys($before)), 'scoring' => ['before' => $scoreBefore, 'after' => $this->scoring->snapshot($unit)]]]);
 
             return $unit;
         });
