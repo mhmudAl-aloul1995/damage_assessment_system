@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Support\Navigation\Sidebar;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -45,7 +46,7 @@ it('offers only enabled modules the user can access', function () {
     $borrowerOfficer->assignRole(Role::findOrCreate('Project Officer - Borrowers', 'web'));
 
     expect(Sidebar::forUser($this->user)->pluck('key')->all())->not->toContain('heks')
-        ->and(Sidebar::forUser($borrowerOfficer)->pluck('key')->all())->toBe(['damage_assessment_borrowers']);
+        ->and(Sidebar::forUser($borrowerOfficer)->pluck('key')->all())->toBe(['damage_assessment', 'damage_assessment_borrowers']);
 });
 
 it('falls back to the first available module on pages without a module', function () {
@@ -89,9 +90,12 @@ it('shows just the current module sections in the sidebar', function () {
 });
 
 it('does not offer a switch when only one module is available', function () {
-    $borrowerOfficer = User::factory()->create();
-    $borrowerOfficer->assignRole(Role::findOrCreate('Project Officer - Borrowers', 'web'));
-    $modules = Sidebar::forUser($borrowerOfficer);
+    config(['modules.damage_assessment.enabled' => false]);
+    $rehReader = User::factory()->create();
+    $rehReader->givePermissionTo(Permission::findOrCreate('reh.view', 'web'));
+    $modules = Sidebar::forUser($rehReader);
+
+    expect($modules->pluck('key')->all())->toBe(['reh']);
 
     $this->view('layouts.partials.module-switcher', [
         'sidebarModules' => $modules,
@@ -109,7 +113,7 @@ it('renders the workspace switcher and isolated module navigation in the applica
     $sidebarLinks = $xpath->query('//*[@id="kt_app_sidebar_menu"]//a');
 
     expect($xpath->query('//*[@id="phc_module_trigger"]'))->toHaveCount(1)
-        ->and($xpath->query('//*[@data-module-option]'))->toHaveCount(4)
+        ->and($xpath->query('//*[@data-module-option]'))->toHaveCount(Sidebar::forUser($this->user)->count())
         ->and($sidebarLinks)->toHaveCount(1)
         ->and($sidebarLinks->item(0)->getAttribute('href'))->toBe(url('heks'));
 });

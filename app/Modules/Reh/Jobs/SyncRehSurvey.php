@@ -24,6 +24,7 @@ class SyncRehSurvey implements ShouldQueue
     public function __construct(public int $runId)
     {
         $this->onConnection(config('reh.queue_connection'));
+        $this->onQueue('reh');
     }
 
     /**

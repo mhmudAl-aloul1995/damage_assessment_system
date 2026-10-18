@@ -126,6 +126,8 @@ it('queues one sync and keeps ajax requests responsive', function (): void {
     $this->actingAs($this->officer)->postJson(route('reh.sync'))->assertAccepted();
     $this->postJson(route('reh.sync'))->assertAccepted();
     Queue::assertPushed(SyncRehSurvey::class, 1);
+    Queue::assertPushed(SyncRehSurvey::class, fn (SyncRehSurvey $job): bool => $job->queue === 'reh' && $job->connection === 'reh');
+    expect(config('queue.connections.reh.retry_after'))->toBeGreaterThan((new SyncRehSurvey(1))->timeout);
     expect(RehSyncRun::query()->count())->toBe(1);
     expect($this->getJson(route('reh.data', ['tab' => 'sync']))->json('sync_active'))->toBeTrue();
 });

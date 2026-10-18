@@ -7,5 +7,5 @@ return [
     'username' => env('REH_ARCGIS_USERNAME', env('ARCGIS_USERNAME')),
     'password' => env('REH_ARCGIS_PASSWORD', env('ARCGIS_PASSWORD')),
     'referer' => env('REH_ARCGIS_REFERER', env('ARCGIS_REFERER', env('APP_URL'))),
-    'queue_connection' => env('REH_QUEUE_CONNECTION', 'database'),
+    'queue_connection' => env('REH_QUEUE_CONNECTION', 'reh'),
 ];
