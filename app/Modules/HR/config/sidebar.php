@@ -17,6 +17,15 @@ return [[
     'roles' => ['Database Officer'],
     'permissions' => ['hr.attendance.view', 'hr.attendance.view-own', 'hr.attendance.view-team'],
     'active_patterns' => ['hr/attendance*'],
+    'exclude_active_patterns' => ['hr/attendance/projects*'],
+], [
+    'module' => 'hr',
+    'title' => 'حضور موظفي المشاريع',
+    'icon' => 'ki-people',
+    'url' => 'hr/attendance/projects',
+    'roles' => ['Database Officer'],
+    'permissions' => ['hr.attendance.setup'],
+    'active_patterns' => ['hr/attendance/projects*'],
 ], [
     'module' => 'hr', 'title' => 'الموظفون والتاريخ الوظيفي', 'icon' => 'ki-people', 'url' => 'hr/employees',
     'permissions' => ['hr.employees.view', 'hr.employees.view-own', 'hr.employees.view-team'],

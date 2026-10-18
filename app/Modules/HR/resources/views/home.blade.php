@@ -29,6 +29,10 @@
     </div>
     @can('hr.attendance.setup')
         <div class="card"><div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-4">
+            <div><h2 class="fs-5">موظفو المشاريع</h2><p class="text-muted mb-0">مشروع ومدة تكليف وجدول دوام، مع حساب واحد لكل موظف.</p></div>
+            <a class="btn btn-primary" href="{{ route('hr.attendance.projects') }}">تجهيز حضور موظفي المشاريع</a>
+        </div></div>
+        <div class="card"><div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-4">
             <div><h2 class="fs-5">إعداد الحضور</h2><p class="text-muted mb-0">اربط الموظفين بحساباتهم وحدد جداول العمل والورديات.</p></div>
             <a class="btn btn-light" href="{{ route('hr.attendance.setup') }}">فتح إعدادات الحضور</a>
         </div></div>

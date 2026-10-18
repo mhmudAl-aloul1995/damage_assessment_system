@@ -10,7 +10,7 @@ class ShiftAssignment extends AppendOnlyModel
 {
     protected $table = 'hr_shift_assignments';
 
-    protected $fillable = ['employee_id', 'work_schedule_id', 'starts_on', 'ends_on'];
+    protected $fillable = ['employee_id', 'work_schedule_id', 'project_id', 'starts_on', 'ends_on'];
 
     protected function casts(): array
     {
@@ -25,6 +25,11 @@ class ShiftAssignment extends AppendOnlyModel
     public function schedule(): BelongsTo
     {
         return $this->belongsTo(WorkSchedule::class, 'work_schedule_id');
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceProject::class, 'project_id');
     }
 
     public function covers(string $date): bool

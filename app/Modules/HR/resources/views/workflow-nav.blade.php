@@ -1,4 +1,5 @@
 <nav class="d-flex flex-wrap gap-3 mb-5" aria-label="صفحات الحضور">
+    @can('hr.attendance.setup')<a class="btn btn-sm btn-light-primary" href="{{ route('hr.attendance.projects') }}">موظفو المشاريع</a>@endcan
     @can('viewAny', \App\Modules\HR\Models\Employee::class)<a class="btn btn-sm btn-light-primary" href="{{ route('hr.home') }}">رئيسية HR</a>@endcan
     @can('viewAny', \App\Modules\HR\Models\EmploymentContract::class)<a class="btn btn-sm btn-light-primary" href="{{ route('hr.contracts.index') }}">العقود</a>@endcan
     @can('viewAnyProfiles', \App\Modules\HR\Models\Employee::class)<a class="btn btn-sm btn-light-primary" href="{{ route('hr.employees.index') }}">الموظفون</a>@endcan

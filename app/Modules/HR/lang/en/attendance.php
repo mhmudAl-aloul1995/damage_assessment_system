@@ -21,12 +21,14 @@ return ['statuses' => [
     'approved_present' => 'Approved corrected presence — times unknown',
     'approved_absent' => 'Approved corrected absence',
 ], 'actions' => [
+    'project' => ['created' => 'Attendance project created'],
     'employee' => ['mapped' => 'Attendance identity created'],
     'schedule' => ['created' => 'Schedule version created', 'exception_recorded' => 'Approved schedule exception recorded'],
     'shift' => ['assigned' => 'Shift assigned', 'retired' => 'Assignment end recorded'],
     'holiday' => ['created' => 'Holiday recorded', 'cancelled' => 'Holiday cancellation recorded'],
     'device' => ['registered' => 'Device enrollment requested', 'approved' => 'Device approved', 'rejected' => 'Device rejected', 'revoked' => 'Device revoked'],
     'attendance' => [
+        'native_access_enabled' => 'Employee native attendance enabled',
         'simulated' => 'Test attendance event', 'correction_requested' => 'Attendance correction requested',
         'signed' => 'Attendance signed by an approved device',
         'session_resolved' => 'Session administratively closed after an approved correction',

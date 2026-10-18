@@ -55,6 +55,14 @@ it('reuses existing accounts and preserves account data when creating employee i
         ->assertUnprocessable()->assertJsonValidationErrors('user_id');
 });
 
+it('keeps directory identity validation separate from attendance activation', function (): void {
+    $this->actingAs($this->officer)->postJson(route('hr.employees.store'), ['display_name' => 'Missing number', 'starts_on' => '2026-10-01'])
+        ->assertUnprocessable()->assertJsonValidationErrors('employee_number');
+    $this->postJson(route('hr.employees.store'), ['display_name' => 'Unsupported activation', 'employee_number' => 'TEST-ACTIVATE', 'starts_on' => '2026-10-01', 'enable_native_attendance' => true])
+        ->assertUnprocessable()->assertJsonValidationErrors('enable_native_attendance');
+    $this->assertDatabaseCount('hr_employees', 1);
+});
+
 it('updates work profiles separately from encrypted personal data and logs no private values', function (): void {
     $this->actingAs($this->officer)->put(route('hr.employees.update', $this->employee), ['display_name' => 'Updated', 'work_email' => 'work@example.test'])->assertRedirect();
     expect($this->employee->fresh()->profile->work_email)->toBe('work@example.test');

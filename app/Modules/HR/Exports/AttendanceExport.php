@@ -16,7 +16,7 @@ class AttendanceExport extends DefaultValueBinder implements FromCollection, Wit
 
     public function headings(): array
     {
-        return ['رقم الموظف', 'الاسم', 'التاريخ', 'الجدول', 'المنطقة الزمنية', 'الحضور', 'الانصراف', 'الحالة', 'المصدر', 'السجل القديم', 'الدقائق المتوقعة', 'دقائق العمل', 'دقائق التأخير', 'دقائق الانصراف المبكر', 'الوقت الزائد غير المعتمد', 'تعارض'];
+        return ['رقم الموظف', 'الاسم', 'التاريخ', 'الجدول', 'المنطقة الزمنية', 'الحضور', 'الانصراف', 'الحالة', 'المصدر', 'السجل القديم', 'الدقائق المتوقعة', 'دقائق العمل', 'دقائق التأخير', 'دقائق الانصراف المبكر', 'الوقت الزائد غير المعتمد', 'تعارض', 'المشاريع'];
     }
 
     public function collection(): Collection
@@ -26,6 +26,7 @@ class AttendanceExport extends DefaultValueBinder implements FromCollection, Wit
             $row['check_in'], $row['check_out'], __('hr::attendance.statuses.'.$row['status']), $row['source'],
             $row['legacy_status'], $row['expected_minutes'], $row['worked_minutes'], $row['late_minutes'],
             $row['early_minutes'], $row['overtime_minutes'], $row['conflict'] ? 'نعم' : 'لا',
+            implode(' / ', $row['projects'] ?? []),
         ]);
     }
 

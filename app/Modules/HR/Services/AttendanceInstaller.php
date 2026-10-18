@@ -47,6 +47,9 @@ class AttendanceInstaller
         if (! Schema::connection($connection)->hasColumn('hr_audit_logs', 'subject_key')) {
             throw new RuntimeException('لم يصبح سجل تدقيق HR جاهزاً لمعرفات التقارير.');
         }
+        if (! Schema::connection($connection)->hasTable('hr_attendance_projects') || ! Schema::connection($connection)->hasColumn('hr_shift_assignments', 'project_id')) {
+            throw new RuntimeException('لم يكتمل تحديث مشاريع الحضور.');
+        }
         if (Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\HrPermissionsSeeder', '--force' => true, '--no-interaction' => true]) !== 0) {
             throw new RuntimeException('فشلت تهيئة صلاحيات HR.');
         }

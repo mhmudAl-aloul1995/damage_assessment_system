@@ -51,7 +51,7 @@ class AttendanceController extends Controller
         return view('hr::setup', [
             'employees' => Employee::query()->orderBy('employee_number')->paginate(25, ['*'], 'employees_page'),
             'schedules' => WorkSchedule::query()->latest('id')->paginate(25, ['*'], 'schedules_page'),
-            'assignments' => ShiftAssignment::query()->with(['employee', 'schedule', 'retirements'])->latest('id')->paginate(25, ['*'], 'assignments_page'),
+            'assignments' => ShiftAssignment::query()->with(['employee', 'schedule', 'retirements', 'project'])->latest('id')->paginate(25, ['*'], 'assignments_page'),
         ]);
     }
 
@@ -59,7 +59,7 @@ class AttendanceController extends Controller
     {
         $setup->employee($request->user(), $request->validated());
 
-        return to_route('hr.attendance.setup')->with('success', 'تم إنشاء هوية الحضور.');
+        return to_route($request->routeIs('hr.attendance.projects.employees.store') ? 'hr.attendance.projects' : 'hr.attendance.setup')->with('success', 'تم إنشاء هوية الحضور.');
     }
 
     public function schedule(StoreWorkScheduleRequest $request, AttendanceSetup $setup): RedirectResponse
@@ -73,7 +73,7 @@ class AttendanceController extends Controller
     {
         $setup->assign($request->user(), $request->validated());
 
-        return to_route('hr.attendance.setup')->with('success', 'تم إسناد الوردية.');
+        return to_route($request->routeIs('hr.attendance.projects.assignments.store') ? 'hr.attendance.projects' : 'hr.attendance.setup')->with('success', 'تم إسناد الوردية للفترة المحددة.');
     }
 
     public function retireAssignment(RetireShiftAssignmentRequest $request, ShiftAssignment $assignment, AttendanceSetup $setup): RedirectResponse

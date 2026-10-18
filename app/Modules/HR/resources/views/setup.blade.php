@@ -6,15 +6,12 @@
     <div class="d-flex justify-content-between align-items-center"><h1 class="fs-2">إعداد الحضور والورديات</h1><a class="btn btn-light" href="{{ route('hr.attendance.index') }}">متابعة الحضور</a></div>
     @if(session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-    <p class="text-muted">إعداد هوية الحضور لا يمنح الحساب صلاحيات إضافية. الجداول والتكليفات محفوظة كتاريخ؛ اختر فترات محددة وغير متداخلة.</p>
+    <p class="text-muted">استخدم هوية واحدة لكل موظف. يمكنك تفعيل حضوره عبر التطبيق صراحةً عند ربط حسابه، ثم اعتماد جهازه بشكل مستقل.</p>
+    <div><a class="btn btn-light-primary" href="{{ route('hr.attendance.projects') }}">المشاريع وتكليفات الحضور</a></div>
     <div class="row g-6">
         <div class="col-xl-4"><div class="card h-100"><div class="card-header"><h2 class="card-title">هوية الحضور</h2></div><form class="card-body d-flex flex-column gap-4" method="post" action="{{ route('hr.attendance.employees.store') }}">@csrf
-            <div><label for="employee-number" class="form-label">الرقم الوظيفي</label><input id="employee-number" name="employee_number" class="form-control" maxlength="50" value="{{ old('employee_number') }}" required></div>
-            <div><label for="display-name" class="form-label">اسم الموظف</label><input id="display-name" name="display_name" class="form-control" maxlength="255" value="{{ old('display_name') }}" required></div>
-            <div><label for="user-id" class="form-label">معرّف حساب المستخدم (اختياري)</label><input id="user-id" name="user_id" type="number" min="1" class="form-control" value="{{ old('user_id') }}"><small class="text-muted">تحقق من معرّف الحساب في إدارة المستخدمين. اتركه فارغاً لموظف بلا حساب.</small></div>
+            @include('hr::attendance-identity-fields')
             <div><label for="supervisor-user-id" class="form-label">معرّف حساب المشرف (اختياري)</label><input id="supervisor-user-id" name="supervisor_user_id" type="number" min="1" class="form-control" value="{{ old('supervisor_user_id') }}"></div>
-            <div><label for="employment-start" class="form-label">بدء العمل</label><input id="employment-start" name="starts_on" type="date" class="form-control" required></div>
-            <div><label for="employment-end" class="form-label">نهاية العمل (اختياري)</label><input id="employment-end" name="ends_on" type="date" class="form-control"></div>
             <button class="btn btn-primary" type="submit">حفظ هوية الحضور</button>
         </form></div></div>
         <div class="col-xl-4"><div class="card h-100"><div class="card-header"><h2 class="card-title">إصدار جدول عمل</h2></div><form class="card-body d-flex flex-column gap-4" method="post" action="{{ route('hr.attendance.schedules.store') }}">@csrf

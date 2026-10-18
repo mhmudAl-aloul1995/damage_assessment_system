@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\HR\Http\Controllers\AttendanceController;
+use App\Modules\HR\Http\Controllers\AttendanceProjectController;
 use App\Modules\HR\Http\Controllers\AttendanceReportController;
 use App\Modules\HR\Http\Controllers\AttendanceWorkflowController;
 use App\Modules\HR\Http\Controllers\ContractController;
@@ -20,6 +21,10 @@ Route::middleware([RequireHrHttps::class, 'auth', EnsureAttendanceWorkflowStorag
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('index');
     Route::get('/attendance/export', [AttendanceController::class, 'export'])->name('export');
     Route::get('/attendance/setup', [AttendanceController::class, 'setup'])->name('setup');
+    Route::get('/attendance/projects', [AttendanceProjectController::class, 'index'])->name('projects');
+    Route::post('/attendance/projects', [AttendanceProjectController::class, 'store'])->name('projects.store');
+    Route::post('/attendance/projects/employees', [AttendanceController::class, 'employee'])->name('projects.employees.store');
+    Route::post('/attendance/projects/assignments', [AttendanceController::class, 'assignment'])->name('projects.assignments.store');
     Route::post('/attendance/employees', [AttendanceController::class, 'employee'])->name('employees.store');
     Route::post('/attendance/schedules', [AttendanceController::class, 'schedule'])->name('schedules.store');
     Route::post('/attendance/assignments', [AttendanceController::class, 'assignment'])->name('assignments.store');

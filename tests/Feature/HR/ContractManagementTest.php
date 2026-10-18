@@ -220,7 +220,7 @@ it('bounds contract dashboards and reports and produces a real scoped workbook',
     $this->actingAs($this->officer)->get(route('hr.contracts.export'))->assertOk()->assertDownload('hr-contracts.xlsx');
     $this->get(route('hr.contracts.index', ['status' => 'expired']))->assertOk()->assertDontSee('PHC-C-001');
     $this->get(route('hr.contracts.index', ['expires_before' => '2026-11-01']))->assertOk()->assertDontSee('PHC-C-001');
-    $this->get(route('hr.contracts.index', ['date' => '2027-01-01']))->assertOk()->assertSee('منتهي المدة')->assertSee('PHC-C-001');
+    $this->get(route('hr.contracts.index', ['date' => '2027-01-01']))->assertOk()->assertSee(__('hr::contracts.statuses.expired'))->assertSee('PHC-C-001');
     $query = EmploymentContract::query()->getConnection();
     $query->enableQueryLog();
     $query->flushQueryLog();
@@ -230,9 +230,9 @@ it('bounds contract dashboards and reports and produces a real scoped workbook',
     expect($page['rows']->total())->toBe(1)->and($count)->toBeLessThan(12);
 });
 
-it('queues expiry checks through the scheduled command without sending prematurely',function (): void {
+it('queues expiry checks through the scheduled command without sending prematurely', function (): void {
     ($this->approve)();
     $this->artisan('hr:notify-contract-expiry')->assertSuccessful();
-    Queue::assertPushed(NotifyContractExpiry::class,1);
-    $this->assertDatabaseCount('hr_contract_alerts',0);
+    Queue::assertPushed(NotifyContractExpiry::class, 1);
+    $this->assertDatabaseCount('hr_contract_alerts', 0);
 });

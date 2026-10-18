@@ -93,3 +93,9 @@ An approved attendance correction can administratively resolve a raw open sessio
 
 Remaining Phase 5 acceptance includes PHC organizational data, bilingual UI coverage, multiple employment-period/rehire handling and staging operations. Contracts, leave workflows, payroll and advanced HR remain in the full roadmap and are not represented as implemented placeholders.
 
+### Incremental project attendance foundation — 18 October 2026
+
+Project-based workers use the same employee identity and existing user account. A lightweight immutable `hr_attendance_projects` catalog records the actual code/name and date boundaries; nullable `hr_shift_assignments.project_id` associates each finite attendance assignment with its project. This deliberately reuses the existing day-of-week, fixed/flexible shift, overlap, retirement, capture and absence calculations. Administrative organizational assignments and department access scopes are unchanged. Project membership does not grant team visibility or administrative authority.
+
+Attendance setup now supports optional generated internal numbers, email-based account mapping and explicit audited activation of the three employee self-service attendance/device-registration grants. An Arabic project preparation page joins project creation, employee mapping and schedule assignment. Reports preserve a single employee/day calculation and display project labels; Excel adds a project column. Project cost allocation, payroll, contract classification and real PHC project/worker provisioning remain separate work, and no phase is marked complete by this incremental feature.
+

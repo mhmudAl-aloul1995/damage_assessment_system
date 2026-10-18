@@ -42,7 +42,7 @@ class AttendanceReport
     public function relations(Builder $query, string $start, string $end): Builder
     {
         return $query->with([
-            'assignments' => fn ($query) => $query->with(['schedule', 'retirements'])->where('starts_on', '<=', $end)->where(fn ($query) => $query->whereNull('ends_on')->orWhere('ends_on', '>=', $start)),
+            'assignments' => fn ($query) => $query->with(['schedule', 'retirements', 'project'])->where('starts_on', '<=', $end)->where(fn ($query) => $query->whereNull('ends_on')->orWhere('ends_on', '>=', $start)),
             'events' => fn ($query) => $query->whereBetween('work_date', [$start, $end]),
             'legacyAttendances' => fn ($query) => $query->whereBetween('date', [$start, $end]),
             'adjustments' => fn ($query) => $query->with('decision')->whereBetween('work_date', [$start, $end]),

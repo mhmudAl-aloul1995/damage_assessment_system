@@ -21,12 +21,14 @@ return ['statuses' => [
     'approved_present' => 'حضور مصحح ومعتمد — الأوقات غير معلومة',
     'approved_absent' => 'غياب مصحح ومعتمد',
 ], 'actions' => [
+    'project' => ['created' => 'إنشاء مشروع للحضور'],
     'employee' => ['mapped' => 'إنشاء هوية الحضور'],
     'schedule' => ['created' => 'إنشاء إصدار جدول العمل', 'exception_recorded' => 'تسجيل استثناء معتمد'],
     'shift' => ['assigned' => 'إسناد وردية', 'retired' => 'تسجيل إنهاء تكليف الوردية'],
     'holiday' => ['created' => 'تسجيل عطلة رسمية', 'cancelled' => 'تسجيل إلغاء عطلة'],
     'device' => ['registered' => 'طلب تسجيل جهاز', 'approved' => 'اعتماد جهاز', 'rejected' => 'رفض جهاز', 'revoked' => 'إلغاء اعتماد جهاز'],
     'attendance' => [
+        'native_access_enabled' => 'تفعيل الحضور عبر التطبيق لموظف',
         'simulated' => 'حدث حضور في بيئة الاختبار', 'correction_requested' => 'طلب تصحيح الحضور',
         'signed' => 'حدث حضور موقع من جهاز معتمد',
         'session_resolved' => 'إغلاق إداري لوردية بعد تصحيح معتمد',

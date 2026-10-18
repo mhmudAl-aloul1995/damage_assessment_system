@@ -34,7 +34,7 @@ class AttendanceCalculator
 
     public function day(Employee $employee, string $date, ?CarbonImmutable $asOf = null): array
     {
-        $employee->loadMissing(['assignments.schedule', 'assignments.retirements', 'events', 'legacyAttendances', 'adjustments.decision', 'scheduleExceptions.schedule']);
+        $employee->loadMissing(['assignments.schedule', 'assignments.retirements', 'assignments.project', 'events', 'legacyAttendances', 'adjustments.decision', 'scheduleExceptions.schedule']);
         if (! $employee->relationLoaded('attendanceHolidays')) {
             $employee->setRelation('attendanceHolidays', Holiday::query()->with('cancellation')->where('starts_on', '<=', $date)->where('ends_on', '>=', $date)->get());
         }
@@ -209,6 +209,7 @@ class AttendanceCalculator
         return [
             'employee_id' => $employee->id, 'employee_number' => $employee->employee_number, 'name' => $employee->display_name,
             'date' => $date, 'schedule' => collect($sessions)->pluck('schedule')->filter()->unique()->implode(' / ') ?: null,
+            'projects' => $assignments->pluck('project.name')->filter()->unique()->values()->all(),
             'timezone' => $timezone, 'check_in' => $firstIn?->setTimezone($timezone)->format('Y-m-d H:i'),
             'check_out' => $lastOut?->setTimezone($timezone)->format('Y-m-d H:i'), 'status' => $conflict ? 'conflict' : $status,
             'source' => $approved ? 'approved_correction' : ($events->isNotEmpty() ? $events->pluck('source')->unique()->sort()->implode(', ') : ($legacy ? 'legacy' : 'none')),
