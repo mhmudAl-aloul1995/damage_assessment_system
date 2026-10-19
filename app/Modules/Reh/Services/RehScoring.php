@@ -4,7 +4,7 @@ namespace App\Modules\Reh\Services;
 
 class RehScoring
 {
-    public const VERSION = 'phc-matrix-v2';
+    public const VERSION = 'phc-matrix-v3';
 
     public const STATUSES = ['calculated' => 'محسوب', 'missing' => 'بيانات ناقصة', 'invalid' => 'بيانات تحتاج تصحيحًا'];
 
@@ -13,6 +13,7 @@ class RehScoring
         'hosted' => 'تُقيّم الأسر المقيمة أو المستضافة كمجموعة من الأعداد المجمّعة، دون قسمة الأفراد أو مضاعفة النقاط بعدد الأسر. تُعتمد الأعلى بينها وبين أسرة المالك بعد اكتمالهما.',
         'fractional_walls' => 'الحوائط: صفر = صفر نقاط؛ أكبر من صفر وأقل من 5 = الشريحة الأولى؛ من 5 وأقل من 11 = الثانية؛ 11 فأكثر = الثالثة. دون تقريب.',
         'missing_values' => 'كل إجابة مؤثرة في السكور إلزامية عند انطباقها. الإجابة الناقصة لا تُعتبر صفرًا؛ تبقى الدرجة النهائية والأولوية معلقتين حتى الاستكمال.',
+        'engineering_blanks' => 'ضمن حصر أعمال يحتوي كميات مدخلة، أو مع تسجيل أن الوحدة لا تحتاج تدخلًا، يُحتسب بند BoQ الخالي كعمل غير مدرج وصفر للاحتساب. غياب الحصر كله أو غياب حقل من بيانات المصدر يستلزم المراجعة.',
     ];
 
     public const PRIORITIES = ['very_high' => 'أولوية عالية جدًا', 'high' => 'أولوية عالية', 'medium' => 'أولوية متوسطة', 'low' => 'أولوية منخفضة'];
@@ -74,7 +75,24 @@ class RehScoring
     public function engineering(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $catalog = [];
-        foreach ($this->survey->quantities($unit) as $item) {
+        $quantities = $this->survey->quantities($unit);
+        $hasAssessment = ($unit->source['unit_needs_intervention'] ?? null) === 'no'
+            || collect($quantities)->every(fn (array $item): bool => $this->number($item['quantity'], $item['type'] === 'integer')['status'] === 'calculated')
+            || collect($quantities)->contains(function (array $item): bool {
+                foreach (['source', 'quantity'] as $key) {
+                    $number = $this->number($item[$key], $item['type'] === 'integer');
+                    if ($number['status'] === 'calculated' && $number['value'] > 0) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+        foreach ($quantities as $item) {
+            $item['not_requested'] = $hasAssessment
+                && array_key_exists($item['field'], $unit->source ?? [])
+                && ($item['quantity'] === null || $item['quantity'] === '');
+            $item['scoring_quantity'] = $item['not_requested'] ? 0 : $item['quantity'];
             if (preg_match('/^boq_(\d+)_(\d+)_/', $item['field'], $match)) {
                 $catalog[$match[1].'.'.$match[2]] = $item;
             }
@@ -82,7 +100,7 @@ class RehScoring
         $rows = [];
         foreach (self::ENGINEERING as $id => [$label, $maximum, $codes]) {
             $items = array_map(fn (string $code): array => ['code' => $code] + $catalog[$code], $codes);
-            $numbers = array_map(fn (array $item): array => $this->number($item['quantity'], $item['type'] === 'integer'), $items);
+            $numbers = array_map(fn (array $item): array => $this->number($item['scoring_quantity'], $item['type'] === 'integer'), $items);
             $state = $this->inputState($numbers);
             $points = null;
             $reason = 'تُحتسب نقاط الفئة مرة واحدة عند وجود كمية موجبة في أحد بنودها.';
@@ -105,7 +123,9 @@ class RehScoring
                 }
             }
             if (in_array($state, ['missing', 'invalid'], true)) {
-                $reason = $state === 'missing' ? 'يلزم استكمال الكميات المرتبطة؛ القيمة الفارغة ليست صفرًا.' : 'توجد كمية سالبة أو غير صالحة أو كسر في بند عددي.';
+                $reason = $state === 'missing' ? 'حصر الأعمال غير متوفر أو أن حقولًا مطلوبة لم تصل من المصدر؛ يلزم مراجعة البيانات.' : 'توجد كمية سالبة أو غير صالحة أو كسر في بند عددي.';
+            } elseif ($points === 0) {
+                $reason = 'لا توجد كمية موجبة مدرجة لهذه الفئة ضمن حصر الأعمال؛ صفر نقاط. '.($wall ? self::RULES['fractional_walls'] : 'تُمنح نقاط الفئة عند وجود كمية موجبة في أحد بنودها.');
             }
             $rows[] = $this->row($id, $label, $maximum, $points, $state, $reason, $items);
         }

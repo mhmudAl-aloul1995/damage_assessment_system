@@ -17,7 +17,7 @@ function rehScoringSource(): array
         }
     }
 
-    return [...$source, 'owner_age' => 40, 'household_males_age18_60' => 1, 'owner_sex' => 'male', 'other_members_have_disability' => 'no', 'owner_has_disability' => 'no', 'nonfood_assistance_recency' => 'recent', 'shelter_assistance_recency' => 'recent', 'household_has_stable_income' => 'yes', 'household_protection_risks' => 'debt', 'breadwinner_male_owner' => 'owner', 'hosts_other_households' => 'no', 'current_unit_occupancy' => 'owner_family'];
+    return [...$source, 'owner_age' => 40, 'household_males_age18_60' => 1, 'owner_sex' => 'male', 'other_members_have_disability' => 'no', 'owner_has_disability' => 'no', 'nonfood_assistance_recency' => 'recent', 'shelter_assistance_recency' => 'recent', 'household_has_stable_income' => 'yes', 'household_protection_risks' => 'debt', 'breadwinner_male_owner' => 'owner', 'hosts_other_households' => 'no', 'current_unit_occupancy' => 'owner_family', 'unit_needs_intervention' => 'no'];
 }
 
 function rehScoringUnit(array $changes = []): RehUnit
@@ -43,6 +43,63 @@ function rehScoringDisplacedSource(): array
         'nonowner_chronic_count' => 2, 'nonowner_pregnant_lactating' => 1,
     ];
 }
+
+function rehScoringBlankBoq(): array
+{
+    return array_fill_keys(array_filter(array_keys(app(RehSurvey::class)->dictionary()['fields']), fn (string $field): bool => str_starts_with($field, 'boq_')), null);
+}
+
+it('scores unused nullable boq fields as no work within an existing assessment and preserves raw data', function (): void {
+    $unit = rehScoringUnit([
+        ...rehScoringBlankBoq(), 'unit_needs_intervention' => 'yes',
+        'boq_12_1_water_tank_1000l_qty' => 1,
+        'boq_2_3_partition_wall_qty' => 10.5, 'boq_2_1_pallet_wall_qty' => 4.5, 'boq_5_3_roof_tarp_drain_qty' => 1,
+    ]);
+    $original = $unit->source;
+    $score = app(RehScoring::class)->calculate($unit);
+    expect($score['engineering']['calculated_count'])->toBe(12)
+        ->and($score['engineering']['pending_count'])->toBe(0)
+        ->and($score['engineering']['total'])->toBe(8)
+        ->and(rehScoreRow($score, 'engineering', 'kitchen')['points'])->toBe(0)
+        ->and(rehScoreRow($score, 'engineering', 'internal_wall')['points'])->toBe(2)
+        ->and($score['total'])->toBe(10)
+        ->and($unit->source)->toBe($original)
+        ->and(rehScoreRow($score, 'engineering', 'kitchen')['inputs'][0]['quantity'])->toBeNull()
+        ->and(rehScoreRow($score, 'engineering', 'kitchen')['inputs'][0]['not_requested'])->toBeTrue();
+});
+
+it('keeps an entirely blank engineering assessment pending unless no intervention is explicitly recorded', function (?string $needsIntervention, ?int $expected): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([...rehScoringBlankBoq(), 'unit_needs_intervention' => $needsIntervention]));
+    expect($score['engineering']['total'])->toBe($expected)
+        ->and($score['engineering']['pending_count'])->toBe($expected === null ? 12 : 0);
+})->with([['yes', null], [null, null], ['no', 0]]);
+
+it('does not turn a missing source schema into a zero assessment', function (): void {
+    $score = app(RehScoring::class)->calculate(new RehUnit(['source' => ['unit_needs_intervention' => 'no']]));
+    expect($score['engineering']['total'])->toBeNull()->and($score['engineering']['pending_count'])->toBe(12);
+});
+
+it('does not mistake one zero entry for a completed otherwise blank assessment', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([...rehScoringBlankBoq(), 'unit_needs_intervention' => 'yes', 'boq_12_1_water_tank_1000l_qty' => 0]));
+    expect($score['engineering']['total'])->toBeNull();
+});
+
+it('respects saved zero overrides while flagging invalid quantities in a sparse assessment', function (): void {
+    $unit = rehScoringUnit([...rehScoringBlankBoq(), 'boq_12_1_water_tank_1000l_qty' => 1]);
+    $unit->quantity_overrides = ['boq_12_1_water_tank_1000l_qty' => 0];
+    expect(app(RehScoring::class)->engineering($unit)['total'])->toBe(0);
+    $unit->source = [...$unit->source, 'boq_2_3_partition_wall_qty' => -1];
+    $score = app(RehScoring::class)->calculate($unit);
+    expect(rehScoreRow($score, 'engineering', 'internal_wall')['status'])->toBe('invalid')
+        ->and($score['engineering']['total'])->toBeNull();
+});
+
+it('never uses the engineering blank rule to fill required social answers', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([...rehScoringBlankBoq(), 'boq_12_1_water_tank_1000l_qty' => 1, 'household_chronic_count' => null]));
+    expect($score['engineering']['total'])->toBe(2)
+        ->and(rehScoreRow($score, 'owner', 'chronic')['status'])->toBe('missing')
+        ->and($score['total'])->toBeNull()->and($score['priority'])->toBeNull();
+});
 
 it('calculates dependency from all eight age counts with exact ratio boundaries', function (int $dependents, int $workingAge, ?int $points, string $status): void {
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_males_age5_17' => $dependents, 'household_males_age18_60' => $workingAge]));
@@ -180,7 +237,7 @@ it('awards each engineering category once and ignores unmapped additional work',
         ->and(rehScoreRow($score, 'engineering', 'kitchen')['points'])->toBe(6);
 });
 
-it('resolves binary categories with a positive quantity but never assumes empty means zero', function (): void {
+it('resolves binary categories with a positive quantity but keeps absent source fields missing', function (): void {
     $unit = new RehUnit(['source' => ['boq_12_1_water_tank_1000l_qty' => 1]]);
     $score = app(RehScoring::class)->calculate($unit);
     expect(rehScoreRow($score, 'engineering', 'tank')['points'])->toBe(2)
@@ -192,7 +249,7 @@ it('handles continuous internal wall thresholds without rounding quantities', fu
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['boq_2_3_partition_wall_qty' => $quantity]));
     expect(rehScoreRow($score, 'engineering', 'internal_wall')['points'])->toBe($expected)
         ->and(rehScoreRow($score, 'engineering', 'internal_wall')['status'])->toBe($status);
-})->with([[0, 0, 'calculated'], [1, 1, 'calculated'], [4, 1, 'calculated'], [5, 2, 'calculated'], [10, 2, 'calculated'], [11, 4, 'calculated'], [0.5, 1, 'calculated'], [4.5, 1, 'calculated'], [4.999, 1, 'calculated'], [5.5, 2, 'calculated'], [10.5, 2, 'calculated'], [10.999, 2, 'calculated'], [null, null, 'missing'], [-1, null, 'invalid'], ['bad', null, 'invalid']]);
+})->with([[0, 0, 'calculated'], [1, 1, 'calculated'], [4, 1, 'calculated'], [5, 2, 'calculated'], [10, 2, 'calculated'], [11, 4, 'calculated'], [0.5, 1, 'calculated'], [4.5, 1, 'calculated'], [4.999, 1, 'calculated'], [5.5, 2, 'calculated'], [10.5, 2, 'calculated'], [10.999, 2, 'calculated'], [null, 0, 'calculated'], ['', 0, 'calculated'], [-1, null, 'invalid'], ['bad', null, 'invalid']]);
 
 it('scores external wall length and area separately without adding incompatible units', function (): void {
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['boq_2_1_pallet_wall_qty' => 4, 'boq_2_5_used_block_20cm_qty' => 4]));
