@@ -5,7 +5,7 @@ $rehRoles = [
     'مشاهد REH' => ['viewer', ['reh.view']],
     'مدقق هندسي REH' => ['engineering', ['reh.view', 'reh.review', 'reh.review.engineering']],
     'مدقق اجتماعي REH' => ['social', ['reh.view', 'reh.review', 'reh.review.social', 'reh.sensitive', 'reh.scores.view']],
-    'صاحب قرار REH' => ['decision', ['reh.view', 'reh.scores.view', 'reh.decide']],
+    'REH Project Officer' => ['decision', ['reh.view', 'reh.scores.view', 'reh.decide']],
     'مسؤول موديول REH' => ['manager', $rehPermissions],
 ];
 $rehProfiles = [];

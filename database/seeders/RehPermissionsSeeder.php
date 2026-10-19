@@ -15,6 +15,13 @@ class RehPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
+        $legacyRole = Role::query()->where('guard_name', 'web')->where('name', 'صاحب قرار REH')->first();
+        if ($legacyRole !== null) {
+            if (Role::query()->where('guard_name', 'web')->where('name', 'REH Project Officer')->exists()) {
+                throw new \RuntimeException('يوجد دوران باسم صاحب قرار REH وREH Project Officer. راجع تعارض الأسماء قبل إعادة التهيئة؛ لم يتم دمج الصلاحيات أو تغيير إسناد المستخدمين.');
+            }
+            $legacyRole->update(['name' => 'REH Project Officer']);
+        }
         $scoresPermissionIsNew = ! Permission::query()->where('guard_name', 'web')->where('name', 'reh.scores.view')->exists();
         foreach (config('access.reh_permissions') as $permission) {
             Permission::findOrCreate($permission, 'web');

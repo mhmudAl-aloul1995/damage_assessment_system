@@ -89,12 +89,12 @@ it('enforces each role for the page every review action synchronization export a
     ['مشاهد REH', [], false],
     ['مدقق هندسي REH', ['claim', 'engineering_approve', 'return', 'second_assessment', 'quantities'], false],
     ['مدقق اجتماعي REH', ['claim', 'social_approve', 'return'], false],
-    ['صاحب قرار REH', ['select', 'exclude', 'reopen'], false],
+    ['REH Project Officer', ['select', 'exclude', 'reopen'], false],
     ['مسؤول موديول REH', ['claim', 'engineering_approve', 'social_approve', 'return', 'second_assessment', 'quantities', 'select', 'exclude', 'reopen'], true],
 ]);
 
 it('shows final scores priorities and their history without exposing social details identity health or private attachments', function (): void {
-    $user = rehAccessUser('صاحب قرار REH');
+    $user = rehAccessUser('REH Project Officer');
     $unit = rehAccessScoredUnit();
     $snapshot = app(RehScoring::class)->snapshot($unit);
     $unit->reviews()->create(['action' => 'quantities', 'note' => 'توثيق مراجعة', 'changes' => ['scoring' => ['before' => $snapshot, 'after' => $snapshot]]]);
@@ -135,7 +135,7 @@ it('groups and explains REH permissions and role profiles in Arabic and English'
     $catalog = app(PermissionCatalog::class);
     expect($catalog->groupKey('reh.scores.view'))->toBe('reh')
         ->and($catalog->groups()->firstWhere('key', 'reh')['permissions'])->toHaveCount(9);
-    $role = Role::findByName('صاحب قرار REH', 'web');
+    $role = Role::findByName('REH Project Officer', 'web');
     $this->getJson(route('roles.edit', $role))->assertOk()->assertJsonPath('role.profile.description', __('access.reh_roles.decision'));
     Permission::findOrCreate('users.update', 'web');
     $this->putJson(route('roles.update', $role), ['name' => $role->name, 'permissions' => ['reh.view', 'users.update'], 'revision' => $catalog->revision($role->load('permissions'))])->assertUnprocessable()->assertJsonValidationErrors('permissions');
@@ -151,6 +151,42 @@ it('retains customized grants and revocations when the REH setup is run again', 
     expect(Role::findByName('مسؤول موديول REH', 'web')->hasPermissionTo('reh.sync'))->toBeFalse()
         ->and($user->fresh()->can('reh.scores.view'))->toBeFalse()
         ->and(Role::query()->where('name', 'مدقق اجتماعي REH')->count())->toBe(1);
+});
+
+it('renames the legacy project role in place preserving customized permissions members and the global Project Officer role', function (): void {
+    $role = Role::findByName('REH Project Officer', 'web');
+    $role->update(['name' => 'صاحب قرار REH']);
+    $role->revokePermissionTo('reh.decide');
+    $role->givePermissionTo('reh.export');
+    $user = rehAccessUser('صاحب قرار REH');
+    $globalRole = Role::findOrCreate('Project Officer', 'web');
+    $globalRole->givePermissionTo('reh.view');
+    $globalPermissions = $globalRole->permissions->pluck('name')->sort()->values()->all();
+    $permissions = $role->fresh()->permissions->pluck('name')->sort()->values()->all();
+
+    $this->seed(RehPermissionsSeeder::class);
+    $this->seed(RehPermissionsSeeder::class);
+
+    expect(Role::findByName('REH Project Officer', 'web')->id)->toBe($role->id)
+        ->and($role->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe($permissions)
+        ->and($user->fresh()->roles->pluck('id')->all())->toBe([$role->id])
+        ->and($user->fresh()->hasRole('REH Project Officer'))->toBeTrue()
+        ->and($user->fresh()->can('reh.decide'))->toBeFalse()
+        ->and(Role::query()->where('name', 'صاحب قرار REH')->exists())->toBeFalse()
+        ->and($globalRole->fresh()->name)->toBe('Project Officer')
+        ->and($globalRole->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe($globalPermissions);
+});
+
+it('leaves both roles intact when a conflicting project officer role already exists', function (): void {
+    $role = Role::findOrCreate('صاحب قرار REH', 'web');
+    $role->givePermissionTo('reh.view');
+    $user = rehAccessUser('صاحب قرار REH');
+    $target = Role::findByName('REH Project Officer', 'web');
+    $permissions = $target->permissions->pluck('name')->sort()->values()->all();
+    expect(fn () => $this->seed(RehPermissionsSeeder::class))->toThrow(\RuntimeException::class);
+    expect($role->fresh()->name)->toBe('صاحب قرار REH')
+        ->and($user->fresh()->roles->pluck('id')->all())->toBe([$role->id])
+        ->and($target->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe($permissions);
 });
 
 it('preserves existing score access once when upgrading legacy sensitive grants', function (): void {
