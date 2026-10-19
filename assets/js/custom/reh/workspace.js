@@ -7,6 +7,8 @@
     const loading = document.getElementById('reh-loading');
     const detail = document.getElementById('reh-detail');
     const detailBody = document.getElementById('reh-detail-body');
+    const sourceDialog = document.getElementById('reh-score-source-dialog');
+    const sourceBody = document.getElementById('reh-score-source-body');
     const message = document.getElementById('reh-message');
     const detailMessage = document.getElementById('reh-detail-message');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -84,6 +86,7 @@
 
     function closeDetail() {
         if (!canLeave()) return false;
+        if (sourceDialog.open) sourceDialog.close();
         detailRequest?.abort();
         dirty = false;
         detail.close();
@@ -111,6 +114,7 @@
 
     async function openDetail(url, push = true, section = 'summary') {
         if (!canLeave()) return;
+        if (sourceDialog.open) sourceDialog.close();
         detailRequest?.abort();
         const controller = new AbortController();
         detailRequest = controller;
@@ -177,6 +181,8 @@
         dirty = true;
     });
     detail.addEventListener('cancel', event => { event.preventDefault(); if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); });
+    sourceDialog.addEventListener('cancel', event => { event.stopPropagation(); });
+    sourceDialog.addEventListener('close', () => sourceBody.replaceChildren());
 
     root.addEventListener('click', async event => {
         const button = event.target.closest('a, button, input');
@@ -211,8 +217,13 @@
                 }
             }
         } else if (button.matches('[data-score-source]')) {
-            selectDetailTab('data');
-            detailBody.querySelector(`[data-source-field="${CSS.escape(button.dataset.scoreSource)}"]`)?.scrollIntoView({ block: 'center' });
+            const template = button.closest('[data-score-row]').querySelector('[data-score-source-content]');
+            if (!template) return;
+            document.getElementById('reh-source-title').textContent = button.dataset.scoreSource;
+            sourceBody.replaceChildren(template.content.cloneNode(true));
+            sourceDialog.showModal();
+        } else if (button.matches('[data-close-score-source]')) {
+            sourceDialog.close();
         } else if (button.matches('[data-show-all-quantities]')) {
             detailBody.querySelectorAll('[data-quantity-row]').forEach(row => { row.hidden = !button.checked && row.dataset.hasQuantity !== '1'; });
         } else if (button.matches('[data-export]')) {

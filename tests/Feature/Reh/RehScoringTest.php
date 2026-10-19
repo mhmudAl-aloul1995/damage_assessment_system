@@ -49,6 +49,49 @@ function rehScoringBlankBoq(): array
     return array_fill_keys(array_filter(array_keys(app(RehSurvey::class)->dictionary()['fields']), fn (string $field): bool => str_starts_with($field, 'boq_')), null);
 }
 
+it('renders only the selected family dependency inputs in its source preview', function (string $family, string $prefix): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo(['reh.view', 'reh.sensitive']);
+    $unit = RehUnit::factory()->create(['source' => [...rehScoringSource(), ...rehScoringDisplacedSource()]]);
+    $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $template = $xpath->query('//div[@data-score-family-panel="'.$family.'"]//details[@data-score-row="dependency"]//template[@data-score-source-content]')->item(0);
+    expect($template)->not->toBeNull();
+    $fields = [];
+    foreach ($xpath->query('.//*[@data-indicator-field]', $template) as $field) {
+        $fields[] = $field->getAttribute('data-indicator-field');
+    }
+    expect($fields)->toBe(array_map(fn (string $suffix): string => $prefix.$suffix, ['males_under5', 'males_age5_17', 'males_over60', 'females_under5', 'females_age5_17', 'females_over60', 'males_age18_60', 'females_age18_60']));
+    $this->get(route('reh.index'))->assertOk()->assertSee('id="reh-score-source-dialog"', false)->assertSee('العودة للتقييم');
+})->with([['owner', 'household_'], ['other', 'nonowner_']]);
+
+it('keeps the engineering source preview limited to the indicator and distinguishes original reviewed and missing quantities', function (): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo('reh.view');
+    $unit = RehUnit::factory()->create(['source' => rehScoringSource()]);
+    $kitchen = collect(app(RehScoring::class)->engineering($unit)['rows'])->firstWhere('id', 'kitchen');
+    $source = $unit->source;
+    $source[$kitchen['inputs'][0]['field']] = 5;
+    $source[$kitchen['inputs'][1]['field']] = null;
+    $unit->update(['source' => $source, 'quantity_overrides' => [$kitchen['inputs'][0]['field'] => 0]]);
+    $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $template = $xpath->query('//details[@data-score-row="kitchen"]//template[@data-score-source-content]')->item(0);
+    $fields = $xpath->query('.//*[@data-indicator-field]', $template);
+    expect($fields->length)->toBe(4)
+        ->and($template->textContent)->not->toContain('توريد وتصنيع وتركيب أسطح مطابخ ومجالي بسمك')
+        ->and($fields->item(0)->textContent)->toContain('الكمية الميدانية: 5', 'الكمية المراجعة: 0')
+        ->and($fields->item(1)->textContent)->toContain('غير مسجل', 'لم تُعدّل', 'لا توجد أعمال مدرجة');
+    expect($xpath->query('//template[@data-score-source-content]//*[@data-indicator-field="owner_age"]')->length)->toBe(0)
+        ->and($xpath->query('//template[@data-score-source-content]//*[@data-indicator-field="household_chronic_count"]')->length)->toBe(0);
+});
+
 function rehPrioritySource(string $priority): array
 {
     $source = rehScoringSource();

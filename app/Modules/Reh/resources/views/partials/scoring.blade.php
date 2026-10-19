@@ -29,7 +29,7 @@
         @foreach(['owner' => 'أسرة المالك', 'other' => 'مجموعة الأسر المقيمة / المستضافة'] as $family => $label)
             @if($score[$family] !== null)<div data-score-family-panel="{{ $family }}" @if($family !== 'owner') hidden @endif>
                 @if($family === 'other')<p class="reh-score-explainer">تُحسب الأعداد المجمّعة لكل الأسر التي يمثلها المقيم كسجل واحد. لا تُقسم الأعداد على عدد الأسر، ولا تتضاعف النقاط بعددها.</p>@endif
-                @include('reh::partials.scoring-rows', ['rows' => $score[$family]['rows'], 'engineeringRows' => false])
+                @include('reh::partials.scoring-rows', ['rows' => $score[$family]['rows'], 'engineeringRows' => false, 'sourceContext' => $label])
             </div>@endif
         @endforeach
         @if($score['other'] === null)<p class="text-muted mt-4">لا توجد أسرة إضافية وفق بيانات الاستضافة الحالية.</p>@endif
