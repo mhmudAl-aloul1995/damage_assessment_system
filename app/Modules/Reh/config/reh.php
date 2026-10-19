@@ -8,4 +8,5 @@ return [
     'password' => env('REH_ARCGIS_PASSWORD', env('ARCGIS_PASSWORD')),
     'referer' => env('REH_ARCGIS_REFERER', env('ARCGIS_REFERER', env('APP_URL'))),
     'queue_connection' => env('REH_QUEUE_CONNECTION', 'reh'),
+    'worker_php_binary' => env('REH_PHP_BINARY'),
 ];

@@ -7,6 +7,7 @@ use App\Modules\Reh\Models\RehSyncRun;
 use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehArcgisClient;
 use App\Modules\Reh\Services\RehSurvey;
+use App\Modules\Reh\Services\RehSyncWorker;
 use App\Support\Navigation\Sidebar;
 use Database\Seeders\RehPermissionsSeeder;
 use Illuminate\Support\Facades\Queue;
@@ -123,6 +124,7 @@ it('detects duplicate apartments and household totals without combining hosted f
 
 it('queues one sync and keeps ajax requests responsive', function (): void {
     Queue::fake();
+    $this->mock(RehSyncWorker::class)->shouldReceive('start')->twice()->andReturnTrue();
     $this->actingAs($this->officer)->postJson(route('reh.sync'))->assertAccepted();
     $this->postJson(route('reh.sync'))->assertAccepted();
     Queue::assertPushed(SyncRehSurvey::class, 1);
@@ -130,6 +132,39 @@ it('queues one sync and keeps ajax requests responsive', function (): void {
     expect(config('queue.connections.reh.retry_after'))->toBeGreaterThan((new SyncRehSurvey(1))->timeout);
     expect(RehSyncRun::query()->count())->toBe(1);
     expect($this->getJson(route('reh.data', ['tab' => 'sync']))->json('sync_active'))->toBeTrue();
+});
+
+it('restarts an existing queued sync from the button without dispatching a duplicate', function (): void {
+    Queue::fake();
+    $run = RehSyncRun::query()->create();
+    $this->mock(RehSyncWorker::class)->shouldReceive('start')->once()->andReturnTrue();
+
+    $this->actingAs($this->officer)->postJson(route('reh.sync'))->assertAccepted()->assertJsonPath('run_id', $run->id);
+    Queue::assertNothingPushed();
+    expect(RehSyncRun::query()->count())->toBe(1);
+});
+
+it('does not start another worker when synchronization is already running', function (): void {
+    Queue::fake();
+    $run = RehSyncRun::query()->create(['status' => 'running']);
+    $this->mock(RehSyncWorker::class)->shouldNotReceive('start');
+
+    $this->actingAs($this->officer)->postJson(route('reh.sync'))->assertAccepted()->assertJsonPath('run_id', $run->id);
+    Queue::assertNothingPushed();
+    $html = $this->getJson(route('reh.data', ['tab' => 'sync']))->assertOk()->json('html');
+    expect($html)->toContain('المزامنة قيد التنفيذ…', 'تبدأ المزامنة تلقائيًا')->not->toContain('يلزم أن يكون عامل');
+});
+
+it('preserves the queued job and supports retrying a failed automatic worker launch', function (): void {
+    Queue::fake();
+    $this->mock(RehSyncWorker::class)->shouldReceive('start')->twice()->andReturn(false, true);
+    $this->actingAs($this->officer)->postJson(route('reh.sync'))->assertStatus(503);
+    $run = RehSyncRun::query()->sole();
+    expect($run->status)->toBe('queued')->and($run->message)->toContain('تعذر بدء التنفيذ التلقائي');
+
+    $this->postJson(route('reh.sync'))->assertAccepted()->assertJsonPath('run_id', $run->id);
+    Queue::assertPushed(SyncRehSurvey::class, 1);
+    expect(RehSyncRun::query()->count())->toBe(1);
 });
 
 it('authorizes sensitive attachments independently from the gallery', function (): void {

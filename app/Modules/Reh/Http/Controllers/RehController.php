@@ -14,6 +14,7 @@ use App\Modules\Reh\Services\RehArcgisClient;
 use App\Modules\Reh\Services\RehReviewService;
 use App\Modules\Reh\Services\RehScoring;
 use App\Modules\Reh\Services\RehSurvey;
+use App\Modules\Reh\Services\RehSyncWorker;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,25 +87,34 @@ class RehController extends Controller
         return $this->unit($request, $unit);
     }
 
-    public function sync(Request $request): JsonResponse
+    public function sync(Request $request, RehSyncWorker $worker): JsonResponse
     {
         $lock = Cache::lock('reh:sync:dispatch', 10);
         abort_unless($lock->get(), 409, 'يتم تجهيز المزامنة؛ حاول بعد لحظات.');
         try {
             $run = RehSyncRun::query()->whereIn('status', ['queued', 'running'])->first();
-            if ($run) {
-                return response()->json(['message' => 'توجد مزامنة قيد الانتظار أو التنفيذ.', 'run_id' => $run->id], 202);
+            if ($run?->status === 'running') {
+                return response()->json(['message' => 'المزامنة قيد التنفيذ؛ تُحدّث الحالة تلقائيًا.', 'run_id' => $run->id], 202);
             }
-            $run = RehSyncRun::query()->create(['user_id' => $request->user()->id]);
-            try {
-                SyncRehSurvey::dispatch($run->id);
-            } catch (Throwable) {
-                $run->update(['status' => 'failed', 'finished_at' => now(), 'message' => 'تعذر إرسال مهمة المزامنة إلى قائمة الانتظار.']);
+            if (! $run) {
+                $run = RehSyncRun::query()->create(['user_id' => $request->user()->id]);
+                try {
+                    SyncRehSurvey::dispatch($run->id);
+                } catch (Throwable) {
+                    $run->update(['status' => 'failed', 'finished_at' => now(), 'message' => 'تعذر إرسال مهمة المزامنة إلى قائمة الانتظار.']);
 
-                return response()->json(['message' => 'تعذر بدء المزامنة. تحقق من إعدادات قائمة الانتظار.'], 503);
+                    return response()->json(['message' => 'تعذر بدء المزامنة. تحقق من إعدادات قائمة الانتظار.'], 503);
+                }
+            }
+            if (! $worker->start()) {
+                $run->update(['message' => 'حُفظ الطلب، لكن تعذر بدء التنفيذ التلقائي. أعد المحاولة أو تواصل مع مسؤول النظام.']);
+
+                return response()->json(['message' => $run->message, 'run_id' => $run->id], 503);
             }
 
-            return response()->json(['message' => 'أُرسلت المزامنة إلى قائمة الانتظار.', 'run_id' => $run->id], 202);
+            RehSyncRun::query()->whereKey($run->id)->where('status', 'queued')->update(['message' => 'جاري بدء المزامنة تلقائيًا…']);
+
+            return response()->json(['message' => 'جاري بدء المزامنة بالخلفية؛ تُحدّث الحالة تلقائيًا.', 'run_id' => $run->id], 202);
         } finally {
             $lock->release();
         }

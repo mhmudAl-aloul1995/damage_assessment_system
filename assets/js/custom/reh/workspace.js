@@ -200,7 +200,7 @@
         } else if (button.matches('[data-sync]')) {
             button.disabled = true;
             try { const data = await request(root.dataset.syncUrl, { method: 'POST' }); await load(false); notify(data.message, message, true); }
-            catch (error) { notify(error.message); }
+            catch (error) { await load(false); notify(error.message); }
             finally { button.disabled = false; }
         } else if (button.matches('[data-load-attachments]')) {
             const target = button.nextElementSibling;
