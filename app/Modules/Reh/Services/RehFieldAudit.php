@@ -184,15 +184,17 @@ class RehFieldAudit
         $source = [...$record->source, $log->field => $log->values['after']];
         if ($record instanceof RehUnit) {
             $before = app(RehScoring::class)->snapshot($record);
+            $lastReviewId = $record->reviews()->max('id') ?? 0;
             $overrides = $record->quantity_overrides ?? [];
             unset($overrides[$log->field]);
             $record->update(['quantity_overrides' => $overrides]);
-            $source['parentglobalid'] = $record->building->global_id;
+            $source['parentglobalid'] ??= $record->building->global_id;
             $updated = $this->importer->unit(['attributes' => $source]);
             if ($updated->version === $record->version) {
                 $updated->update(['engineering_status' => 'pending', 'social_status' => 'pending', 'decision' => 'pending', 'workflow_status' => 'source_changed', 'version' => $updated->version + 1]);
             }
-            $updated->reviews()->create(['user_id' => $log->user_id, 'action' => 'field_audit', 'note' => 'تصحيح بيانات ميدانية موثق في سجل التعديلات.', 'changes' => ['audit_log_id' => $log->id, 'scoring' => ['before' => $before, 'after' => app(RehScoring::class)->snapshot($updated)]]]);
+            $review = $updated->reviews()->where('id', '>', $lastReviewId)->where('action', 'source_changed')->first() ?? $updated->reviews()->make();
+            $review->fill(['user_id' => $log->user_id, 'action' => 'field_audit', 'note' => 'تصحيح بيانات ميدانية موثق في سجل التعديلات.', 'changes' => ['audit_log_id' => $log->id, 'scoring' => ['before' => $before, 'after' => app(RehScoring::class)->snapshot($updated)]]])->save();
         } else {
             $this->importer->building(['attributes' => $source, 'geometry' => $record->geometry]);
         }

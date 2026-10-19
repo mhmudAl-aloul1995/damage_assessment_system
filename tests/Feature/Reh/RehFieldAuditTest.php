@@ -23,7 +23,7 @@ beforeEach(function (): void {
 function rehAuditUnit(array $attributes = []): RehUnit
 {
     $unit = RehUnit::factory()->create($attributes);
-    $unit->update(['source' => [...$unit->source, 'parentglobalid' => $unit->building->global_id]]);
+    $unit->update(['source' => [...$unit->source, 'parentglobalid' => '{'.strtoupper($unit->building->global_id).'}']]);
 
     return $unit;
 }
@@ -77,6 +77,7 @@ it('saves a correction in the base source and ArcGIS without assignment and keep
         ->and($unit->fresh()->quantity_overrides)->toBe([])
         ->and($unit->fresh()->engineering_status)->toBe('pending')
         ->and($unit->fresh()->social_status)->toBe('pending')
+        ->and($unit->reviews()->count())->toBe(1)
         ->and($state->writes)->toBe(1)
         ->and($state->source['boq_1_1_water_tank_repair_qty'])->toBe(3);
     $log = RehAuditLog::query()->sole();
@@ -226,3 +227,26 @@ it('blocks writes during synchronization and for decided units or their building
     }
     Http::assertNothingSent();
 });
+
+it('reconciles a rejected or superseded uncertain attempt without rewriting the remote record', function (bool $superseded): void {
+    $unit = rehAuditUnit();
+    $state = rehAuditFake($unit);
+    $state->mode = 'uncertain';
+    $this->postJson(route('reh.audit.save', ['unit', $unit->id]), rehAuditPayload($unit))->assertStatus(502);
+    $log = RehAuditLog::query()->sole();
+    $state->mode = 'success';
+    $state->source['boq_1_1_water_tank_repair_qty'] = $superseded ? 5 : 2;
+    if ($superseded) {
+        $this->postJson(route('reh.audit.verify', $log))->assertConflict();
+        app(RehImporter::class)->unit(['attributes' => $state->source]);
+    }
+    $this->postJson(route('reh.audit.verify', $log))->assertOk();
+    expect($log->fresh()->status)->toBe($superseded ? 'superseded' : 'failed')->and($state->writes)->toBe(1);
+})->with([true, false]);
+
+it('allows zero and fractional decimal quantities in the source while preserving their scoring inputs', function (string $field, string $value, int|float $expected): void {
+    $unit = rehAuditUnit();
+    $state = rehAuditFake($unit, $field);
+    $this->postJson(route('reh.audit.save', ['unit', $unit->id]), rehAuditPayload($unit, $field, $value))->assertOk();
+    expect($unit->fresh()->source[$field])->toBe($expected)->and($state->source[$field])->toBe($expected);
+})->with([['boq_1_1_water_tank_repair_qty', '0', 0], ['boq_2_3_partition_wall_qty', '4.5', 4.5]]);

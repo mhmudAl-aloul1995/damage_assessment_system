@@ -168,3 +168,7 @@
     #reh-workspace .reh-audit-editor footer, #reh-workspace .reh-audit-entry summary { align-items:stretch; flex-direction:column; }
     #reh-workspace .reh-audit-status { align-self:flex-start; }
 }
+
+#reh-workspace .reh-quantity-spec { max-width:480px; margin-top:8px; font-size:12px; }
+#reh-workspace .reh-quantity-spec summary { color:var(--reh-accent); cursor:pointer; }
+#reh-workspace .reh-quantity-spec p { margin-top:10px; line-height:1.9; }

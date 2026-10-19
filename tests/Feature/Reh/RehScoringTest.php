@@ -99,9 +99,9 @@ it('links engineering sources to all their quantity rows even for readers withou
     $original = $xpath->query('//tr[@data-quantity-field="'.$fields[0].'"]/td');
     $missing = $xpath->query('//tr[@data-quantity-field="'.$fields[1].'"]/td');
     expect(trim($original->item(2)->textContent))->toBe('5')
-        ->and(trim($original->item(3)->textContent))->toBe('0')
+        ->and(trim($original->item(3)->textContent))->toStartWith('0')->toContain('يُزال الاستثناء السابق عند حفظ التصحيح.')
         ->and(trim($missing->item(2)->textContent))->toBe('غير مسجل')
-        ->and(trim($missing->item(3)->textContent))->toBe('لم تُعدل')
+        ->and(trim($missing->item(3)->textContent))->toBe('—')
         ->and($xpath->query('//*[@data-source-field="owner_age"]')->length)->toBe(0);
 });
 
