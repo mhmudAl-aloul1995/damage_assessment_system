@@ -4,6 +4,8 @@ namespace App\Modules\Reh\Services;
 
 class RehSurvey
 {
+    public const REFERENCE_FIELDS = ['OldUnit_objectID', 'Old_objectID', 'old_objectID', 'old_objectid'];
+
     public const FIELD_STATUSES = ['completed' => 'مكتمل ميدانيًا', 'not_completed' => 'غير مكتمل ميدانيًا', 'unrecorded' => 'غير مسجل', 'all' => 'كل حالات الاستبيان'];
 
     public const WORKFLOW = ['new' => 'وارد جديد', 'in_review' => 'قيد التدقيق', 'returned' => 'معاد للاستكمال', 'second_assessment' => 'بانتظار تقييم ثانٍ', 'ready' => 'مكتمل التدقيق', 'decided' => 'تم توثيق القرار', 'source_changed' => 'تغيّرت بيانات المصدر'];
@@ -14,9 +16,14 @@ class RehSurvey
 
     public static function reference(array $source): string
     {
-        $value = $source['old_objectid'] ?? null;
+        foreach (self::REFERENCE_FIELDS as $field) {
+            $value = $source[$field] ?? null;
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return trim((string) $value);
+            }
+        }
 
-        return is_scalar($value) && trim((string) $value) !== '' ? trim((string) $value) : 'غير متوفر';
+        return 'غير متوفر';
     }
 
     public function dictionary(): array

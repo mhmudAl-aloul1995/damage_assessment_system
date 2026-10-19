@@ -306,8 +306,14 @@ class RehController extends Controller
     {
         $reference = trim($reference);
 
-        return $query->where(fn (Builder $record) => $record->where('source->old_objectid', $reference)
-            ->when(ctype_digit($reference), fn (Builder $numeric) => $numeric->orWhere('source->old_objectid', (int) $reference)));
+        return $query->where(function (Builder $record) use ($reference): void {
+            foreach (RehSurvey::REFERENCE_FIELDS as $field) {
+                $record->orWhere('source->'.$field, $reference);
+                if (ctype_digit($reference)) {
+                    $record->orWhere('source->'.$field, (int) $reference);
+                }
+            }
+        });
     }
 
     private function filterSurveyStatus(Builder $query, string $status): Builder

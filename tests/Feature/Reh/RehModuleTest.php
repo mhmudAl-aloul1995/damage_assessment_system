@@ -141,9 +141,9 @@ it('rejects invalid survey filters and renders the organized filter controls', f
 
 function rehObjectIdRecords(): array
 {
-    $building = RehBuilding::factory()->create(['id' => 17, 'object_id' => 987650, 'source' => ['Field_status' => 'COMPLETED', 'old_objectid' => 987654], 'name' => 'اسم المبنى الأصلي']);
+    $building = RehBuilding::factory()->create(['id' => 17, 'object_id' => 987650, 'source' => ['Field_status' => 'COMPLETED', 'Old_objectID' => 987654], 'name' => 'اسم المبنى الأصلي']);
     $otherBuilding = RehBuilding::factory()->create(['id' => 987654, 'object_id' => 987655, 'source' => ['Field_status' => 'COMPLETED', 'old_objectid' => '987655'], 'name' => 'مبنى مختلف']);
-    $unit = RehUnit::factory()->create(['id' => 18, 'object_id' => 876540, 'source' => ['old_objectid' => '876543'], 'building_id' => $building->id, 'code' => 'SOURCE-CODE']);
+    $unit = RehUnit::factory()->create(['id' => 18, 'object_id' => 876540, 'source' => ['OldUnit_objectID' => '876543'], 'building_id' => $building->id, 'code' => 'SOURCE-CODE']);
     $otherUnit = RehUnit::factory()->create(['id' => 876543, 'object_id' => 876544, 'source' => ['old_objectid' => 876544], 'building_id' => $otherBuilding->id, 'code' => 'DECOY-CODE']);
 
     return [$building, $unit, $otherBuilding, $otherUnit];
@@ -460,4 +460,14 @@ it('keeps records with duplicate old references independently linked on the map'
     expect($map)->toHaveCount(2)->and(array_column($map, 'id'))->toBe([$first->id, $second->id])
         ->and($map[0]['units'][0]['old_objectid'])->toBe('123')
         ->and($map[0]['units'][0]['url'])->not->toBe($map[1]['units'][0]['url']);
+});
+
+it('reads the original ArcGIS reference casing and retains compatibility with earlier source keys', function (): void {
+    foreach (['OldUnit_objectID', 'Old_objectID', 'old_objectID', 'old_objectid'] as $field) {
+        expect(RehSurvey::reference([$field => 2328]))->toBe('2328')
+            ->and(RehSurvey::reference([$field => ' 00123 ']))->toBe('00123')
+            ->and(RehSurvey::reference([$field => null]))->toBe('غير متوفر');
+    }
+    expect(RehSurvey::reference(['Old_objectID' => 2328, 'old_objectid' => 999]))->toBe('2328')
+        ->and(RehSurvey::reference(['OldUnit_objectID' => 456, 'Old_objectID' => 2328]))->toBe('456');
 });
