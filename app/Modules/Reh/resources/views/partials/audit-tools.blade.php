@@ -1,4 +1,6 @@
-@if($auditFields)
+@if(!$auditReady)
+<div class="alert alert-warning" role="status">{{ \App\Modules\Reh\Services\RehFieldAudit::SETUP_MESSAGE }}</div>
+@elseif($auditFields)
 @php
     $editorFields = [];
     foreach ($auditFields as $name => $definition) {

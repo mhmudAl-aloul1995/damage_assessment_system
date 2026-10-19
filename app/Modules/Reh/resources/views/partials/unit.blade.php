@@ -8,7 +8,7 @@
     @php
         $actions = collect(['engineering_approve' => 'reh.review.engineering', 'social_approve' => 'reh.review.social', 'return' => 'reh.review', 'second_assessment' => 'reh.review.engineering', 'select' => 'reh.decide', 'exclude' => 'reh.decide', 'reopen' => 'reh.decide'])->filter(fn ($permission, $action) => auth()->user()->can($permission) && ($action !== 'social_approve' || auth()->user()->can('reh.sensitive')) && ($unit->decision === 'pending' ? $action !== 'reopen' : $action === 'reopen'));
     @endphp
-    @if($actions->isNotEmpty())
+    @if($auditReady && $actions->isNotEmpty())
     @php
         $actionDescriptions = [
             'engineering_approve' => 'توثيق انتهاء مراجعة الكميات وحالة الوحدة والصور. لا يعتمد التكلفة.',

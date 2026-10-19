@@ -20,6 +20,28 @@ beforeEach(function (): void {
     Http::preventStrayRequests();
 });
 
+it('keeps unit and building files readable before the audit migration while safely blocking writes', function (): void {
+    $unit = rehAuditUnit();
+    $schema = (new RehAuditLog)->getConnection()->getSchemaBuilder();
+    $schema->rename('reh_audit_logs', 'reh_audit_logs_pending_setup');
+    Http::fake();
+    try {
+        foreach ([route('reh.units.show', $unit), route('reh.buildings.show', $unit->building)] as $url) {
+            $html = $this->getJson($url)->assertOk()->json('html');
+            expect($html)->toContain(RehFieldAudit::SETUP_MESSAGE)->not->toContain('data-audit-form', 'data-action-form');
+        }
+        $this->postJson(route('reh.audit.save', ['unit', $unit->id]), rehAuditPayload($unit))->assertStatus(503)->assertJsonPath('message', RehFieldAudit::SETUP_MESSAGE);
+        $this->postJson(route('reh.units.review', $unit), ['action' => 'engineering_approve', 'version' => 1, 'note' => 'مراجعة هندسية'])->assertStatus(503);
+        $this->postJson(route('reh.audit.verify', ['log' => 1]))->assertStatus(503);
+        expect($unit->fresh()->source['boq_1_1_water_tank_repair_qty'])->toBe(2)->and($unit->reviews()->count())->toBe(0);
+        Http::assertNothingSent();
+    } finally {
+        $schema->rename('reh_audit_logs_pending_setup', 'reh_audit_logs');
+    }
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->toContain('data-audit-form', 'data-action-form')->not->toContain(RehFieldAudit::SETUP_MESSAGE);
+});
+
 function rehAuditUnit(array $attributes = []): RehUnit
 {
     $unit = RehUnit::factory()->create($attributes);
@@ -67,6 +89,16 @@ function rehAuditFake(RehUnit|RehBuilding $record, string $field = 'boq_1_1_wate
 
     return $state;
 }
+
+it('saves a selected survey answer using its code and displays the Arabic label in the audit history', function (): void {
+    $unit = rehAuditUnit();
+    $state = rehAuditFake($unit, 'refusal_reason', ['domain' => ['type' => 'codedValue', 'codedValues' => [['code' => 'other_reason', 'name' => 'سبب آخر']]]]);
+    $html = $this->postJson(route('reh.audit.save', ['unit', $unit->id]), rehAuditPayload($unit, 'refusal_reason', 'other_reason'))->assertOk()->json('html');
+    expect($unit->fresh()->source['refusal_reason'])->toBe('other_reason')
+        ->and($state->source['refusal_reason'])->toBe('other_reason')
+        ->and(RehAuditLog::query()->sole()->values['after'])->toBe('other_reason')
+        ->and($html)->toContain('سبب آخر', 'حُفظ في المصدرين');
+});
 
 it('saves a correction in the base source and ArcGIS without assignment and keeps an attributed field log', function (): void {
     $unit = rehAuditUnit(['reviewer_id' => User::factory()->create()->id, 'engineering_status' => 'approved', 'social_status' => 'approved', 'quantity_overrides' => ['boq_1_1_water_tank_repair_qty' => 9]]);

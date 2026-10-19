@@ -14,7 +14,19 @@ use Throwable;
 
 class RehFieldAudit
 {
+    public const SETUP_MESSAGE = 'سجل التدقيق غير مهيأ على هذا السيرفر. يلزم تشغيل ترحيل قاعدة البيانات الخاص بموديول REH. عرض البيانات متاح، والتعديل والاعتماد متوقفان مؤقتًا.';
+
     public function __construct(private RehSurvey $survey, private RehArcgisClient $client, private RehImporter $importer) {}
+
+    public function ready(): bool
+    {
+        return (new RehAuditLog)->getConnection()->getSchemaBuilder()->hasTable('reh_audit_logs');
+    }
+
+    public function ensureReady(): void
+    {
+        abort_unless($this->ready(), 503, self::SETUP_MESSAGE);
+    }
 
     public function kind(RehUnit|RehBuilding $record): string
     {
@@ -53,12 +65,20 @@ class RehFieldAudit
 
     public function history(RehUnit|RehBuilding $record, User $user): Collection
     {
+        if (! $this->ready()) {
+            return collect();
+        }
+
         return RehAuditLog::query()->with('user:id,name')->where('record_kind', $this->kind($record))->where('record_id', $record->id)
             ->when(! $user->can('reh.sensitive'), fn ($query) => $query->where('sensitive', false))->latest('id')->limit(100)->get();
     }
 
     public function blocked(RehUnit|RehBuilding $record): ?string
     {
+        if (! $this->ready()) {
+            return self::SETUP_MESSAGE;
+        }
+
         if ($record->source_missing || ($record instanceof RehUnit && $record->building->source_missing)) {
             return 'السجل غير موجود في المصدر؛ تحقق بالمزامنة قبل التدقيق.';
         }
@@ -73,6 +93,7 @@ class RehFieldAudit
     {
         $definition = $this->fields($record, $user)[$data['field']] ?? null;
         abort_unless($definition, 403, 'لا تملك صلاحية تعديل هذا الحقل.');
+        $this->ensureReady();
         $lock = Cache::lock('reh:sync:execution', 600);
         abort_unless($lock->get(), 409, 'هناك استقبال أو حفظ جارٍ. انتظر انتهاءه ثم حاول مجددًا.');
         $log = null;

@@ -169,6 +169,7 @@
         const input = document.createElement(definition.type.startsWith('select_') ? 'select' : 'input');
         input.id = 'reh-audit-value'; input.name = 'value'; input.required = true; input.className = 'form-control';
         if (input.tagName === 'SELECT') {
+            input.dataset.dropdownParent = '#reh-detail';
             input.multiple = definition.type === 'select_multiple';
             if (input.multiple) input.size = Math.min(6, Object.keys(definition.choices).length);
             else { const empty = new Option('اختر الإجابة الصحيحة', ''); input.add(empty); }
@@ -179,7 +180,14 @@
             if (input.type === 'number') { input.min = '0'; input.max = '1000000'; input.step = definition.type === 'integer' ? '1' : 'any'; }
             input.value = definition.value ?? '';
         }
+        const previousInput = editor.querySelector('[data-audit-input] select');
+        if (previousInput && window.jQuery?.fn.select2 && window.jQuery(previousInput).data('select2')) {
+            window.jQuery(previousInput).select2('destroy');
+        }
         editor.querySelector('[data-audit-input]').replaceChildren(input);
+        if (input.tagName === 'SELECT' && window.jQuery) {
+            window.jQuery(input).on('change.rehAudit', () => { dirty = true; });
+        }
         editor.querySelector('[data-audit-feedback]').hidden = true;
         editor.hidden = false; auditOrigin = button; dirty = false;
         input.focus({ preventScroll: true }); editor.scrollIntoView({ block: 'start', behavior: 'smooth' });

@@ -13,6 +13,7 @@ class RehReviewService
     public function apply(RehUnit $record, User $user, array $data): RehUnit
     {
         abort_if(in_array($data['action'], ['claim', 'quantities'], true), 403, 'استخدم تصحيح البيانات الميدانية؛ التدقيق لا يحتاج إلى إسناد.');
+        app(RehFieldAudit::class)->ensureReady();
 
         return $record->getConnection()->transaction(function () use ($record, $user, $data): RehUnit {
             $unit = RehUnit::query()->with('building')->lockForUpdate()->findOrFail($record->id);

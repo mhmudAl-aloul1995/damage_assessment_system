@@ -95,7 +95,7 @@ class RehController extends Controller
     {
         $audit = app(RehFieldAudit::class);
 
-        return ['auditRecord' => $record, 'auditKind' => $audit->kind($record), 'auditFields' => $audit->fields($record, $request->user()), 'auditRevision' => $audit->revision($record), 'auditBlocked' => $audit->blocked($record), 'auditHistory' => $audit->history($record, $request->user())];
+        return ['auditReady' => $audit->ready(), 'auditRecord' => $record, 'auditKind' => $audit->kind($record), 'auditFields' => $audit->fields($record, $request->user()), 'auditRevision' => $audit->revision($record), 'auditBlocked' => $audit->blocked($record), 'auditHistory' => $audit->history($record, $request->user())];
     }
 
     public function audit(RehFieldAuditRequest $request, string $kind, int $id, RehFieldAudit $service): View|JsonResponse
@@ -106,9 +106,10 @@ class RehController extends Controller
         return $kind === 'unit' ? $this->unit($request, $record->fresh()) : $this->building($request, $record->fresh());
     }
 
-    public function reconcileAudit(Request $request, RehAuditLog $log, RehFieldAudit $service): View|JsonResponse
+    public function reconcileAudit(Request $request, int $log, RehFieldAudit $service): View|JsonResponse
     {
-        $record = $service->reconcile($log, $request->user());
+        $service->ensureReady();
+        $record = $service->reconcile(RehAuditLog::query()->findOrFail($log), $request->user());
 
         return $record instanceof RehUnit ? $this->unit($request, $record) : $this->building($request, $record);
     }
