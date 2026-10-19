@@ -49,7 +49,7 @@ function rehScoringBlankBoq(): array
     return array_fill_keys(array_filter(array_keys(app(RehSurvey::class)->dictionary()['fields']), fn (string $field): bool => str_starts_with($field, 'boq_')), null);
 }
 
-it('renders only the selected family total count in its dependency source preview', function (string $family, string $field, array $changes): void {
+it('links dependency to the selected family count in field data', function (string $family, string $field, array $changes): void {
     $this->seed(RehPermissionsSeeder::class);
     $user = User::factory()->create();
     $user->givePermissionTo(['reh.view', 'reh.sensitive']);
@@ -58,21 +58,21 @@ it('renders only the selected family total count in its dependency source previe
     $document = new DOMDocument;
     $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
     $xpath = new DOMXPath($document);
-    $template = $xpath->query('//div[@data-score-family-panel="'.$family.'"]//details[@data-score-row="dependency"]//template[@data-score-source-content]')->item(0);
-    expect($template)->not->toBeNull();
-    $fields = [];
-    foreach ($xpath->query('.//*[@data-indicator-field]', $template) as $input) {
-        $fields[] = $input->getAttribute('data-indicator-field');
-    }
-    expect($fields)->toBe([$field]);
-    $this->get(route('reh.index'))->assertOk()->assertSee('id="reh-score-source-dialog"', false)->assertSee('العودة للتقييم');
+    $button = $xpath->query('//div[@data-score-family-panel="'.$family.'"]//details[@data-score-row="dependency"]//button[@data-score-source]')->item(0);
+    expect($button)->not->toBeNull();
+    expect(json_decode($button->getAttribute('data-score-source'), true))->toBe([$field])
+        ->and($button->getAttribute('data-source-panel'))->toBe('data')
+        ->and($button->getAttribute('aria-controls'))->toBe('reh-detail-panel-data')
+        ->and($xpath->query('//section[@id="reh-detail-panel-data"]//*[@data-source-field="'.$field.'"]')->length)->toBe(1)
+        ->and($xpath->query('//template[@data-score-source-content]')->length)->toBe(0);
+    $this->get(route('reh.index'))->assertOk()->assertDontSee('id="reh-score-source-dialog"', false);
 })->with([
     'owner' => ['owner', 'household_size', []],
     'displaced' => ['other', 'displaced_individuals_count', []],
     'hosted' => ['other', 'hosted_individuals_count', ['current_unit_occupancy' => 'owner_family', 'hosts_other_households' => 'yes', 'hosted_individuals_count' => 15]],
 ]);
 
-it('keeps the engineering source preview limited to the indicator and distinguishes original reviewed and missing quantities', function (): void {
+it('links engineering sources to all their quantity rows even for readers without edit or sensitive access', function (): void {
     $this->seed(RehPermissionsSeeder::class);
     $user = User::factory()->create();
     $user->givePermissionTo('reh.view');
@@ -86,14 +86,23 @@ it('keeps the engineering source preview limited to the indicator and distinguis
     $document = new DOMDocument;
     $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
     $xpath = new DOMXPath($document);
-    $template = $xpath->query('//details[@data-score-row="kitchen"]//template[@data-score-source-content]')->item(0);
-    $fields = $xpath->query('.//*[@data-indicator-field]', $template);
-    expect($fields->length)->toBe(4)
-        ->and($template->textContent)->not->toContain('توريد وتصنيع وتركيب أسطح مطابخ ومجالي بسمك')
-        ->and($fields->item(0)->textContent)->toContain('الكمية الميدانية: 5', 'الكمية المراجعة: 0')
-        ->and($fields->item(1)->textContent)->toContain('غير مسجل', 'لم تُعدّل', 'لا توجد أعمال مدرجة');
-    expect($xpath->query('//template[@data-score-source-content]//*[@data-indicator-field="owner_age"]')->length)->toBe(0)
-        ->and($xpath->query('//template[@data-score-source-content]//*[@data-indicator-field="household_chronic_count"]')->length)->toBe(0);
+    $button = $xpath->query('//details[@data-score-row="kitchen"]//button[@data-score-source]')->item(0);
+    $fields = json_decode($button->getAttribute('data-score-source'), true);
+    expect($fields)->toBe(array_column($kitchen['inputs'], 'field'))
+        ->and($button->getAttribute('data-source-panel'))->toBe('quantities')
+        ->and($button->getAttribute('aria-controls'))->toBe('reh-detail-panel-quantities');
+    foreach ($fields as $field) {
+        $target = $xpath->query('//section[@id="reh-detail-panel-quantities"]//tr[@data-quantity-field="'.$field.'"]');
+        expect($target->length)->toBe(1)
+            ->and($xpath->query('.//input', $target->item(0))->length)->toBe(0);
+    }
+    $original = $xpath->query('//tr[@data-quantity-field="'.$fields[0].'"]/td');
+    $missing = $xpath->query('//tr[@data-quantity-field="'.$fields[1].'"]/td');
+    expect(trim($original->item(2)->textContent))->toBe('5')
+        ->and(trim($original->item(3)->textContent))->toBe('0')
+        ->and(trim($missing->item(2)->textContent))->toBe('غير مسجل')
+        ->and(trim($missing->item(3)->textContent))->toBe('لم تُعدل')
+        ->and($xpath->query('//*[@data-source-field="owner_age"]')->length)->toBe(0);
 });
 
 function rehPrioritySource(string $priority): array

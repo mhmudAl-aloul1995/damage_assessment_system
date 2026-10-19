@@ -69,16 +69,16 @@
 <section data-detail-panel="scoring" hidden>
     @include('reh::partials.scoring')
 </section>
-<section data-detail-panel="data" hidden>
+<section id="reh-detail-panel-data" data-detail-panel="data" hidden>
     @cannot('reh.sensitive')<div class="alert alert-info">بيانات الهوية والأسرة والصحة والحماية تحتاج صلاحية الاطلاع على البيانات الحساسة.</div>@endcannot
     @include('reh::partials.fields', ['sections' => $survey->sections($unit->source, 'unit', auth()->user()->can('reh.sensitive'))])
 </section>
-<section data-detail-panel="quantities" hidden>
+<section id="reh-detail-panel-quantities" data-detail-panel="quantities" hidden>
     <div class="reh-callout"><div><strong>75 بندًا · الأسعار غير متوفرة حاليًا</strong><p>الميداني محفوظ كما ورد. اترك حقل المراجعة فارغًا لاستخدام الكمية الأصلية. الصفر كمية مراجعة فعلية.</p></div></div>
     <label class="d-flex gap-2 mb-5"><input type="checkbox" data-show-all-quantities> إظهار جميع البنود بما فيها الفارغة والصفرية</label>
     <form data-review-form action="{{ route('reh.units.review', $unit) }}">@csrf<input type="hidden" name="version" value="{{ $unit->version }}"><input type="hidden" name="action" value="quantities">
     <div class="table-responsive"><table class="table reh-table"><thead><tr><th>البند</th><th>الوحدة</th><th>الميداني</th><th>الكمية المراجعة</th><th>السعر</th></tr></thead><tbody>
-    @foreach($quantities as $item)<tr data-quantity-row data-has-quantity="{{ (float) ($item['source'] ?? 0) > 0 || $item['reviewed'] !== null ? '1' : '0' }}" @if(!((float) ($item['source'] ?? 0) > 0 || $item['reviewed'] !== null)) hidden @endif><td>{{ $item['label'] }}</td><td>{{ $item['unit'] }}</td><td>{{ $item['source'] ?? 'غير مسجل' }}</td><td>@if(auth()->user()->can('reh.review.engineering') && $unit->decision === 'pending')<input type="number" class="form-control form-control-sm reh-quantity" aria-label="الكمية المراجعة: {{ $item['label'] }}" name="quantities[{{ $item['field'] }}]" min="0" max="1000000" step="{{ $item['type'] === 'integer' ? '1' : '0.001' }}" value="{{ $item['reviewed'] }}" placeholder="{{ $item['source'] ?? '—' }}">@else{{ $item['reviewed'] ?? 'لم تُعدل' }}@endif</td><td>غير مسعّر</td></tr>@endforeach
+    @foreach($quantities as $item)<tr data-quantity-row data-quantity-field="{{ $item['field'] }}" data-has-quantity="{{ (float) ($item['source'] ?? 0) > 0 || $item['reviewed'] !== null ? '1' : '0' }}" @if(!((float) ($item['source'] ?? 0) > 0 || $item['reviewed'] !== null)) hidden @endif><td>{{ $item['label'] }}</td><td>{{ $item['unit'] }}</td><td>{{ $item['source'] ?? 'غير مسجل' }}</td><td>@if(auth()->user()->can('reh.review.engineering') && $unit->decision === 'pending')<input type="number" class="form-control form-control-sm reh-quantity" aria-label="الكمية المراجعة: {{ $item['label'] }}" name="quantities[{{ $item['field'] }}]" min="0" max="1000000" step="{{ $item['type'] === 'integer' ? '1' : '0.001' }}" value="{{ $item['reviewed'] }}" placeholder="{{ $item['source'] ?? '—' }}">@else{{ $item['reviewed'] ?? 'لم تُعدل' }}@endif</td><td>غير مسعّر</td></tr>@endforeach
     </tbody></table></div>
     @if(auth()->user()->can('reh.review.engineering') && $unit->decision === 'pending')<label for="reh-quantity-note">سبب مراجعة الكميات</label><textarea id="reh-quantity-note" name="note" class="form-control mb-4" rows="2" required minlength="3" maxlength="2000"></textarea><button class="btn btn-primary" type="submit">حفظ مراجعة الكميات</button>@endif
     </form><div class="reh-field-group mt-6"><h4>الأعمال الإضافية — للتوثيق فقط</h4>@for($i = 1; $i <= 3; $i++)@if(!empty($unit->source['additional_item_description_'.$i]))<p>{{ $unit->source['additional_item_description_'.$i] }} · الكمية: {{ $unit->source['additional_item_quantity_'.$i] ?? 'غير مسجلة' }}</p>@endif@endfor<p class="text-muted">لا تُحتسب تكلفة البنود الإضافية قبل اعتماد آلية تسعيرها.</p></div>

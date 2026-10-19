@@ -33,11 +33,6 @@
     <section id="reh-results" aria-label="نتائج المشروع" aria-busy="true"><div class="reh-empty">جاري تجهيز مساحة العمل…</div></section>
     <noscript><div class="alert alert-warning">يلزم تفعيل JavaScript لاستخدام البحث والمراجعات في هذه المساحة.</div></noscript>
     <dialog id="reh-detail" class="reh-drawer" aria-label="ملف التقييم"><div class="reh-drawer-toolbar"><span>ملف التقييم</span><button type="button" data-close-detail class="btn btn-sm btn-light" aria-label="إغلاق ملف التقييم">إغلاق ✕</button></div><div id="reh-detail-message" role="alert" hidden></div><div id="reh-detail-body">{!! $initialDetail !!}</div>
-        <dialog id="reh-score-source-dialog" class="reh-source-dialog" aria-labelledby="reh-source-title">
-            <header class="reh-source-header"><div><small>البيانات الميدانية المرتبطة بالمؤشر</small><h3 id="reh-source-title">بيانات المؤشر</h3></div><button type="button" class="btn btn-sm btn-light" data-close-score-source aria-label="إغلاق البيانات الميدانية">✕</button></header>
-            <div id="reh-score-source-body" class="reh-source-body"></div>
-            <footer class="reh-source-footer"><span>عرض فقط · البيانات حسب آخر استقبال ومراجعة محفوظة.</span><button type="button" class="btn btn-light-primary" data-close-score-source>العودة للتقييم</button></footer>
-        </dialog>
     </dialog>
 </div>
 @endsection

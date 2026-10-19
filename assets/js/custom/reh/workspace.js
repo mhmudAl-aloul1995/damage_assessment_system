@@ -7,8 +7,6 @@
     const loading = document.getElementById('reh-loading');
     const detail = document.getElementById('reh-detail');
     const detailBody = document.getElementById('reh-detail-body');
-    const sourceDialog = document.getElementById('reh-score-source-dialog');
-    const sourceBody = document.getElementById('reh-score-source-body');
     const message = document.getElementById('reh-message');
     const detailMessage = document.getElementById('reh-detail-message');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -86,7 +84,6 @@
 
     function closeDetail() {
         if (!canLeave()) return false;
-        if (sourceDialog.open) sourceDialog.close();
         detailRequest?.abort();
         dirty = false;
         detail.close();
@@ -94,6 +91,7 @@
     }
 
     function selectDetailTab(name) {
+        detailBody.querySelectorAll('.reh-source-highlight').forEach(field => field.classList.remove('reh-source-highlight'));
         detailBody.querySelectorAll('[data-detail-tab]').forEach(tab => {
             const active = tab.dataset.detailTab === name;
             tab.classList.toggle('active', active);
@@ -112,9 +110,30 @@
         detailBody.querySelectorAll('[data-score-family-panel]').forEach(panel => { panel.hidden = panel.dataset.scoreFamilyPanel !== name; });
     }
 
+    function showScoreSource(button) {
+        const panelName = button.dataset.sourcePanel;
+        const fields = JSON.parse(button.dataset.scoreSource);
+        selectDetailTab(panelName);
+        const panel = detailBody.querySelector(`[data-detail-panel="${CSS.escape(panelName)}"]`);
+        const attribute = panelName === 'quantities' ? 'data-quantity-field' : 'data-source-field';
+        const targets = fields.map(field => panel?.querySelector(`[${attribute}="${CSS.escape(field)}"]`)).filter(Boolean);
+        if (!targets.length) {
+            notify('البيانات المرتبطة بهذا المؤشر غير متوفرة في آخر استقبال ضمن صلاحياتك.', detailMessage);
+            detailMessage.scrollIntoView({ block: 'nearest' });
+            return;
+        }
+        detailMessage.hidden = true;
+        targets.forEach(target => {
+            target.hidden = false;
+            target.classList.add('reh-source-highlight');
+            target.setAttribute('tabindex', '-1');
+        });
+        targets[0].focus({ preventScroll: true });
+        targets[0].scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+
     async function openDetail(url, push = true, section = 'summary') {
         if (!canLeave()) return;
-        if (sourceDialog.open) sourceDialog.close();
         detailRequest?.abort();
         const controller = new AbortController();
         detailRequest = controller;
@@ -181,8 +200,6 @@
         dirty = true;
     });
     detail.addEventListener('cancel', event => { event.preventDefault(); if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); });
-    sourceDialog.addEventListener('cancel', event => { event.stopPropagation(); });
-    sourceDialog.addEventListener('close', () => sourceBody.replaceChildren());
 
     root.addEventListener('click', async event => {
         const button = event.target.closest('a, button, input');
@@ -217,13 +234,7 @@
                 }
             }
         } else if (button.matches('[data-score-source]')) {
-            const template = button.closest('[data-score-row]').querySelector('[data-score-source-content]');
-            if (!template) return;
-            document.getElementById('reh-source-title').textContent = button.dataset.scoreSource;
-            sourceBody.replaceChildren(template.content.cloneNode(true));
-            sourceDialog.showModal();
-        } else if (button.matches('[data-close-score-source]')) {
-            sourceDialog.close();
+            showScoreSource(button);
         } else if (button.matches('[data-show-all-quantities]')) {
             detailBody.querySelectorAll('[data-quantity-row]').forEach(row => { row.hidden = !button.checked && row.dataset.hasQuantity !== '1'; });
         } else if (button.matches('[data-export]')) {
