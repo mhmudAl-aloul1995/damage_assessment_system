@@ -12,6 +12,7 @@
     const auditHistoryDialog = document.getElementById('reh-audit-history-dialog');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     let state = { tab: 'overview', survey_status: 'completed', ...JSON.parse(root.dataset.initial) };
+    let mapMode = 'survey';
     let listRequest, detailRequest, debounce, poll, map, dirty = false, saving = false;
 
     function notify(text, target = message, success = false) {
@@ -39,7 +40,7 @@
     }
 
     function reflectFilters() {
-        if (state.tab === 'buildings' || state.tab === 'sync') state.priority = '';
+        if (state.tab === 'sync') state.priority = '';
         for (const input of filters.elements) {
             if (!input.name) continue;
             if (input.type === 'checkbox') input.checked = String(state[input.name]) === '1';
@@ -51,11 +52,11 @@
             link.classList.toggle('active', active);
             if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
         });
-        for (const name of ['status']) filters.elements[name].disabled = state.tab === 'buildings' || state.tab === 'sync';
+        for (const name of ['status']) filters.elements[name].disabled = state.tab === 'sync';
         const filterSummary = filters.querySelector('[data-filter-summary]');
         filterSummary.textContent = filters.elements.survey_status.selectedOptions[0]?.textContent || '';
         filterSummary.dataset.default = String(state.survey_status === 'completed');
-        if (filters.elements.priority) filters.elements.priority.disabled = state.tab === 'buildings' || state.tab === 'sync';
+        if (filters.elements.priority) filters.elements.priority.disabled = state.tab === 'sync';
         filters.hidden = state.tab === 'sync';
     }
 
@@ -275,23 +276,97 @@
             attribution: 'Tiles &copy; <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noopener">Esri</a> &mdash; Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community'
         }).addTo(map);
         const group = L.featureGroup().addTo(map);
-        const buildings = JSON.parse(document.getElementById('reh-map-data').dataset.buildings);
+        const data = document.getElementById('reh-map-data');
+        const buildings = JSON.parse(data.dataset.buildings);
+        const statuses = JSON.parse(data.dataset.statuses);
+        const priorities = JSON.parse(data.dataset.priorities);
+        const categories = {
+            survey: { completed: ['مكتمل ميدانيًا', '#14846b'], not_completed: ['غير مكتمل ميدانيًا', '#d97706'], unrecorded: ['غير مسجل', '#64748b'] },
+            status: Object.fromEntries(Object.entries(statuses).map(([key, label], index) => [key, [label, ['#2563eb', '#0891b2', '#dc2626', '#d97706', '#14846b', '#4338ca', '#be185d'][index]]])),
+            priority: { very_high: [priorities.very_high, '#b91c1c'], high: [priorities.high, '#ea580c'], medium: [priorities.medium, '#2563eb'], low: [priorities.low, '#14846b'], unclassified: ['غير مصنفة', '#64748b'] }
+        };
+        const common = { mixed: ['حالات متعددة', '#7c3aed'], empty: ['لا توجد وحدات مطابقة', '#64748b'], missing: ['غير موجود في المصدر', '#475569'] };
+        const layers = new Map();
+        let selectedId = null;
+        if (!results.querySelector(`[data-map-mode="${mapMode}"]`)) mapMode = 'survey';
+        const category = building => {
+            if (building.source_missing) return 'missing';
+            if (mapMode === 'survey') return building.survey;
+            const values = [...new Set(building.units.map(unit => unit.source_missing ? 'missing' : unit[mapMode]))];
+            return values.length === 0 ? 'empty' : values.length > 1 ? 'mixed' : values[0];
+        };
+        const definition = building => ({ ...categories[mapMode], ...common }[category(building)] || ['غير مسجل', '#64748b']);
+        function element(tag, text, className) {
+            const node = document.createElement(tag);
+            if (text !== undefined) node.textContent = text;
+            if (className) node.className = className;
+            return node;
+        }
+        function badge(label, color) {
+            const node = element('span', label, 'reh-map-badge');
+            node.style.setProperty('--map-color', color);
+            return node;
+        }
+        function selectBuilding(building, zoom = true) {
+            selectedId = building.id;
+            layers.forEach((layer, id) => layer.setStyle({ weight: id === selectedId ? 4 : 2, fillOpacity: id === selectedId ? .6 : .35 }));
+            const layer = layers.get(building.id);
+            if (zoom && layer) map.fitBounds(layer.getBounds(), { padding: [35, 35], maxZoom: 18 });
+            results.querySelectorAll('[data-map-building-row]').forEach(row => {
+                const selected = row.dataset.mapBuildingRow === String(building.id);
+                row.classList.toggle('is-map-selected', selected);
+                row.querySelector('[data-map-building]').setAttribute('aria-pressed', String(selected));
+            });
+            const panel = results.querySelector('[data-map-selection]');
+            panel.replaceChildren(element('strong', building.name), element('p', `${building.units.length} وحدة مطابقة من ${building.total_units} وحدة`));
+            if (!layer) panel.append(element('p', 'لا توجد حدود جغرافية صالحة لهذا المبنى؛ وحداته متاحة أدناه.', 'text-muted'));
+            const buildingLink = element('a', 'فتح ملف المبنى', 'btn btn-sm btn-light-primary');
+            buildingLink.href = building.url; buildingLink.dataset.detail = '';
+            panel.append(buildingLink);
+            const list = element('div', undefined, 'reh-map-unit-list');
+            building.units.forEach(unit => {
+                const link = element('a', undefined, 'reh-map-unit');
+                link.href = unit.url; link.dataset.detail = '';
+                link.append(element('strong', `وحدة · OBJECTID ${unit.object_id}`));
+                const status = unit.source_missing ? common.missing : categories.status[unit.status] || ['غير مسجل', '#64748b'];
+                link.append(badge(...status));
+                if ('priority' in unit) link.append(badge(...(categories.priority[unit.priority] || categories.priority.unclassified)));
+                link.append(element('small', 'فتح ملف التقييم ←'));
+                list.append(link);
+            });
+            if (!building.units.length) list.append(element('p', 'لا توجد وحدات مطابقة للفلاتر داخل هذا المبنى.'));
+            panel.append(list);
+        }
         buildings.forEach(building => {
             const rings = building.geometry?.rings;
-            if (!rings?.length) return;
-            const polygon = L.polygon(rings.map(ring => ring.map(point => [point[1], point[0]])), { color: '#167b7c', weight: 2, fillOpacity: .22 }).addTo(group);
-            const link = document.createElement('a');
-            link.textContent = building.name;
-            link.href = building.url;
-            link.dataset.detail = '';
-            polygon.bindPopup(link);
+            if (!Array.isArray(rings) || !rings.length || !rings.every(ring => Array.isArray(ring) && ring.length >= 3 && ring.every(point => Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]) && Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90))) return;
+            const polygon = L.polygon(rings.map(ring => ring.map(point => [point[1], point[0]])), { weight: 2, fillOpacity: .35 }).addTo(group);
+            polygon.bindTooltip(element('span', building.name), { direction: 'top' });
+            polygon.on('click', () => selectBuilding(building, false));
+            layers.set(building.id, polygon);
         });
+        function recolor() {
+            layers.forEach((layer, id) => layer.setStyle({ color: definition(buildings.find(building => building.id === id))[1] }));
+            results.querySelectorAll('[data-map-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mapMode === mapMode)));
+            const legend = results.querySelector('[data-map-legend]');
+            legend.replaceChildren();
+            Object.entries({ ...categories[mapMode], ...common }).forEach(([key, [label, color]]) => {
+                const count = buildings.filter(building => category(building) === key).length;
+                if (count) legend.append(badge(`${label} · ${count}`, color));
+            });
+        }
+        results.querySelectorAll('[data-map-mode]').forEach(button => button.addEventListener('click', () => { mapMode = button.dataset.mapMode; recolor(); }));
+        results.querySelectorAll('[data-map-building]').forEach(button => button.addEventListener('click', () => {
+            const building = buildings.find(item => item.id === Number(button.dataset.mapBuilding));
+            if (building) selectBuilding(building);
+        }));
+        results.querySelector('[data-map-coverage]').textContent = `${layers.size} مبنى على الخريطة من ${buildings.length} في هذه الصفحة · ${buildings.length - layers.size} دون حدود جغرافية صالحة`;
+        recolor();
         if (group.getLayers().length) map.fitBounds(group.getBounds(), { padding: [25, 25], maxZoom: 16 });
     }
 
     function changeFilters() {
         state = { ...state, ...Object.fromEntries(new FormData(filters)), mine: '', page: 1 };
-        if (state.tab === 'buildings') { state.status = ''; state.mine = ''; state.priority = ''; }
         load();
     }
     filters.addEventListener('submit', event => { event.preventDefault(); clearTimeout(debounce); changeFilters(); });
@@ -337,7 +412,7 @@
         }
         else if (button.matches('[data-detail]')) { event.preventDefault(); event.stopPropagation(); await openDetail(button.href, true, button.dataset.detailSection || 'summary'); }
         else if (button.matches('[data-close-detail]')) { if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); }
-        else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; state.priority = ''; } await load(); }
+        else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
         else if (button.matches('[data-page]')) { state.page = button.dataset.page; await load(); }
         else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', survey_status: state.survey_status, building_object_id: button.dataset.buildingUnits, page: 1 }; await load(); }

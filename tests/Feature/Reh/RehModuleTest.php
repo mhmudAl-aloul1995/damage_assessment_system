@@ -382,3 +382,46 @@ it('loads the exact workbook catalog with 75 quantity definitions', function ():
     expect(count(array_filter(array_keys($fields), fn (string $field): bool => str_starts_with($field, 'boq_'))))->toBe(75);
     expect(app(RehSurvey::class)->value('governorate', 'khan_younis'))->toBe('خانيونس');
 });
+
+it('links map buildings to filtered unit object ids without serializing sensitive source data', function (): void {
+    $building = RehBuilding::factory()->create(['object_id' => 701, 'geometry' => ['rings' => [[[34.3, 31.4], [34.31, 31.4], [34.31, 31.41], [34.3, 31.4]]]]]);
+    $unit = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 801, 'workflow_status' => 'ready', 'owner_identity' => 'PRIVATE-IDENTITY']);
+    RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 802, 'workflow_status' => 'returned']);
+    $other = RehBuilding::factory()->create(['object_id' => 702]);
+    RehUnit::factory()->create(['building_id' => $other->id, 'workflow_status' => 'returned']);
+    $html = $this->actingAs($this->officer)->getJson(route('reh.data', ['tab' => 'buildings', 'status' => 'ready']))->assertOk()->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
+    expect($map)->toHaveCount(1)
+        ->and($map[0]['id'])->toBe(701)
+        ->and($map[0]['total_units'])->toBe(2)
+        ->and($map[0]['survey'])->toBe('completed')
+        ->and($map[0]['units'])->toHaveCount(1)
+        ->and($map[0]['units'][0])->toMatchArray(['object_id' => 801, 'status' => 'ready', 'url' => route('reh.units.show', $unit), 'priority' => 'unclassified'])
+        ->and(json_encode($map))->not->toContain('PRIVATE-IDENTITY', 'owner_full_name', 'owner_identity_number', 'source_hash')
+        ->and($html)->toContain('data-map-mode="priority"', 'data-map-selection', 'data-map-building="701"');
+});
+
+it('keeps map priorities private and supports survey and priority filtering', function (): void {
+    $complete = RehBuilding::factory()->create(['object_id' => 711]);
+    $incomplete = RehBuilding::factory()->create(['object_id' => 712, 'source' => ['Field_status' => 'notcomplete']]);
+    RehUnit::factory()->create(['building_id' => $complete->id]);
+    RehUnit::factory()->create(['building_id' => $incomplete->id]);
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('reh.view');
+    $this->actingAs($viewer);
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'survey_status' => 'not_completed']))->assertOk()->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
+    expect($map)->toHaveCount(1)->and($map[0]['id'])->toBe(712)
+        ->and($map[0]['survey'])->toBe('not_completed')
+        ->and($map[0]['units'][0])->not->toHaveKey('priority')
+        ->and($html)->not->toContain('data-map-mode="priority"');
+    $this->getJson(route('reh.data', ['tab' => 'buildings', 'priority' => 'high']))->assertForbidden();
+    $html = $this->actingAs($this->officer)->getJson(route('reh.data', ['tab' => 'buildings', 'priority' => 'high']))->assertOk()->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    expect(json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true))->toBe([]);
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'priority' => 'unclassified']))->assertOk()->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    expect(json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true))->toHaveCount(1);
+});

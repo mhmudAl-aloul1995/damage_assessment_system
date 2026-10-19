@@ -56,13 +56,49 @@ class RehController extends Controller
         ];
         $unitRows = in_array($tab, ['overview', 'units'], true)
             ? $query->with(['building', 'reviewer:id,name'])->latest('updated_at')->orderByDesc('id')->paginate(20)->withQueryString() : null;
-        $buildingRows = $tab === 'buildings' ? $this->buildings($filters)->withCount('units')->orderBy('id')->paginate(20)->withQueryString() : null;
+        $buildingRows = null;
+        $mapBuildings = collect();
+        if ($tab === 'buildings') {
+            $unitFilters = $filters;
+            unset($unitFilters['q']);
+            $matchingUnitIds = $this->units($unitFilters)->select('id');
+            $buildingQuery = $this->buildings($filters);
+            if (! empty($filters['status']) || ! empty($filters['priority']) || ! empty($filters['mine'])) {
+                $buildingQuery->whereHas('units', fn (Builder $units) => $units->whereIn('id', clone $matchingUnitIds));
+            }
+            $buildingRows = $buildingQuery->withCount('units')->with(['units' => fn ($units) => $units
+                ->whereIn('id', clone $matchingUnitIds)->orderBy('object_id')])->orderBy('id')->paginate(20)->withQueryString();
+            $mapBuildings = $buildingRows->getCollection()->map(function (RehBuilding $building) use ($request): array {
+                $fieldStatus = $building->source['Field_status'] ?? null;
+
+                return [
+                    'id' => $building->object_id,
+                    'name' => 'مبنى '.$building->object_id.($building->name ? ' · '.$building->name : ''),
+                    'geometry' => $building->geometry,
+                    'url' => route('reh.buildings.show', $building),
+                    'survey' => match ($fieldStatus) {
+                        'COMPLETED' => 'completed',
+                        'Not_Completed', 'notcomplete' => 'not_completed',
+                        default => 'unrecorded',
+                    },
+                    'source_missing' => $building->source_missing,
+                    'total_units' => $building->units_count,
+                    'units' => $building->units->map(fn (RehUnit $unit): array => [
+                        'object_id' => $unit->object_id,
+                        'url' => route('reh.units.show', $unit),
+                        'status' => $unit->workflow_status,
+                        'source_missing' => $unit->source_missing,
+                        ...($request->user()->can('reh.scores.view') ? ['priority' => $this->scoring->calculate($unit)['priority'] ?? 'unclassified'] : []),
+                    ])->values()->all(),
+                ];
+            });
+        }
         $runs = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncRun::query()->latest()->limit(10)->get() : collect();
         $lastSync = RehSyncRun::query()->whereIn('status', ['completed', 'completed_with_warnings'])->latest('finished_at')->first();
         $issueCount = RehSyncIssue::query()->whereNull('resolved_at')->count();
         $syncIssues = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->select(['id', 'object_id', 'reason'])->orderBy('id')->limit(100)->get() : collect();
         $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)]]) ?? collect();
-        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId') + ['survey' => $this->survey])->render();
+        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'mapBuildings', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId') + ['survey' => $this->survey])->render();
 
         return response()->json(['html' => $view, 'sync_active' => $runs->contains(fn (RehSyncRun $run): bool => in_array($run->status, ['queued', 'running'], true))])->header('Cache-Control', 'private, no-store');
     }

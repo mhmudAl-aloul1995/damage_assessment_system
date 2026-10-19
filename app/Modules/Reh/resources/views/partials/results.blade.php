@@ -36,11 +36,23 @@
     </tbody></table></div>@include('reh::partials.pagination', ['paginator' => $unitRows])</div>
 @endif
 @if($buildingRows)
-    <div class="reh-card"><div id="reh-map" class="reh-map" aria-label="خريطة مباني الصفحة الحالية"></div><p class="text-muted mt-3">تعرض الخريطة حدود المباني الموجودة في الصفحة الحالية فقط.</p>
+    <div class="reh-card">
+    <div class="reh-map-heading"><div><h4>من المبنى إلى ملف الوحدة</h4><p>اختر مبنى من الخريطة أو الجدول لعرض وحداته المطابقة للفلاتر.</p></div>
+        <div class="reh-map-modes" role="group" aria-label="تلوين المباني حسب">
+            <button type="button" data-map-mode="survey" aria-pressed="true">حالة الاستبيان</button>
+            <button type="button" data-map-mode="status" aria-pressed="false">حالة التدقيق</button>
+            @can('reh.scores.view')<button type="button" data-map-mode="priority" aria-pressed="false">الأولوية</button>@endcan
+        </div>
+    </div>
+    <div data-map-legend class="reh-map-legend" aria-label="دليل ألوان المباني"></div>
+    <div class="reh-map-layout"><div><div id="reh-map" class="reh-map" aria-label="خريطة مباني الصفحة الحالية"></div><p data-map-coverage class="reh-map-coverage" role="status"></p></div>
+        <aside class="reh-map-selection" aria-labelledby="reh-map-selection-title"><h4 id="reh-map-selection-title">وحدات المبنى</h4><div data-map-selection aria-live="polite"><div class="reh-empty">اختر مبنى لعرض أرقام OBJECTID وحالات تدقيق وحداته.</div></div></aside>
+    </div>
+    <p class="text-muted">الخريطة تعرض مباني الصفحة الحالية فقط. «حالات متعددة» تعني اختلاف حالات الوحدات المطابقة داخل المبنى.</p>
     <div class="table-responsive"><table class="table align-middle reh-table"><thead><tr><th>المبنى (OBJECTID)</th><th>الموقع</th><th>المهندس</th><th>الوحدات</th><th>السلامة الميدانية</th><th></th></tr></thead><tbody>
-    @forelse($buildingRows as $building)<tr><td><a data-detail href="{{ route('reh.buildings.show', $building) }}">مبنى {{ $building->object_id }}</a><small>{{ $building->name }}</small>@if($building->source_missing)<small class="text-danger">غير موجود في المصدر</small>@endif</td><td>{{ $survey->value('governorate', $building->governorate) }}<small>{{ $survey->value('neighborhood', $building->neighborhood) }}</small></td><td>{{ $survey->value('engineer_name', $building->engineer) }}</td><td><button type="button" class="btn btn-sm btn-light" data-building-units="{{ $building->object_id }}">{{ $building->units_count }} وحدة</button></td><td>{{ $survey->value('building_structurally_safe', $building->source['building_structurally_safe'] ?? null) }}</td><td><a data-detail href="{{ route('reh.buildings.show', $building) }}" class="btn btn-sm btn-light-primary">التفاصيل</a></td></tr>@empty<tr><td colspan="6"><div class="reh-empty">لا توجد مبانٍ مطابقة للفلاتر.</div></td></tr>@endforelse
+    @forelse($buildingRows as $building)<tr data-map-building-row="{{ $building->object_id }}"><td><button type="button" class="reh-map-building-link" data-map-building="{{ $building->object_id }}">مبنى {{ $building->object_id }}</button><small>{{ $building->name }}</small>@if($building->source_missing)<small class="text-danger">غير موجود في المصدر</small>@endif</td><td>{{ $survey->value('governorate', $building->governorate) }}<small>{{ $survey->value('neighborhood', $building->neighborhood) }}</small></td><td>{{ $survey->value('engineer_name', $building->engineer) }}</td><td><button type="button" class="btn btn-sm btn-light" data-building-units="{{ $building->object_id }}">{{ $building->units_count }} وحدة</button></td><td>{{ $survey->value('building_structurally_safe', $building->source['building_structurally_safe'] ?? null) }}</td><td><a data-detail href="{{ route('reh.buildings.show', $building) }}" class="btn btn-sm btn-light-primary">التفاصيل</a></td></tr>@empty<tr><td colspan="6"><div class="reh-empty">لا توجد مبانٍ مطابقة للفلاتر.</div></td></tr>@endforelse
     </tbody></table></div>@include('reh::partials.pagination', ['paginator' => $buildingRows])
-    <div hidden id="reh-map-data" data-buildings="{{ json_encode($buildingRows->map(fn ($building) => ['id' => $building->object_id, 'name' => 'مبنى '.$building->object_id.($building->name ? ' · '.$building->name : ''), 'geometry' => $building->geometry, 'url' => route('reh.buildings.show', $building)])->values()) }}"></div></div>
+    <div hidden id="reh-map-data" data-statuses="{{ json_encode($survey::WORKFLOW) }}" data-priorities="{{ json_encode(\App\Modules\Reh\Services\RehScoring::PRIORITIES) }}" data-buildings="{{ json_encode($mapBuildings) }}"></div></div>
 @endif
 @if($tab === 'sync')
     @can('reh.sync')
