@@ -180,6 +180,7 @@ class RehController extends Controller
     private function units(array $filters): Builder
     {
         return RehUnit::query()
+            ->when(($filters['survey_status'] ?? 'completed') !== 'all', fn (Builder $query) => $query->whereHas('building', fn (Builder $building) => $this->filterSurveyStatus($building, $filters['survey_status'] ?? 'completed')))
             ->when($filters['q'] ?? null, function (Builder $query, string $search): void {
                 $search = trim($search);
                 $query->where(function (Builder $query) use ($search): void {
@@ -203,12 +204,13 @@ class RehController extends Controller
 
     private function workspace(?string $initialDetail, array $filters): View
     {
-        return view('reh::workspace', ['initialDetail' => $initialDetail, 'filters' => $filters, 'engineers' => RehBuilding::query()->whereNotNull('engineer')->distinct()->orderBy('engineer')->pluck('engineer')]);
+        return view('reh::workspace', ['initialDetail' => $initialDetail, 'filters' => ['survey_status' => 'completed', ...$filters], 'engineers' => RehBuilding::query()->whereNotNull('engineer')->distinct()->orderBy('engineer')->pluck('engineer')]);
     }
 
     private function buildings(array $filters): Builder
     {
         return RehBuilding::query()
+            ->when(($filters['survey_status'] ?? 'completed') !== 'all', fn (Builder $query) => $this->filterSurveyStatus($query, $filters['survey_status'] ?? 'completed'))
             ->when($filters['q'] ?? null, function (Builder $query, string $value): void {
                 $value = trim($value);
                 $query->where(function (Builder $query) use ($value): void {
@@ -222,6 +224,15 @@ class RehController extends Controller
             ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->where('object_id', $objectId))
             ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->where('governorate', $value))
             ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->where('engineer', $value));
+    }
+
+    private function filterSurveyStatus(Builder $query, string $status): Builder
+    {
+        return match ($status) {
+            'completed' => $query->where('source->Field_status', 'COMPLETED'),
+            'not_completed' => $query->whereIn('source->Field_status', ['Not_Completed', 'notcomplete']),
+            default => $query->where(fn (Builder $query) => $query->whereNull('source->Field_status')->orWhereNotIn('source->Field_status', ['COMPLETED', 'Not_Completed', 'notcomplete'])),
+        };
     }
 
     private function attachmentRecord(string $kind, int $id): array

@@ -19,6 +19,56 @@ beforeEach(function (): void {
     $this->officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
 });
 
+it('defaults survey filtering to field complete buildings and their units using the parent survey state', function (): void {
+    $complete = RehBuilding::factory()->create(['source' => ['Field_status' => 'COMPLETED'], 'name' => 'FIELD-COMPLETE']);
+    $pending = RehBuilding::factory()->create(['source' => ['Field_status' => 'Not_Completed'], 'name' => 'FIELD-PENDING']);
+    RehUnit::factory()->create(['building_id' => $complete->id, 'code' => 'UNIT-COMPLETE', 'source' => ['unitFieldStatus' => 'Not_Completed']]);
+    RehUnit::factory()->create(['building_id' => $pending->id, 'code' => 'UNIT-PENDING', 'source' => ['unitFieldStatus' => 'COMPLETED']]);
+    $this->actingAs($this->officer);
+    $this->get(route('reh.index'))->assertOk()->assertViewHas('filters', fn (array $filters): bool => $filters['survey_status'] === 'completed');
+    $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
+    expect($html)->toContain('UNIT-COMPLETE')->not->toContain('UNIT-PENDING');
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings']))->assertOk()->json('html');
+    expect($html)->toContain('FIELD-COMPLETE')->not->toContain('FIELD-PENDING');
+    $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
+    expect($csv)->toContain('UNIT-COMPLETE')->not->toContain('UNIT-PENDING');
+});
+
+it('supports all survey states including legacy incomplete and unrecorded values', function (string $filter, array $included, array $excluded): void {
+    foreach (['DONE' => 'COMPLETED', 'OPEN' => 'Not_Completed', 'LEGACY' => 'notcomplete', 'EMPTY' => null, 'UNKNOWN' => 'unexpected'] as $code => $status) {
+        $building = RehBuilding::factory()->create(['source' => ['Field_status' => $status], 'name' => 'FIELD-'.$code]);
+        RehUnit::factory()->create(['building_id' => $building->id, 'code' => 'UNIT-'.$code]);
+    }
+    $this->actingAs($this->officer);
+    foreach (['units', 'buildings'] as $tab) {
+        $html = $this->getJson(route('reh.data', ['tab' => $tab, 'survey_status' => $filter]))->assertOk()->json('html');
+        $prefix = $tab === 'units' ? 'UNIT-' : 'FIELD-';
+        foreach ($included as $code) {
+            expect($html)->toContain($prefix.$code);
+        }
+        foreach ($excluded as $code) {
+            expect($html)->not->toContain($prefix.$code);
+        }
+    }
+    $csv = $this->get(route('reh.export', ['survey_status' => $filter]))->assertOk()->streamedContent();
+    foreach ($included as $code) {
+        expect($csv)->toContain('UNIT-'.$code);
+    }
+    foreach ($excluded as $code) {
+        expect($csv)->not->toContain('UNIT-'.$code);
+    }
+})->with([
+    ['completed', ['DONE'], ['OPEN', 'LEGACY', 'EMPTY', 'UNKNOWN']],
+    ['not_completed', ['OPEN', 'LEGACY'], ['DONE', 'EMPTY', 'UNKNOWN']],
+    ['unrecorded', ['EMPTY', 'UNKNOWN'], ['DONE', 'OPEN', 'LEGACY']],
+    ['all', ['DONE', 'OPEN', 'LEGACY', 'EMPTY', 'UNKNOWN'], []],
+]);
+
+it('rejects invalid survey filters and renders the organized filter controls', function (): void {
+    $this->actingAs($this->officer)->getJson(route('reh.data', ['survey_status' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('survey_status');
+    $this->get(route('reh.index'))->assertOk()->assertSee('reh-filter-grid')->assertSee('حالة الاستبيان')->assertSee('الملفات المسندة لي')->assertSee('value="completed" selected', false);
+});
+
 function rehObjectIdRecords(): array
 {
     $building = RehBuilding::factory()->create(['id' => 17, 'object_id' => 987654, 'name' => 'اسم المبنى الأصلي']);

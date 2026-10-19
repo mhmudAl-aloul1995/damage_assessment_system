@@ -20,7 +20,7 @@ class RehBuildingFactory extends Factory
     {
         $globalId = fake()->uuid();
         $objectId = fake()->unique()->numberBetween(1, 1000000);
-        $source = ['globalid' => $globalId, 'objectid' => $objectId, 'building_name' => 'مبنى تجريبي', 'governorate' => 'khan_younis', 'neighborhood' => 'al_amal', 'engineer_name' => 'eng1', 'building_structurally_safe' => 'yes', 'building_uxo_present' => 'no', 'building_dangerous_debris' => 'no'];
+        $source = ['Field_status' => 'COMPLETED', 'globalid' => $globalId, 'objectid' => $objectId, 'building_name' => 'مبنى تجريبي', 'governorate' => 'khan_younis', 'neighborhood' => 'al_amal', 'engineer_name' => 'eng1', 'building_structurally_safe' => 'yes', 'building_uxo_present' => 'no', 'building_dangerous_debris' => 'no'];
 
         return ['global_id' => $globalId, 'object_id' => $objectId, 'name' => $source['building_name'], 'governorate' => 'khan_younis', 'neighborhood' => 'al_amal', 'engineer' => 'eng1', 'source' => $source, 'source_hash' => hash('sha256', json_encode($source)), 'synced_at' => now()];
     }

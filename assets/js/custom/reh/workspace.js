@@ -10,7 +10,7 @@
     const message = document.getElementById('reh-message');
     const detailMessage = document.getElementById('reh-detail-message');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
-    let state = { tab: 'overview', ...JSON.parse(root.dataset.initial) };
+    let state = { tab: 'overview', survey_status: 'completed', ...JSON.parse(root.dataset.initial) };
     let listRequest, detailRequest, debounce, poll, map, dirty = false, saving = false;
 
     function notify(text, target = message, success = false) {
@@ -50,6 +50,9 @@
             if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
         });
         for (const name of ['status', 'mine']) filters.elements[name].disabled = state.tab === 'buildings' || state.tab === 'sync';
+        const filterSummary = filters.querySelector('[data-filter-summary]');
+        filterSummary.textContent = filters.elements.survey_status.selectedOptions[0]?.textContent || '';
+        filterSummary.dataset.default = String(state.survey_status === 'completed');
         filters.hidden = state.tab === 'sync';
     }
 
@@ -154,7 +157,7 @@
     filters.addEventListener('input', event => { if (event.target.name === 'q') { clearTimeout(debounce); debounce = setTimeout(changeFilters, 350); } });
     filters.addEventListener('change', event => { if (event.target.name !== 'q') { clearTimeout(debounce); changeFilters(); } });
     if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', () => { clearTimeout(debounce); changeFilters(); });
-    filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, page: 1 }; setTimeout(() => load(), 0); });
+    filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1 }; setTimeout(() => load(), 0); });
     detailBody.addEventListener('input', event => { if (event.target.closest('[data-review-form]')) dirty = true; });
     detail.addEventListener('cancel', event => { event.preventDefault(); if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); });
 
@@ -166,7 +169,7 @@
         else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; } await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
         else if (button.matches('[data-page]')) { state.page = button.dataset.page; await load(); }
-        else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', building_object_id: button.dataset.buildingUnits, page: 1 }; await load(); }
+        else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', survey_status: state.survey_status, building_object_id: button.dataset.buildingUnits, page: 1 }; await load(); }
         else if (button.matches('[data-detail-tab]')) {
             selectDetailTab(button.dataset.detailTab);
         } else if (button.matches('[data-score-tab], [data-score-jump]')) {
@@ -255,7 +258,7 @@
     });
 
     window.addEventListener('popstate', event => {
-        state = event.state?.filters || { tab: 'overview', ...Object.fromEntries(new URLSearchParams(location.search)) };
+        state = event.state?.filters || { tab: 'overview', survey_status: 'completed', ...Object.fromEntries(new URLSearchParams(location.search)) };
         load(false);
         if (event.state?.detailUrl) openDetail(event.state.detailUrl, false);
         else if (detail.open) closeDetail();

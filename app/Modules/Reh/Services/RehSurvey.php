@@ -4,6 +4,8 @@ namespace App\Modules\Reh\Services;
 
 class RehSurvey
 {
+    public const FIELD_STATUSES = ['completed' => 'مكتمل ميدانيًا', 'not_completed' => 'غير مكتمل ميدانيًا', 'unrecorded' => 'غير مسجل', 'all' => 'كل حالات الاستبيان'];
+
     public const WORKFLOW = ['new' => 'وارد جديد', 'in_review' => 'قيد التدقيق', 'returned' => 'معاد للاستكمال', 'second_assessment' => 'بانتظار تقييم ثانٍ', 'ready' => 'مكتمل التدقيق', 'decided' => 'تم توثيق القرار', 'source_changed' => 'تغيّرت بيانات المصدر'];
 
     public const ACTIONS = ['claim' => 'استلام الملف', 'engineering_approve' => 'اعتماد التدقيق الهندسي', 'social_approve' => 'اعتماد التدقيق الاجتماعي', 'return' => 'إرجاع للاستكمال', 'second_assessment' => 'طلب تقييم هندسي ثانٍ', 'select' => 'قبول مبدئي', 'exclude' => 'استبعاد', 'reopen' => 'إعادة فتح التدقيق', 'quantities' => 'مراجعة الكميات', 'source_changed' => 'تحديث البيانات الميدانية', 'source_missing' => 'السجل غير موجود في آخر مزامنة'];
