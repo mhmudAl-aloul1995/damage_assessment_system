@@ -448,7 +448,7 @@ it('gives saved overrides precedence including zero and retains missing semantic
     expect(rehScoreRow(app(RehScoring::class)->calculate($unit), 'engineering', 'tank')['points'])->toBe(2);
 });
 
-it('renders real ajax scoring and records before and after snapshots on quantity review', function (): void {
+it('renders ajax scoring and snapshots after a source quantity correction', function (): void {
     $this->seed(RehPermissionsSeeder::class);
     $officer = User::factory()->create();
     $officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
@@ -459,14 +459,16 @@ it('renders real ajax scoring and records before and after snapshots on quantity
     $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
     $csvRows = array_map('str_getcsv', explode("\n", trim($csv)));
     expect($csvRows[1][12])->toBe('2')->and($csvRows[1][13])->toBe('أولوية منخفضة');
-    $response = $this->postJson(route('reh.units.review', $unit), ['action' => 'quantities', 'version' => 1, 'note' => 'تدقيق الحائط الداخلي', 'quantities' => ['boq_2_3_partition_wall_qty' => 11]])->assertOk();
+    $source = [...$unit->source, 'globalid' => $unit->global_id, 'objectid' => $unit->object_id, 'parentglobalid' => $unit->building->global_id, 'boq_2_3_partition_wall_qty' => 11];
+    app(\App\Modules\Reh\Services\RehImporter::class)->unit(['attributes' => $source]);
+    $response = $this->getJson(route('reh.units.show', $unit))->assertOk();
     expect($response->json('html'))->toContain('data-engineering-subtotal="4"', 'قبل 0', 'بعد 4');
     $changes = $unit->reviews()->latest()->first()->changes['scoring'];
     expect($changes['before']['engineering']['subtotal'])->toBe(0)
         ->and($changes['after']['engineering']['subtotal'])->toBe(4)
         ->and($changes['after']['total'])->toBe(6)
         ->and($changes['after']['version'])->toBe(RehScoring::VERSION);
-    $this->postJson(route('reh.units.review', $unit), ['action' => 'quantities', 'version' => 1, 'note' => 'نسخة قديمة', 'quantities' => ['boq_2_3_partition_wall_qty' => 0]])->assertConflict();
+    $this->postJson(route('reh.units.review', $unit), ['action' => 'quantities', 'version' => 1, 'note' => 'مسار قديم', 'quantities' => ['boq_2_3_partition_wall_qty' => 0]])->assertForbidden();
     expect($unit->reviews()->count())->toBe(1);
 });
 

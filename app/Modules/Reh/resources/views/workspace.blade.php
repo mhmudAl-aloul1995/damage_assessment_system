@@ -25,7 +25,7 @@
             <div><label for="reh-status">حالة التدقيق</label><select id="reh-status" name="status" class="form-select" data-dropdown-parent="#reh-filters"><option value="">كل حالات التدقيق</option>@foreach($survey::WORKFLOW as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></div>
             <div><label for="reh-governorate">المحافظة</label><select id="reh-governorate" name="governorate" class="form-select" data-dropdown-parent="#reh-filters"><option value="">كل المحافظات</option>@foreach($survey->dictionary()['choices']['governorate'] as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></div>
             <div><label for="reh-engineer">المهندس</label><select id="reh-engineer" name="engineer" class="form-select" data-dropdown-parent="#reh-filters"><option value="">كل المهندسين</option>@foreach($engineers as $value)<option value="{{ $value }}">{{ $survey->value('engineer_name', $value) }}</option>@endforeach</select></div>
-            <div class="reh-filter-actions"><label class="reh-mine"><input type="checkbox" name="mine" value="1"> الملفات المسندة لي</label>@can('reh.export')<button type="button" data-export class="btn btn-light-primary btn-sm">تصدير النتائج CSV</button>@endcan</div>
+            <div class="reh-filter-actions">@can('reh.export')<button type="button" data-export class="btn btn-light-primary btn-sm">تصدير النتائج CSV</button>@endcan</div>
         </div>
     </form>
     <div id="reh-message" role="status" aria-live="polite" hidden></div>

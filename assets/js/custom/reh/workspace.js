@@ -50,7 +50,7 @@
             link.classList.toggle('active', active);
             if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
         });
-        for (const name of ['status', 'mine']) filters.elements[name].disabled = state.tab === 'buildings' || state.tab === 'sync';
+        for (const name of ['status']) filters.elements[name].disabled = state.tab === 'buildings' || state.tab === 'sync';
         const filterSummary = filters.querySelector('[data-filter-summary]');
         filterSummary.textContent = filters.elements.survey_status.selectedOptions[0]?.textContent || '';
         filterSummary.dataset.default = String(state.survey_status === 'completed');
@@ -152,6 +152,83 @@
         }
     }
 
+    let auditOrigin = null;
+
+    function openAudit(button) {
+        if (saving || (dirty && !window.confirm('توجد تعديلات غير محفوظة. هل تريد تركها وفتح هذا الحقل؟'))) return;
+        const field = button.dataset.auditField;
+        const definition = JSON.parse(detailBody.querySelector('[data-audit-fields]').textContent)[field];
+        if (!definition) return;
+        const editor = detailBody.querySelector('[data-audit-editor]');
+        const form = editor.querySelector('form');
+        form.reset();
+        form.elements.field.value = field;
+        editor.querySelector('[data-audit-title]').textContent = definition.label;
+        editor.querySelector('[data-audit-group]').textContent = definition.group;
+        editor.querySelector('[data-audit-before]').textContent = definition.display;
+        const input = document.createElement(definition.type.startsWith('select_') ? 'select' : 'input');
+        input.id = 'reh-audit-value'; input.name = 'value'; input.required = true; input.className = 'form-control';
+        if (input.tagName === 'SELECT') {
+            input.multiple = definition.type === 'select_multiple';
+            if (input.multiple) input.size = Math.min(6, Object.keys(definition.choices).length);
+            else { const empty = new Option('اختر الإجابة الصحيحة', ''); input.add(empty); }
+            const selected = input.multiple ? String(definition.value || '').split(/[ ,]+/) : [String(definition.value ?? '')];
+            Object.entries(definition.choices).forEach(([code, label]) => input.add(new Option(label, code, false, selected.includes(code))));
+        } else {
+            input.type = ['integer', 'decimal'].includes(definition.type) ? 'number' : definition.type === 'date' ? 'date' : 'text';
+            if (input.type === 'number') { input.min = '0'; input.max = '1000000'; input.step = definition.type === 'integer' ? '1' : 'any'; }
+            input.value = definition.value ?? '';
+        }
+        editor.querySelector('[data-audit-input]').replaceChildren(input);
+        editor.querySelector('[data-audit-feedback]').hidden = true;
+        editor.hidden = false; auditOrigin = button; dirty = false;
+        input.focus({ preventScroll: true }); editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+
+    function cancelAudit() {
+        if (saving || (dirty && !window.confirm('هل تريد إلغاء التصحيح غير المحفوظ؟'))) return;
+        detailBody.querySelector('[data-audit-editor]').hidden = true;
+        dirty = false; auditOrigin?.focus({ preventScroll: true }); auditOrigin?.scrollIntoView({ block: 'center' });
+    }
+
+    detailBody.addEventListener('input', event => { if (event.target.closest('[data-audit-form]')) dirty = true; });
+    detailBody.addEventListener('change', event => { if (event.target.closest('[data-audit-form]')) dirty = true; });
+    detailBody.addEventListener('submit', async event => {
+        const form = event.target.closest('[data-audit-form]');
+        if (!form) return;
+        event.preventDefault();
+        if (saving || !form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form));
+        if (form.elements.value.multiple) payload.value = [...form.elements.value.selectedOptions].map(option => option.value).join(' ');
+        const field = payload.field;
+        const activeTab = detailBody.querySelector('[data-detail-tab].active')?.dataset.detailTab;
+        const feedback = form.querySelector('[data-audit-feedback]');
+        const submit = form.querySelector('[type="submit"]');
+        const label = submit.textContent;
+        saving = true; feedback.hidden = true; submit.disabled = true; submit.textContent = 'جاري التحقق والحفظ في المصدرين…';
+        form.setAttribute('aria-busy', 'true');
+        try {
+            const data = await request(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            detailBody.innerHTML = data.html; dirty = false; auditOrigin = null;
+            if (activeTab) selectDetailTab(activeTab);
+            const target = detailBody.querySelector(`[data-source-field="${CSS.escape(field)}"], [data-quantity-field="${CSS.escape(field)}"]`);
+            if (target) { target.hidden = false; target.classList.add('reh-source-highlight'); target.scrollIntoView({ block: 'center' }); target.querySelector('[data-audit-field]')?.focus({ preventScroll: true }); }
+            notify('تم حفظ التصحيح في قاعدة البيانات وArcGIS وتحديث التقييم وسجل التعديلات.', detailMessage, true);
+            await load(false, true);
+        } catch (error) {
+            notify(error.message, feedback); feedback.scrollIntoView({ block: 'nearest' });
+            if (error.status === 502) {
+                const reopen = document.createElement('button'); reopen.type = 'button'; reopen.className = 'btn btn-light-primary btn-sm'; reopen.textContent = 'فتح سجل التعديلات والتحقق';
+                reopen.addEventListener('click', async () => {
+                    dirty = false;
+                    await openDetail(location.href, false, 'history');
+                    detailBody.querySelector('.reh-audit-history')?.scrollIntoView({ block: 'start' });
+                });
+                feedback.append(document.createElement('br'), reopen);
+            }
+        } finally { saving = false; submit.disabled = false; submit.textContent = label; form.removeAttribute('aria-busy'); }
+    });
+
     function renderMap() {
         const target = document.getElementById('reh-map');
         if (!target) return;
@@ -177,7 +254,7 @@
     }
 
     function changeFilters() {
-        state = { ...state, ...Object.fromEntries(new FormData(filters)), mine: filters.elements.mine.checked ? '1' : '', page: 1 };
+        state = { ...state, ...Object.fromEntries(new FormData(filters)), mine: '', page: 1 };
         if (state.tab === 'buildings') { state.status = ''; state.mine = ''; state.priority = ''; }
         load();
     }
@@ -204,7 +281,26 @@
     root.addEventListener('click', async event => {
         const button = event.target.closest('a, button, input');
         if (!button || button.disabled) return;
-        if (button.matches('[data-detail]')) { event.preventDefault(); event.stopPropagation(); await openDetail(button.href, true, button.dataset.detailSection || 'summary'); }
+        if (button.matches('[data-audit-field]')) { openAudit(button); }
+        else if (button.matches('[data-audit-field-history]')) {
+            selectDetailTab('history');
+            const entry = detailBody.querySelector(`[data-audit-log-field="${CSS.escape(button.dataset.auditFieldHistory)}"]`);
+            if (entry) { entry.open = true; entry.querySelector('summary').focus(); entry.scrollIntoView({ block: 'center' }); }
+        }
+        else if (button.matches('[data-audit-cancel]')) { cancelAudit(); }
+        else if (button.matches('[data-audit-verify]')) {
+            if (saving || !canLeave()) return;
+            saving = true; button.disabled = true;
+            try {
+                const data = await request(button.dataset.auditVerify, { method: 'POST' });
+                detailBody.innerHTML = data.html; dirty = false; selectDetailTab('history');
+                notify('تم التحقق؛ راجع نتيجة المحاولة في سجل التعديلات.', detailMessage, true);
+                detailBody.querySelector('.reh-audit-history')?.scrollIntoView({ block: 'start' });
+                await load(false, true);
+            } catch (error) { notify(error.message, detailMessage); detailMessage.scrollIntoView({ block: 'nearest' }); }
+            finally { saving = false; button.disabled = false; }
+        }
+        else if (button.matches('[data-detail]')) { event.preventDefault(); event.stopPropagation(); await openDetail(button.href, true, button.dataset.detailSection || 'summary'); }
         else if (button.matches('[data-close-detail]')) { if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); }
         else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; state.priority = ''; } await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
@@ -226,7 +322,7 @@
         } else if (button.matches('[data-score-quantities], [data-score-quantity]')) {
             selectDetailTab('quantities');
             if (button.dataset.scoreQuantity) {
-                const input = detailBody.querySelector(`[name="quantities[${CSS.escape(button.dataset.scoreQuantity)}]"]`);
+                const input = detailBody.querySelector(`[data-audit-field="${CSS.escape(button.dataset.scoreQuantity)}"]`);
                 if (input) {
                     input.closest('[data-quantity-row]').hidden = false;
                     input.focus();

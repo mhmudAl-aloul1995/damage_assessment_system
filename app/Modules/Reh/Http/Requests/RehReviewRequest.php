@@ -11,6 +11,10 @@ class RehReviewRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        if (in_array($this->input('action'), ['claim', 'quantities'], true)) {
+            return false;
+        }
+
         $permission = match ($this->input('action')) {
             'engineering_approve', 'quantities', 'second_assessment' => 'reh.review.engineering',
             'social_approve' => 'reh.review.social',

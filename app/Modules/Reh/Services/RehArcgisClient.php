@@ -98,6 +98,35 @@ class RehArcgisClient
         return $data;
     }
 
+    public function updateField(int $layer, int $objectId, string $field, mixed $value, bool $retry = true): void
+    {
+        try {
+            $response = Http::asForm()->withHeaders(['Referer' => config('reh.referer')])->connectTimeout(10)->timeout(60)
+                ->post($this->base().'/'.$layer.'/updateFeatures', [
+                    'f' => 'json', 'token' => $this->token(), 'rollbackOnFailure' => 'true',
+                    'features' => json_encode([['attributes' => ['objectid' => $objectId, $field => $value]]], JSON_THROW_ON_ERROR),
+                ]);
+            $data = $response->json();
+        } catch (Throwable) {
+            throw new RehSyncException('انقطع الاتصال أثناء الحفظ؛ يجب التحقق من نتيجة ArcGIS.', 2001);
+        }
+        if ($retry && in_array($data['error']['code'] ?? null, [498, 499], true)) {
+            Cache::forget($this->tokenKey());
+            $this->updateField($layer, $objectId, $field, $value, false);
+
+            return;
+        }
+        $result = $data['updateResults'][0] ?? null;
+        if ($response->successful() && ($result['success'] ?? false) === true && (int) ($result['objectId'] ?? 0) === $objectId) {
+            return;
+        }
+        if (isset($data['error']) || ($result && ($result['success'] ?? null) === false)) {
+            throw new RehSyncException('رفضت ArcGIS تعديل الحقل. تحقق من صلاحية تحرير الطبقة وقواعدها.', 2002);
+        }
+
+        throw new RehSyncException('لم تصل نتيجة مؤكدة للحفظ في ArcGIS.', 2001);
+    }
+
     private function token(): string
     {
         return Cache::remember($this->tokenKey(), 3000, function (): string {

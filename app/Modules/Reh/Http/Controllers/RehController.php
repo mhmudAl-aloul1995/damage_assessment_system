@@ -3,14 +3,17 @@
 namespace App\Modules\Reh\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Reh\Http\Requests\RehFieldAuditRequest;
 use App\Modules\Reh\Http\Requests\RehFilterRequest;
 use App\Modules\Reh\Http\Requests\RehReviewRequest;
 use App\Modules\Reh\Jobs\SyncRehSurvey;
+use App\Modules\Reh\Models\RehAuditLog;
 use App\Modules\Reh\Models\RehBuilding;
 use App\Modules\Reh\Models\RehSyncIssue;
 use App\Modules\Reh\Models\RehSyncRun;
 use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehArcgisClient;
+use App\Modules\Reh\Services\RehFieldAudit;
 use App\Modules\Reh\Services\RehReviewService;
 use App\Modules\Reh\Services\RehScoring;
 use App\Modules\Reh\Services\RehSurvey;
@@ -68,7 +71,7 @@ class RehController extends Controller
     {
         $unit->load(['building', 'reviewer:id,name', 'reviews' => fn ($query) => $query->with('user:id,name')->latest('id')->limit(100)]);
         $score = $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)];
-        $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit), 'score' => $score])->render();
+        $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit), 'score' => $score, ...$this->auditView($unit, $request)])->render();
 
         return $request->expectsJson() ? response()->json(['html' => $html])->header('Cache-Control', 'private, no-store') : $this->workspace($html, ['tab' => 'units']);
     }
@@ -76,7 +79,7 @@ class RehController extends Controller
     public function building(Request $request, RehBuilding $building): View|JsonResponse
     {
         $building->loadCount('units');
-        $html = view('reh::partials.building', ['building' => $building, 'survey' => $this->survey])->render();
+        $html = view('reh::partials.building', ['building' => $building, 'survey' => $this->survey, ...$this->auditView($building, $request)])->render();
 
         return $request->expectsJson() ? response()->json(['html' => $html])->header('Cache-Control', 'private, no-store') : $this->workspace($html, ['tab' => 'buildings']);
     }
@@ -86,6 +89,28 @@ class RehController extends Controller
         $unit = $service->apply($unit, $request->user(), $request->validated());
 
         return $this->unit($request, $unit);
+    }
+
+    private function auditView(RehUnit|RehBuilding $record, Request $request): array
+    {
+        $audit = app(RehFieldAudit::class);
+
+        return ['auditRecord' => $record, 'auditKind' => $audit->kind($record), 'auditFields' => $audit->fields($record, $request->user()), 'auditRevision' => $audit->revision($record), 'auditBlocked' => $audit->blocked($record), 'auditHistory' => $audit->history($record, $request->user())];
+    }
+
+    public function audit(RehFieldAuditRequest $request, string $kind, int $id, RehFieldAudit $service): View|JsonResponse
+    {
+        [$record] = $this->attachmentRecord($kind, $id);
+        $service->save($record, $request->user(), $request->validated());
+
+        return $kind === 'unit' ? $this->unit($request, $record->fresh()) : $this->building($request, $record->fresh());
+    }
+
+    public function reconcileAudit(Request $request, RehAuditLog $log, RehFieldAudit $service): View|JsonResponse
+    {
+        $record = $service->reconcile($log, $request->user());
+
+        return $record instanceof RehUnit ? $this->unit($request, $record) : $this->building($request, $record);
     }
 
     public function sync(Request $request, RehSyncWorker $worker): JsonResponse
@@ -198,7 +223,6 @@ class RehController extends Controller
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('workflow_status', $status))
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->where('building_id', $id))
             ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->whereHas('building', fn (Builder $building) => $building->where('object_id', $objectId)))
-            ->when($filters['mine'] ?? false, fn (Builder $query) => $query->where('reviewer_id', auth()->id()))
             ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('governorate', $value)))
             ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('engineer', $value)))
             ->when($filters['priority'] ?? null, function (Builder $query, string $priority): void {

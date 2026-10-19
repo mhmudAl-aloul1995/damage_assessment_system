@@ -63,7 +63,7 @@ it('enforces each role for the page every review action synchronization export a
     $this->actingAs($user)->get(route('reh.index'))->assertOk();
     $this->getJson(route('reh.data'))->assertOk();
     expect(Sidebar::forUser($user)->pluck('key'))->toContain('reh');
-    foreach (['claim', 'engineering_approve', 'social_approve', 'return', 'second_assessment', 'quantities', 'select', 'exclude', 'reopen'] as $action) {
+    foreach (['engineering_approve', 'social_approve', 'return', 'second_assessment', 'select', 'exclude', 'reopen'] as $action) {
         $unit = RehUnit::factory()->create(['engineering_status' => 'approved', 'social_status' => 'approved', 'decision' => $action === 'reopen' ? 'excluded' : 'pending']);
         $response = $this->postJson(route('reh.units.review', $unit), ['action' => $action, 'version' => 1, 'note' => 'تدقيق صلاحيات الموديول', 'quantities' => ['boq_1_1_water_tank_repair_qty' => 1]]);
         if (in_array($action, $allowedActions, true)) {
@@ -87,10 +87,10 @@ it('enforces each role for the page every review action synchronization export a
     $this->get(route('users.access', $user))->assertForbidden();
 })->with([
     ['REH Viewer', [], false],
-    ['مدقق هندسي REH', ['claim', 'engineering_approve', 'return', 'second_assessment', 'quantities'], false],
-    ['مدقق اجتماعي REH', ['claim', 'social_approve', 'return'], false],
+    ['مدقق هندسي REH', ['engineering_approve', 'return', 'second_assessment'], false],
+    ['مدقق اجتماعي REH', ['social_approve', 'return'], false],
     ['REH Project Officer', ['select', 'exclude', 'reopen'], false],
-    ['REH Module Manager', ['claim', 'engineering_approve', 'social_approve', 'return', 'second_assessment', 'quantities', 'select', 'exclude', 'reopen'], true],
+    ['REH Module Manager', ['engineering_approve', 'social_approve', 'return', 'second_assessment', 'select', 'exclude', 'reopen'], true],
 ]);
 
 it('shows final scores priorities and their history without exposing social details identity health or private attachments', function (): void {

@@ -12,40 +12,25 @@ class RehReviewService
 
     public function apply(RehUnit $record, User $user, array $data): RehUnit
     {
+        abort_if(in_array($data['action'], ['claim', 'quantities'], true), 403, 'استخدم تصحيح البيانات الميدانية؛ التدقيق لا يحتاج إلى إسناد.');
+
         return $record->getConnection()->transaction(function () use ($record, $user, $data): RehUnit {
             $unit = RehUnit::query()->with('building')->lockForUpdate()->findOrFail($record->id);
             abort_if($unit->version !== (int) $data['version'], 409, 'تغيّر الملف منذ فتحه. أعد تحميله قبل الحفظ.');
             $action = $data['action'];
+            if (in_array($action, ['engineering_approve', 'social_approve', 'select'], true)) {
+                $unresolved = \App\Modules\Reh\Models\RehAuditLog::query()->whereIn('status', ['pending', 'needs_review'])->where(function ($query) use ($unit): void {
+                    $query->where(fn ($query) => $query->where('record_kind', 'unit')->where('record_id', $unit->id))
+                        ->orWhere(fn ($query) => $query->where('record_kind', 'building')->where('record_id', $unit->building_id));
+                })->exists();
+                abort_if($unresolved, 409, 'يلزم التحقق من محاولة حفظ البيانات غير المحسومة قبل الاعتماد.');
+            }
             if ($unit->decision !== 'pending' && $action !== 'reopen') {
                 throw ValidationException::withMessages(['action' => 'أعد فتح التدقيق قبل تعديل ملف صدر بشأنه قرار.']);
             }
             $before = $unit->only(['workflow_status', 'engineering_status', 'social_status', 'decision', 'reviewer_id', 'quantity_overrides']);
             $scoreBefore = $this->scoring->snapshot($unit);
-            if ($action === 'claim') {
-                if ($unit->reviewer_id && $unit->reviewer_id !== $user->id) {
-                    throw ValidationException::withMessages(['action' => 'الملف مسند بالفعل إلى مراجع آخر.']);
-                }
-                $unit->reviewer_id = $user->id;
-                if ($unit->workflow_status === 'new') {
-                    $unit->workflow_status = 'in_review';
-                }
-            } elseif ($action === 'quantities') {
-                $overrides = $unit->quantity_overrides ?? [];
-                $fields = $this->survey->dictionary()['fields'];
-                foreach ($data['quantities'] as $field => $quantity) {
-                    if (! str_starts_with($field, 'boq_') || ! isset($fields[$field]) || ($quantity !== null && $fields[$field]['type'] === 'integer' && (float) $quantity !== floor((float) $quantity))) {
-                        throw ValidationException::withMessages(['quantities' => 'تحقق من البند ووحدة القياس؛ البنود العددية تقبل أعدادًا صحيحة فقط.']);
-                    }
-                    if ($quantity === null) {
-                        unset($overrides[$field]);
-                    } else {
-                        $overrides[$field] = (float) $quantity;
-                    }
-                }
-                $unit->quantity_overrides = $overrides;
-                $unit->engineering_status = 'pending';
-                $unit->workflow_status = 'in_review';
-            } elseif (in_array($action, ['engineering_approve', 'social_approve'], true)) {
+            if (in_array($action, ['engineering_approve', 'social_approve'], true)) {
                 if ($unit->source_missing || $unit->building->source_missing) {
                     throw ValidationException::withMessages(['action' => 'تحقق أولًا من السجل المفقود في المصدر.']);
                 }

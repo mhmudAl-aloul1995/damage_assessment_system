@@ -37,11 +37,11 @@ function rehReviewActionInputs(string $html): array
 it('explains review actions without a dropdown or a preselected decision and shows acceptance requirements', function (): void {
     $unit = RehUnit::factory()->create();
     $html = $this->actingAs($this->officer)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('ماذا تريد أن تفعل بهذا الملف؟', 'إسناد الملف لك لمتابعة مراجعته.', 'لا يعتمد التكلفة.', 'اعتماد التدقيق الهندسي، اعتماد التدقيق الاجتماعي', 'اختر إجراءً للمتابعة')
+    expect($html)->toContain('ماذا تريد أن تفعل بهذا الملف؟', 'دون إسناد', 'لا يعتمد التكلفة.', 'اعتماد التدقيق الهندسي، اعتماد التدقيق الاجتماعي', 'اختر إجراءً للمتابعة')
         ->not->toContain('id="reh-review-action"');
     $actions = rehReviewActionInputs($html);
-    expect($actions)->toHaveCount(7)->and($actions['select']['disabled'])->toBeTrue()
-        ->and($actions['claim']['disabled'])->toBeFalse()
+    expect($actions)->toHaveCount(6)->and($actions['select']['disabled'])->toBeTrue()
+        ->and(array_key_exists('claim', $actions))->toBeFalse()
         ->and(collect($actions)->contains('checked', true))->toBeFalse();
     $this->postJson(route('reh.units.review', $unit), ['version' => 1, 'note' => 'ملاحظة دون اختيار إجراء'])->assertUnprocessable()->assertJsonValidationErrors('action');
     expect($unit->fresh()->reviews()->count())->toBe(0)->and($unit->fresh()->decision)->toBe('pending');
@@ -59,19 +59,19 @@ it('keeps acceptance unavailable until the actual issues are resolved even after
     $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
     $actions = rehReviewActionInputs($html);
     expect($actions['select']['disabled'])->toBeFalse()
-        ->and($actions['claim']['disabled'])->toBeTrue()
+        ->and(array_key_exists('claim', $actions))->toBeFalse()
         ->and($actions['engineering_approve']['disabled'])->toBeTrue()
         ->and($actions['social_approve']['disabled'])->toBeTrue();
     $this->postJson(route('reh.units.review', $unit), ['action' => 'select', 'version' => 1, 'note' => 'اكتملت المراجعة والتصحيح'])->assertOk();
 });
 
-it('explains unavailable assignment and missing source reviews without hiding their reasons', function (): void {
+it('removes assignment while explaining missing source review restrictions', function (): void {
     $otherReviewer = User::factory()->create();
     $unit = RehUnit::factory()->create(['reviewer_id' => $otherReviewer->id, 'source_missing' => true]);
     $html = $this->actingAs($this->officer)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
     $actions = rehReviewActionInputs($html);
-    expect($html)->toContain('الملف مسند إلى مراجع آخر.', 'تحقق من السجل المفقود في المصدر أولًا.');
-    expect($actions['claim']['disabled'])->toBeTrue()
+    expect($html)->toContain('دون إسناد', 'تحقق من السجل المفقود في المصدر أولًا.');
+    expect(array_key_exists('claim', $actions))->toBeFalse()
         ->and($actions['engineering_approve']['disabled'])->toBeTrue()
         ->and($actions['social_approve']['disabled'])->toBeTrue()
         ->and($actions['return']['disabled'])->toBeFalse();
@@ -136,7 +136,7 @@ it('supports all survey states including legacy incomplete and unrecorded values
 
 it('rejects invalid survey filters and renders the organized filter controls', function (): void {
     $this->actingAs($this->officer)->getJson(route('reh.data', ['survey_status' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('survey_status');
-    $this->get(route('reh.index'))->assertOk()->assertSee('reh-filter-grid')->assertSee('حالة الاستبيان')->assertSee('الملفات المسندة لي')->assertSee('value="completed" selected', false);
+    $this->get(route('reh.index'))->assertOk()->assertSee('reh-filter-grid')->assertSee('حالة الاستبيان')->assertDontSee('الملفات المسندة لي')->assertSee('value="completed" selected', false);
 });
 
 function rehObjectIdRecords(): array
@@ -281,19 +281,14 @@ it('requires the correct review permission and a recorded reason', function (): 
     $this->postJson(route('reh.units.review', $unit), ['action' => 'engineering_approve', 'version' => 1, 'note' => 'مراجعة هندسية'])->assertOk();
 });
 
-it('keeps original quantities separates null from zero and invalidates engineering approval', function (): void {
+it('retires local-only quantity edits and assignment without changing existing data', function (): void {
     $unit = RehUnit::factory()->create(['engineering_status' => 'approved', 'social_status' => 'approved', 'workflow_status' => 'ready']);
-    $url = route('reh.units.review', $unit);
-    $this->actingAs($this->officer)->postJson($url, ['action' => 'quantities', 'version' => 1, 'note' => 'لا يحتاج صيانة خزان', 'quantities' => ['boq_1_1_water_tank_repair_qty' => 0]])->assertOk();
-    $unit->refresh();
-    expect($unit->source['boq_1_1_water_tank_repair_qty'])->toBe(2)
-        ->and($unit->quantity_overrides['boq_1_1_water_tank_repair_qty'])->toEqual(0)
-        ->and($unit->engineering_status)->toBe('pending')->and($unit->social_status)->toBe('approved');
-    $this->postJson($url, ['action' => 'quantities', 'version' => 2, 'note' => 'استعادة الكمية الميدانية', 'quantities' => ['boq_1_1_water_tank_repair_qty' => null]])->assertOk();
-    expect($unit->fresh()->quantity_overrides)->toBe([]);
-    $this->postJson($url, ['action' => 'quantities', 'version' => 3, 'note' => 'كمية غير صحيحة', 'quantities' => ['boq_1_1_water_tank_repair_qty' => 1.5]])->assertUnprocessable();
-    $this->postJson($url, ['action' => 'quantities', 'version' => 3, 'note' => 'حقل غير معروف', 'quantities' => ['owner_name' => 3]])->assertUnprocessable();
-    expect($this->getJson(route('reh.units.show', $unit))->json('html'))->toContain('غير مسعّر', 'بانتظار الأسعار');
+    foreach (['claim', 'quantities'] as $action) {
+        $this->actingAs($this->officer)->postJson(route('reh.units.review', $unit), ['action' => $action, 'version' => 1, 'note' => 'مراجعة اختبارية', 'quantities' => ['boq_1_1_water_tank_repair_qty' => 0]])->assertForbidden();
+    }
+    expect($unit->fresh()->source['boq_1_1_water_tank_repair_qty'])->toBe(2)
+        ->and($unit->fresh()->engineering_status)->toBe('approved')->and($unit->fresh()->reviews()->count())->toBe(0);
+    expect($this->getJson(route('reh.units.show', $unit))->json('html'))->toContain('data-audit-field="boq_1_1_water_tank_repair_qty"', 'بانتظار الأسعار');
 });
 
 it('blocks selection for unverified safety without automatically excluding a unit', function (): void {
