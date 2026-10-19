@@ -1,9 +1,36 @@
 #reh-workspace{--reh-ink:#173f44;--reh-accent:#167b7c;--reh-line:var(--bs-gray-200,#e5eaea);--reh-surface:var(--bs-body-bg,#fff);--reh-muted:var(--bs-gray-600,#647879);color:var(--bs-body-color,#223d42);line-height:1.8}
 #reh-workspace [hidden]{display:none!important}
+#reh-workspace .reh-score-cell{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:170px}
+#reh-workspace .reh-final-summary{display:flex;flex-direction:column;gap:3px;width:100%;padding:12px 16px;border:1px solid #a4cfcb;border-inline-start:4px solid var(--reh-accent);border-radius:10px;background:#edf8f5;color:var(--reh-ink);text-decoration:none;transition:box-shadow .15s,border-color .15s}
+#reh-workspace .reh-final-summary:hover{border-color:var(--reh-accent);box-shadow:0 3px 12px #173f4414}
+#reh-workspace .reh-final-summary:focus-visible{outline:3px solid var(--reh-accent);outline-offset:3px}
+#reh-workspace .reh-final-label{font-size:11px;font-weight:600}
+#reh-workspace .reh-final-value{display:flex;align-items:baseline;gap:6px;align-self:flex-start;font-size:30px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}
+#reh-workspace .reh-final-value>span{font-size:12px;font-weight:500;color:var(--reh-muted)}
+#reh-workspace .reh-final-summary.is-pending{background:var(--bs-gray-100,#f5f6f8);border-color:var(--reh-line);border-inline-start-color:#8b98a9;border-style:dashed;color:var(--reh-muted)}
+#reh-workspace .reh-final-pending{font-size:11px;font-weight:500}
+#reh-workspace .reh-engineering-summary{font-size:11px;font-weight:500}
+#reh-workspace .reh-priority-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid;border-radius:999px;font-size:12px;font-weight:700;line-height:1.6;white-space:nowrap}
+#reh-workspace .reh-priority-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+#reh-workspace .reh-priority-very_high{color:#fff;background:#b12543;border-color:#b12543;box-shadow:0 2px 6px #b1254326}
+#reh-workspace .reh-priority-high{color:#8b4105;background:#fff1df;border-color:#e9b777}
+#reh-workspace .reh-priority-medium{color:#175b9a;background:#eaf3ff;border-color:#a3c9ee}
+#reh-workspace .reh-priority-low{color:#176046;background:#e8f6ef;border-color:#99cfb6}
+#reh-workspace .reh-priority-pending{color:#596779;background:#f0f2f5;border-color:#bac3cf;border-style:dashed;font-weight:500}
+[data-bs-theme=dark] #reh-workspace .reh-final-summary{background:#153a38;border-color:#38635e;color:#e4f7f2}
+[data-bs-theme=dark] #reh-workspace .reh-final-summary.is-pending{background:var(--bs-gray-100,#20282d);color:var(--reh-muted);border-color:var(--reh-line)}
+[data-bs-theme=dark] #reh-workspace .reh-priority-high{color:#ffcf8f;background:#452c18;border-color:#80562a}
+[data-bs-theme=dark] #reh-workspace .reh-priority-medium{color:#a4d1ff;background:#19334e;border-color:#355f84}
+[data-bs-theme=dark] #reh-workspace .reh-priority-low{color:#a0e0bd;background:#183c2e;border-color:#396c52}
+[data-bs-theme=dark] #reh-workspace .reh-priority-pending{color:#c3cbd7;background:#29313d;border-color:#5d6a7c}
 #reh-workspace .reh-score-metrics{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px;margin-bottom:18px}
 #reh-workspace .reh-score-metric{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:20px;border:1px solid var(--reh-line);border-radius:12px;background:var(--reh-surface);min-width:0}
-#reh-workspace .reh-score-total{background:var(--bs-gray-100,#f3f7f6)}
+#reh-workspace .reh-score-metric.reh-score-total{border:2px solid #8dbeb7;box-shadow:0 5px 18px #173f4412}
+#reh-workspace .reh-score-total.is-complete{background:linear-gradient(135deg,#103f46,#176763);color:#fff;border-color:#176763}
+#reh-workspace .reh-score-total.is-pending{background:var(--bs-gray-100,#f3f7f6);border-style:dashed;border-color:#aab8bf}
 #reh-workspace .reh-score-metric>strong{font-size:32px;line-height:1.3;font-variant-numeric:tabular-nums}
+#reh-workspace .reh-score-total>strong{font-size:48px;font-weight:800;letter-spacing:-1px}
+#reh-workspace .reh-score-total.is-complete>strong small,#reh-workspace .reh-score-total.is-complete>p{color:#d2e8e4}
 #reh-workspace .reh-score-metric strong small{font-size:12px;font-weight:400;color:var(--reh-muted)}
 #reh-workspace .reh-score-metric p{font-size:12px;color:var(--reh-muted);margin:0}
 #reh-workspace .reh-score-metric progress{width:100%;height:6px;accent-color:var(--reh-accent)}

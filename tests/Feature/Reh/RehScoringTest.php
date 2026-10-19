@@ -273,7 +273,7 @@ it('renders real ajax scoring and records before and after snapshots on quantity
     $unit = RehUnit::factory()->create(['source' => rehScoringSource()]);
     $response = $this->actingAs($officer)->getJson(route('reh.units.show', $unit))->assertOk();
     expect($response->json('html'))->toContain('data-scoring', 'أولوية منخفضة', 'نسبة الإعالة', 'data-final-score="2"')->not->toContain('قواعد بانتظار الإدارة');
-    expect($this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html'))->toContain('النهائي: 2 / 100', 'أولوية منخفضة');
+    expect($this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html'))->toContain('reh-final-summary', 'data-final-score="2"', 'reh-priority-low', 'أولوية منخفضة');
     $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
     $csvRows = array_map('str_getcsv', explode("\n", trim($csv)));
     expect($csvRows[1][12])->toBe('2')->and($csvRows[1][13])->toBe('أولوية منخفضة');
@@ -296,10 +296,22 @@ it('hides social scoring and social audit snapshots from readers without sensiti
     $snapshot = app(RehScoring::class)->snapshot($unit);
     $unit->reviews()->create(['action' => 'quantities', 'note' => 'مراجعة', 'changes' => ['scoring' => ['before' => $snapshot, 'after' => $snapshot]]]);
     $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('data-score-panel="engineering"')->not->toContain('data-score-panel="social"', 'إعاقة المالك', 'مخاطر الحماية', 'أسرة المالك · نقاط محسومة');
+    expect($html)->toContain('data-score-panel="engineering"')->not->toContain('data-score-panel="social"', 'إعاقة المالك', 'مخاطر الحماية', 'أسرة المالك · نقاط محسومة', 'data-priority=');
     $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
     expect($csv)->toContain('نقاط هندسية محسومة', 'محجوب', RehScoring::VERSION)->not->toContain('نقاط اجتماعية', 'أولوية منخفضة');
 });
+
+it('renders a distinct priority badge for every priority and the pending state', function (?string $priority, string $style, string $label): void {
+    $view = $this->view('reh::partials.priority-badge', ['priority' => $priority]);
+    $view->assertSee('reh-priority-'.$style, false)->assertSee('data-priority="'.$style.'"', false)->assertSee($label);
+})->with([
+    ['very_high', 'very_high', 'أولوية عالية جدًا'],
+    ['high', 'high', 'أولوية عالية'],
+    ['medium', 'medium', 'أولوية متوسطة'],
+    ['low', 'low', 'أولوية منخفضة'],
+    [null, 'pending', 'الأولوية غير مصنفة'],
+    ['unknown', 'pending', 'الأولوية غير مصنفة'],
+]);
 
 it('keeps an immutable scoring snapshot when source data changes and ignores repeated imports', function (): void {
     $unit = RehUnit::factory()->create(['source' => rehScoringSource()]);
