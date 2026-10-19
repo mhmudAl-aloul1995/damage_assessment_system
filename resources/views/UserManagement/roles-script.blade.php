@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 heading.append(element('h3', 'fs-4 mb-0 text-break', role.name),
                     element('span', 'badge ' + (role.system ? 'badge-light-warning' : 'badge-light-primary'), role.system ? translations.system : translations.custom));
                 body.append(heading, element('p', 'text-muted', role.users_count + ' ' + translations.users + ' · ' + role.permissions.length + ' ' + translations.permissions));
+                if (role.profile?.description) body.append(element('p', 'text-gray-700 fs-7', role.profile.description));
                 const groups = new Map();
                 role.permissions.forEach(name => {
                     const input = toggles.find(input => input.value === name);
@@ -197,6 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? translations.admin_protected
                 : !writable
                     ? translations.read_only
+                    : currentRole?.profile?.notice
+                        ? currentRole.profile.notice
                     : currentRole?.profile?.read_only
                         ? translations.role_profile_notice
                         : currentRole?.system

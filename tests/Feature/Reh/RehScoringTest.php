@@ -112,14 +112,14 @@ it('applies priority before pagination combines survey status and refreshes chan
     expect($html)->toContain('22 وحدة', 'PRIORITY-CHANGED');
 });
 
-it('validates priority and restricts its controls and filtering to users allowed to see social scores', function (): void {
+it('validates priority and restricts its controls and filtering to users allowed to see final scores', function (): void {
     $this->seed(RehPermissionsSeeder::class);
     $reader = User::factory()->create();
     $reader->givePermissionTo(['reh.view', 'reh.export']);
     $this->actingAs($reader)->get(route('reh.index'))->assertOk()->assertDontSee('id="reh-priority"', false);
     $this->getJson(route('reh.data', ['priority' => 'low']))->assertForbidden();
     $this->get(route('reh.export', ['priority' => 'low']))->assertForbidden();
-    $reader->givePermissionTo('reh.sensitive');
+    $reader->givePermissionTo('reh.scores.view');
     $this->get(route('reh.index'))->assertOk()->assertSee('id="reh-priority"', false);
     $this->getJson(route('reh.data', ['priority' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('priority');
 });

@@ -11,6 +11,13 @@
     .access-center .access-group[aria-pressed="true"] { background:var(--bs-primary-light); color:var(--bs-primary); font-weight:700; }
     .access-center .permission-cell { display:flex; gap:.65rem; align-items:flex-start; padding:.65rem; border-radius:.5rem; cursor:pointer; }
     .access-center .permission-cell:has(input:checked) { background:var(--bs-primary-light); }
+    .access-center .reh-access-permissions { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:1rem; }
+    .access-center .reh-access-permissions .permission-row { min-width:0; }
+    .access-center .reh-access-permissions .permission-cell { height:100%; margin:0; padding:1rem; border:1px solid var(--bs-border-color); }
+    .access-center .reh-access-permissions .permission-cell:has(input:checked) { border-color:var(--bs-primary); }
+    .access-center .reh-access-permissions .permission-cell:has(input:focus-visible) { outline:2px solid var(--bs-primary); outline-offset:2px; }
+    .access-center .reh-access-permissions .permission-cell>span { min-width:0; overflow-wrap:anywhere; }
+    .access-center .reh-access-permissions small { line-height:1.8; margin-top:.4rem; }
     .access-center .permission-code { display:none; font-size:.75rem; overflow-wrap:anywhere; }
     .access-center.show-codes .permission-code { display:block; }
     .access-center .access-savebar { position:sticky; bottom:1rem; z-index:10; background:var(--bs-body-bg); border:1px solid var(--bs-border-color); box-shadow:0 4px 24px #00000012; }
@@ -93,6 +100,24 @@
                                 <div class="text-center py-12 text-muted"><p>{{ __('access.no_permissions') }}</p>
                                     @if(in_array($group['key'], ['heks', 'borrowers']))<p>{{ __('access.legacy_empty') }}</p>@endif
                                 </div>
+                            @elseif($group['key'] === 'reh')
+                                <div class="reh-access-permissions">
+                                    @foreach($group['rows'] as $row)
+                                        @foreach($row['cells']->flatten(1) as $permission)
+                                            <div class="permission-row">
+                                                <label class="permission-cell" data-search="{{ mb_strtolower($group['label'].' '.$permission['label'].' '.$permission['description'].' '.$permission['name']) }}">
+                                                    <input type="checkbox" class="form-check-input permission-toggle flex-shrink-0" value="{{ $permission['name'] }}" data-group="reh" data-label="{{ $permission['label'] }}" aria-label="{{ $permission['label'] }}" aria-describedby="reh-permission-{{ str_replace('.', '-', $permission['name']) }}-description">
+                                                    <span><span class="fw-semibold">{{ $permission['label'] }}</span>
+                                                        @if($permission['sensitive'])<span class="text-warning" title="{{ __('access.sensitive') }}" aria-label="{{ __('access.sensitive') }}">●</span>@endif
+                                                        <small class="d-block text-muted fw-normal" id="reh-permission-{{ str_replace('.', '-', $permission['name']) }}-description">{{ $permission['description'] }}</small>
+                                                        <code class="permission-code text-muted" dir="ltr">{{ $permission['name'] }}</code>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    @endforeach
+                                </div>
+                                <p class="permission-empty text-muted text-center py-8" hidden>{{ __('access.no_permissions') }}</p>
                             @else
                                 <div class="table-responsive">
                                     <table class="table table-row-dashed align-middle permission-matrix">
@@ -110,6 +135,7 @@
                                                                     <input type="checkbox" class="form-check-input permission-toggle flex-shrink-0" value="{{ $permission['name'] }}" data-group="{{ $group['key'] }}" data-label="{{ $row['label'].' — '.$permission['label'] }}" aria-label="{{ $row['label'].' — '.$permission['label'] }}">
                                                                     <span><span>{{ $permission['label'] }}</span>
                                                                         @if($permission['sensitive'])<span class="text-warning" title="{{ __('access.sensitive') }}" aria-label="{{ __('access.sensitive') }}">●</span>@endif
+                                                                        @if(!empty($permission['description']))<small class="d-block text-muted fw-normal">{{ $permission['description'] }}</small>@endif
                                                                         <code class="permission-code text-muted" dir="ltr">{{ $permission['name'] }}</code>
                                                                     </span>
                                                                 </label>

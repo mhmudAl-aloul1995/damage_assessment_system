@@ -24,6 +24,7 @@ class PermissionCatalog
         'building_survey_return_requests' => ['building-survey-return-requests.'],
         'damage_assessment' => ['damage-assessments.', 'damage-assessment.', 'buildings.', 'housing-units.'],
         'heks' => ['heks.'],
+        'reh' => ['reh.'],
         'borrowers' => ['damage-assessment-borrowers.', 'borrowers.'],
     ];
 
@@ -36,7 +37,7 @@ class PermissionCatalog
 
             return [
                 'key' => $key,
-                'label' => in_array($key, ['heks', 'borrowers'], true) ? __('access.'.$key) : __('ui.permission_groups.'.$key),
+                'label' => in_array($key, ['heks', 'borrowers', 'reh'], true) ? __('access.'.$key) : __('ui.permission_groups.'.$key),
                 'permissions' => $items->values(),
                 'rows' => $items->map(fn (Permission $permission): array => $this->describe($permission->name))
                     ->groupBy('resource')->map(fn (Collection $cells, string $resource): array => [
@@ -60,7 +61,7 @@ class PermissionCatalog
         return 'other';
     }
 
-    /** @return array{name: string, resource: string, action: string, label: string, column: string, sensitive: bool} */
+    /** @return array{name: string, resource: string, action: string, label: string, description: string, column: string, sensitive: bool} */
     public function describe(string $name): array
     {
         $resource = Str::beforeLast($name, '.');
@@ -71,12 +72,15 @@ class PermissionCatalog
             $action = Str::before($name, ' ');
         }
 
+        $rehDefinition = str_starts_with($name, 'reh.') ? __('access.reh_permissions.'.str_replace('.', '_', $name)) : null;
+
         return [
             'name' => $name,
             'resource' => $resource,
             'action' => $action,
-            'label' => $name === 'audit.actions' ? __('ui.permissions.audit_actions') : $this->translate('actions', $action),
-            'column' => match ($action) {
+            'label' => is_array($rehDefinition) ? $rehDefinition['label'] : ($name === 'audit.actions' ? __('ui.permissions.audit_actions') : $this->translate('actions', $action)),
+            'description' => is_array($rehDefinition) ? $rehDefinition['description'] : '',
+            'column' => $name === 'reh.sensitive' ? 'view' : match ($action) {
                 'view', 'list' => 'view',
                 'create' => 'create',
                 'update', 'edit' => 'update',
@@ -84,7 +88,7 @@ class PermissionCatalog
                 'export' => 'export',
                 default => 'advanced',
             },
-            'sensitive' => preg_match('/^(delete|sign|maintenance|reset|sync|import)|approve/', $action) === 1,
+            'sensitive' => is_array($rehDefinition) ? ($rehDefinition['sensitive'] ?? false) : preg_match('/^(delete|sign|maintenance|reset|sync|import)|approve/', $action) === 1,
         ];
     }
 

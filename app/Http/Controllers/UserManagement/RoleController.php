@@ -115,6 +115,10 @@ class RoleController extends Controller
     private function roleData(Role $role): array
     {
         $profile = $this->catalog->roleProfile($role->name);
+        if ($profile !== null) {
+            $profile['description'] = isset($profile['description_key']) ? __($profile['description_key']) : '';
+            $profile['notice'] = isset($profile['notice_key']) ? __($profile['notice_key']) : '';
+        }
 
         return [
             'id' => $role->id,
@@ -137,7 +141,7 @@ class RoleController extends Controller
     {
         if (! $this->catalog->permissionsAreAllowedForRole($roleName, $permissions)) {
             throw ValidationException::withMessages([
-                'permissions' => __('access.role_profile_permissions'),
+                'permissions' => __($this->catalog->roleProfile($roleName)['module'] === 'reh' ? 'access.reh_role_profile_permissions' : 'access.role_profile_permissions'),
             ]);
         }
     }

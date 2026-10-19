@@ -18,14 +18,14 @@
     <div class="table-responsive"><table class="table align-middle reh-table"><thead><tr><th>الوحدة (OBJECTID) / المالك</th><th>المبنى (OBJECTID) والموقع</th><th>الفريق</th><th>حالة التدقيق</th><th>القرار</th><th>التسعير</th><th>التقييم والأولوية</th><th></th></tr></thead><tbody>
     @forelse($unitRows as $unit)
         <tr><td><a data-detail href="{{ route('reh.units.show', $unit) }}" class="fw-bold">وحدة {{ $unit->object_id }}</a>@if($unit->code)<small>الكود: {{ $unit->code }}</small>@endif<small>{{ $unit->owner_name ?: 'اسم المالك غير مسجل' }}</small><small>طابق {{ $unit->floor_number ?? '—' }} · شقة {{ $unit->apartment_number ?? '—' }}</small></td><td>مبنى {{ $unit->building->object_id }}<small>{{ $unit->building->name }}</small><small>{{ $survey->value('governorate', $unit->building->governorate) }} · {{ $survey->value('neighborhood', $unit->building->neighborhood) }}</small></td><td>{{ $survey->value('engineer_name', $unit->building->engineer) }}<small>المراجع: {{ $unit->reviewer?->name ?? 'غير مسند' }}</small></td><td><span class="badge badge-light-{{ in_array($unit->workflow_status, ['returned', 'source_changed', 'second_assessment']) ? 'warning' : ($unit->workflow_status === 'ready' ? 'success' : 'primary') }}">{{ $survey::WORKFLOW[$unit->workflow_status] }}</span>@if($unit->source_missing || $unit->building->source_missing)<small class="text-danger">غير موجود في المصدر</small>@endif</td><td>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] }}</td><td><span class="badge badge-light">بانتظار الأسعار</span></td><td><div class="reh-score-cell">
-            @can('reh.sensitive')
+            @can('reh.scores.view')
                 <a data-detail data-detail-section="scoring" href="{{ route('reh.units.show', $unit) }}" class="reh-final-summary {{ $scores[$unit->id]['total'] === null ? 'is-pending' : '' }}" aria-label="الدرجة النهائية للوحدة {{ $unit->object_id }}: {{ $scores[$unit->id]['total'] ?? 'بانتظار الاستكمال' }}">
                     <span class="reh-final-label">الدرجة النهائية</span>
                     <strong class="reh-final-value" dir="ltr" data-final-score="{{ $scores[$unit->id]['total'] }}">{{ $scores[$unit->id]['total'] ?? '—' }} <span>/ 100</span></strong>
                     @if($scores[$unit->id]['total'] === null)<span class="reh-final-pending">بانتظار الاستكمال</span>@endif
                 </a>
                 @include('reh::partials.priority-badge', ['priority' => $scores[$unit->id]['priority']])
-            @else<small>تفاصيل التقييم الاجتماعي محجوبة</small>@endcan
+            @else<small>الدرجة والأولوية تحتاجان صلاحية عرض التقييم</small>@endcan
             <a data-detail data-detail-section="scoring" href="{{ route('reh.units.show', $unit) }}" class="reh-engineering-summary">الهندسي: {{ $scores[$unit->id]['engineering']['subtotal'] }} / 40</a>
             @if($scores[$unit->id]['engineering']['pending_count'] > 0)<small>{{ $scores[$unit->id]['engineering']['pending_count'] }} فئة هندسية معلقة</small>@endif
         </div></td><td><a data-detail href="{{ route('reh.units.show', $unit) }}" class="btn btn-sm btn-light-primary">فتح الملف</a></td></tr>

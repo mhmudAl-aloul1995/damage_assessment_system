@@ -58,7 +58,7 @@ class RehController extends Controller
         $lastSync = RehSyncRun::query()->whereIn('status', ['completed', 'completed_with_warnings'])->latest('finished_at')->first();
         $issueCount = RehSyncIssue::query()->whereNull('resolved_at')->count();
         $syncIssues = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->select(['id', 'object_id', 'reason'])->orderBy('id')->limit(100)->get() : collect();
-        $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $request->user()->can('reh.sensitive') ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)]]) ?? collect();
+        $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)]]) ?? collect();
         $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId') + ['survey' => $this->survey])->render();
 
         return response()->json(['html' => $view, 'sync_active' => $runs->contains(fn (RehSyncRun $run): bool => in_array($run->status, ['queued', 'running'], true))])->header('Cache-Control', 'private, no-store');
@@ -67,7 +67,7 @@ class RehController extends Controller
     public function unit(Request $request, RehUnit $unit): View|JsonResponse
     {
         $unit->load(['building', 'reviewer:id,name', 'reviews' => fn ($query) => $query->with('user:id,name')->latest('id')->limit(100)]);
-        $score = $request->user()->can('reh.sensitive') ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)];
+        $score = $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)];
         $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit), 'score' => $score])->render();
 
         return $request->expectsJson() ? response()->json(['html' => $html])->header('Cache-Control', 'private, no-store') : $this->workspace($html, ['tab' => 'units']);
@@ -161,16 +161,17 @@ class RehController extends Controller
     {
         $query = $this->units($request->validated())->with('building');
         $sensitive = $request->user()->can('reh.sensitive');
+        $canSeeScores = $request->user()->can('reh.scores.view');
 
-        return response()->streamDownload(function () use ($query, $sensitive): void {
+        return response()->streamDownload(function () use ($query, $sensitive, $canSeeScores): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
             fputcsv($output, ['OBJECTID الوحدة', 'OBJECTID المبنى', 'المالك', 'الهوية', 'المحافظة', 'الحي', 'التدقيق', 'القرار', 'التسعير', 'آخر مزامنة', 'نقاط هندسية محسومة', 'فئات هندسية معلقة', 'الدرجة النهائية', 'الأولوية', 'إصدار قواعد الحساب', 'كود الوحدة', 'اسم المبنى']);
             foreach ($query->lazyById(200) as $unit) {
                 $row = [$unit->object_id, $unit->building->object_id, $unit->owner_name, $sensitive ? $unit->owner_identity : 'محجوب', $this->survey->value('governorate', $unit->building->governorate), $this->survey->value('neighborhood', $unit->building->neighborhood), RehSurvey::WORKFLOW[$unit->workflow_status], ['pending' => 'لم يُقرر', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision], 'بانتظار الأسعار', $unit->synced_at?->toDateTimeString()];
                 $engineering = $this->scoring->engineering($unit);
-                $score = $sensitive ? $this->scoring->calculate($unit) : null;
-                $row = [...$row, $engineering['subtotal'], $engineering['pending_count'], $sensitive ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب', $sensitive ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION, $unit->code, $unit->building->name];
+                $score = $canSeeScores ? $this->scoring->calculate($unit) : null;
+                $row = [...$row, $engineering['subtotal'], $engineering['pending_count'], $canSeeScores ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب', $canSeeScores ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION, $unit->code, $unit->building->name];
                 fputcsv($output, array_map(static fn (mixed $value): string => preg_match('/^[\s]*[=+@\-]/u', (string) $value) ? "'".$value : (string) $value, $row));
             }
             fclose($output);

@@ -19,7 +19,7 @@ class RehFilterRequest extends FormRequest
     public function authorize(): bool
     {
         return ($this->user()?->can('reh.view') ?? false)
-            && (! $this->filled('priority') || $this->user()->can('reh.sensitive'));
+            && (! $this->filled('priority') || $this->user()->can('reh.scores.view'));
     }
 
     /**

@@ -1,7 +1,29 @@
 <?php
 
+$rehPermissions = ['reh.view', 'reh.review', 'reh.review.engineering', 'reh.review.social', 'reh.decide', 'reh.scores.view', 'reh.sensitive', 'reh.sync', 'reh.export'];
+$rehRoles = [
+    'مشاهد REH' => ['viewer', ['reh.view']],
+    'مدقق هندسي REH' => ['engineering', ['reh.view', 'reh.review', 'reh.review.engineering']],
+    'مدقق اجتماعي REH' => ['social', ['reh.view', 'reh.review', 'reh.review.social', 'reh.sensitive', 'reh.scores.view']],
+    'صاحب قرار REH' => ['decision', ['reh.view', 'reh.scores.view', 'reh.decide']],
+    'مسؤول موديول REH' => ['manager', $rehPermissions],
+];
+$rehProfiles = [];
+foreach ($rehRoles as $name => [$key, $permissions]) {
+    $rehProfiles[$name] = [
+        'module' => 'reh',
+        'read_only' => $key === 'viewer',
+        'allowed_permissions' => $key === 'viewer' ? ['reh.view', 'reh.scores.view'] : $rehPermissions,
+        'default_permissions' => $permissions,
+        'description_key' => 'access.reh_roles.'.$key,
+        'notice_key' => 'access.reh_role_profile_notice',
+    ];
+}
+
 return [
+    'reh_permissions' => $rehPermissions,
     'role_profiles' => [
+        ...$rehProfiles,
         'UNDP' => [
             'module' => 'damage_assessment',
             'read_only' => true,
