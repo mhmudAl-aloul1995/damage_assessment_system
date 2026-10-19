@@ -2,11 +2,11 @@
 
 $rehPermissions = ['reh.view', 'reh.review', 'reh.review.engineering', 'reh.review.social', 'reh.decide', 'reh.scores.view', 'reh.sensitive', 'reh.sync', 'reh.export'];
 $rehRoles = [
-    'مشاهد REH' => ['viewer', ['reh.view']],
+    'REH Viewer' => ['viewer', ['reh.view']],
     'مدقق هندسي REH' => ['engineering', ['reh.view', 'reh.review', 'reh.review.engineering']],
     'مدقق اجتماعي REH' => ['social', ['reh.view', 'reh.review', 'reh.review.social', 'reh.sensitive', 'reh.scores.view']],
     'REH Project Officer' => ['decision', ['reh.view', 'reh.scores.view', 'reh.decide']],
-    'مسؤول موديول REH' => ['manager', $rehPermissions],
+    'REH Module Manager' => ['manager', $rehPermissions],
 ];
 $rehProfiles = [];
 foreach ($rehRoles as $name => [$key, $permissions]) {

@@ -15,13 +15,18 @@ class RehPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        $legacyRole = Role::query()->where('guard_name', 'web')->where('name', 'صاحب قرار REH')->first();
-        if ($legacyRole !== null) {
-            if (Role::query()->where('guard_name', 'web')->where('name', 'REH Project Officer')->exists()) {
-                throw new \RuntimeException('يوجد دوران باسم صاحب قرار REH وREH Project Officer. راجع تعارض الأسماء قبل إعادة التهيئة؛ لم يتم دمج الصلاحيات أو تغيير إسناد المستخدمين.');
+        (new Role)->getConnection()->transaction(function (): void {
+            $renames = ['صاحب قرار REH' => 'REH Project Officer', 'مسؤول موديول REH' => 'REH Module Manager', 'مشاهد REH' => 'REH Viewer'];
+            $roles = Role::query()->where('guard_name', 'web')->whereIn('name', [...array_keys($renames), ...array_values($renames)])->lockForUpdate()->get()->keyBy('name');
+            foreach ($renames as $previous => $next) {
+                if ($roles->has($previous) && $roles->has($next)) {
+                    throw new \RuntimeException('يوجد دوران باسم '.$previous.' و'.$next.'. راجع تعارض الأسماء قبل إعادة التهيئة؛ لم يتم دمج الصلاحيات أو تغيير إسناد المستخدمين.');
+                }
             }
-            $legacyRole->update(['name' => 'REH Project Officer']);
-        }
+            foreach ($renames as $previous => $next) {
+                $roles->get($previous)?->update(['name' => $next]);
+            }
+        });
         $scoresPermissionIsNew = ! Permission::query()->where('guard_name', 'web')->where('name', 'reh.scores.view')->exists();
         foreach (config('access.reh_permissions') as $permission) {
             Permission::findOrCreate($permission, 'web');

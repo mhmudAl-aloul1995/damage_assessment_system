@@ -134,7 +134,10 @@
         if (!target) return;
         if (!window.L) { target.textContent = 'تعذر تحميل الخريطة؛ يمكنك استخدام جدول المباني.'; return; }
         map = L.map(target, { scrollWheelZoom: false }).setView([31.42, 34.36], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+        L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" target="_blank" rel="noopener">Esri</a> &mdash; Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community'
+        }).addTo(map);
         const group = L.featureGroup().addTo(map);
         const buildings = JSON.parse(document.getElementById('reh-map-data').dataset.buildings);
         buildings.forEach(building => {

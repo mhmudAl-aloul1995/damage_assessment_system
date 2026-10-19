@@ -86,11 +86,11 @@ it('enforces each role for the page every review action synchronization export a
     $this->get(route('permissions.index'))->assertForbidden();
     $this->get(route('users.access', $user))->assertForbidden();
 })->with([
-    ['مشاهد REH', [], false],
+    ['REH Viewer', [], false],
     ['مدقق هندسي REH', ['claim', 'engineering_approve', 'return', 'second_assessment', 'quantities'], false],
     ['مدقق اجتماعي REH', ['claim', 'social_approve', 'return'], false],
     ['REH Project Officer', ['select', 'exclude', 'reopen'], false],
-    ['مسؤول موديول REH', ['claim', 'engineering_approve', 'social_approve', 'return', 'second_assessment', 'quantities', 'select', 'exclude', 'reopen'], true],
+    ['REH Module Manager', ['claim', 'engineering_approve', 'social_approve', 'return', 'second_assessment', 'quantities', 'select', 'exclude', 'reopen'], true],
 ]);
 
 it('shows final scores priorities and their history without exposing social details identity health or private attachments', function (): void {
@@ -113,7 +113,7 @@ it('shows final scores priorities and their history without exposing social deta
 
 it('keeps score and sensitive permissions independent including in exports', function (): void {
     $unit = rehAccessScoredUnit();
-    $user = rehAccessUser('مشاهد REH');
+    $user = rehAccessUser('REH Viewer');
     $user->givePermissionTo(['reh.scores.view', 'reh.export']);
     $csv = $this->actingAs($user)->get(route('reh.export'))->assertOk()->streamedContent();
     $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
@@ -142,23 +142,23 @@ it('groups and explains REH permissions and role profiles in Arabic and English'
 })->with(['ar', 'en']);
 
 it('retains customized grants and revocations when the REH setup is run again', function (): void {
-    $role = Role::findByName('مسؤول موديول REH', 'web');
+    $role = Role::findByName('REH Module Manager', 'web');
     $role->revokePermissionTo('reh.sync');
     $role = Role::findByName('مدقق اجتماعي REH', 'web');
     $role->revokePermissionTo('reh.scores.view');
     $user = rehAccessUser('مدقق اجتماعي REH');
     $this->seed(RehPermissionsSeeder::class);
-    expect(Role::findByName('مسؤول موديول REH', 'web')->hasPermissionTo('reh.sync'))->toBeFalse()
+    expect(Role::findByName('REH Module Manager', 'web')->hasPermissionTo('reh.sync'))->toBeFalse()
         ->and($user->fresh()->can('reh.scores.view'))->toBeFalse()
         ->and(Role::query()->where('name', 'مدقق اجتماعي REH')->count())->toBe(1);
 });
 
-it('renames the legacy project role in place preserving customized permissions members and the global Project Officer role', function (): void {
-    $role = Role::findByName('REH Project Officer', 'web');
-    $role->update(['name' => 'صاحب قرار REH']);
-    $role->revokePermissionTo('reh.decide');
+it('renames legacy REH roles in place preserving customized permissions members and the global Project Officer role', function (string $previous, string $next, string $revokedPermission): void {
+    $role = Role::findByName($next, 'web');
+    $role->update(['name' => $previous]);
+    $role->revokePermissionTo($revokedPermission);
     $role->givePermissionTo('reh.export');
-    $user = rehAccessUser('صاحب قرار REH');
+    $user = rehAccessUser($previous);
     $globalRole = Role::findOrCreate('Project Officer', 'web');
     $globalRole->givePermissionTo('reh.view');
     $globalPermissions = $globalRole->permissions->pluck('name')->sort()->values()->all();
@@ -167,27 +167,35 @@ it('renames the legacy project role in place preserving customized permissions m
     $this->seed(RehPermissionsSeeder::class);
     $this->seed(RehPermissionsSeeder::class);
 
-    expect(Role::findByName('REH Project Officer', 'web')->id)->toBe($role->id)
+    expect(Role::findByName($next, 'web')->id)->toBe($role->id)
         ->and($role->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe($permissions)
         ->and($user->fresh()->roles->pluck('id')->all())->toBe([$role->id])
-        ->and($user->fresh()->hasRole('REH Project Officer'))->toBeTrue()
-        ->and($user->fresh()->can('reh.decide'))->toBeFalse()
-        ->and(Role::query()->where('name', 'صاحب قرار REH')->exists())->toBeFalse()
+        ->and($user->fresh()->hasRole($next))->toBeTrue()
+        ->and($user->fresh()->can($revokedPermission))->toBeFalse()
+        ->and(Role::query()->where('name', $previous)->exists())->toBeFalse()
         ->and($globalRole->fresh()->name)->toBe('Project Officer')
         ->and($globalRole->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe($globalPermissions);
-});
+})->with([
+    ['صاحب قرار REH', 'REH Project Officer', 'reh.decide'],
+    ['مسؤول موديول REH', 'REH Module Manager', 'reh.sync'],
+    ['مشاهد REH', 'REH Viewer', 'reh.view'],
+]);
 
-it('leaves both roles intact when a conflicting project officer role already exists', function (): void {
-    $role = Role::findOrCreate('صاحب قرار REH', 'web');
+it('leaves both roles intact when a conflicting REH role already exists', function (string $previous, string $next): void {
+    $role = Role::findOrCreate($previous, 'web');
     $role->givePermissionTo('reh.view');
-    $user = rehAccessUser('صاحب قرار REH');
-    $target = Role::findByName('REH Project Officer', 'web');
+    $user = rehAccessUser($previous);
+    $target = Role::findByName($next, 'web');
     $permissions = $target->permissions->pluck('name')->sort()->values()->all();
     expect(fn () => $this->seed(RehPermissionsSeeder::class))->toThrow(\RuntimeException::class);
-    expect($role->fresh()->name)->toBe('صاحب قرار REH')
+    expect($role->fresh()->name)->toBe($previous)
         ->and($user->fresh()->roles->pluck('id')->all())->toBe([$role->id])
         ->and($target->fresh()->permissions->pluck('name')->sort()->values()->all())->toBe($permissions);
-});
+})->with([
+    ['صاحب قرار REH', 'REH Project Officer'],
+    ['مسؤول موديول REH', 'REH Module Manager'],
+    ['مشاهد REH', 'REH Viewer'],
+]);
 
 it('preserves existing score access once when upgrading legacy sensitive grants', function (): void {
     Permission::findByName('reh.scores.view', 'web')->delete();
