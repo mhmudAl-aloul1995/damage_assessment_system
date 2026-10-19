@@ -12,6 +12,13 @@ class RehSurvey
 
     private ?array $dictionary = null;
 
+    public static function reference(array $source): string
+    {
+        $value = $source['old_objectid'] ?? null;
+
+        return is_scalar($value) && trim((string) $value) !== '' ? trim((string) $value) : 'غير متوفر';
+    }
+
     public function dictionary(): array
     {
         return $this->dictionary ??= json_decode(file_get_contents(dirname(__DIR__).'/resources/survey.json'), true, flags: JSON_THROW_ON_ERROR);
@@ -57,7 +64,9 @@ class RehSurvey
                 continue;
             }
             $sections[$group]['label'] = $definition['group']['label'] ?? 'بيانات عامة';
-            $sections[$group]['fields'][] = ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field])];
+            $sections[$group]['fields'][] = $field === 'objectid'
+                ? ['field' => 'old_objectid', 'label' => 'old_objectid', 'value' => self::reference($source)]
+                : ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field])];
         }
 
         return $sections;

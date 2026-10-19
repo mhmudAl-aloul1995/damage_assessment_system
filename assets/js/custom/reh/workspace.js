@@ -333,7 +333,7 @@
             building.units.forEach(unit => {
                 const link = element('a', undefined, 'reh-map-unit');
                 link.href = unit.url; link.dataset.detail = '';
-                link.append(element('strong', `وحدة · OBJECTID ${unit.object_id}`));
+                link.append(element('strong', `وحدة · old_objectid ${unit.old_objectid}`));
                 const status = unit.source_missing ? common.missing : categories.status[unit.status] || ['غير مسجل', '#64748b'];
                 link.append(badge(...status));
                 if ('priority' in unit) link.append(badge(...(categories.priority[unit.priority] || categories.priority.unclassified)));
@@ -425,7 +425,7 @@
         else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
         else if (button.matches('[data-page]')) { state.page = button.dataset.page; await load(); }
-        else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', survey_status: state.survey_status, building_object_id: button.dataset.buildingUnits, page: 1 }; await load(); }
+        else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', survey_status: state.survey_status, building_id: button.dataset.buildingUnits, page: 1 }; await load(); }
         else if (button.matches('[data-detail-tab]')) {
             selectDetailTab(button.dataset.detailTab);
         } else if (button.matches('[data-score-tab], [data-score-jump]')) {

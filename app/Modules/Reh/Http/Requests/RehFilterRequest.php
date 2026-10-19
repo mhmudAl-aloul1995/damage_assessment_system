@@ -37,6 +37,7 @@ class RehFilterRequest extends FormRequest
             'governorate' => ['nullable', 'string', 'max:100'],
             'engineer' => ['nullable', 'string', 'max:100'],
             'building_id' => ['nullable', 'integer', 'min:1'],
+            'building_old_objectid' => ['nullable', 'string', 'max:100'],
             'building_object_id' => ['nullable', 'integer', 'min:1'],
             'mine' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],

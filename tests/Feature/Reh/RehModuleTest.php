@@ -141,10 +141,10 @@ it('rejects invalid survey filters and renders the organized filter controls', f
 
 function rehObjectIdRecords(): array
 {
-    $building = RehBuilding::factory()->create(['id' => 17, 'object_id' => 987654, 'name' => 'اسم المبنى الأصلي']);
-    $otherBuilding = RehBuilding::factory()->create(['id' => 987654, 'object_id' => 987655, 'name' => 'مبنى مختلف']);
-    $unit = RehUnit::factory()->create(['id' => 18, 'object_id' => 876543, 'building_id' => $building->id, 'code' => 'SOURCE-CODE']);
-    $otherUnit = RehUnit::factory()->create(['id' => 876543, 'object_id' => 876544, 'building_id' => $otherBuilding->id, 'code' => 'DECOY-CODE']);
+    $building = RehBuilding::factory()->create(['id' => 17, 'object_id' => 987650, 'source' => ['Field_status' => 'COMPLETED', 'old_objectid' => 987654], 'name' => 'اسم المبنى الأصلي']);
+    $otherBuilding = RehBuilding::factory()->create(['id' => 987654, 'object_id' => 987655, 'source' => ['Field_status' => 'COMPLETED', 'old_objectid' => '987655'], 'name' => 'مبنى مختلف']);
+    $unit = RehUnit::factory()->create(['id' => 18, 'object_id' => 876540, 'source' => ['old_objectid' => '876543'], 'building_id' => $building->id, 'code' => 'SOURCE-CODE']);
+    $otherUnit = RehUnit::factory()->create(['id' => 876543, 'object_id' => 876544, 'source' => ['old_objectid' => 876544], 'building_id' => $otherBuilding->id, 'code' => 'DECOY-CODE']);
 
     return [$building, $unit, $otherBuilding, $otherUnit];
 }
@@ -153,15 +153,15 @@ it('uses source object ids as the visible unit and building references throughou
     [$building, $unit] = rehObjectIdRecords();
     $this->actingAs($this->officer);
     $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('ملف الوحدة · OBJECTID 876543', 'مبنى 987654', 'SOURCE-CODE');
+    expect($html)->toContain('ملف الوحدة · old_objectid 876543', 'مبنى 987654', 'SOURCE-CODE');
     $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
-    expect($html)->toContain('ملف المبنى · OBJECTID 987654', 'data-building-units="987654"');
+    expect($html)->toContain('ملف المبنى · old_objectid 987654', 'data-building-units="17"');
     $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
     expect($html)->toContain('وحدة 876543', 'مبنى 987654', 'SOURCE-CODE');
     $html = $this->getJson(route('reh.data', ['tab' => 'buildings']))->assertOk()->json('html');
     preg_match('/data-buildings="([^"]+)"/', $html, $matches);
     $map = collect(json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true));
-    expect($map->firstWhere('id', 987654)['name'])->toBe('مبنى 987654 · اسم المبنى الأصلي');
+    expect($map->firstWhere('id', 17)['name'])->toBe('مبنى 987654 · اسم المبنى الأصلي');
 });
 
 it('finds source object ids without confusing them with local primary keys', function (): void {
@@ -180,22 +180,22 @@ it('finds source object ids without confusing them with local primary keys', fun
 it('filters building units by object id and keeps legacy filters displaying the source reference', function (): void {
     rehObjectIdRecords();
     $this->actingAs($this->officer);
-    foreach ([['building_object_id' => 987654], ['building_id' => 17]] as $filters) {
+    foreach ([['building_old_objectid' => '987654'], ['building_id' => 17]] as $filters) {
         $html = $this->getJson(route('reh.data', ['tab' => 'units', ...$filters]))->assertOk()->json('html');
-        expect($html)->toContain('النتائج مقيّدة بالمبنى OBJECTID 987654', 'SOURCE-CODE')->not->toContain('DECOY-CODE');
+        expect($html)->toContain('النتائج مقيّدة بالمبنى old_objectid 987654', 'SOURCE-CODE')->not->toContain('DECOY-CODE');
     }
-    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'building_object_id' => 987654]))->assertOk()->json('html');
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'building_old_objectid' => '987654']))->assertOk()->json('html');
     expect($html)->toContain('اسم المبنى الأصلي')->not->toContain('مبنى مختلف');
     $this->getJson(route('reh.data', ['building_object_id' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('building_object_id');
 });
 
 it('exports both source object ids as primary references and retains the code and name', function (): void {
     rehObjectIdRecords();
-    $csv = $this->actingAs($this->officer)->get(route('reh.export', ['building_object_id' => 987654]))->assertOk()->streamedContent();
+    $csv = $this->actingAs($this->officer)->get(route('reh.export', ['building_old_objectid' => '987654']))->assertOk()->streamedContent();
     $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
     expect($rows)->toHaveCount(2)
-        ->and($rows[0][0])->toBe('OBJECTID الوحدة')
-        ->and($rows[0][1])->toBe('OBJECTID المبنى')
+        ->and($rows[0][0])->toBe('old_objectid الوحدة')
+        ->and($rows[0][1])->toBe('old_objectid المبنى')
         ->and($rows[1][0])->toBe('876543')->and($rows[1][1])->toBe('987654')
         ->and($rows[1][15])->toBe('SOURCE-CODE')->and($rows[1][16])->toBe('اسم المبنى الأصلي');
 });
@@ -209,7 +209,7 @@ it('labels attachment downloads with their source object id', function (): void 
         $mock->shouldReceive('download')->once()->with(1, $unit->object_id, 2)->andReturn('image-bytes');
     });
     $this->actingAs($this->officer)->get(route('reh.attachment', ['unit', $unit->id, 2]))
-        ->assertOk()->assertHeader('Content-Disposition', 'attachment; filename="reh-unit-876543-attachment-2"');
+        ->assertOk()->assertHeader('Content-Disposition', 'attachment; filename=reh-unit-876543-attachment-2');
 });
 
 it('registers the module and protects its page data mutations and export', function (): void {
@@ -393,15 +393,15 @@ it('links map buildings to filtered unit object ids without serializing sensitiv
     preg_match('/data-buildings="([^"]+)"/', $html, $matches);
     $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
     expect($map)->toHaveCount(1)
-        ->and($map[0]['id'])->toBe(701)
+        ->and($map[0]['id'])->toBe($building->id)
         ->and($map[0]['total_units'])->toBe(2)
         ->and($map[0]['priority'])->toBe('unclassified')
         ->and($map[0]['unclassified_units'])->toBe(1)
         ->and($map[0]['survey'])->toBe('completed')
         ->and($map[0]['units'])->toHaveCount(1)
-        ->and($map[0]['units'][0])->toMatchArray(['object_id' => 801, 'status' => 'ready', 'url' => route('reh.units.show', $unit), 'priority' => 'unclassified'])
+        ->and($map[0]['units'][0])->toMatchArray(['old_objectid' => 'غير متوفر', 'status' => 'ready', 'url' => route('reh.units.show', $unit), 'priority' => 'unclassified'])
         ->and(json_encode($map))->not->toContain('PRIVATE-IDENTITY', 'owner_full_name', 'owner_identity_number', 'source_hash')
-        ->and($html)->toContain('data-map-mode="priority"', 'data-map-selection', 'data-map-building="701"');
+        ->and($html)->toContain('data-map-mode="priority"', 'data-map-selection', 'data-map-building="'.$building->id.'"');
 });
 
 it('keeps map priorities private and supports survey and priority filtering', function (): void {
@@ -415,7 +415,7 @@ it('keeps map priorities private and supports survey and priority filtering', fu
     $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'survey_status' => 'not_completed']))->assertOk()->json('html');
     preg_match('/data-buildings="([^"]+)"/', $html, $matches);
     $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
-    expect($map)->toHaveCount(1)->and($map[0]['id'])->toBe(712)
+    expect($map)->toHaveCount(1)->and($map[0]['id'])->toBe($incomplete->id)
         ->and($map[0]['survey'])->toBe('not_completed')
         ->and($map[0])->not->toHaveKeys(['priority', 'unclassified_units', 'missing_units'])
         ->and($map[0]['units'][0])->not->toHaveKey('priority')
@@ -427,4 +427,37 @@ it('keeps map priorities private and supports survey and priority filtering', fu
     $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'priority' => 'unclassified']))->assertOk()->json('html');
     preg_match('/data-buildings="([^"]+)"/', $html, $matches);
     expect(json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true))->toHaveCount(1);
+});
+
+it('displays unavailable for absent old references without substituting current arcgis ids', function (): void {
+    foreach ([[], ['old_objectid' => null], ['old_objectid' => '   '], ['old_objectid' => []]] as $source) {
+        expect(RehSurvey::reference($source))->toBe('غير متوفر');
+    }
+    expect(RehSurvey::reference(['old_objectid' => 0]))->toBe('0')
+        ->and(RehSurvey::reference(['old_objectid' => '00123']))->toBe('00123');
+    $building = RehBuilding::factory()->create(['object_id' => 991122]);
+    $unit = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 991133]);
+    $this->actingAs($this->officer);
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->toContain('ملف الوحدة · old_objectid غير متوفر', 'مبنى غير متوفر')->not->toContain('OBJECTID 991133', 'وحدة 991133', 'مبنى 991122');
+    $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
+    expect($html)->toContain('ملف المبنى · old_objectid غير متوفر');
+    $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
+    $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
+    expect($rows[1][0])->toBe('غير متوفر')->and($rows[1][1])->toBe('غير متوفر');
+    $html = $this->getJson(route('reh.data', ['tab' => 'units', 'q' => '991133']))->assertOk()->json('html');
+    expect($html)->not->toContain(route('reh.units.show', $unit));
+});
+
+it('keeps records with duplicate old references independently linked on the map', function (): void {
+    $first = RehBuilding::factory()->create(['source' => ['Field_status' => 'COMPLETED', 'old_objectid' => 321]]);
+    $second = RehBuilding::factory()->create(['source' => ['Field_status' => 'COMPLETED', 'old_objectid' => '321']]);
+    RehUnit::factory()->create(['building_id' => $first->id, 'source' => ['old_objectid' => 123]]);
+    RehUnit::factory()->create(['building_id' => $second->id, 'source' => ['old_objectid' => 123]]);
+    $html = $this->actingAs($this->officer)->getJson(route('reh.data', ['tab' => 'buildings', 'q' => '321']))->assertOk()->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
+    expect($map)->toHaveCount(2)->and(array_column($map, 'id'))->toBe([$first->id, $second->id])
+        ->and($map[0]['units'][0]['old_objectid'])->toBe('123')
+        ->and($map[0]['units'][0]['url'])->not->toBe($map[1]['units'][0]['url']);
 });
