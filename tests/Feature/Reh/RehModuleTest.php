@@ -395,6 +395,8 @@ it('links map buildings to filtered unit object ids without serializing sensitiv
     expect($map)->toHaveCount(1)
         ->and($map[0]['id'])->toBe(701)
         ->and($map[0]['total_units'])->toBe(2)
+        ->and($map[0]['priority'])->toBe('unclassified')
+        ->and($map[0]['unclassified_units'])->toBe(1)
         ->and($map[0]['survey'])->toBe('completed')
         ->and($map[0]['units'])->toHaveCount(1)
         ->and($map[0]['units'][0])->toMatchArray(['object_id' => 801, 'status' => 'ready', 'url' => route('reh.units.show', $unit), 'priority' => 'unclassified'])
@@ -415,6 +417,7 @@ it('keeps map priorities private and supports survey and priority filtering', fu
     $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
     expect($map)->toHaveCount(1)->and($map[0]['id'])->toBe(712)
         ->and($map[0]['survey'])->toBe('not_completed')
+        ->and($map[0])->not->toHaveKeys(['priority', 'unclassified_units', 'missing_units'])
         ->and($map[0]['units'][0])->not->toHaveKey('priority')
         ->and($html)->not->toContain('data-map-mode="priority"');
     $this->getJson(route('reh.data', ['tab' => 'buildings', 'priority' => 'high']))->assertForbidden();

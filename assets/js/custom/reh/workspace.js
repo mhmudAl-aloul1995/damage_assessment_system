@@ -292,9 +292,11 @@
         const category = building => {
             if (building.source_missing) return 'missing';
             if (mapMode === 'survey') return building.survey;
+            if (mapMode === 'priority') return building.units.length ? building.priority || 'unclassified' : 'empty';
             const values = [...new Set(building.units.map(unit => unit.source_missing ? 'missing' : unit[mapMode]))];
             return values.length === 0 ? 'empty' : values.length > 1 ? 'mixed' : values[0];
         };
+        const priorityRanges = { very_high: '76–100', high: '55–75', medium: '30–54', low: '0–29' };
         const definition = building => ({ ...categories[mapMode], ...common }[category(building)] || ['غير مسجل', '#64748b']);
         function element(tag, text, className) {
             const node = document.createElement(tag);
@@ -319,6 +321,10 @@
             });
             const panel = results.querySelector('[data-map-selection]');
             panel.replaceChildren(element('strong', building.name), element('p', `${building.units.length} وحدة مطابقة من ${building.total_units} وحدة`));
+            if ('priority' in building) {
+                panel.append(badge(`أعلى أولوية محسوبة: ${categories.priority[building.priority]?.[0] || 'غير مصنفة'}`, categories.priority[building.priority]?.[1] || '#64748b'));
+                panel.append(element('p', `${building.unclassified_units} وحدة بانتظار اكتمال التقييم · ${building.missing_units} وحدة غير موجودة في المصدر`, 'text-muted'));
+            }
             if (!layer) panel.append(element('p', 'لا توجد حدود جغرافية صالحة لهذا المبنى؛ وحداته متاحة أدناه.', 'text-muted'));
             const buildingLink = element('a', 'فتح ملف المبنى', 'btn btn-sm btn-light-primary');
             buildingLink.href = building.url; buildingLink.dataset.detail = '';
@@ -348,11 +354,15 @@
         function recolor() {
             layers.forEach((layer, id) => layer.setStyle({ color: definition(buildings.find(building => building.id === id))[1] }));
             results.querySelectorAll('[data-map-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mapMode === mapMode)));
+            results.querySelector('[data-map-explanation]').textContent = mapMode === 'priority'
+                ? 'لون المبنى يعبّر عن أعلى أولوية محسوبة بين وحداته المطابقة للفلاتر، وليس درجة مستقلة للمبنى. الرمادي يعني عدم وجود أولوية محسوبة. تظهر الوحدات بانتظار الاستكمال عند اختيار المبنى. تعرض الخريطة مباني الصفحة الحالية فقط.'
+                : 'الخريطة تعرض مباني الصفحة الحالية فقط.' + (mapMode === 'status' ? ' «حالات متعددة» تعني اختلاف حالات تدقيق الوحدات المطابقة داخل المبنى.' : '');
             const legend = results.querySelector('[data-map-legend]');
             legend.replaceChildren();
             Object.entries({ ...categories[mapMode], ...common }).forEach(([key, [label, color]]) => {
                 const count = buildings.filter(building => category(building) === key).length;
-                if (count) legend.append(badge(`${label} · ${count}`, color));
+                const range = mapMode === 'priority' && priorityRanges[key] ? ` (${priorityRanges[key]})` : '';
+                if (count || (mapMode === 'priority' && priorityRanges[key])) legend.append(badge(`${label}${range} · ${count} مبنى`, color));
             });
         }
         results.querySelectorAll('[data-map-mode]').forEach(button => button.addEventListener('click', () => { mapMode = button.dataset.mapMode; recolor(); }));

@@ -351,7 +351,7 @@ it('respects conditional required health counts and rejects contradictory answer
 
 it('uses the published priority boundaries without normalizing the achievable 97 points to 100', function (int $total, string $priority): void {
     expect(app(RehScoring::class)->priority($total))->toBe($priority);
-})->with([[0, 'low'], [29, 'low'], [30, 'medium'], [54, 'medium'], [55, 'high'], [75, 'high'], [76, 'very_high'], [97, 'very_high']]);
+})->with([[0, 'low'], [29, 'low'], [30, 'medium'], [54, 'medium'], [55, 'high'], [75, 'high'], [76, 'very_high'], [97, 'very_high'], [100, 'very_high']]);
 
 it('scores external wall decimal thresholds by their own unit groups', function (float $quantity, int $points): void {
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['boq_2_1_pallet_wall_qty' => $quantity, 'boq_2_5_used_block_20cm_qty' => 0.5]));
@@ -540,3 +540,14 @@ it('keeps an immutable scoring snapshot when source data changes and ignores rep
     $importer->unit(['attributes' => $source]);
     expect($unit->reviews()->count())->toBe(1);
 });
+
+it('summarizes map priority using the highest calculated unit and counts incomplete units separately', function (array $units, array $expected): void {
+    expect(app(RehScoring::class)->summarizePriorities($units))->toBe($expected);
+})->with([
+    'mixed priorities with incomplete data' => [[['priority' => 'low'], ['priority' => 'high'], ['priority' => 'unclassified']], ['priority' => 'high', 'unclassified_units' => 1, 'missing_units' => 0]],
+    'highest published band' => [[['priority' => 'medium'], ['priority' => 'very_high'], ['priority' => 'high']], ['priority' => 'very_high', 'unclassified_units' => 0, 'missing_units' => 0]],
+    'only incomplete' => [[['priority' => 'unclassified'], []], ['priority' => 'unclassified', 'unclassified_units' => 2, 'missing_units' => 0]],
+    'missing source is excluded from priority' => [[['priority' => 'very_high', 'source_missing' => true], ['priority' => 'low']], ['priority' => 'low', 'unclassified_units' => 0, 'missing_units' => 1]],
+    'all source records missing' => [[['priority' => 'very_high', 'source_missing' => true]], ['priority' => 'unclassified', 'unclassified_units' => 0, 'missing_units' => 1]],
+    'no matching units' => [[], ['priority' => 'unclassified', 'unclassified_units' => 0, 'missing_units' => 0]],
+]);

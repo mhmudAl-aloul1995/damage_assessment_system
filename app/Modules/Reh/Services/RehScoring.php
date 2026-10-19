@@ -148,6 +148,29 @@ class RehScoring
         };
     }
 
+    /**
+     * @param  array<int, array{priority?: string, source_missing?: bool}>  $units
+     * @return array{priority: string, unclassified_units: int, missing_units: int}
+     */
+    public function summarizePriorities(array $units): array
+    {
+        $available = array_filter($units, fn (array $unit): bool => ! ($unit['source_missing'] ?? false));
+        $priorities = array_column($available, 'priority');
+        $highest = 'unclassified';
+        foreach (array_keys(self::PRIORITIES) as $priority) {
+            if (in_array($priority, $priorities, true)) {
+                $highest = $priority;
+                break;
+            }
+        }
+
+        return [
+            'priority' => $highest,
+            'unclassified_units' => count(array_filter($available, fn (array $unit): bool => ! isset(self::PRIORITIES[$unit['priority'] ?? '']))),
+            'missing_units' => count($units) - count($available),
+        ];
+    }
+
     private function social(array $source, bool $other = false): array
     {
         $prefix = $other ? 'nonowner_' : 'household_';

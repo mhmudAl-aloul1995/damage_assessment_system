@@ -70,6 +70,14 @@ class RehController extends Controller
                 ->whereIn('id', clone $matchingUnitIds)->orderBy('object_id')])->orderBy('id')->paginate(20)->withQueryString();
             $mapBuildings = $buildingRows->getCollection()->map(function (RehBuilding $building) use ($request): array {
                 $fieldStatus = $building->source['Field_status'] ?? null;
+                $canViewPriority = $request->user()->can('reh.scores.view');
+                $units = $building->units->map(fn (RehUnit $unit): array => [
+                    'object_id' => $unit->object_id,
+                    'url' => route('reh.units.show', $unit),
+                    'status' => $unit->workflow_status,
+                    'source_missing' => $unit->source_missing,
+                    ...($canViewPriority ? ['priority' => $this->scoring->calculate($unit)['priority'] ?? 'unclassified'] : []),
+                ])->values()->all();
 
                 return [
                     'id' => $building->object_id,
@@ -83,13 +91,8 @@ class RehController extends Controller
                     },
                     'source_missing' => $building->source_missing,
                     'total_units' => $building->units_count,
-                    'units' => $building->units->map(fn (RehUnit $unit): array => [
-                        'object_id' => $unit->object_id,
-                        'url' => route('reh.units.show', $unit),
-                        'status' => $unit->workflow_status,
-                        'source_missing' => $unit->source_missing,
-                        ...($request->user()->can('reh.scores.view') ? ['priority' => $this->scoring->calculate($unit)['priority'] ?? 'unclassified'] : []),
-                    ])->values()->all(),
+                    'units' => $units,
+                    ...($canViewPriority ? $this->scoring->summarizePriorities($units) : []),
                 ];
             });
         }
