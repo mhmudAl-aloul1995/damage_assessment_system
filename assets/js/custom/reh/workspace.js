@@ -38,6 +38,7 @@
     }
 
     function reflectFilters() {
+        if (state.tab === 'buildings' || state.tab === 'sync') state.priority = '';
         for (const input of filters.elements) {
             if (!input.name) continue;
             if (input.type === 'checkbox') input.checked = String(state[input.name]) === '1';
@@ -53,6 +54,7 @@
         const filterSummary = filters.querySelector('[data-filter-summary]');
         filterSummary.textContent = filters.elements.survey_status.selectedOptions[0]?.textContent || '';
         filterSummary.dataset.default = String(state.survey_status === 'completed');
+        if (filters.elements.priority) filters.elements.priority.disabled = state.tab === 'buildings' || state.tab === 'sync';
         filters.hidden = state.tab === 'sync';
     }
 
@@ -150,7 +152,7 @@
 
     function changeFilters() {
         state = { ...state, ...Object.fromEntries(new FormData(filters)), mine: filters.elements.mine.checked ? '1' : '', page: 1 };
-        if (state.tab === 'buildings') { state.status = ''; state.mine = ''; }
+        if (state.tab === 'buildings') { state.status = ''; state.mine = ''; state.priority = ''; }
         load();
     }
     filters.addEventListener('submit', event => { event.preventDefault(); clearTimeout(debounce); changeFilters(); });
@@ -166,7 +168,7 @@
         if (!button || button.disabled) return;
         if (button.matches('[data-detail]')) { event.preventDefault(); event.stopPropagation(); await openDetail(button.href, true, button.dataset.detailSection || 'summary'); }
         else if (button.matches('[data-close-detail]')) { if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); }
-        else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; } await load(); }
+        else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; state.priority = ''; } await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
         else if (button.matches('[data-page]')) { state.page = button.dataset.page; await load(); }
         else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', survey_status: state.survey_status, building_object_id: button.dataset.buildingUnits, page: 1 }; await load(); }

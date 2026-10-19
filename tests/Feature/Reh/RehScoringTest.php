@@ -49,6 +49,81 @@ function rehScoringBlankBoq(): array
     return array_fill_keys(array_filter(array_keys(app(RehSurvey::class)->dictionary()['fields']), fn (string $field): bool => str_starts_with($field, 'boq_')), null);
 }
 
+function rehPrioritySource(string $priority): array
+{
+    $source = rehScoringSource();
+    if ($priority === 'unclassified') {
+        return [...$source, 'owner_age' => null];
+    }
+    if ($priority === 'low') {
+        return $source;
+    }
+    foreach (array_keys(rehScoringBlankBoq()) as $field) {
+        $source[$field] = 20;
+    }
+    $source['unit_needs_intervention'] = 'yes';
+    if ($priority === 'medium') {
+        return $source;
+    }
+    $source = [...$source, 'other_members_have_disability' => 'yes', 'household_has_stable_income' => 'no'];
+    foreach (['other_vision_difficulty_count', 'other_hearing_difficulty_count', 'other_walking_difficulty_count', 'other_memory_difficulty_count', 'other_selfcare_diff_count', 'other_communication_diff_count'] as $field) {
+        $source[$field] = 2;
+    }
+
+    return $priority === 'high' ? $source : [...$source, 'household_chronic_count' => 2, 'household_pregnant_lactating' => 2, 'household_females_under5' => 4, 'unaccompanied_child_count' => 2, 'owner_has_disability' => 'yes'];
+}
+
+it('filters each calculated priority and unclassified units consistently in results counts and exports', function (string $priority): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $officer = User::factory()->create();
+    $officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+    foreach ([...array_keys(RehScoring::PRIORITIES), 'unclassified'] as $level) {
+        $unit = RehUnit::factory()->create(['source' => rehPrioritySource($level), 'code' => 'PRIORITY-'.$level]);
+        expect(app(RehScoring::class)->calculate($unit)['priority'] ?? 'unclassified')->toBe($level);
+    }
+    $this->actingAs($officer);
+    $html = $this->getJson(route('reh.data', ['tab' => 'units', 'priority' => $priority]))->assertOk()->json('html');
+    $csv = $this->get(route('reh.export', ['priority' => $priority]))->assertOk()->streamedContent();
+    expect($html)->toContain('1 وحدة', 'PRIORITY-'.$priority);
+    $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
+    expect($rows)->toHaveCount(2)->and($rows[1][15])->toBe('PRIORITY-'.$priority);
+    foreach (array_diff([...array_keys(RehScoring::PRIORITIES), 'unclassified'], [$priority]) as $other) {
+        expect($html)->not->toContain('PRIORITY-'.$other.'<');
+    }
+})->with([...array_keys(RehScoring::PRIORITIES), 'unclassified']);
+
+it('applies priority before pagination combines survey status and refreshes changed scores immediately', function (): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $officer = User::factory()->create();
+    $officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
+    RehUnit::factory()->count(21)->create(['source' => rehPrioritySource('medium')]);
+    $changed = RehUnit::factory()->create(['source' => rehPrioritySource('low'), 'code' => 'PRIORITY-CHANGED']);
+    $pending = RehUnit::factory()->create(['source' => rehPrioritySource('medium'), 'code' => 'PRIORITY-PENDING']);
+    $pending->building->update(['source' => ['Field_status' => 'Not_Completed']]);
+    $this->actingAs($officer);
+    $html = $this->getJson(route('reh.data', ['tab' => 'units', 'priority' => 'medium', 'page' => 2]))->assertOk()->json('html');
+    expect($html)->toContain('21 وحدة')->not->toContain('PRIORITY-CHANGED', 'PRIORITY-PENDING');
+    $csv = $this->get(route('reh.export', ['priority' => 'medium']))->assertOk()->streamedContent();
+    expect(array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF")))))->toHaveCount(22);
+    $html = $this->getJson(route('reh.data', ['tab' => 'units', 'priority' => 'medium', 'survey_status' => 'not_completed']))->assertOk()->json('html');
+    expect($html)->toContain('1 وحدة', 'PRIORITY-PENDING');
+    $changed->update(['source' => rehPrioritySource('medium')]);
+    $html = $this->getJson(route('reh.data', ['tab' => 'units', 'priority' => 'medium']))->assertOk()->json('html');
+    expect($html)->toContain('22 وحدة', 'PRIORITY-CHANGED');
+});
+
+it('validates priority and restricts its controls and filtering to users allowed to see social scores', function (): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $reader = User::factory()->create();
+    $reader->givePermissionTo(['reh.view', 'reh.export']);
+    $this->actingAs($reader)->get(route('reh.index'))->assertOk()->assertDontSee('id="reh-priority"', false);
+    $this->getJson(route('reh.data', ['priority' => 'low']))->assertForbidden();
+    $this->get(route('reh.export', ['priority' => 'low']))->assertForbidden();
+    $reader->givePermissionTo('reh.sensitive');
+    $this->get(route('reh.index'))->assertOk()->assertSee('id="reh-priority"', false);
+    $this->getJson(route('reh.data', ['priority' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('priority');
+});
+
 it('scores unused nullable boq fields as no work within an existing assessment and preserves raw data', function (): void {
     $unit = rehScoringUnit([
         ...rehScoringBlankBoq(), 'unit_needs_intervention' => 'yes',

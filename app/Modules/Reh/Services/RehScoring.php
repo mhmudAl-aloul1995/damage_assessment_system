@@ -75,8 +75,9 @@ class RehScoring
     public function engineering(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $catalog = [];
+        $source = $unit->source ?? [];
         $quantities = $this->survey->quantities($unit);
-        $hasAssessment = ($unit->source['unit_needs_intervention'] ?? null) === 'no'
+        $hasAssessment = ($source['unit_needs_intervention'] ?? null) === 'no'
             || collect($quantities)->every(fn (array $item): bool => $this->number($item['quantity'], $item['type'] === 'integer')['status'] === 'calculated')
             || collect($quantities)->contains(function (array $item): bool {
                 foreach (['source', 'quantity'] as $key) {
@@ -90,7 +91,7 @@ class RehScoring
             });
         foreach ($quantities as $item) {
             $item['not_requested'] = $hasAssessment
-                && array_key_exists($item['field'], $unit->source ?? [])
+                && array_key_exists($item['field'], $source)
                 && ($item['quantity'] === null || $item['quantity'] === '');
             $item['scoring_quantity'] = $item['not_requested'] ? 0 : $item['quantity'];
             if (preg_match('/^boq_(\d+)_(\d+)_/', $item['field'], $match)) {

@@ -40,7 +40,7 @@ class RehController extends Controller
         $query = $this->units($filters);
         $groups = (clone $query)->selectRaw('workflow_status, decision, count(*) as total')->groupBy('workflow_status', 'decision')->get();
         $counts = $groups->groupBy('workflow_status')->map(fn ($rows): int => (int) $rows->sum('total'))->all();
-        $hasUnitFilter = ! empty($filters['q']) || ! empty($filters['status']) || ! empty($filters['mine']) || ! empty($filters['building_id']) || ! empty($filters['building_object_id']);
+        $hasUnitFilter = ! empty($filters['q']) || ! empty($filters['status']) || ! empty($filters['mine']) || ! empty($filters['building_id']) || ! empty($filters['building_object_id']) || ! empty($filters['priority']);
         $buildingObjectId = $filters['building_object_id'] ?? (! empty($filters['building_id']) ? RehBuilding::query()->whereKey($filters['building_id'])->value('object_id') : null);
         $stats = [
             'units' => (int) $groups->sum('total'),
@@ -199,7 +199,17 @@ class RehController extends Controller
             ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->whereHas('building', fn (Builder $building) => $building->where('object_id', $objectId)))
             ->when($filters['mine'] ?? false, fn (Builder $query) => $query->where('reviewer_id', auth()->id()))
             ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('governorate', $value)))
-            ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('engineer', $value)));
+            ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('engineer', $value)))
+            ->when($filters['priority'] ?? null, function (Builder $query, string $priority): void {
+                $ids = [];
+                foreach ((clone $query)->select(['id', 'source', 'quantity_overrides', 'workflow_status', 'source_missing'])->lazyById(200) as $unit) {
+                    $actualPriority = $this->scoring->calculate($unit)['priority'] ?? 'unclassified';
+                    if ($actualPriority === $priority) {
+                        $ids[] = $unit->id;
+                    }
+                }
+                $query->whereIntegerInRaw('id', $ids);
+            });
     }
 
     private function workspace(?string $initialDetail, array $filters): View

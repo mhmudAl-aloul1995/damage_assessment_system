@@ -66,13 +66,15 @@ class RehSurvey
     public function quantities(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $items = [];
+        $source = $unit->source ?? [];
+        $overrides = $unit->quantity_overrides ?? [];
         foreach ($this->dictionary()['fields'] as $field => $definition) {
             if (! str_starts_with($field, 'boq_')) {
                 continue;
             }
-            $source = $unit->source[$field] ?? null;
-            $reviewed = $unit->quantity_overrides[$field] ?? null;
-            $items[] = ['field' => $field, 'label' => $definition['label'], 'unit' => str_replace('الوحدة: ', '', $definition['hint'] ?? ''), 'type' => $definition['type'], 'source' => $source, 'reviewed' => $reviewed, 'quantity' => $reviewed ?? $source, 'group' => $definition['group']['label'] ?? ''];
+            $quantity = $source[$field] ?? null;
+            $reviewed = $overrides[$field] ?? null;
+            $items[] = ['field' => $field, 'label' => $definition['label'], 'unit' => str_replace('الوحدة: ', '', $definition['hint'] ?? ''), 'type' => $definition['type'], 'source' => $quantity, 'reviewed' => $reviewed, 'quantity' => $reviewed ?? $quantity, 'group' => $definition['group']['label'] ?? ''];
         }
 
         return $items;

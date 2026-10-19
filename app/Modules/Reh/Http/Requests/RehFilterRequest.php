@@ -18,7 +18,8 @@ class RehFilterRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('reh.view') ?? false;
+        return ($this->user()?->can('reh.view') ?? false)
+            && (! $this->filled('priority') || $this->user()->can('reh.sensitive'));
     }
 
     /**
@@ -30,6 +31,7 @@ class RehFilterRequest extends FormRequest
     {
         return [
             'q' => ['nullable', 'string', 'max:100'],
+            'priority' => ['nullable', \Illuminate\Validation\Rule::in([...array_keys(\App\Modules\Reh\Services\RehScoring::PRIORITIES), 'unclassified'])],
             'survey_status' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Modules\Reh\Services\RehSurvey::FIELD_STATUSES))],
             'status' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(\App\Modules\Reh\Services\RehSurvey::WORKFLOW))],
             'governorate' => ['nullable', 'string', 'max:100'],
@@ -44,6 +46,6 @@ class RehFilterRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['survey_status.in' => 'حالة الاستبيان غير صالحة.', 'q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'رقم OBJECTID للمبنى غير صالح.', 'building_object_id.min' => 'رقم OBJECTID للمبنى يجب أن يكون موجبًا.'];
+        return ['priority.in' => 'مستوى الأولوية غير صالح.', 'survey_status.in' => 'حالة الاستبيان غير صالحة.', 'q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'رقم OBJECTID للمبنى غير صالح.', 'building_object_id.min' => 'رقم OBJECTID للمبنى يجب أن يكون موجبًا.'];
     }
 }
