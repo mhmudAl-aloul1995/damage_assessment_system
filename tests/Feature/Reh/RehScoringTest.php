@@ -456,6 +456,38 @@ it('hides social scoring and social audit snapshots from readers without sensiti
     expect($csv)->toContain('نقاط هندسية محسومة', 'محجوب', RehScoring::VERSION)->not->toContain('نقاط اجتماعية', 'أولوية منخفضة');
 });
 
+it('shows the selected social total in ajax results only with sensitive access and preserves missing scores', function (bool $sensitive, array $source, ?int $total): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo(['reh.view', 'reh.scores.view']);
+    if ($sensitive) {
+        $user->givePermissionTo('reh.sensitive');
+    }
+    RehUnit::factory()->create(['source' => [...rehScoringSource(), ...$source]]);
+    $html = $this->actingAs($user)->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $summaries = $xpath->query('//a[@data-social-score]');
+    expect($summaries->length)->toBe($sensitive ? 1 : 0)
+        ->and($html)->toContain('reh-engineering-summary');
+    if ($sensitive) {
+        $summary = $summaries->item(0);
+        expect($summary->getAttribute('data-social-score'))->toBe($total === null ? '' : (string) $total)
+            ->and($summary->textContent)->toContain('الاجتماعي:', ($total ?? '—').' / 60')
+            ->and($summary->getAttribute('data-detail-section'))->toBe('scoring')
+            ->and($summary->hasAttribute('data-detail'))->toBeTrue();
+        if ($total === null) {
+            expect($summary->textContent)->toContain('بانتظار الاستكمال');
+        }
+    }
+})->with([
+    'completed owner' => [true, [], 2],
+    'higher displaced score' => [true, rehScoringDisplacedSource(), 22],
+    'pending social score' => [true, ['household_size' => null], null],
+    'scores without sensitive access' => [false, [], 2],
+]);
+
 it('renders a distinct priority badge for every priority and the pending state', function (?string $priority, string $style, string $label): void {
     $view = $this->view('reh::partials.priority-badge', ['priority' => $priority]);
     $view->assertSee('reh-priority-'.$style, false)->assertSee('data-priority="'.$style.'"', false)->assertSee($label);

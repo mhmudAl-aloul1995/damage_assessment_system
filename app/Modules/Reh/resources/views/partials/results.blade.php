@@ -26,7 +26,10 @@
                 </a>
                 @include('reh::partials.priority-badge', ['priority' => $scores[$unit->id]['priority']])
             @else<small>الدرجة والأولوية تحتاجان صلاحية عرض التقييم</small>@endcan
-            <a data-detail data-detail-section="scoring" href="{{ route('reh.units.show', $unit) }}" class="reh-engineering-summary">الهندسي: {{ $scores[$unit->id]['engineering']['subtotal'] }} / 40</a>
+            @can('reh.sensitive')
+                <a data-detail data-detail-section="scoring" href="{{ route('reh.units.show', $unit) }}" class="reh-social-summary" data-social-score="{{ $scores[$unit->id]['social_total'] }}">الاجتماعي: <bdi dir="ltr">{{ $scores[$unit->id]['social_total'] ?? '—' }} / 60</bdi>@if($scores[$unit->id]['social_total'] === null) · بانتظار الاستكمال@endif</a>
+            @endcan
+            <a data-detail data-detail-section="scoring" href="{{ route('reh.units.show', $unit) }}" class="reh-engineering-summary">الهندسي: <bdi dir="ltr">{{ $scores[$unit->id]['engineering']['subtotal'] }} / 40</bdi></a>
             @if($scores[$unit->id]['engineering']['pending_count'] > 0)<small>{{ $scores[$unit->id]['engineering']['pending_count'] }} فئة هندسية معلقة</small>@endif
         </div></td><td><a data-detail href="{{ route('reh.units.show', $unit) }}" class="btn btn-sm btn-light-primary">فتح الملف</a></td></tr>
     @empty<tr><td colspan="8"><div class="reh-empty"><strong>{{ $lastSync ? 'لا توجد وحدات مطابقة' : 'مساحة العمل جاهزة لاستقبال الوحدات' }}</strong><p>{{ $lastSync ? 'جرّب تغيير البحث أو مسح الفلاتر.' : 'ابدأ المزامنة من قسم المزامنة بعد تجهيز اتصال ArcGIS.' }}</p></div></td></tr>@endforelse

@@ -81,7 +81,7 @@
 #reh-workspace .reh-final-value>span{font-size:12px;font-weight:500;color:var(--reh-muted)}
 #reh-workspace .reh-final-summary.is-pending{background:var(--bs-gray-100,#f5f6f8);border-color:var(--reh-line);border-inline-start-color:#8b98a9;border-style:dashed;color:var(--reh-muted)}
 #reh-workspace .reh-final-pending{font-size:11px;font-weight:500}
-#reh-workspace .reh-engineering-summary{font-size:11px;font-weight:500}
+#reh-workspace .reh-engineering-summary,#reh-workspace .reh-social-summary{font-size:11px;font-weight:500}
 #reh-workspace .reh-priority-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid;border-radius:999px;font-size:12px;font-weight:700;line-height:1.6;white-space:nowrap}
 #reh-workspace .reh-priority-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 #reh-workspace .reh-priority-very_high{color:#fff;background:#b12543;border-color:#b12543;box-shadow:0 2px 6px #b1254326}
