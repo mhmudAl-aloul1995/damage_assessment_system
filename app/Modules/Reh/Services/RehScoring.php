@@ -4,12 +4,12 @@ namespace App\Modules\Reh\Services;
 
 class RehScoring
 {
-    public const VERSION = 'phc-matrix-v3';
+    public const VERSION = 'phc-matrix-v4';
 
     public const STATUSES = ['calculated' => 'محسوب', 'missing' => 'بيانات ناقصة', 'invalid' => 'بيانات تحتاج تصحيحًا'];
 
     public const RULES = [
-        'dependency' => 'نسبة الإعالة = مجموع الأفراد دون 18 وفوق 60 ÷ مجموع الأفراد من 18 إلى 60. مقام صفر يستلزم مراجعة البيانات.',
+        'dependency' => 'يُحتسب المؤشر من إجمالي عدد أفراد الأسرة مباشرة: 1 أو أقل = 0؛ أكثر من 1 حتى 2 = 2؛ أكثر من 2 = 4.',
         'hosted' => 'تُقيّم الأسر المقيمة أو المستضافة كمجموعة من الأعداد المجمّعة، دون قسمة الأفراد أو مضاعفة النقاط بعدد الأسر. تُعتمد الأعلى بينها وبين أسرة المالك بعد اكتمالهما.',
         'fractional_walls' => 'الحوائط: صفر = صفر نقاط؛ أكبر من صفر وأقل من 5 = الشريحة الأولى؛ من 5 وأقل من 11 = الثانية؛ 11 فأكثر = الثالثة. دون تقريب.',
         'missing_values' => 'كل إجابة مؤثرة في السكور إلزامية عند انطباقها. الإجابة الناقصة لا تُعتبر صفرًا؛ تبقى الدرجة النهائية والأولوية معلقتين حتى الاستكمال.',
@@ -203,7 +203,7 @@ class RehScoring
         $allowed = $this->survey->dictionary()['choices'][$other ? 'nonowner_protection_risks' : 'protection_risks'];
         $state = $risks === null || $risks === '' ? 'missing' : (empty($tokens) || array_diff($tokens, array_keys($allowed)) || (in_array('none', $tokens, true) && count($tokens) > 1) ? 'invalid' : 'calculated');
         $rows[] = $this->row('protection', 'مخاطر الحماية', 3, $state === 'calculated' ? $this->countPoints(in_array('none', $tokens, true) ? 0 : count($tokens)) : null, $state, 'لا مخاطر = 0؛ خطر واحد = 2؛ خطران فأكثر = 3. لا تُحسب الاختيارات المكررة مرتين.', $this->inputs($source, [$field]));
-        $rows[] = $this->dependency($source, $prefix);
+        $rows[] = $this->dependency($source, $other);
         $sex = $source[$sexField] ?? null;
         $breadwinnerField = $other ? 'nonowner_breadwinner_'.($sex === 'male' ? 'm' : 'f') : ($sex === 'male' ? 'breadwinner_male_owner' : 'breadwinner_female_owner');
         $rows[] = $this->choice($source, 'breadwinner', 'معيل الأسرة', 3, $breadwinnerField, $sex === 'male' ? ['owner' => 0, 'wife' => 3, 'minor_child' => 3, 'adult_son' => 2, 'adult_daughter' => 2, 'relative' => 0, 'other' => 0] : ($sex === 'female' ? ['owner' => 0, 'husband' => 0, 'minor_child' => 3, 'adult_son' => 2, 'adult_daughter' => 2, 'relative' => 0, 'other' => 0] : []), 'اختيار ابن قاصر = 3؛ ابن/ابنة بالغ = 2؛ الزوجة = 3؛ غير ذلك = 0.');
@@ -269,28 +269,13 @@ class RehScoring
         return array_map(fn (string $field): array => ['field' => $field, 'label' => $this->survey->label($field), 'display' => $this->survey->value($field, is_scalar($source[$field] ?? null) ? $source[$field] : null)], $fields);
     }
 
-    private function dependency(array $source, string $prefix): array
+    private function dependency(array $source, bool $other): array
     {
-        $fields = array_map(fn (string $suffix): string => $prefix.$suffix, ['males_under5', 'males_age5_17', 'males_over60', 'females_under5', 'females_age5_17', 'females_over60', 'males_age18_60', 'females_age18_60']);
-        $numbers = array_map(fn (string $field): array => $this->number($source[$field] ?? null, true), $fields);
-        $state = $this->inputState($numbers);
-        $points = null;
-        $reason = self::RULES['dependency'];
-        if ($state === 'calculated') {
-            $values = array_column($numbers, 'value');
-            $dependents = array_sum(array_slice($values, 0, 6));
-            $workingAge = $values[6] + $values[7];
-            if ($workingAge === 0.0) {
-                $state = 'invalid';
-                $reason = 'عدد الأفراد من 18 إلى 60 صفر؛ يلزم مراجعة تركيبة الأسرة، ولا تُمنح نقاط تلقائية لهذه الحالة.';
-            } else {
-                $ratio = $dependents / $workingAge;
-                $points = $ratio <= 1 ? 0 : ($ratio <= 2 ? 2 : 4);
-                $reason .= ' '.$dependents.' ÷ '.$workingAge.' = '.round($ratio, 3).'؛ حتى 1 = 0؛ أكبر من 1 حتى 2 = 2؛ أكبر من 2 = 4.';
-            }
-        }
+        $field = $other
+            ? (($source['current_unit_occupancy'] ?? null) === 'displaced_family' ? 'displaced_individuals_count' : 'hosted_individuals_count')
+            : 'household_size';
 
-        return $this->row('dependency', 'نسبة الإعالة', 4, $points, $state, $reason, $this->inputs($source, $fields));
+        return $this->numeric($source, 'dependency', 'نسبة الإعالة', 4, [$field], fn (float $count): int => $count <= 1 ? 0 : ($count <= 2 ? 2 : 4), self::RULES['dependency']);
     }
 
     private function row(string $id, string $label, int $maximum, ?int $points, string $status, string $reason, array $inputs): array

@@ -17,7 +17,7 @@ function rehScoringSource(): array
         }
     }
 
-    return [...$source, 'owner_age' => 40, 'household_males_age18_60' => 1, 'owner_sex' => 'male', 'other_members_have_disability' => 'no', 'owner_has_disability' => 'no', 'nonfood_assistance_recency' => 'recent', 'shelter_assistance_recency' => 'recent', 'household_has_stable_income' => 'yes', 'household_protection_risks' => 'debt', 'breadwinner_male_owner' => 'owner', 'hosts_other_households' => 'no', 'current_unit_occupancy' => 'owner_family', 'unit_needs_intervention' => 'no'];
+    return [...$source, 'owner_age' => 40, 'household_size' => 1, 'household_males_age18_60' => 1, 'owner_sex' => 'male', 'other_members_have_disability' => 'no', 'owner_has_disability' => 'no', 'nonfood_assistance_recency' => 'recent', 'shelter_assistance_recency' => 'recent', 'household_has_stable_income' => 'yes', 'household_protection_risks' => 'debt', 'breadwinner_male_owner' => 'owner', 'hosts_other_households' => 'no', 'current_unit_occupancy' => 'owner_family', 'unit_needs_intervention' => 'no'];
 }
 
 function rehScoringUnit(array $changes = []): RehUnit
@@ -49,11 +49,11 @@ function rehScoringBlankBoq(): array
     return array_fill_keys(array_filter(array_keys(app(RehSurvey::class)->dictionary()['fields']), fn (string $field): bool => str_starts_with($field, 'boq_')), null);
 }
 
-it('renders only the selected family dependency inputs in its source preview', function (string $family, string $prefix): void {
+it('renders only the selected family total count in its dependency source preview', function (string $family, string $field, array $changes): void {
     $this->seed(RehPermissionsSeeder::class);
     $user = User::factory()->create();
     $user->givePermissionTo(['reh.view', 'reh.sensitive']);
-    $unit = RehUnit::factory()->create(['source' => [...rehScoringSource(), ...rehScoringDisplacedSource()]]);
+    $unit = RehUnit::factory()->create(['source' => [...rehScoringSource(), ...rehScoringDisplacedSource(), ...$changes]]);
     $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
     $document = new DOMDocument;
     $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
@@ -61,12 +61,16 @@ it('renders only the selected family dependency inputs in its source preview', f
     $template = $xpath->query('//div[@data-score-family-panel="'.$family.'"]//details[@data-score-row="dependency"]//template[@data-score-source-content]')->item(0);
     expect($template)->not->toBeNull();
     $fields = [];
-    foreach ($xpath->query('.//*[@data-indicator-field]', $template) as $field) {
-        $fields[] = $field->getAttribute('data-indicator-field');
+    foreach ($xpath->query('.//*[@data-indicator-field]', $template) as $input) {
+        $fields[] = $input->getAttribute('data-indicator-field');
     }
-    expect($fields)->toBe(array_map(fn (string $suffix): string => $prefix.$suffix, ['males_under5', 'males_age5_17', 'males_over60', 'females_under5', 'females_age5_17', 'females_over60', 'males_age18_60', 'females_age18_60']));
+    expect($fields)->toBe([$field]);
     $this->get(route('reh.index'))->assertOk()->assertSee('id="reh-score-source-dialog"', false)->assertSee('العودة للتقييم');
-})->with([['owner', 'household_'], ['other', 'nonowner_']]);
+})->with([
+    'owner' => ['owner', 'household_size', []],
+    'displaced' => ['other', 'displaced_individuals_count', []],
+    'hosted' => ['other', 'hosted_individuals_count', ['current_unit_occupancy' => 'owner_family', 'hosts_other_households' => 'yes', 'hosted_individuals_count' => 15]],
+]);
 
 it('keeps the engineering source preview limited to the indicator and distinguishes original reviewed and missing quantities', function (): void {
     $this->seed(RehPermissionsSeeder::class);
@@ -113,7 +117,7 @@ function rehPrioritySource(string $priority): array
         $source[$field] = 2;
     }
 
-    return $priority === 'high' ? $source : [...$source, 'household_chronic_count' => 2, 'household_pregnant_lactating' => 2, 'household_females_under5' => 4, 'unaccompanied_child_count' => 2, 'owner_has_disability' => 'yes'];
+    return $priority === 'high' ? $source : [...$source, 'household_size' => 5, 'household_chronic_count' => 2, 'household_pregnant_lactating' => 2, 'household_females_under5' => 4, 'unaccompanied_child_count' => 2, 'owner_has_disability' => 'yes'];
 }
 
 it('filters each calculated priority and unclassified units consistently in results counts and exports', function (string $priority): void {
@@ -219,20 +223,53 @@ it('never uses the engineering blank rule to fill required social answers', func
         ->and($score['total'])->toBeNull()->and($score['priority'])->toBeNull();
 });
 
-it('calculates dependency from all eight age counts with exact ratio boundaries', function (int $dependents, int $workingAge, ?int $points, string $status): void {
-    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_males_age5_17' => $dependents, 'household_males_age18_60' => $workingAge]));
+it('calculates dependency directly from household size using the approved boundaries', function (mixed $size, ?int $points, string $status): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_size' => $size, 'household_males_age5_17' => null, 'household_males_age18_60' => 0]));
     expect(rehScoreRow($score, 'owner', 'dependency')['points'])->toBe($points)
-        ->and(rehScoreRow($score, 'owner', 'dependency')['status'])->toBe($status);
+        ->and(rehScoreRow($score, 'owner', 'dependency')['status'])->toBe($status)
+        ->and(array_column(rehScoreRow($score, 'owner', 'dependency')['inputs'], 'field'))->toBe(['household_size'])
+        ->and(rehScoreRow($score, 'owner', 'dependency')['reason'])->not->toContain('÷', '18 إلى 60');
     if ($points === null) {
         expect($score['total'])->toBeNull()->and($score['priority'])->toBeNull();
+    } else {
+        expect($score['total'])->toBe(2 + $points)->and($score['priority'])->toBe('low');
     }
-})->with([[0, 2, 0, 'calculated'], [2, 2, 0, 'calculated'], [3, 2, 2, 'calculated'], [4, 2, 2, 'calculated'], [5, 2, 4, 'calculated'], [3, 0, null, 'invalid'], [0, 0, null, 'invalid']]);
+})->with([[0, 0, 'calculated'], [1, 0, 'calculated'], [2, 2, 'calculated'], [3, 4, 'calculated'], [15, 4, 'calculated'], ['2', 2, 'calculated'], [null, null, 'missing'], ['', null, 'missing'], [-1, null, 'invalid'], [1.5, null, 'invalid'], ['unknown', null, 'invalid']]);
 
-it('holds the final score and priority for missing required age counts without treating them as zero', function (): void {
-    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_females_age5_17' => null]));
+it('holds the final score and priority for missing household size without treating it as zero', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_size' => null]));
     expect(rehScoreRow($score, 'owner', 'dependency')['status'])->toBe('missing')
         ->and($score['social_total'])->toBeNull()->and($score['total'])->toBeNull()->and($score['priority'])->toBeNull();
 });
+
+it('does not require age bands unused by other indicators when household size is recorded', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_size' => 2, 'household_males_age5_17' => null, 'household_females_age5_17' => null, 'household_males_age18_60' => null, 'household_females_age18_60' => null]));
+    expect(rehScoreRow($score, 'owner', 'dependency')['points'])->toBe(2)
+        ->and($score['total'])->toBe(4)->and($score['priority'])->toBe('low');
+});
+
+it('uses only the aggregate individual count for the other group dependency', function (bool $displaced, mixed $count, ?int $points, string $status): void {
+    $field = $displaced ? 'displaced_individuals_count' : 'hosted_individuals_count';
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([
+        ...rehScoringDisplacedSource(), 'household_size' => 15,
+        'current_unit_occupancy' => $displaced ? 'displaced_family' : 'owner_family',
+        'hosts_other_households' => $displaced ? 'no' : 'yes',
+        'hosted_age' => 40, 'hosted_sex' => 'male',
+        'displaced_families_count' => 2, 'hosted_families_count' => 2,
+        'nonowner_males_age18_60' => null, 'nonowner_females_age18_60' => null,
+        'nonowner_males_age5_17' => null, 'nonowner_females_age5_17' => null,
+        $field => $count,
+    ]));
+    $row = rehScoreRow($score, 'other', 'dependency');
+    expect($row['points'])->toBe($points)->and($row['status'])->toBe($status)
+        ->and(array_column($row['inputs'], 'field'))->toBe([$field]);
+    if ($points === null) {
+        expect($score['social_total'])->toBeNull()->and($score['total'])->toBeNull();
+    }
+})->with([
+    [true, 1, 0, 'calculated'], [true, 2, 2, 'calculated'], [true, 15, 4, 'calculated'], [true, null, null, 'missing'],
+    [false, 1, 0, 'calculated'], [false, 2, 2, 'calculated'], [false, 15, 4, 'calculated'], [false, null, null, 'missing'],
+]);
 
 it('scores displaced households as one aggregate and selects the higher completed social score', function (): void {
     $unit = rehScoringUnit(rehScoringDisplacedSource());
