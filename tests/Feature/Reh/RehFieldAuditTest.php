@@ -42,6 +42,27 @@ it('keeps unit and building files readable before the audit migration while safe
     expect($html)->toContain('data-audit-form', 'data-action-form')->not->toContain(RehFieldAudit::SETUP_MESSAGE);
 });
 
+it('renders field history with authorized changes and a separate accessible modal without exposing social logs', function (): void {
+    $unit = rehAuditUnit();
+    $engineer = User::factory()->create(['name' => 'مدقق الاختبار']);
+    $engineer->assignRole('مدقق هندسي REH');
+    $base = ['record_kind' => 'unit', 'record_id' => $unit->id, 'object_id' => $unit->object_id, 'global_id' => $unit->global_id, 'layer_id' => 1, 'user_id' => $engineer->id, 'field' => 'boq_1_1_water_tank_repair_qty', 'reason' => 'مطابقة الكمية مع الحصر الميداني', 'status' => 'completed', 'message' => 'حُفظ التعديل في قاعدة البيانات وArcGIS.'];
+    foreach ([['before' => 0, 'after' => 1], ['before' => 1, 'after' => 2]] as $values) {
+        RehAuditLog::query()->create([...$base, 'values' => $values]);
+    }
+    RehAuditLog::query()->create([...$base, 'field' => 'floor_number', 'values' => ['before' => 0, 'after' => 1], 'reason' => 'تصحيح رقم الطابق']);
+    RehAuditLog::query()->create([...$base, 'field' => 'owner_chronic_disease_name', 'sensitive' => true, 'values' => ['before' => null, 'after' => 'PRIVATE-SOCIAL-HISTORY'], 'reason' => 'PRIVATE-SOCIAL-REASON']);
+    $this->actingAs($engineer);
+    $response = $this->get(route('reh.units.show', $unit))->assertOk()
+        ->assertSee('id="reh-audit-history-dialog"', false)->assertSee('aria-labelledby="reh-audit-history-title"', false)
+        ->assertSee('data-audit-field-history="boq_1_1_water_tank_repair_qty"', false)->assertSee('سجل التعديلات (2)')
+        ->assertDontSee('PRIVATE-SOCIAL-HISTORY')->assertDontSee('PRIVATE-SOCIAL-REASON');
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect(substr_count($html, 'data-audit-log-field="boq_1_1_water_tank_repair_qty"'))->toBe(2)
+        ->and($html)->toContain('مدقق الاختبار', 'مطابقة الكمية مع الحصر الميداني');
+    file_put_contents(sys_get_temp_dir().'/phc-reh-history-modal-preview.html', str_replace('http://localhost', 'http://localhost/phc', $response->getContent()));
+});
+
 function rehAuditUnit(array $attributes = []): RehUnit
 {
     $unit = RehUnit::factory()->create($attributes);

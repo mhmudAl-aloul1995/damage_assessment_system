@@ -9,6 +9,7 @@
     const detailBody = document.getElementById('reh-detail-body');
     const message = document.getElementById('reh-message');
     const detailMessage = document.getElementById('reh-detail-message');
+    const auditHistoryDialog = document.getElementById('reh-audit-history-dialog');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     let state = { tab: 'overview', survey_status: 'completed', ...JSON.parse(root.dataset.initial) };
     let listRequest, detailRequest, debounce, poll, map, dirty = false, saving = false;
@@ -84,6 +85,7 @@
 
     function closeDetail() {
         if (!canLeave()) return false;
+        if (auditHistoryDialog.open) auditHistoryDialog.close();
         detailRequest?.abort();
         dirty = false;
         detail.close();
@@ -153,6 +155,32 @@
     }
 
     let auditOrigin = null;
+    let auditHistoryOrigin = null;
+
+    function openAuditHistory(button) {
+        const field = button.dataset.auditFieldHistory;
+        const entries = [...detailBody.querySelectorAll('[data-audit-log-field]')].filter(entry => entry.dataset.auditLogField === field);
+        const body = auditHistoryDialog.querySelector('[data-audit-history-body]');
+        body.replaceChildren();
+        auditHistoryDialog.querySelector('#reh-audit-history-title').textContent = entries[0]?.querySelector('summary strong')?.textContent || 'سجل الحقل';
+        auditHistoryDialog.querySelector('#reh-audit-history-caption').textContent = `${entries.length} تعديل · الأحدث أولًا · ضمن أحدث 100 تعديل متاح في الملف حسب صلاحيتك`;
+        for (const entry of entries) {
+            const copy = entry.cloneNode(true);
+            copy.open = true;
+            copy.querySelectorAll('[data-audit-verify]').forEach(control => control.remove());
+            body.append(copy);
+        }
+        if (!entries.length) body.textContent = 'لا توجد تعديلات متاحة لهذا الحقل.';
+        auditHistoryOrigin = button;
+        auditHistoryDialog.showModal();
+    }
+
+    auditHistoryDialog.addEventListener('cancel', event => { event.preventDefault(); auditHistoryDialog.close(); });
+    auditHistoryDialog.addEventListener('close', () => {
+        auditHistoryDialog.querySelector('[data-audit-history-body]').replaceChildren();
+        if (auditHistoryOrigin?.isConnected) auditHistoryOrigin.focus({ preventScroll: true });
+        auditHistoryOrigin = null;
+    });
 
     function openAudit(button) {
         if (saving || (dirty && !window.confirm('توجد تعديلات غير محفوظة. هل تريد تركها وفتح هذا الحقل؟'))) return;
@@ -291,10 +319,9 @@
         if (!button || button.disabled) return;
         if (button.matches('[data-audit-field]')) { openAudit(button); }
         else if (button.matches('[data-audit-field-history]')) {
-            selectDetailTab('history');
-            const entry = detailBody.querySelector(`[data-audit-log-field="${CSS.escape(button.dataset.auditFieldHistory)}"]`);
-            if (entry) { entry.open = true; entry.querySelector('summary').focus(); entry.scrollIntoView({ block: 'center' }); }
+            openAuditHistory(button);
         }
+        else if (button.matches('[data-close-audit-history]')) { auditHistoryDialog.close(); }
         else if (button.matches('[data-audit-cancel]')) { cancelAudit(); }
         else if (button.matches('[data-audit-verify]')) {
             if (saving || !canLeave()) return;
