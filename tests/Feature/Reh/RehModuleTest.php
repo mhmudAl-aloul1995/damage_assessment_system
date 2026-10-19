@@ -19,6 +19,76 @@ beforeEach(function (): void {
     $this->officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
 });
 
+function rehReviewActionInputs(string $html): array
+{
+    $document = new DOMDocument;
+    $previousErrors = libxml_use_internal_errors(true);
+    $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+    libxml_clear_errors();
+    libxml_use_internal_errors($previousErrors);
+    $inputs = [];
+    foreach ((new DOMXPath($document))->query('//form[@data-action-form]//input[@name="action"]') as $input) {
+        $inputs[$input->getAttribute('value')] = ['disabled' => $input->hasAttribute('disabled'), 'checked' => $input->hasAttribute('checked')];
+    }
+
+    return $inputs;
+}
+
+it('explains review actions without a dropdown or a preselected decision and shows acceptance requirements', function (): void {
+    $unit = RehUnit::factory()->create();
+    $html = $this->actingAs($this->officer)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->toContain('ماذا تريد أن تفعل بهذا الملف؟', 'إسناد الملف لك لمتابعة مراجعته.', 'لا يعتمد التكلفة.', 'اعتماد التدقيق الهندسي، اعتماد التدقيق الاجتماعي', 'اختر إجراءً للمتابعة')
+        ->not->toContain('id="reh-review-action"');
+    $actions = rehReviewActionInputs($html);
+    expect($actions)->toHaveCount(7)->and($actions['select']['disabled'])->toBeTrue()
+        ->and($actions['claim']['disabled'])->toBeFalse()
+        ->and(collect($actions)->contains('checked', true))->toBeFalse();
+    $this->postJson(route('reh.units.review', $unit), ['version' => 1, 'note' => 'ملاحظة دون اختيار إجراء'])->assertUnprocessable()->assertJsonValidationErrors('action');
+    expect($unit->fresh()->reviews()->count())->toBe(0)->and($unit->fresh()->decision)->toBe('pending');
+});
+
+it('keeps acceptance unavailable until the actual issues are resolved even after both reviews', function (): void {
+    $unit = RehUnit::factory()->create(['engineering_status' => 'approved', 'social_status' => 'approved', 'reviewer_id' => $this->officer->id]);
+    $unit->update(['source' => [...$unit->source, 'ownership_proof_status' => 'no']]);
+    $this->actingAs($this->officer);
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect(rehReviewActionInputs($html)['select']['disabled'])->toBeTrue();
+    expect($html)->toContain('ما الذي يمنع القبول المبدئي؟', 'معالجة التنبيهات أعلاه', 'لا تعني استبعاد الوحدة تلقائيًا');
+    $this->postJson(route('reh.units.review', $unit), ['action' => 'select', 'version' => 1, 'note' => 'الملكية لم تستكمل'])->assertUnprocessable();
+    $unit->update(['source' => [...$unit->source, 'ownership_proof_status' => 'yes']]);
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $actions = rehReviewActionInputs($html);
+    expect($actions['select']['disabled'])->toBeFalse()
+        ->and($actions['claim']['disabled'])->toBeTrue()
+        ->and($actions['engineering_approve']['disabled'])->toBeTrue()
+        ->and($actions['social_approve']['disabled'])->toBeTrue();
+    $this->postJson(route('reh.units.review', $unit), ['action' => 'select', 'version' => 1, 'note' => 'اكتملت المراجعة والتصحيح'])->assertOk();
+});
+
+it('explains unavailable assignment and missing source reviews without hiding their reasons', function (): void {
+    $otherReviewer = User::factory()->create();
+    $unit = RehUnit::factory()->create(['reviewer_id' => $otherReviewer->id, 'source_missing' => true]);
+    $html = $this->actingAs($this->officer)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $actions = rehReviewActionInputs($html);
+    expect($html)->toContain('الملف مسند إلى مراجع آخر.', 'تحقق من السجل المفقود في المصدر أولًا.');
+    expect($actions['claim']['disabled'])->toBeTrue()
+        ->and($actions['engineering_approve']['disabled'])->toBeTrue()
+        ->and($actions['social_approve']['disabled'])->toBeTrue()
+        ->and($actions['return']['disabled'])->toBeFalse();
+});
+
+it('shows only permitted action cards and only reopening after a recorded decision', function (): void {
+    $unit = RehUnit::factory()->create();
+    $engineer = User::factory()->create();
+    $engineer->givePermissionTo(['reh.view', 'reh.review.engineering']);
+    $html = $this->actingAs($engineer)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect(array_keys(rehReviewActionInputs($html)))->toBe(['engineering_approve', 'second_assessment']);
+    $unit->update(['decision' => 'excluded', 'workflow_status' => 'decided']);
+    $html = $this->actingAs($this->officer)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect(array_keys(rehReviewActionInputs($html)))->toBe(['reopen']);
+    expect($html)->toContain('إلغاء القرار السابق وإعادة التدقيقين إلى انتظار المراجعة');
+});
+
 it('defaults survey filtering to field complete buildings and their units using the parent survey state', function (): void {
     $complete = RehBuilding::factory()->create(['source' => ['Field_status' => 'COMPLETED'], 'name' => 'FIELD-COMPLETE']);
     $pending = RehBuilding::factory()->create(['source' => ['Field_status' => 'Not_Completed'], 'name' => 'FIELD-PENDING']);

@@ -161,6 +161,18 @@
     if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', () => { clearTimeout(debounce); changeFilters(); });
     filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1 }; setTimeout(() => load(), 0); });
     detailBody.addEventListener('input', event => { if (event.target.closest('[data-review-form]')) dirty = true; });
+    detailBody.addEventListener('change', event => {
+        if (!event.target.matches('[data-action-form] input[name="action"]')) return;
+        const form = event.target.closest('[data-action-form]');
+        const label = event.target.dataset.actionLabel;
+        form.querySelector('[data-action-selection]').textContent = 'الإجراء المختار: ' + label;
+        const submit = form.querySelector('[data-action-submit]');
+        submit.disabled = false;
+        submit.textContent = 'حفظ: ' + label;
+        submit.classList.toggle('btn-danger', event.target.value === 'exclude');
+        submit.classList.toggle('btn-primary', event.target.value !== 'exclude');
+        dirty = true;
+    });
     detail.addEventListener('cancel', event => { event.preventDefault(); if (closeDetail()) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query()); });
 
     root.addEventListener('click', async event => {
@@ -239,6 +251,7 @@
         if (!form) return;
         event.preventDefault();
         if (saving) return;
+        if (!form.reportValidity()) return;
         const payload = {};
         for (const [key, value] of new FormData(form)) {
             const quantity = key.match(/^quantities\[(.+)\]$/);
@@ -246,17 +259,20 @@
             else if (key !== '_token') payload[key] = value;
         }
         const activeTab = detailBody.querySelector('[data-detail-tab].active')?.dataset.detailTab;
+        const actionLabel = form.querySelector('input[name="action"]:checked')?.dataset.actionLabel || 'مراجعة الكميات';
         saving = true; detailMessage.hidden = true;
-        const submit = form.querySelector('[type=submit]'); submit.disabled = true; submit.textContent = 'جاري الحفظ…';
+        const submit = form.querySelector('[type=submit]');
+        const submitLabel = submit.textContent;
+        submit.disabled = true; submit.textContent = 'جاري الحفظ…';
         try {
             const data = await request(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             detailBody.innerHTML = data.html;
             dirty = false;
             detailBody.querySelector(`[data-detail-tab="${activeTab}"]`)?.click();
-            notify('تم حفظ الإجراء وتحديث النقاط المحسومة وسجل الوحدة.', detailMessage, true);
+            notify('تم حفظ «' + actionLabel + '» وتحديث سجل الوحدة.', detailMessage, true);
             await load(false, true);
         } catch (error) { notify(error.message, detailMessage); detailMessage.scrollIntoView({ block: 'nearest' }); }
-        finally { saving = false; submit.disabled = false; submit.textContent = payload.action === 'quantities' ? 'حفظ مراجعة الكميات' : 'حفظ الإجراء'; }
+        finally { saving = false; submit.disabled = false; submit.textContent = submitLabel; }
     });
 
     window.addEventListener('popstate', event => {
