@@ -166,7 +166,7 @@
         else if (button.matches('[data-tab]')) { event.preventDefault(); event.stopPropagation(); state.tab = button.dataset.tab; state.page = 1; if (state.tab === 'buildings') { state.status = ''; state.mine = ''; } await load(); }
         else if (button.matches('[data-metric-tab]')) { state.tab = button.dataset.metricTab; state.status = button.dataset.metricStatus; state.page = 1; await load(); }
         else if (button.matches('[data-page]')) { state.page = button.dataset.page; await load(); }
-        else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', building_id: button.dataset.buildingUnits, page: 1 }; await load(); }
+        else if (button.matches('[data-building-units]')) { if (detail.open && !closeDetail()) return; state = { tab: 'units', building_object_id: button.dataset.buildingUnits, page: 1 }; await load(); }
         else if (button.matches('[data-detail-tab]')) {
             selectDetailTab(button.dataset.detailTab);
         } else if (button.matches('[data-score-tab], [data-score-jump]')) {

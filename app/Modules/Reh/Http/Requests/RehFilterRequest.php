@@ -27,6 +27,7 @@ class RehFilterRequest extends FormRequest
             'governorate' => ['nullable', 'string', 'max:100'],
             'engineer' => ['nullable', 'string', 'max:100'],
             'building_id' => ['nullable', 'integer', 'min:1'],
+            'building_object_id' => ['nullable', 'integer', 'min:1'],
             'mine' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],
             'tab' => ['nullable', \Illuminate\Validation\Rule::in(['overview', 'units', 'buildings', 'reports', 'sync'])],
@@ -35,6 +36,6 @@ class RehFilterRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.'];
+        return ['q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'رقم OBJECTID للمبنى غير صالح.', 'building_object_id.min' => 'رقم OBJECTID للمبنى يجب أن يكون موجبًا.'];
     }
 }

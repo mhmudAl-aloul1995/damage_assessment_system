@@ -40,7 +40,8 @@ class RehController extends Controller
         $query = $this->units($filters);
         $groups = (clone $query)->selectRaw('workflow_status, decision, count(*) as total')->groupBy('workflow_status', 'decision')->get();
         $counts = $groups->groupBy('workflow_status')->map(fn ($rows): int => (int) $rows->sum('total'))->all();
-        $hasUnitFilter = ! empty($filters['q']) || ! empty($filters['status']) || ! empty($filters['mine']) || ! empty($filters['building_id']);
+        $hasUnitFilter = ! empty($filters['q']) || ! empty($filters['status']) || ! empty($filters['mine']) || ! empty($filters['building_id']) || ! empty($filters['building_object_id']);
+        $buildingObjectId = $filters['building_object_id'] ?? (! empty($filters['building_id']) ? RehBuilding::query()->whereKey($filters['building_id'])->value('object_id') : null);
         $stats = [
             'units' => (int) $groups->sum('total'),
             'buildings' => $tab !== 'buildings' && $hasUnitFilter ? (clone $query)->distinct()->count('building_id') : $this->buildings($filters)->count(),
@@ -58,7 +59,7 @@ class RehController extends Controller
         $issueCount = RehSyncIssue::query()->whereNull('resolved_at')->count();
         $syncIssues = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->select(['id', 'object_id', 'reason'])->orderBy('id')->limit(100)->get() : collect();
         $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $request->user()->can('reh.sensitive') ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)]]) ?? collect();
-        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores') + ['survey' => $this->survey])->render();
+        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId') + ['survey' => $this->survey])->render();
 
         return response()->json(['html' => $view, 'sync_active' => $runs->contains(fn (RehSyncRun $run): bool => in_array($run->status, ['queued', 'running'], true))])->header('Cache-Control', 'private, no-store');
     }
@@ -153,7 +154,7 @@ class RehController extends Controller
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($body);
         $inline = in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true);
 
-        return response($body)->withHeaders(['Content-Type' => $inline ? $mime : 'application/octet-stream', 'Content-Disposition' => ($inline ? 'inline' : 'attachment').'; filename="reh-attachment-'.$attachment.'"', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        return response($body)->withHeaders(['Content-Type' => $inline ? $mime : 'application/octet-stream', 'Content-Disposition' => ($inline ? 'inline' : 'attachment').'; filename="reh-'.$kind.'-'.$record->object_id.'-attachment-'.$attachment.'"', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
     public function export(RehFilterRequest $request): StreamedResponse
@@ -164,12 +165,12 @@ class RehController extends Controller
         return response()->streamDownload(function () use ($query, $sensitive): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['رقم الوحدة', 'المبنى', 'المالك', 'الهوية', 'المحافظة', 'الحي', 'التدقيق', 'القرار', 'التسعير', 'آخر مزامنة', 'نقاط هندسية محسومة', 'فئات هندسية معلقة', 'الدرجة النهائية', 'الأولوية', 'إصدار قواعد الحساب']);
+            fputcsv($output, ['OBJECTID الوحدة', 'OBJECTID المبنى', 'المالك', 'الهوية', 'المحافظة', 'الحي', 'التدقيق', 'القرار', 'التسعير', 'آخر مزامنة', 'نقاط هندسية محسومة', 'فئات هندسية معلقة', 'الدرجة النهائية', 'الأولوية', 'إصدار قواعد الحساب', 'كود الوحدة', 'اسم المبنى']);
             foreach ($query->lazyById(200) as $unit) {
-                $row = [$unit->code ?? $unit->id, $unit->building->name, $unit->owner_name, $sensitive ? $unit->owner_identity : 'محجوب', $this->survey->value('governorate', $unit->building->governorate), $this->survey->value('neighborhood', $unit->building->neighborhood), RehSurvey::WORKFLOW[$unit->workflow_status], ['pending' => 'لم يُقرر', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision], 'بانتظار الأسعار', $unit->synced_at?->toDateTimeString()];
+                $row = [$unit->object_id, $unit->building->object_id, $unit->owner_name, $sensitive ? $unit->owner_identity : 'محجوب', $this->survey->value('governorate', $unit->building->governorate), $this->survey->value('neighborhood', $unit->building->neighborhood), RehSurvey::WORKFLOW[$unit->workflow_status], ['pending' => 'لم يُقرر', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision], 'بانتظار الأسعار', $unit->synced_at?->toDateTimeString()];
                 $engineering = $this->scoring->engineering($unit);
                 $score = $sensitive ? $this->scoring->calculate($unit) : null;
-                $row = [...$row, $engineering['subtotal'], $engineering['pending_count'], $sensitive ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب', $sensitive ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION];
+                $row = [...$row, $engineering['subtotal'], $engineering['pending_count'], $sensitive ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب', $sensitive ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION, $unit->code, $unit->building->name];
                 fputcsv($output, array_map(static fn (mixed $value): string => preg_match('/^[\s]*[=+@\-]/u', (string) $value) ? "'".$value : (string) $value, $row));
             }
             fclose($output);
@@ -180,8 +181,13 @@ class RehController extends Controller
     {
         return RehUnit::query()
             ->when($filters['q'] ?? null, function (Builder $query, string $search): void {
+                $search = trim($search);
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('code', 'like', '%'.$search.'%')->orWhere('owner_name', 'like', '%'.$search.'%');
+                    if (ctype_digit($search)) {
+                        $query->orWhere('object_id', $search)
+                            ->orWhereHas('building', fn (Builder $building) => $building->where('object_id', $search));
+                    }
                     if (auth()->user()->can('reh.sensitive')) {
                         $query->orWhere('owner_identity', $search);
                     }
@@ -189,6 +195,7 @@ class RehController extends Controller
             })
             ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('workflow_status', $status))
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->where('building_id', $id))
+            ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->whereHas('building', fn (Builder $building) => $building->where('object_id', $objectId)))
             ->when($filters['mine'] ?? false, fn (Builder $query) => $query->where('reviewer_id', auth()->id()))
             ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('governorate', $value)))
             ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('engineer', $value)));
@@ -202,8 +209,17 @@ class RehController extends Controller
     private function buildings(array $filters): Builder
     {
         return RehBuilding::query()
-            ->when($filters['q'] ?? null, fn (Builder $query, string $value) => $query->where('name', 'like', '%'.$value.'%'))
+            ->when($filters['q'] ?? null, function (Builder $query, string $value): void {
+                $value = trim($value);
+                $query->where(function (Builder $query) use ($value): void {
+                    $query->where('name', 'like', '%'.$value.'%');
+                    if (ctype_digit($value)) {
+                        $query->orWhere('object_id', $value);
+                    }
+                });
+            })
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->whereKey($id))
+            ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->where('object_id', $objectId))
             ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->where('governorate', $value))
             ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->where('engineer', $value));
     }

@@ -19,6 +19,79 @@ beforeEach(function (): void {
     $this->officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
 });
 
+function rehObjectIdRecords(): array
+{
+    $building = RehBuilding::factory()->create(['id' => 17, 'object_id' => 987654, 'name' => 'اسم المبنى الأصلي']);
+    $otherBuilding = RehBuilding::factory()->create(['id' => 987654, 'object_id' => 987655, 'name' => 'مبنى مختلف']);
+    $unit = RehUnit::factory()->create(['id' => 18, 'object_id' => 876543, 'building_id' => $building->id, 'code' => 'SOURCE-CODE']);
+    $otherUnit = RehUnit::factory()->create(['id' => 876543, 'object_id' => 876544, 'building_id' => $otherBuilding->id, 'code' => 'DECOY-CODE']);
+
+    return [$building, $unit, $otherBuilding, $otherUnit];
+}
+
+it('uses source object ids as the visible unit and building references throughout the module', function (): void {
+    [$building, $unit] = rehObjectIdRecords();
+    $this->actingAs($this->officer);
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->toContain('ملف الوحدة · OBJECTID 876543', 'مبنى 987654', 'SOURCE-CODE');
+    $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
+    expect($html)->toContain('ملف المبنى · OBJECTID 987654', 'data-building-units="987654"');
+    $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
+    expect($html)->toContain('وحدة 876543', 'مبنى 987654', 'SOURCE-CODE');
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings']))->assertOk()->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    $map = collect(json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true));
+    expect($map->firstWhere('id', 987654)['name'])->toBe('مبنى 987654 · اسم المبنى الأصلي');
+});
+
+it('finds source object ids without confusing them with local primary keys', function (): void {
+    rehObjectIdRecords();
+    $reader = User::factory()->create();
+    $reader->givePermissionTo('reh.view');
+    $this->actingAs($reader);
+    foreach (['876543', '987654', ' 876543 '] as $search) {
+        $html = $this->getJson(route('reh.data', ['tab' => 'units', 'q' => $search]))->assertOk()->json('html');
+        expect($html)->toContain('SOURCE-CODE')->not->toContain('DECOY-CODE');
+    }
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'q' => '987654']))->assertOk()->json('html');
+    expect($html)->toContain('اسم المبنى الأصلي')->not->toContain('مبنى مختلف');
+});
+
+it('filters building units by object id and keeps legacy filters displaying the source reference', function (): void {
+    rehObjectIdRecords();
+    $this->actingAs($this->officer);
+    foreach ([['building_object_id' => 987654], ['building_id' => 17]] as $filters) {
+        $html = $this->getJson(route('reh.data', ['tab' => 'units', ...$filters]))->assertOk()->json('html');
+        expect($html)->toContain('النتائج مقيّدة بالمبنى OBJECTID 987654', 'SOURCE-CODE')->not->toContain('DECOY-CODE');
+    }
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'building_object_id' => 987654]))->assertOk()->json('html');
+    expect($html)->toContain('اسم المبنى الأصلي')->not->toContain('مبنى مختلف');
+    $this->getJson(route('reh.data', ['building_object_id' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('building_object_id');
+});
+
+it('exports both source object ids as primary references and retains the code and name', function (): void {
+    rehObjectIdRecords();
+    $csv = $this->actingAs($this->officer)->get(route('reh.export', ['building_object_id' => 987654]))->assertOk()->streamedContent();
+    $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
+    expect($rows)->toHaveCount(2)
+        ->and($rows[0][0])->toBe('OBJECTID الوحدة')
+        ->and($rows[0][1])->toBe('OBJECTID المبنى')
+        ->and($rows[1][0])->toBe('876543')->and($rows[1][1])->toBe('987654')
+        ->and($rows[1][15])->toBe('SOURCE-CODE')->and($rows[1][16])->toBe('اسم المبنى الأصلي');
+});
+
+it('labels attachment downloads with their source object id', function (): void {
+    [, $unit] = rehObjectIdRecords();
+    $this->mock(RehArcgisClient::class, function ($mock) use ($unit): void {
+        $mock->shouldReceive('attachments')->once()->with(1, $unit->object_id)->andReturn([
+            ['id' => 2, 'name' => 'kitchen.jpg', 'keywords' => 'kitchen_photo', 'contentType' => 'image/jpeg'],
+        ]);
+        $mock->shouldReceive('download')->once()->with(1, $unit->object_id, 2)->andReturn('image-bytes');
+    });
+    $this->actingAs($this->officer)->get(route('reh.attachment', ['unit', $unit->id, 2]))
+        ->assertOk()->assertHeader('Content-Disposition', 'attachment; filename="reh-unit-876543-attachment-2"');
+});
+
 it('registers the module and protects its page data mutations and export', function (): void {
     $this->get(route('reh.index'))->assertRedirect();
     $reader = User::factory()->create();

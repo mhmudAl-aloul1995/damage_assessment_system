@@ -17,7 +17,7 @@
         @can('reh.sync')<a href="{{ route('reh.index', ['tab' => 'sync']) }}" data-tab="sync">المزامنة</a>@endcan
     </nav>
     <form id="reh-filters" class="reh-filter-bar" role="search">
-        <div class="reh-search"><label for="reh-q">بحث في السجلات</label><input id="reh-q" name="q" class="form-control" placeholder="كود الوحدة أو اسم المالك / المبنى" autocomplete="off"></div>
+        <div class="reh-search"><label for="reh-q">بحث برقم OBJECTID أو الاسم</label><input id="reh-q" name="q" class="form-control" placeholder="OBJECTID الوحدة أو المبنى، الاسم أو الكود" autocomplete="off"></div>
         <div><label for="reh-status">حالة التدقيق</label><select id="reh-status" name="status" class="form-select"><option value="">كل الحالات</option>@foreach($survey::WORKFLOW as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></div>
         <div><label for="reh-governorate">المحافظة</label><select id="reh-governorate" name="governorate" class="form-select"><option value="">كل المحافظات</option>@foreach($survey->dictionary()['choices']['governorate'] as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></div>
         <div><label for="reh-engineer">المهندس</label><select id="reh-engineer" name="engineer" class="form-select"><option value="">كل المهندسين</option>@foreach($engineers as $value)<option value="{{ $value }}">{{ $survey->value('engineer_name', $value) }}</option>@endforeach</select></div>
