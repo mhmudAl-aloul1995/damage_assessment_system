@@ -13,7 +13,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('phc:queue-status', function () {
-    $queues = collect(['arcgis', 'default', 'exports', config('heks_kobo.queue', 'heks')])
+    $queues = collect(['arcgis', 'default', 'exports', 'reh', config('heks_kobo.queue', 'heks')])
         ->filter()
         ->unique()
         ->values();
@@ -36,7 +36,7 @@ Artisan::command('phc:queue-status', function () {
     ])->all();
 
     $this->table(['Queue', 'Pending', 'Reserved', 'Failed'], $rows);
-    $this->line('Run workers: php artisan phc:queue-work-arcgis / php artisan phc:queue-work-exports');
+    $this->line('Run workers: php artisan phc:queue-work-arcgis / php artisan phc:queue-work-exports / php artisan phc:queue-work-reh');
 
     return Command::SUCCESS;
 })->purpose('Display PHC queue status and pending job counts');
@@ -77,6 +77,25 @@ Artisan::command('phc:queue-work-exports {--once : Process only one job}', funct
     return $this->call('queue:work', $options);
 })->purpose('Process PHC export queue jobs');
 
+Artisan::command('phc:queue-work-reh {--once : Process only one job} {--daemon : Keep the worker running when the queue is empty}', function () {
+    $options = [
+        'connection' => config('reh.queue_connection', 'reh'),
+        '--queue' => 'reh',
+        '--tries' => 1,
+        '--timeout' => 1800,
+        '--memory' => 512,
+    ];
+
+    if ($this->option('once')) {
+        $options['--once'] = true;
+    } elseif (! $this->option('daemon')) {
+        $options['--stop-when-empty'] = true;
+        $options['--max-time'] = 1800;
+    }
+
+    return $this->call('queue:work', $options);
+})->purpose('Process REH survey synchronization jobs');
+
 Artisan::command('phc:queue-restart', function () {
     return $this->call('queue:restart');
 })->purpose('Restart PHC queue workers after their current job');
@@ -92,6 +111,13 @@ Schedule::command('queue:work database --queue=exports --stop-when-empty --tries
     ->withoutOverlapping(10)
     ->runInBackground()
     ->name('exports-queue-worker')
+    ->appendOutputTo(storage_path('logs/queue-schedule.log'));
+
+Schedule::command('phc:queue-work-reh')
+    ->everyMinute()
+    ->withoutOverlapping(65)
+    ->runInBackground()
+    ->name('reh-queue-worker')
     ->appendOutputTo(storage_path('logs/queue-schedule.log'));
 
 foreach (range(1, 3) as $workerSlot) {

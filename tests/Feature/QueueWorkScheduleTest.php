@@ -2,6 +2,17 @@
 
 use Illuminate\Console\Scheduling\Schedule;
 
+test('reh queue worker is scheduled independently with a mutex covering its runtime', function (): void {
+    $event = collect(app(Schedule::class)->events())
+        ->first(fn (object $event): bool => str_contains($event->command, 'phc:queue-work-reh'));
+
+    expect($event)->not->toBeNull()
+        ->and($event->getExpression())->toBe('* * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->expiresAt)->toBe(65)
+        ->and($event->runInBackground)->toBeTrue();
+});
+
 test('queue work is scheduled every minute', function () {
     $queueWorkEvent = collect(app(Schedule::class)->events())
         ->first(function (object $event): bool {

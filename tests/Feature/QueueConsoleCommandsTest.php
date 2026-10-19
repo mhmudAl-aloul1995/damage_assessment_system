@@ -40,6 +40,7 @@ it('shows phc queue status counts', function () {
         ->toContain('arcgis')
         ->not->toContain('arcgis-cso')
         ->toContain('exports')
+        ->toContain('reh')
         ->toContain('Run workers:');
 });
 
@@ -50,5 +51,25 @@ it('registers phc queue console commands', function () {
         ->toContain('phc:queue-status')
         ->toContain('phc:queue-work-arcgis')
         ->toContain('phc:queue-work-exports')
+        ->toContain('phc:queue-work-reh')
         ->toContain('phc:queue-restart');
 });
+
+it('runs the dedicated reh worker with safe synchronization limits', function (bool $once, bool $daemon): void {
+    config(['reh.queue_connection' => 'reh']);
+    $worker = Mockery::mock(\Illuminate\Queue\Worker::class);
+    $worker->shouldReceive('setName')->once()->andReturnSelf();
+    $worker->shouldReceive('setCache')->once()->andReturnSelf();
+    $worker->shouldReceive($once ? 'runNextJob' : 'daemon')->once()
+        ->with('reh', 'reh', Mockery::on(function (\Illuminate\Queue\WorkerOptions $options) use ($once, $daemon): bool {
+            return $options->timeout === 1800
+                && $options->timeout < config('queue.connections.reh.retry_after')
+                && $options->maxTries === 1
+                && $options->memory === 512
+                && $options->stopWhenEmpty === (! $once && ! $daemon)
+                && (int) $options->maxTime === (! $once && ! $daemon ? 1800 : 0);
+        }))->andReturn(0);
+    app()->instance('queue.worker', $worker);
+
+    $this->artisan('phc:queue-work-reh', ['--once' => $once, '--daemon' => $daemon])->assertSuccessful();
+})->with([[false, false], [true, false], [false, true]]);
