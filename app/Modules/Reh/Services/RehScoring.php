@@ -4,16 +4,18 @@ namespace App\Modules\Reh\Services;
 
 class RehScoring
 {
-    public const VERSION = 'phc-matrix-pending-v1';
+    public const VERSION = 'phc-matrix-v2';
 
-    public const STATUSES = ['calculated' => 'محسوب', 'missing' => 'بيانات ناقصة', 'invalid' => 'بيانات تحتاج تصحيحًا', 'policy' => 'بانتظار اعتماد القاعدة'];
+    public const STATUSES = ['calculated' => 'محسوب', 'missing' => 'بيانات ناقصة', 'invalid' => 'بيانات تحتاج تصحيحًا'];
 
-    public const PENDING_RULES = [
-        'dependency' => 'تعريف العامل والمعال ونقاط الأسرة التي لا يوجد فيها عاملون.',
-        'hosted' => 'تحديد أسرة المقيم أو المستضاف وكيفية تقييم عدة أسر وتطبيق مؤشرات المالك عليها.',
-        'fractional_walls' => 'حدود احتساب كميات الحوائط الكسرية.',
-        'missing_values' => 'اعتماد آلية التعامل مع الإجابات الناقصة؛ تُعلّق المؤشرات الناقصة حاليًا ولا تُعتبر صفرًا.',
+    public const RULES = [
+        'dependency' => 'نسبة الإعالة = مجموع الأفراد دون 18 وفوق 60 ÷ مجموع الأفراد من 18 إلى 60. مقام صفر يستلزم مراجعة البيانات.',
+        'hosted' => 'تُقيّم الأسر المقيمة أو المستضافة كمجموعة من الأعداد المجمّعة، دون قسمة الأفراد أو مضاعفة النقاط بعدد الأسر. تُعتمد الأعلى بينها وبين أسرة المالك بعد اكتمالهما.',
+        'fractional_walls' => 'الحوائط: صفر = صفر نقاط؛ أكبر من صفر وأقل من 5 = الشريحة الأولى؛ من 5 وأقل من 11 = الثانية؛ 11 فأكثر = الثالثة. دون تقريب.',
+        'missing_values' => 'كل إجابة مؤثرة في السكور إلزامية عند انطباقها. الإجابة الناقصة لا تُعتبر صفرًا؛ تبقى الدرجة النهائية والأولوية معلقتين حتى الاستكمال.',
     ];
+
+    public const PRIORITIES = ['very_high' => 'أولوية عالية جدًا', 'high' => 'أولوية عالية', 'medium' => 'أولوية متوسطة', 'low' => 'أولوية منخفضة'];
 
     private const ENGINEERING = [
         'kitchen' => ['المطبخ', 6, ['6.1', '6.2', '6.4', '6.5']],
@@ -42,11 +44,16 @@ class RehScoring
             || (float) ($source['displaced_individuals_count'] ?? 0) > 0;
         $other = $hasOtherFamily ? $this->social($source, true) : null;
         $engineering = $this->engineering($unit);
+        $socialTotal = $owner['total'] !== null && ($other === null || $other['total'] !== null)
+            ? max($owner['total'], $other['total'] ?? 0) : null;
+        $selectedFamily = $socialTotal === null ? null : ($other !== null && $other['total'] > $owner['total'] ? 'other' : 'owner');
+        $total = $socialTotal !== null && $engineering['total'] !== null ? $socialTotal + $engineering['total'] : null;
 
         return [
             'version' => self::VERSION, 'owner' => $owner, 'other' => $other,
-            'engineering' => $engineering, 'social_total' => null, 'total' => null, 'priority' => null,
-            'status' => 'policy', 'rules' => self::PENDING_RULES,
+            'engineering' => $engineering, 'social_total' => $socialTotal, 'selected_family' => $selectedFamily,
+            'total' => $total, 'priority' => $total === null ? null : $this->priority($total),
+            'status' => $total === null ? 'incomplete' : 'calculated', 'rules' => self::RULES,
             'source_changed' => $unit->workflow_status === 'source_changed' || $unit->source_missing,
         ];
     }
@@ -86,17 +93,13 @@ class RehScoring
             } elseif ($state === 'calculated') {
                 if ($wall) {
                     $values = array_column($numbers, 'value');
-                    if (collect($values)->contains(fn (float $value): bool => floor($value) !== $value)) {
-                        $state = 'policy';
-                        $reason = self::PENDING_RULES['fractional_walls'];
-                    } else {
-                        $points = $id === 'internal_wall'
-                            ? $this->wallPoints(array_sum($values), false)
-                            : max($this->wallPoints($values[0] + $values[1], true), $this->wallPoints($values[2] + $values[3] + $values[4], true));
-                        $reason = $id === 'internal_wall'
-                            ? 'مجموع 2.3 + 2.4: صفر = 0؛ 1–4 = 1؛ 5–10 = 2؛ 11 فأكثر = 4.'
-                            : 'تُقيّم مجموعة 2.1 + 2.2 ومجموعة 2.5 + 2.6 + 2.7 كل على حدة، ثم تؤخذ أعلى النقاط: 1–4 = 1؛ 5–10 = 3؛ 11 فأكثر = 4.';
-                    }
+                    $points = $id === 'internal_wall'
+                        ? $this->wallPoints(array_sum($values), false)
+                        : max($this->wallPoints($values[0] + $values[1], true), $this->wallPoints($values[2] + $values[3] + $values[4], true));
+                    $reason = ($id === 'internal_wall'
+                        ? 'مجموع 2.3 + 2.4: الشرائح تمنح 1 ثم 2 ثم 4 نقاط. '
+                        : 'تُقيّم مجموعة 2.1 + 2.2 ومجموعة 2.5 + 2.6 + 2.7 كل على حدة، ثم تؤخذ أعلى النقاط: 1 ثم 3 ثم 4. ')
+                        .self::RULES['fractional_walls'];
                 } else {
                     $points = 0;
                 }
@@ -113,48 +116,65 @@ class RehScoring
     private function wallPoints(float $value, bool $external): int
     {
         return match (true) {
-            $value === 0.0 => 0, $value <= 4 => 1, $value <= 10 => $external ? 3 : 2, default => 4,
+            $value === 0.0 => 0, $value < 5 => 1, $value < 11 => $external ? 3 : 2, default => 4,
+        };
+    }
+
+    public function priority(int $total): string
+    {
+        return match (true) {
+            $total >= 76 => 'very_high', $total >= 55 => 'high', $total >= 30 => 'medium', default => 'low',
         };
     }
 
     private function social(array $source, bool $other = false): array
     {
         $prefix = $other ? 'nonowner_' : 'household_';
+        $headPrefix = $other ? (($source['current_unit_occupancy'] ?? null) === 'displaced_family' ? 'resident_' : 'hosted_') : 'owner_';
+        $ageField = $headPrefix.'age';
+        $sexField = $headPrefix.'sex';
         $rows = [];
-        $rows[] = $other ? $this->policy('age', 'سن رب الأسرة', 3) : $this->numeric($source, 'age', 'سن رب الأسرة', 3, ['owner_age'], fn (float $n): int => $n > 60 ? 3 : 0, 'أكبر من 60 سنة = 3؛ وإلا 0.');
+        $rows[] = $this->numeric($source, 'age', $other ? 'سن ممثل الأسر' : 'سن رب الأسرة', 3, [$ageField], fn (float $n): int => $n > 60 ? 3 : 0, 'أكبر من 60 سنة = 3؛ وإلا 0.');
         $elderFields = [$prefix.'males_over60', $prefix.'females_over60'];
-        $elder = $this->numeric($source, 'elders', 'كبار السن الآخرون', 3, [...$elderFields, ...($other ? [] : ['owner_age'])], function (float $ignored, array $values) use ($other): int {
-            return $this->countPoints($values[0] + $values[1] - (! $other && $values[2] > 60 ? 1 : 0));
-        }, 'باستثناء المالك: لا أحد = 0؛ فرد = 2؛ فردان فأكثر = 3.');
-        if ($other) {
-            $elder = $this->policy('elders', 'كبار السن الآخرون', 3, $elder['inputs']);
-        } elseif ($elder['status'] === 'calculated' && (float) ($source['owner_age'] ?? 0) > 60 && array_sum(array_map(fn (string $field): float => (float) $source[$field], $elderFields)) < 1) {
-            $elder = $this->row('elders', 'كبار السن الآخرون', 3, null, 'invalid', 'عمر المالك يتجاوز 60 لكن عدد كبار السن المسجل لا يشمله.', $elder['inputs']);
+        $elder = $this->numeric($source, 'elders', 'كبار السن الآخرون', 3, [...$elderFields, $ageField], function (float $ignored, array $values): int {
+            return $this->countPoints($values[0] + $values[1] - ($values[2] > 60 ? 1 : 0));
+        }, 'باستثناء المالك أو ممثل الأسر: لا أحد = 0؛ فرد = 2؛ فردان فأكثر = 3.');
+        if ($elder['status'] === 'calculated' && (float) ($source[$ageField] ?? 0) > 60 && array_sum(array_map(fn (string $field): float => (float) $source[$field], $elderFields)) < 1) {
+            $elder = $this->row('elders', 'كبار السن الآخرون', 3, null, 'invalid', 'العمر يتجاوز 60 لكن عدد كبار السن المسجل لا يشمله.', $elder['inputs']);
         }
         $rows[] = $elder;
         foreach (['vision' => ['بصرية', 'other_vision_difficulty_count'], 'hearing' => ['سمعية', 'other_hearing_difficulty_count'], 'walking' => ['حركية', 'other_walking_difficulty_count'], 'memory' => ['إدراكية', 'other_memory_difficulty_count'], 'selfcare' => ['عناية ذاتية', 'other_selfcare_diff_count'], 'communication' => ['تواصل', 'other_communication_diff_count']] as $key => [$label, $field]) {
-            $row = $this->numeric($source, 'disability_'.$key, 'إعاقة بقية الأسرة · '.$label, 2, [$other ? 'nonowner_'.$key.'_count' : $field], fn (float $n): int => (int) min(2, $n), 'باستثناء المالك: لا أحد = 0؛ فرد = 1؛ فردان فأكثر = 2.');
-            if ($other) {
-                $row = $this->policy($row['id'], $row['label'], 2, $row['inputs']);
-            } elseif (($source['other_members_have_disability'] ?? null) === 'no') {
+            $row = $this->numeric($source, 'disability_'.$key, ($other ? 'الإعاقة لدى المجموعة · ' : 'إعاقة بقية الأسرة · ').$label, 2, [$other ? 'nonowner_'.$key.'_count' : $field], fn (float $n): int => (int) min(2, $n), ($other ? 'عدد الأفراد المسجل ضمن المجموعة المجمّعة' : 'باستثناء المالك').': لا أحد = 0؛ فرد = 1؛ فردان فأكثر = 2.');
+            $disabilityGate = $other ? 'nonowner_has_disability' : 'other_members_have_disability';
+            if (($source[$disabilityGate] ?? null) === 'no') {
                 if ($row['status'] === 'missing' || $row['points'] === 0) {
-                    $row = $this->choice($source, $row['id'], $row['label'], 2, 'other_members_have_disability', ['no' => 0], 'مسجل صراحة عدم وجود إعاقة لبقية الأسرة.');
+                    $row = $this->choice($source, $row['id'], $row['label'], 2, $disabilityGate, ['no' => 0], 'مسجل صراحة عدم وجود إعاقة لأفراد المجموعة المقصودة.');
                 } else {
                     $row = $this->row($row['id'], $row['label'], 2, null, 'invalid', 'عدد الإعاقات يتعارض مع الإجابة بعدم وجود إعاقة.', $row['inputs']);
                 }
             }
             $rows[] = $row;
         }
-        $rows[] = $other ? $this->policy('head_disability', 'إعاقة رب الأسرة', 3) : $this->choice($source, 'head_disability', 'إعاقة المالك', 3, 'owner_has_disability', ['yes' => 3, 'no' => 0], 'نعم = 3؛ لا = 0.');
+        $rows[] = ! $other
+            ? $this->choice($source, 'head_disability', 'إعاقة المالك', 3, 'owner_has_disability', ['yes' => 3, 'no' => 0], 'نعم = 3؛ لا = 0.')
+            : (($source['nonowner_has_disability'] ?? null) === 'no'
+                ? $this->choice($source, 'head_disability', 'إعاقة ممثل الأسر', 3, 'nonowner_has_disability', ['no' => 0], 'مسجل عدم وجود إعاقة بين أفراد المجموعة، بما فيهم ممثلها.')
+                : $this->row('head_disability', 'إعاقة ممثل الأسر', 3, null, 'missing', 'البيانات المجمّعة لا تحدد إن كانت الإعاقة تخص ممثل الأسر. يلزم استكمال هذه المعلومة وفصلها عن أعداد بقية الأفراد قبل اعتماد المقارنة.', $this->inputs($source, ['nonowner_has_disability', 'nonowner_disability_count'])));
         foreach (['nfi' => ['مساعدة المواد غير الغذائية', 'nonfood_assistance_recency'], 'shelter' => ['مساعدة المأوى', 'shelter_assistance_recency']] as $id => [$label, $field]) {
             $rows[] = $this->choice($source, $id, $label, 1, $other ? 'nonowner_'.$id.'_recency' : $field, ['recent' => 0, 'm6_12' => 1, 'm12_plus' => 1], 'خلال آخر 6 أشهر = 0؛ قبل ذلك = 1.');
         }
-        $rows[] = $other ? $this->policy('female', 'ربة أسرة', 3) : $this->choice($source, 'female', 'ربة أسرة', 3, 'owner_sex', ['female' => 3, 'male' => 0], 'المالك أنثى = 3؛ وإلا 0.');
+        $rows[] = $this->choice($source, 'female', $other ? 'ممثلة الأسر أنثى' : 'ربة أسرة', 3, $sexField, ['female' => 3, 'male' => 0], 'أنثى = 3؛ ذكر = 0.');
         foreach ([['pregnancy', 'الحوامل والمرضعات', [$prefix.'pregnant_lactating']], ['unaccompanied', 'الأطفال غير المصحوبين', [$other ? 'nonowner_unaccompanied_count' : 'unaccompanied_child_count']], ['chronic', 'المصابون بأمراض مزمنة', [$prefix.'chronic_count']]] as [$id, $label, $fields]) {
-            $rows[] = $this->numeric($source, $id, $label, 3, $fields, fn (float $n): int => $this->countPoints($n), 'لا أحد = 0؛ فرد = 2؛ اثنان فأكثر = 3.');
+            $row = $this->numeric($source, $id, $label, 3, $fields, fn (float $n): int => $this->countPoints($n), 'لا أحد = 0؛ فرد = 2؛ اثنان فأكثر = 3.');
+            if ($other && $id === 'chronic' && ($source['nonowner_has_chronic'] ?? null) === 'no') {
+                $row = $row['status'] === 'missing' || $row['points'] === 0
+                    ? $this->choice($source, $id, $label, 3, 'nonowner_has_chronic', ['no' => 0], 'مسجل صراحة عدم وجود أمراض مزمنة في المجموعة.')
+                    : $this->row($id, $label, 3, null, 'invalid', 'عدد المصابين يتعارض مع الإجابة بعدم وجود أمراض مزمنة.', $row['inputs']);
+            }
+            $rows[] = $row;
         }
         $rows[] = $this->numeric($source, 'under5', 'الأطفال دون خمس سنوات', 3, [$prefix.'males_under5', $prefix.'females_under5'], fn (float $n): int => $n === 0.0 ? 0 : ($n <= 3 ? 2 : 3), 'لا أحد = 0؛ 1–3 = 2؛ أربعة فأكثر = 3.');
-        $rows[] = $other ? $this->policy('minor', 'رب أسرة قاصر', 3) : $this->numeric($source, 'minor', 'رب أسرة قاصر', 3, ['owner_age'], fn (float $n): int => $n < 18 ? 3 : 0, 'عمر المالك أقل من 18 = 3؛ وإلا 0.');
+        $rows[] = $this->numeric($source, 'minor', $other ? 'ممثل الأسر قاصر' : 'رب أسرة قاصر', 3, [$ageField], fn (float $n): int => $n < 18 ? 3 : 0, 'العمر أقل من 18 = 3؛ وإلا 0.');
         $rows[] = $this->choice($source, 'income', 'دخل غير ثابت', 3, $other ? 'nonowner_has_stable_income' : 'household_has_stable_income', ['no' => 3, 'yes' => 0], 'لا يوجد دخل ثابت = 3؛ يوجد = 0.');
         $field = $other ? 'nonowner_protection_risks' : 'household_protection_risks';
         $risks = $source[$field] ?? null;
@@ -162,26 +182,29 @@ class RehScoring
         $allowed = $this->survey->dictionary()['choices'][$other ? 'nonowner_protection_risks' : 'protection_risks'];
         $state = $risks === null || $risks === '' ? 'missing' : (empty($tokens) || array_diff($tokens, array_keys($allowed)) || (in_array('none', $tokens, true) && count($tokens) > 1) ? 'invalid' : 'calculated');
         $rows[] = $this->row('protection', 'مخاطر الحماية', 3, $state === 'calculated' ? $this->countPoints(in_array('none', $tokens, true) ? 0 : count($tokens)) : null, $state, 'لا مخاطر = 0؛ خطر واحد = 2؛ خطران فأكثر = 3. لا تُحسب الاختيارات المكررة مرتين.', $this->inputs($source, [$field]));
-        $rows[] = $this->row('dependency', 'نسبة الإعالة', 4, null, 'policy', self::PENDING_RULES['dependency'], []);
-        $sex = $source['owner_sex'] ?? null;
-        $rows[] = $other ? $this->policy('breadwinner', 'معيل الأسرة', 3) : $this->choice($source, 'breadwinner', 'معيل الأسرة', 3, $sex === 'male' ? 'breadwinner_male_owner' : 'breadwinner_female_owner', $sex === 'male' ? ['owner' => 0, 'wife' => 3, 'minor_child' => 3, 'adult_son' => 2, 'adult_daughter' => 2, 'relative' => 0, 'other' => 0] : ($sex === 'female' ? ['owner' => 0, 'husband' => 0, 'minor_child' => 3, 'adult_son' => 2, 'adult_daughter' => 2, 'relative' => 0, 'other' => 0] : []), 'اختيار ابن قاصر = 3؛ ابن/ابنة بالغ = 2؛ الزوجة = 3؛ غير ذلك = 0.');
+        $rows[] = $this->dependency($source, $prefix);
+        $sex = $source[$sexField] ?? null;
+        $breadwinnerField = $other ? 'nonowner_breadwinner_'.($sex === 'male' ? 'm' : 'f') : ($sex === 'male' ? 'breadwinner_male_owner' : 'breadwinner_female_owner');
+        $rows[] = $this->choice($source, 'breadwinner', 'معيل الأسرة', 3, $breadwinnerField, $sex === 'male' ? ['owner' => 0, 'wife' => 3, 'minor_child' => 3, 'adult_son' => 2, 'adult_daughter' => 2, 'relative' => 0, 'other' => 0] : ($sex === 'female' ? ['owner' => 0, 'husband' => 0, 'minor_child' => 3, 'adult_son' => 2, 'adult_daughter' => 2, 'relative' => 0, 'other' => 0] : []), 'اختيار ابن قاصر = 3؛ ابن/ابنة بالغ = 2؛ الزوجة = 3؛ غير ذلك = 0.');
         $hosts = $source['hosts_other_households'] ?? null;
-        $hosted = $hosts === 'no' ? $this->choice($source, 'hosting', 'الأفراد المستضافون', 3, 'hosts_other_households', ['no' => 0], 'مسجل عدم وجود أسرة مستضافة.') : $this->numeric($source, 'hosting', 'الأفراد المستضافون', 3, ['hosted_individuals_count'], fn (float $n): int => $n === 0.0 ? 0 : ($n <= 3 ? 2 : 3), 'يُحسب عدد الأفراد: 1–3 = 2؛ أربعة فأكثر = 3.');
-        if ($other || ! in_array($hosts, ['yes', 'no'], true)) {
-            $hosted = $this->policy('hosting', 'الأفراد المستضافون', 3, $hosted['inputs']);
-        } elseif (($hosts === 'no' && (float) ($source['hosted_individuals_count'] ?? 0) > 0) || ($hosts === 'yes' && ($source['hosted_individuals_count'] ?? null) !== null && (string) $source['hosted_individuals_count'] === '0')) {
+        $displaced = ($source['current_unit_occupancy'] ?? null) === 'displaced_family';
+        $individualsField = $displaced ? 'displaced_individuals_count' : 'hosted_individuals_count';
+        $hosted = $hosts === 'no' && ! $displaced ? $this->choice($source, 'hosting', 'الأفراد المستضافون', 3, 'hosts_other_households', ['no' => 0], 'مسجل عدم وجود أسرة مستضافة.') : $this->numeric($source, 'hosting', 'الأفراد المستضافون', 3, [$individualsField], fn (float $n): int => $n === 0.0 ? 0 : ($n <= 3 ? 2 : 3), 'يُحسب مجموع الأفراد دون تقسيمه أو مضاعفته بعدد الأسر: 1–3 = 2؛ أربعة فأكثر = 3.');
+        if (! in_array($hosts, ['yes', 'no'], true) && ! $displaced) {
+            $hosted = $this->row('hosting', 'الأفراد المستضافون', 3, null, $hosts === null || $hosts === '' ? 'missing' : 'invalid', 'يلزم تحديد وجود أسر أخرى في الوحدة.', $this->inputs($source, ['hosts_other_households']));
+        } elseif ((! $displaced && $hosts === 'no' && (float) ($source[$individualsField] ?? 0) > 0) || (($hosts === 'yes' || $displaced) && $hosted['status'] === 'calculated' && $hosted['points'] === 0)) {
             $hosted = $this->row('hosting', 'الأفراد المستضافون', 3, null, 'invalid', 'إجابة الاستضافة لا تتفق مع عدد الأفراد.', $hosted['inputs']);
         }
         $rows[] = $hosted;
         $occupied = in_array($source['current_unit_occupancy'] ?? null, ['owner_family', 'displaced_family', 'rented'], true);
-        $rows[] = $other ? $this->policy('vacancy', 'سبب خلو الوحدة', 3) : ($occupied ? $this->row('vacancy', 'سبب خلو الوحدة', 3, 0, 'calculated', 'الوحدة مأهولة؛ مؤشر سبب الخلو لا ينطبق.', $this->inputs($source, ['current_unit_occupancy'])) : $this->choice($source, 'vacancy', 'سبب خلو الوحدة', 3, 'vacancy_reason', ($source['current_unit_occupancy'] ?? null) === 'empty' ? ['displaced_tent' => 3, 'cant_afford' => 2, 'displaced_alt' => 1, 'under_repair_sale' => 0, 'ownership_dispute' => 0, 'other_vacancy' => 0] : [], 'خيمة = 3؛ عجز مالي = 2؛ سكن بديل = 1؛ غير ذلك = 0.'));
+        $rows[] = $occupied ? $this->row('vacancy', 'سبب خلو الوحدة', 3, 0, 'calculated', 'الوحدة مأهولة؛ مؤشر سبب الخلو لا ينطبق.', $this->inputs($source, ['current_unit_occupancy'])) : $this->choice($source, 'vacancy', 'سبب خلو الوحدة', 3, 'vacancy_reason', ($source['current_unit_occupancy'] ?? null) === 'empty' ? ['displaced_tent' => 3, 'cant_afford' => 2, 'displaced_alt' => 1, 'under_repair_sale' => 0, 'ownership_dispute' => 0, 'other_vacancy' => 0] : [], 'خيمة = 3؛ عجز مالي = 2؛ سكن بديل = 1؛ غير ذلك = 0.');
 
         return $this->summary($rows, 60);
     }
 
     private function numeric(array $source, string $id, string $label, int $maximum, array $fields, callable $calculate, string $reason): array
     {
-        $numbers = array_map(fn (string $field): array => $this->number($source[$field] ?? null, true, $field === 'owner_age' ? 120 : 1000000), $fields);
+        $numbers = array_map(fn (string $field): array => $this->number($source[$field] ?? null, true, in_array($field, ['owner_age', 'resident_age', 'hosted_age'], true) ? 120 : 1000000), $fields);
         $state = $this->inputState($numbers);
         $values = array_column($numbers, 'value');
 
@@ -225,9 +248,28 @@ class RehScoring
         return array_map(fn (string $field): array => ['field' => $field, 'label' => $this->survey->label($field), 'display' => $this->survey->value($field, is_scalar($source[$field] ?? null) ? $source[$field] : null)], $fields);
     }
 
-    private function policy(string $id, string $label, int $maximum, array $inputs = []): array
+    private function dependency(array $source, string $prefix): array
     {
-        return $this->row($id, $label, $maximum, null, 'policy', self::PENDING_RULES['hosted'], $inputs);
+        $fields = array_map(fn (string $suffix): string => $prefix.$suffix, ['males_under5', 'males_age5_17', 'males_over60', 'females_under5', 'females_age5_17', 'females_over60', 'males_age18_60', 'females_age18_60']);
+        $numbers = array_map(fn (string $field): array => $this->number($source[$field] ?? null, true), $fields);
+        $state = $this->inputState($numbers);
+        $points = null;
+        $reason = self::RULES['dependency'];
+        if ($state === 'calculated') {
+            $values = array_column($numbers, 'value');
+            $dependents = array_sum(array_slice($values, 0, 6));
+            $workingAge = $values[6] + $values[7];
+            if ($workingAge === 0.0) {
+                $state = 'invalid';
+                $reason = 'عدد الأفراد من 18 إلى 60 صفر؛ يلزم مراجعة تركيبة الأسرة، ولا تُمنح نقاط تلقائية لهذه الحالة.';
+            } else {
+                $ratio = $dependents / $workingAge;
+                $points = $ratio <= 1 ? 0 : ($ratio <= 2 ? 2 : 4);
+                $reason .= ' '.$dependents.' ÷ '.$workingAge.' = '.round($ratio, 3).'؛ حتى 1 = 0؛ أكبر من 1 حتى 2 = 2؛ أكبر من 2 = 4.';
+            }
+        }
+
+        return $this->row('dependency', 'نسبة الإعالة', 4, $points, $state, $reason, $this->inputs($source, $fields));
     }
 
     private function row(string $id, string $label, int $maximum, ?int $points, string $status, string $reason, array $inputs): array

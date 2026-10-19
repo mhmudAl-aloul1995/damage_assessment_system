@@ -17,7 +17,7 @@ function rehScoringSource(): array
         }
     }
 
-    return [...$source, 'owner_age' => 40, 'owner_sex' => 'male', 'other_members_have_disability' => 'no', 'owner_has_disability' => 'no', 'nonfood_assistance_recency' => 'recent', 'shelter_assistance_recency' => 'recent', 'household_has_stable_income' => 'yes', 'household_protection_risks' => 'debt', 'breadwinner_male_owner' => 'owner', 'hosts_other_households' => 'no', 'current_unit_occupancy' => 'owner_family'];
+    return [...$source, 'owner_age' => 40, 'household_males_age18_60' => 1, 'owner_sex' => 'male', 'other_members_have_disability' => 'no', 'owner_has_disability' => 'no', 'nonfood_assistance_recency' => 'recent', 'shelter_assistance_recency' => 'recent', 'household_has_stable_income' => 'yes', 'household_protection_risks' => 'debt', 'breadwinner_male_owner' => 'owner', 'hosts_other_households' => 'no', 'current_unit_occupancy' => 'owner_family'];
 }
 
 function rehScoringUnit(array $changes = []): RehUnit
@@ -30,17 +30,106 @@ function rehScoreRow(array $score, string $section, string $id): array
     return collect($score[$section]['rows'])->firstWhere('id', $id);
 }
 
-it('computes only settled indicators and never publishes a final score or ranking from source scores', function (): void {
+function rehScoringDisplacedSource(): array
+{
+    return [
+        'current_unit_occupancy' => 'displaced_family', 'hosts_other_households' => 'no',
+        'resident_age' => 40, 'resident_sex' => 'male', 'displaced_families_count' => 2, 'displaced_individuals_count' => 15,
+        'nonowner_has_disability' => 'no', 'nonowner_nfi_recency' => 'm6_12', 'nonowner_shelter_recency' => 'm12_plus',
+        'nonowner_has_stable_income' => 'no', 'nonowner_protection_risks' => 'none', 'nonowner_breadwinner_m' => 'adult_son',
+        'nonowner_males_age18_60' => 2, 'nonowner_females_age18_60' => 2,
+        'nonowner_males_under5' => 4, 'nonowner_females_under5' => 3,
+        'nonowner_males_age5_17' => 2, 'nonowner_females_age5_17' => 2,
+        'nonowner_chronic_count' => 2, 'nonowner_pregnant_lactating' => 1,
+    ];
+}
+
+it('calculates dependency from all eight age counts with exact ratio boundaries', function (int $dependents, int $workingAge, ?int $points, string $status): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_males_age5_17' => $dependents, 'household_males_age18_60' => $workingAge]));
+    expect(rehScoreRow($score, 'owner', 'dependency')['points'])->toBe($points)
+        ->and(rehScoreRow($score, 'owner', 'dependency')['status'])->toBe($status);
+    if ($points === null) {
+        expect($score['total'])->toBeNull()->and($score['priority'])->toBeNull();
+    }
+})->with([[0, 2, 0, 'calculated'], [2, 2, 0, 'calculated'], [3, 2, 2, 'calculated'], [4, 2, 2, 'calculated'], [5, 2, 4, 'calculated'], [3, 0, null, 'invalid'], [0, 0, null, 'invalid']]);
+
+it('holds the final score and priority for missing required age counts without treating them as zero', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit(['household_females_age5_17' => null]));
+    expect(rehScoreRow($score, 'owner', 'dependency')['status'])->toBe('missing')
+        ->and($score['social_total'])->toBeNull()->and($score['total'])->toBeNull()->and($score['priority'])->toBeNull();
+});
+
+it('scores displaced households as one aggregate and selects the higher completed social score', function (): void {
+    $unit = rehScoringUnit(rehScoringDisplacedSource());
+    $score = app(RehScoring::class)->calculate($unit);
+    expect($score['owner']['total'])->toBe(5)
+        ->and($score['other']['total'])->toBe(22)
+        ->and($score['social_total'])->toBe(22)->and($score['selected_family'])->toBe('other')
+        ->and($score['total'])->toBe(22)->and($score['priority'])->toBe('low')
+        ->and(rehScoreRow($score, 'other', 'under5')['points'])->toBe(3)
+        ->and(rehScoreRow($score, 'other', 'chronic')['points'])->toBe(3)
+        ->and(rehScoreRow($score, 'other', 'dependency')['points'])->toBe(4)
+        ->and(rehScoreRow($score, 'other', 'hosting')['points'])->toBe(3);
+    $unit->source = [...$unit->source, 'displaced_families_count' => 9];
+    expect(app(RehScoring::class)->calculate($unit)['total'])->toBe(22);
+});
+
+it('uses hosted representative fields and never falls back to owner demographics for the other group', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([
+        ...rehScoringDisplacedSource(), 'current_unit_occupancy' => 'owner_family', 'hosts_other_households' => 'yes',
+        'hosted_individuals_count' => 15, 'hosted_age' => 61, 'hosted_sex' => 'female', 'owner_age' => 17,
+        'nonowner_females_over60' => 1, 'nonowner_breadwinner_f' => 'owner',
+    ]));
+    expect(rehScoreRow($score, 'other', 'age')['points'])->toBe(3)
+        ->and(rehScoreRow($score, 'other', 'minor')['points'])->toBe(0)
+        ->and(rehScoreRow($score, 'other', 'female')['points'])->toBe(3)
+        ->and(rehScoreRow($score, 'other', 'elders')['points'])->toBe(0);
+});
+
+it('does not select a lower completed owner score when the other required group is incomplete', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([...rehScoringDisplacedSource(), 'nonowner_has_stable_income' => null]));
+    expect($score['owner']['total'])->not->toBeNull()
+        ->and($score['other']['total'])->toBeNull()->and($score['social_total'])->toBeNull()
+        ->and($score['selected_family'])->toBeNull()->and($score['total'])->toBeNull();
+});
+
+it('does not infer an individual representative disability from aggregated health counts', function (): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([...rehScoringDisplacedSource(), 'nonowner_has_disability' => 'yes', 'nonowner_vision_count' => 2, 'nonowner_disability_count' => 2]));
+    expect(rehScoreRow($score, 'other', 'disability_vision')['points'])->toBe(2)
+        ->and(rehScoreRow($score, 'other', 'head_disability')['status'])->toBe('missing')
+        ->and($score['total'])->toBeNull();
+});
+
+it('respects conditional required health counts and rejects contradictory answers', function (): void {
+    $source = [...rehScoringDisplacedSource(), 'nonowner_has_chronic' => 'no', 'nonowner_chronic_count' => null, 'nonowner_vision_count' => null];
+    $score = app(RehScoring::class)->calculate(rehScoringUnit($source));
+    expect(rehScoreRow($score, 'other', 'chronic')['points'])->toBe(0)
+        ->and(rehScoreRow($score, 'other', 'disability_vision')['points'])->toBe(0)
+        ->and($score['total'])->not->toBeNull();
+    $score = app(RehScoring::class)->calculate(rehScoringUnit([...$source, 'nonowner_chronic_count' => 2]));
+    expect(rehScoreRow($score, 'other', 'chronic')['status'])->toBe('invalid')->and($score['total'])->toBeNull();
+});
+
+it('uses the published priority boundaries without normalizing the achievable 97 points to 100', function (int $total, string $priority): void {
+    expect(app(RehScoring::class)->priority($total))->toBe($priority);
+})->with([[0, 'low'], [29, 'low'], [30, 'medium'], [54, 'medium'], [55, 'high'], [75, 'high'], [76, 'very_high'], [97, 'very_high']]);
+
+it('scores external wall decimal thresholds by their own unit groups', function (float $quantity, int $points): void {
+    $score = app(RehScoring::class)->calculate(rehScoringUnit(['boq_2_1_pallet_wall_qty' => $quantity, 'boq_2_5_used_block_20cm_qty' => 0.5]));
+    expect(rehScoreRow($score, 'engineering', 'external_wall')['points'])->toBe($points);
+})->with([[4.5, 1], [4.999, 1], [5.0, 3], [10.5, 3], [10.999, 3], [11.0, 4]]);
+
+it('computes a final score from required inputs and ignores untrusted source scores', function (): void {
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['social_score' => 60, 'total_score' => 100, 'priority' => 'very_high']));
     expect($score['owner']['rows'])->toHaveCount(23)
         ->and(array_sum(array_column($score['owner']['rows'], 'maximum')))->toBe(60)
         ->and($score['engineering']['rows'])->toHaveCount(12)
         ->and($score['engineering']['total'])->toBe(0)
-        ->and($score['owner']['calculated_count'])->toBe(22)
+        ->and($score['owner']['calculated_count'])->toBe(23)
         ->and($score['owner']['subtotal'])->toBe(2)
         ->and($score['other'])->toBeNull()
-        ->and($score['total'])->toBeNull()->and($score['priority'])->toBeNull()
-        ->and(rehScoreRow($score, 'owner', 'dependency')['status'])->toBe('policy');
+        ->and($score['total'])->toBe(2)->and($score['priority'])->toBe('low')
+        ->and(rehScoreRow($score, 'owner', 'dependency')['points'])->toBe(0);
 });
 
 it('uses exact age boundaries and removes the owner from the other elder count', function (int $age, int $old, int $minor, int $others): void {
@@ -65,12 +154,12 @@ it('uses explicit breadwinner choices without assuming the hidden child age', fu
     expect(rehScoreRow($score, 'owner', 'breadwinner')['points'])->toBe($expected);
 })->with(['minor' => ['minor_child', 3], 'adult son' => ['adult_son', 2], 'adult daughter' => ['adult_daughter', 2], 'wife' => ['wife', 3], 'owner' => ['owner', 0]]);
 
-it('deduplicates known risks and keeps hosted applicability unresolved', function (): void {
+it('deduplicates known risks and flags missing representative data without inventing it', function (): void {
     $unit = rehScoringUnit(['hosts_other_households' => 'yes', 'hosted_individuals_count' => 4, 'nonowner_protection_risks' => 'none', 'household_protection_risks' => 'debt debt']);
     $score = app(RehScoring::class)->calculate($unit);
     expect(rehScoreRow($score, 'owner', 'protection')['points'])->toBe(2)
         ->and(rehScoreRow($score, 'other', 'protection')['points'])->toBe(0)
-        ->and(rehScoreRow($score, 'other', 'head_disability')['status'])->toBe('policy')
+        ->and(rehScoreRow($score, 'other', 'head_disability')['status'])->toBe('missing')
         ->and($score['other']['rows'])->toHaveCount(23)
         ->and($score['social_total'])->toBeNull();
     $unit->source = [...$unit->source, 'nonowner_protection_risks' => 'none debt'];
@@ -99,11 +188,11 @@ it('resolves binary categories with a positive quantity but never assumes empty 
         ->and($score['engineering']['total'])->toBeNull();
 });
 
-it('handles internal wall thresholds and defers fractional quantities', function (mixed $quantity, ?int $expected, string $status): void {
+it('handles continuous internal wall thresholds without rounding quantities', function (mixed $quantity, ?int $expected, string $status): void {
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['boq_2_3_partition_wall_qty' => $quantity]));
     expect(rehScoreRow($score, 'engineering', 'internal_wall')['points'])->toBe($expected)
         ->and(rehScoreRow($score, 'engineering', 'internal_wall')['status'])->toBe($status);
-})->with([[0, 0, 'calculated'], [1, 1, 'calculated'], [4, 1, 'calculated'], [5, 2, 'calculated'], [10, 2, 'calculated'], [11, 4, 'calculated'], [0.5, null, 'policy'], [4.5, null, 'policy'], [5.5, null, 'policy'], [null, null, 'missing'], [-1, null, 'invalid'], ['bad', null, 'invalid']]);
+})->with([[0, 0, 'calculated'], [1, 1, 'calculated'], [4, 1, 'calculated'], [5, 2, 'calculated'], [10, 2, 'calculated'], [11, 4, 'calculated'], [0.5, 1, 'calculated'], [4.5, 1, 'calculated'], [4.999, 1, 'calculated'], [5.5, 2, 'calculated'], [10.5, 2, 'calculated'], [10.999, 2, 'calculated'], [null, null, 'missing'], [-1, null, 'invalid'], ['bad', null, 'invalid']]);
 
 it('scores external wall length and area separately without adding incompatible units', function (): void {
     $score = app(RehScoring::class)->calculate(rehScoringUnit(['boq_2_1_pallet_wall_qty' => 4, 'boq_2_5_used_block_20cm_qty' => 4]));
@@ -126,13 +215,17 @@ it('renders real ajax scoring and records before and after snapshots on quantity
     $officer->assignRole(Role::findOrCreate('Database Officer', 'web'));
     $unit = RehUnit::factory()->create(['source' => rehScoringSource()]);
     $response = $this->actingAs($officer)->getJson(route('reh.units.show', $unit))->assertOk();
-    expect($response->json('html'))->toContain('data-scoring', 'الأولوية غير مصنفة', 'نسبة الإعالة');
+    expect($response->json('html'))->toContain('data-scoring', 'أولوية منخفضة', 'نسبة الإعالة', 'data-final-score="2"')->not->toContain('قواعد بانتظار الإدارة');
+    expect($this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html'))->toContain('النهائي: 2 / 100', 'أولوية منخفضة');
+    $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
+    $csvRows = array_map('str_getcsv', explode("\n", trim($csv)));
+    expect($csvRows[1][12])->toBe('2')->and($csvRows[1][13])->toBe('أولوية منخفضة');
     $response = $this->postJson(route('reh.units.review', $unit), ['action' => 'quantities', 'version' => 1, 'note' => 'تدقيق الحائط الداخلي', 'quantities' => ['boq_2_3_partition_wall_qty' => 11]])->assertOk();
     expect($response->json('html'))->toContain('data-engineering-subtotal="4"', 'قبل 0', 'بعد 4');
     $changes = $unit->reviews()->latest()->first()->changes['scoring'];
     expect($changes['before']['engineering']['subtotal'])->toBe(0)
         ->and($changes['after']['engineering']['subtotal'])->toBe(4)
-        ->and($changes['after']['total'])->toBeNull()
+        ->and($changes['after']['total'])->toBe(6)
         ->and($changes['after']['version'])->toBe(RehScoring::VERSION);
     $this->postJson(route('reh.units.review', $unit), ['action' => 'quantities', 'version' => 1, 'note' => 'نسخة قديمة', 'quantities' => ['boq_2_3_partition_wall_qty' => 0]])->assertConflict();
     expect($unit->reviews()->count())->toBe(1);
@@ -148,7 +241,7 @@ it('hides social scoring and social audit snapshots from readers without sensiti
     $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
     expect($html)->toContain('data-score-panel="engineering"')->not->toContain('data-score-panel="social"', 'إعاقة المالك', 'مخاطر الحماية', 'أسرة المالك · نقاط محسومة');
     $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
-    expect($csv)->toContain('نقاط هندسية محسومة', 'غير مصنفة', RehScoring::VERSION)->not->toContain('نقاط اجتماعية');
+    expect($csv)->toContain('نقاط هندسية محسومة', 'محجوب', RehScoring::VERSION)->not->toContain('نقاط اجتماعية', 'أولوية منخفضة');
 });
 
 it('keeps an immutable scoring snapshot when source data changes and ignores repeated imports', function (): void {
