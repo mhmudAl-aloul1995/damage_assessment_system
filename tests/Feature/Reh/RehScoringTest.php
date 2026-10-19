@@ -312,6 +312,24 @@ it('does not infer an individual representative disability from aggregated healt
         ->and($score['total'])->toBeNull();
 });
 
+it('explains zero disability points in plain language for the correct family in ajax details', function (bool $other): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo(['reh.view', 'reh.sensitive']);
+    $unit = RehUnit::factory()->create(['source' => [...rehScoringSource(), ...($other ? rehScoringDisplacedSource() : []), 'owner_has_disability' => 'yes']]);
+    $score = app(RehScoring::class)->calculate($unit);
+    $reason = $other
+        ? 'حسب الاستبيان، لا توجد إعاقة لدى أفراد الأسر المقيمة أو المستضافة؛ لذلك نقاط هذا المؤشر صفر.'
+        : 'حسب الاستبيان، لا توجد إعاقة لدى بقية أفراد الأسرة باستثناء المالك؛ لذلك نقاط هذا المؤشر صفر.';
+    foreach (['vision', 'hearing', 'walking', 'memory', 'selfcare', 'communication'] as $type) {
+        $row = rehScoreRow($score, $other ? 'other' : 'owner', 'disability_'.$type);
+        expect($row['points'])->toBe(0)->and($row['reason'])->toBe($reason);
+    }
+    expect(rehScoreRow($score, 'owner', 'head_disability')['points'])->toBe(3);
+    $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->toContain($reason)->not->toContain('مسجل صراحة عدم وجود إعاقة لأفراد المجموعة المقصودة.');
+})->with(['owner' => false, 'other families' => true]);
+
 it('respects conditional required health counts and rejects contradictory answers', function (): void {
     $source = [...rehScoringDisplacedSource(), 'nonowner_has_chronic' => 'no', 'nonowner_chronic_count' => null, 'nonowner_vision_count' => null];
     $score = app(RehScoring::class)->calculate(rehScoringUnit($source));

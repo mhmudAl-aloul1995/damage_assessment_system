@@ -169,7 +169,10 @@ class RehScoring
             $disabilityGate = $other ? 'nonowner_has_disability' : 'other_members_have_disability';
             if (($source[$disabilityGate] ?? null) === 'no') {
                 if ($row['status'] === 'missing' || $row['points'] === 0) {
-                    $row = $this->choice($source, $row['id'], $row['label'], 2, $disabilityGate, ['no' => 0], 'مسجل صراحة عدم وجود إعاقة لأفراد المجموعة المقصودة.');
+                    $reason = $other
+                        ? 'حسب الاستبيان، لا توجد إعاقة لدى أفراد الأسر المقيمة أو المستضافة؛ لذلك نقاط هذا المؤشر صفر.'
+                        : 'حسب الاستبيان، لا توجد إعاقة لدى بقية أفراد الأسرة باستثناء المالك؛ لذلك نقاط هذا المؤشر صفر.';
+                    $row = $this->choice($source, $row['id'], $row['label'], 2, $disabilityGate, ['no' => 0], $reason);
                 } else {
                     $row = $this->row($row['id'], $row['label'], 2, null, 'invalid', 'عدد الإعاقات يتعارض مع الإجابة بعدم وجود إعاقة.', $row['inputs']);
                 }
