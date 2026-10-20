@@ -2,6 +2,7 @@
 
 namespace App\Modules\Reh\Http\Requests;
 
+use App\Modules\Reh\Services\RehAdvancedFilters;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RehFilterRequest extends FormRequest
@@ -19,7 +20,8 @@ class RehFilterRequest extends FormRequest
     public function authorize(): bool
     {
         return ($this->user()?->can('reh.view') ?? false)
-            && (! $this->filled('priority') || $this->user()->can('reh.scores.view'));
+            && (! $this->anyFilled(['priority', ...RehAdvancedFilters::SCORE_FILTERS]) || $this->user()->can('reh.scores.view'))
+            && (! $this->anyFilled(RehAdvancedFilters::SENSITIVE_FILTERS) || $this->user()->can('reh.sensitive'));
     }
 
     /**
@@ -29,13 +31,22 @@ class RehFilterRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'q' => ['nullable', 'string', 'max:100'],
             'priority' => ['nullable', \Illuminate\Validation\Rule::in([...array_keys(\App\Modules\Reh\Services\RehScoring::PRIORITIES), 'unclassified'])],
             'survey_status' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Modules\Reh\Services\RehSurvey::FIELD_STATUSES))],
             'status' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(\App\Modules\Reh\Services\RehSurvey::WORKFLOW))],
             'governorate' => ['nullable', 'string', 'max:100'],
             'engineer' => ['nullable', 'string', 'max:100'],
+            'neighborhood' => ['nullable', 'string', 'max:100'],
+            'visit_from' => ['nullable', 'date_format:Y-m-d'],
+            'visit_to' => ['nullable', 'date_format:Y-m-d', ...($this->filled('visit_from') ? ['after_or_equal:visit_from'] : [])],
+            'evaluation' => ['nullable', 'in:complete,incomplete'],
+            'decision' => ['nullable', 'in:pending,selected,excluded'],
+            'edits' => ['nullable', 'in:yes,no'],
+            'hosting' => ['nullable', 'in:yes,no'],
+            'owner_disability' => ['nullable', 'in:yes,no'],
+            'family_chronic' => ['nullable', 'in:yes,no'],
             'building_id' => ['nullable', 'integer', 'min:1'],
             'building_old_objectid' => ['nullable', 'string', 'max:100'],
             'building_object_id' => ['nullable', 'integer', 'min:1'],
@@ -43,10 +54,21 @@ class RehFilterRequest extends FormRequest
             'page' => ['nullable', 'integer', 'min:1'],
             'tab' => ['nullable', \Illuminate\Validation\Rule::in(['overview', 'units', 'buildings', 'reports', 'sync'])],
         ];
+        foreach (['score' => 100, 'engineering' => 40, 'social' => 60, 'household' => 1000000] as $prefix => $maximum) {
+            $rules[$prefix.'_min'] = ['nullable', 'integer', 'min:0', 'max:'.$maximum];
+            $rules[$prefix.'_max'] = ['nullable', 'integer', 'min:0', 'max:'.$maximum, ...($this->filled($prefix.'_min') ? ['gte:'.$prefix.'_min'] : [])];
+        }
+
+        return $rules;
+    }
+
+    public function attributes(): array
+    {
+        return RehAdvancedFilters::LABELS;
     }
 
     public function messages(): array
     {
-        return ['priority.in' => 'مستوى الأولوية غير صالح.', 'survey_status.in' => 'حالة الاستبيان غير صالحة.', 'q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'معرّف المبنى غير صالح.', 'building_object_id.min' => 'معرّف المبنى يجب أن يكون موجبًا.'];
+        return ['*.gte' => 'قيمة «إلى» يجب أن تكون مساوية أو أكبر من قيمة «من».', '*.integer' => ':attribute يجب أن يكون عددًا صحيحًا.', '*.min' => ':attribute أقل من الحد المسموح.', '*.max' => ':attribute يتجاوز الحد المسموح.', '*.in' => 'قيمة :attribute غير صالحة.', '*.date_format' => 'أدخل تاريخًا صالحًا بصيغة سنة-شهر-يوم.', 'visit_to.after_or_equal' => 'نهاية فترة الزيارة يجب أن تكون بعد بدايتها أو في اليوم نفسه.', 'priority.in' => 'مستوى الأولوية غير صالح.', 'survey_status.in' => 'حالة الاستبيان غير صالحة.', 'q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'معرّف المبنى غير صالح.', 'building_object_id.min' => 'معرّف المبنى يجب أن يكون موجبًا.'];
     }
 }

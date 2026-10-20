@@ -136,7 +136,7 @@ it('supports all survey states including legacy incomplete and unrecorded values
 
 it('rejects invalid survey filters and renders the organized filter controls', function (): void {
     $this->actingAs($this->officer)->getJson(route('reh.data', ['survey_status' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('survey_status');
-    $this->get(route('reh.index'))->assertOk()->assertSee('reh-filter-grid')->assertSee('حالة الاستبيان')->assertDontSee('الملفات المسندة لي')->assertSee('value="completed" selected', false);
+    $this->get(route('reh.index'))->assertOk()->assertSee('reh-filter-primary')->assertSee('reh-advanced-filters')->assertSee('حالة الاستبيان')->assertDontSee('الملفات المسندة لي')->assertSee('value="completed" selected', false);
 });
 
 function rehObjectIdRecords(): array

@@ -10,6 +10,7 @@
     const message = document.getElementById('reh-message');
     const detailMessage = document.getElementById('reh-detail-message');
     const auditHistoryDialog = document.getElementById('reh-audit-history-dialog');
+    const advancedFilters = document.getElementById('reh-advanced-filters');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     let state = { tab: 'overview', survey_status: 'completed', ...JSON.parse(root.dataset.initial) };
     let mapMode = 'survey';
@@ -41,10 +42,10 @@
 
     function reflectFilters() {
         if (state.tab === 'sync') state.priority = '';
-        for (const input of filters.elements) {
+        for (const input of [...filters.elements]) {
             if (!input.name) continue;
             if (input.type === 'checkbox') input.checked = String(state[input.name]) === '1';
-            else input.value = state[input.name] || '';
+            else input.value = state[input.name] ?? '';
             if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
         }
         root.querySelectorAll('[data-tab]').forEach(link => {
@@ -58,6 +59,22 @@
         filterSummary.dataset.default = String(state.survey_status === 'completed');
         if (filters.elements.priority) filters.elements.priority.disabled = state.tab === 'sync';
         filters.hidden = state.tab === 'sync';
+        const chips = filters.querySelector('[data-active-filters]');
+        chips.replaceChildren();
+        let advancedCount = 0;
+        for (const input of [...filters.elements]) {
+            const value = state[input.name];
+            if (!input.name || value === undefined || value === null || value === '') continue;
+            if (advancedFilters.contains(input)) advancedCount++;
+            const label = filters.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent || input.name;
+            const text = input.tagName === 'SELECT' ? input.selectedOptions[0]?.textContent : value;
+            const chip = document.createElement('button');
+            chip.type = 'button'; chip.className = 'reh-filter-chip'; chip.dataset.removeFilter = input.name;
+            chip.textContent = `${label}: ${text} ×`;
+            chip.setAttribute('aria-label', `إزالة فلتر ${label}`);
+            chips.append(chip);
+        }
+        filters.querySelector('[data-advanced-count]').textContent = advancedCount;
     }
 
     async function load(push = true, quiet = false) {
@@ -73,10 +90,13 @@
             if (controller.signal.aborted) return;
             if (map) { map.remove(); map = null; }
             results.innerHTML = data.html;
+            filters.querySelector('[data-result-count]').textContent = `${data.total_units ?? 0} وحدة · ${data.total_buildings ?? 0} مبنى`;
             renderMap();
             if (data.sync_active && state.tab === 'sync') poll = setTimeout(() => { if (!document.hidden) load(false, true); }, 5000);
+            return true;
         } catch (error) {
-            if (error.name !== 'AbortError') notify(error.message);
+            if (error.name !== 'AbortError') notify(error.message, advancedFilters.open ? advancedFilters.querySelector('[data-advanced-message]') : message);
+            return false;
         } finally {
             if (listRequest === controller) { results.setAttribute('aria-busy', 'false'); loading.hidden = true; }
         }
@@ -377,13 +397,41 @@
 
     function changeFilters() {
         state = { ...state, ...Object.fromEntries(new FormData(filters)), mine: '', page: 1 };
-        load();
+        return load();
     }
-    filters.addEventListener('submit', event => { event.preventDefault(); clearTimeout(debounce); changeFilters(); });
+    filters.addEventListener('submit', async event => {
+        event.preventDefault(); clearTimeout(debounce);
+        const apply = advancedFilters.querySelector('[data-apply-filters]');
+        apply.disabled = true;
+        try { if (await changeFilters()) advancedFilters.close(); }
+        finally { apply.disabled = false; }
+    });
     filters.addEventListener('input', event => { if (event.target.name === 'q') { clearTimeout(debounce); debounce = setTimeout(changeFilters, 350); } });
-    filters.addEventListener('change', event => { if (event.target.name !== 'q') { clearTimeout(debounce); changeFilters(); } });
-    if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', () => { clearTimeout(debounce); changeFilters(); });
+    filters.addEventListener('change', event => { if (event.target.name !== 'q' && !advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
+    if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', event => { if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
     filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1 }; setTimeout(() => load(), 0); });
+    advancedFilters.addEventListener('close', () => reflectFilters());
+
+    async function downloadPdf(button, url) {
+        const label = button.textContent;
+        const target = detail.open ? detailMessage : message;
+        button.disabled = true; button.textContent = 'جاري تجهيز PDF…';
+        target.hidden = true;
+        try {
+            const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/pdf, application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!response.ok || !response.headers.get('content-type')?.includes('application/pdf')) {
+                const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
+                throw new Error(data?.errors ? Object.values(data.errors).flat().join('\n') : data?.message || 'تعذر إنشاء التقرير. تحقق من الجلسة وحاول مجددًا.');
+            }
+            const blobUrl = URL.createObjectURL(await response.blob());
+            const link = document.createElement('a'); link.href = blobUrl;
+            const filename = response.headers.get('content-disposition')?.match(/filename="?([^";]+)"?/)?.[1];
+            link.download = filename || 'REH-report.pdf'; document.body.append(link); link.click(); link.remove();
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+            notify('تم تجهيز تقرير PDF وتنزيله.', target, true);
+        } catch (error) { notify(error.message, target); }
+        finally { button.disabled = false; button.textContent = label; }
+    }
     detailBody.addEventListener('input', event => { if (event.target.closest('[data-review-form]')) dirty = true; });
     detailBody.addEventListener('change', event => {
         if (!event.target.matches('[data-action-form] input[name="action"]')) return;
@@ -402,7 +450,25 @@
     root.addEventListener('click', async event => {
         const button = event.target.closest('a, button, input');
         if (!button || button.disabled) return;
-        if (button.matches('[data-audit-field]')) { openAudit(button); }
+        if (button.matches('[data-open-filters]')) {
+            clearTimeout(debounce); reflectFilters();
+            advancedFilters.querySelector('[data-advanced-message]').hidden = true;
+            advancedFilters.showModal();
+        }
+        else if (button.matches('[data-cancel-filters]')) { advancedFilters.close(); }
+        else if (button.matches('[data-clear-advanced]')) {
+            advancedFilters.querySelectorAll('[name]').forEach(input => {
+                input.value = '';
+                if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
+            });
+        }
+        else if (button.matches('[data-remove-filter]')) {
+            clearTimeout(debounce);
+            state[button.dataset.removeFilter] = button.dataset.removeFilter === 'survey_status' ? 'all' : '';
+            state.page = 1; await load();
+        }
+        else if (button.matches('[data-export-pdf], [data-pdf-download]')) { await downloadPdf(button, button.dataset.pdfDownload || root.dataset.pdfUrl + '?' + query()); }
+        else if (button.matches('[data-audit-field]')) { openAudit(button); }
         else if (button.matches('[data-audit-field-history]')) {
             openAuditHistory(button);
         }
