@@ -15,6 +15,9 @@ Route::middleware(['auth', 'can:reh.view'])->name('reh.')->group(function (): vo
     Route::get('/attachments/{kind}/{id}', [RehController::class, 'attachments'])->whereIn('kind', ['building', 'unit'])->whereNumber('id')->name('attachments');
     Route::get('/attachments/{kind}/{id}/{attachment}', [RehController::class, 'attachment'])->whereIn('kind', ['building', 'unit'])->whereNumber(['id', 'attachment'])->name('attachment');
     Route::post('/sync', [RehController::class, 'sync'])->middleware('can:reh.sync')->name('sync');
+    Route::get('/exports', [RehController::class, 'exports'])->middleware('can:reh.export')->name('exports');
+    Route::get('/exports/data', [RehController::class, 'exportData'])->middleware('can:reh.export')->name('exports.data');
+    Route::get('/export/excel', [RehController::class, 'exportExcel'])->middleware('can:reh.export')->name('export.excel');
     Route::get('/export', [RehController::class, 'export'])->middleware('can:reh.export')->name('export');
     Route::get('/export/pdf', [RehController::class, 'exportPdf'])->middleware('can:reh.export')->name('export.pdf');
 });

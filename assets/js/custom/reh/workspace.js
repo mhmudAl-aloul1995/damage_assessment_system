@@ -14,6 +14,7 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     let state = { tab: 'overview', survey_status: 'completed', ...JSON.parse(root.dataset.initial) };
     let mapMode = 'survey';
+    let exportFormat = 'excel';
     let listRequest, detailRequest, debounce, poll, map, dirty = false, saving = false;
 
     function notify(text, target = message, success = false) {
@@ -85,6 +86,7 @@
         listRequest = controller;
         reflectFilters();
         if (push) history.pushState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query());
+        results.querySelectorAll('[data-download-filtered]').forEach(button => { button.disabled = true; });
         if (!quiet) { results.setAttribute('aria-busy', 'true'); loading.hidden = false; message.hidden = true; }
         try {
             const data = await request(root.dataset.dataUrl + '?' + query(), { signal: controller.signal });
@@ -92,6 +94,7 @@
             if (map) { map.remove(); map = null; }
             results.innerHTML = data.html;
             filters.querySelector('[data-result-count]').textContent = `${data.total_units ?? 0} وحدة · ${data.total_buildings ?? 0} مبنى`;
+            updateExportFormat();
             renderMap();
             if (data.sync_active && state.tab === 'sync') poll = setTimeout(() => { if (!document.hidden) load(false, true); }, 5000);
             return true;
@@ -452,23 +455,35 @@
     advancedFilters.addEventListener('close', () => { advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
     advancedFilters.querySelector('#reh-filter-search').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
 
-    async function downloadPdf(button, url) {
+    function updateExportFormat() {
+        const panel = results.querySelector('[data-export-total]');
+        if (!panel) return;
+        const total = Number(panel.dataset.exportTotal);
+        panel.querySelectorAll('[name="export_format"]').forEach(input => { input.checked = input.value === exportFormat; });
+        const button = panel.querySelector('[data-download-filtered]');
+        button.disabled = total === 0 || (exportFormat === 'pdf' && total > 500);
+        button.textContent = exportFormat === 'excel' ? 'تنزيل Excel' : 'تنزيل PDF';
+        panel.querySelector('[data-export-format-help]').textContent = exportFormat === 'excel' ? 'Excel يشمل جميع النتائج المطابقة، وليس المعاينة فقط.' : total > 500 ? 'النتائج أكثر من 500 وحدة؛ ضيّق الفلاتر أو اختر Excel لتصديرها جميعًا.' : 'PDF يشمل جميع النتائج المطابقة مع الفلاتر المعتمدة.';
+    }
+    results.addEventListener('change', event => { if (event.target.name === 'export_format') { exportFormat = event.target.value; updateExportFormat(); } });
+
+    async function downloadFile(button, url, format = 'pdf') {
         const label = button.textContent;
         const target = detail.open ? detailMessage : message;
-        button.disabled = true; button.textContent = 'جاري تجهيز PDF…';
+        button.disabled = true; button.textContent = format === 'excel' ? 'جاري تجهيز Excel…' : 'جاري تجهيز PDF…';
         target.hidden = true;
         try {
-            const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/pdf, application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!response.ok || !response.headers.get('content-type')?.includes('application/pdf')) {
+            const response = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!response.ok || !response.headers.get('content-type')?.includes(format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf')) {
                 const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
                 throw new Error(data?.errors ? Object.values(data.errors).flat().join('\n') : data?.message || 'تعذر إنشاء التقرير. تحقق من الجلسة وحاول مجددًا.');
             }
             const blobUrl = URL.createObjectURL(await response.blob());
             const link = document.createElement('a'); link.href = blobUrl;
             const filename = response.headers.get('content-disposition')?.match(/filename="?([^";]+)"?/)?.[1];
-            link.download = filename || 'REH-report.pdf'; document.body.append(link); link.click(); link.remove();
+            link.download = filename || (format === 'excel' ? 'REH-units.xlsx' : 'REH-report.pdf'); document.body.append(link); link.click(); link.remove();
             setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-            notify('تم تجهيز تقرير PDF وتنزيله.', target, true);
+            notify(format === 'excel' ? 'تم تجهيز ملف Excel وتنزيله.' : 'تم تجهيز تقرير PDF وتنزيله.', target, true);
         } catch (error) { notify(error.message, target); }
         finally { button.disabled = false; button.textContent = label; }
     }
@@ -490,7 +505,17 @@
     root.addEventListener('click', async event => {
         const button = event.target.closest('a, button, input');
         if (!button || button.disabled) return;
-        if (button.matches('[data-open-filters]')) {
+        if (button.matches('[data-open-export-page], [data-workspace-tab]')) {
+            event.preventDefault();
+            const params = query(); params.set('page', '1');
+            if (button.dataset.workspaceTab) params.set('tab', button.dataset.workspaceTab);
+            else params.set('tab', 'units');
+            window.location.assign((button.dataset.workspaceTab ? root.dataset.workspaceUrl : root.dataset.exportPageUrl) + '?' + params);
+        }
+        else if (button.matches('[data-download-filtered]')) {
+            await downloadFile(button, (exportFormat === 'excel' ? root.dataset.excelUrl : root.dataset.pdfUrl) + '?' + query(), exportFormat);
+        }
+        else if (button.matches('[data-open-filters]')) {
             clearTimeout(debounce); reflectFilters();
             advancedFilters.querySelector('[data-advanced-message]').hidden = true;
             advancedFilters.showModal();
@@ -513,7 +538,7 @@
             state[button.dataset.removeFilter] = button.dataset.removeFilter === 'survey_status' ? 'all' : '';
             state.page = 1; await load();
         }
-        else if (button.matches('[data-export-pdf], [data-pdf-download]')) { await downloadPdf(button, button.dataset.pdfDownload || root.dataset.pdfUrl + '?' + query()); }
+        else if (button.matches('[data-export-pdf], [data-pdf-download]')) { await downloadFile(button, button.dataset.pdfDownload || root.dataset.pdfUrl + '?' + query()); }
         else if (button.matches('[data-audit-field]')) { openAudit(button); }
         else if (button.matches('[data-audit-field-history]')) {
             openAuditHistory(button);

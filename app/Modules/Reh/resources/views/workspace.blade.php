@@ -1,20 +1,21 @@
 @extends('layouts.app')
-@section('title', 'تأهيل المساكن — REH')
+@section('title', ($exportPage ?? false) ? 'تصدير بيانات تأهيل المساكن — REH' : 'تأهيل المساكن — REH')
 @section('pageName', 'المرحلة الثانية · التقييم والتدقيق')
 @section('content')
 @php($survey = app(\App\Modules\Reh\Services\RehSurvey::class))
 <link rel="stylesheet" href="{{ asset('assets/css/reh.css') }}?v={{ filemtime(base_path('assets/css/reh.css')) }}">
 <link rel="stylesheet" href="{{ asset('assets/plugins/custom/leaflet/leaflet.bundle.rtl.css') }}">
-<div id="reh-workspace" dir="rtl" data-index-url="{{ route('reh.index') }}" data-data-url="{{ route('reh.data') }}" data-sync-url="{{ route('reh.sync') }}" data-export-url="{{ route('reh.export') }}" data-pdf-url="{{ route('reh.export.pdf') }}" data-initial="{{ json_encode($filters) }}">
+<div id="reh-workspace" dir="rtl" data-index-url="{{ route($exportPage ? 'reh.exports' : 'reh.index') }}" data-data-url="{{ route($exportPage ? 'reh.exports.data' : 'reh.data') }}" data-workspace-url="{{ route('reh.index') }}" data-export-page="{{ $exportPage ? 'true' : 'false' }}" data-export-page-url="{{ route('reh.exports') }}" data-excel-url="{{ route('reh.export.excel') }}" data-sync-url="{{ route('reh.sync') }}" data-export-url="{{ route('reh.export') }}" data-pdf-url="{{ route('reh.export.pdf') }}" data-initial="{{ json_encode($filters) }}">
     <header class="reh-hero">
-        <div><span class="reh-eyebrow">REH / PHASE 02</span><h2>كل وحدة، خطوة نحو التعافي</h2><p>مساحة عمل التقييم والتدقيق لمشروع تأهيل المساكن المتضررة</p></div>
+        <div><span class="reh-eyebrow">REH / PHASE 02</span><h2>{{ $exportPage ? 'تصدير بيانات المشروع' : 'كل وحدة، خطوة نحو التعافي' }}</h2><p>{{ $exportPage ? 'حدد نطاق البيانات بالفلاتر نفسها، ثم نزّل النتائج بصيغة Excel أو PDF.' : 'مساحة عمل التقييم والتدقيق لمشروع تأهيل المساكن المتضررة' }}</p></div>
         <div class="reh-hero-note"><span class="badge badge-light">المرحلة الثانية</span><span>التسعير بانتظار قائمة الأسعار</span></div>
     </header>
     <nav class="reh-tabs" aria-label="أقسام مشروع REH">
         @foreach(['overview' => 'نظرة عامة', 'units' => 'الوحدات السكنية', 'buildings' => 'المباني والخريطة', 'reports' => 'التقارير'] as $key => $label)
-            <a href="{{ route('reh.index', ['tab' => $key]) }}" data-tab="{{ $key }}">{{ $label }}</a>
+            <a href="{{ route('reh.index', ['tab' => $key]) }}" @if($exportPage) data-workspace-tab="{{ $key }}" @else data-tab="{{ $key }}" @endif>{{ $label }}</a>
         @endforeach
-        @can('reh.sync')<a href="{{ route('reh.index', ['tab' => 'sync']) }}" data-tab="sync">المزامنة</a>@endcan
+        @can('reh.export')<a href="{{ route('reh.exports') }}" data-open-export-page @if($exportPage) class="active" aria-current="page" @endif>التصدير</a>@endcan
+        @can('reh.sync')<a href="{{ route('reh.index', ['tab' => 'sync']) }}" @if($exportPage) data-workspace-tab="sync" @else data-tab="sync" @endif>المزامنة</a>@endcan
     </nav>
     @include('reh::partials.filters')
     <div id="reh-message" role="status" aria-live="polite" hidden></div>

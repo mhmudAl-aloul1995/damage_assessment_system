@@ -21,6 +21,7 @@ use App\Modules\Reh\Services\RehScoring;
 use App\Modules\Reh\Services\RehSurvey;
 use App\Modules\Reh\Services\RehSurveyFilters;
 use App\Modules\Reh\Services\RehSyncWorker;
+use App\Modules\Reh\Services\RehUnitsExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -230,21 +231,40 @@ class RehController extends Controller
         return response($body)->withHeaders(['Content-Type' => $inline ? $mime : 'application/octet-stream', 'Content-Disposition' => $disposition, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
+    public function exports(RehFilterRequest $request): View
+    {
+        return $this->workspace(null, [...$request->validated(), 'tab' => 'units'], true);
+    }
+
+    public function exportData(RehFilterRequest $request): JsonResponse
+    {
+        $filters = $request->validated();
+        $query = $this->units($filters);
+        $totalUnits = (clone $query)->count();
+        $totalBuildings = (clone $query)->distinct()->count('building_id');
+        $preview = (clone $query)->with('building')->orderBy('id')->limit(10)->get();
+        $summary = app(RehAdvancedFilters::class)->summary($filters);
+        $html = view('reh::partials.export-results', compact('totalUnits', 'totalBuildings', 'preview', 'summary'))->render();
+
+        return response()->json(['html' => $html, 'total_units' => $totalUnits, 'total_buildings' => $totalBuildings])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function exportExcel(RehFilterRequest $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $export = new RehUnitsExport($this->units($request->validated())->with('building'), $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'));
+
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'REH-units-'.now()->format('Y-m-d').'.xlsx', \Maatwebsite\Excel\Excel::XLSX, ['Cache-Control' => 'private, no-store']);
+    }
+
     public function export(RehFilterRequest $request): StreamedResponse
     {
-        $query = $this->units($request->validated())->with('building');
-        $sensitive = $request->user()->can('reh.sensitive');
-        $canSeeScores = $request->user()->can('reh.scores.view');
+        $export = new RehUnitsExport($this->units($request->validated())->with('building'), $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'));
 
-        return response()->streamDownload(function () use ($query, $sensitive, $canSeeScores): void {
+        return response()->streamDownload(function () use ($export): void {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['معرّف الوحدة', 'معرّف المبنى', 'المالك', 'الهوية', 'المحافظة', 'الحي', 'التدقيق', 'القرار', 'التسعير', 'آخر مزامنة', 'نقاط هندسية محسومة', 'فئات هندسية معلقة', 'الدرجة النهائية', 'الأولوية', 'إصدار قواعد الحساب', 'كود الوحدة', 'اسم المبنى']);
-            foreach ($query->lazyById(200) as $unit) {
-                $row = [$unit->old_objectid, $unit->building->old_objectid, $unit->owner_name, $sensitive ? $unit->owner_identity : 'محجوب', $this->survey->value('governorate', $unit->building->governorate), $this->survey->value('neighborhood', $unit->building->neighborhood), RehSurvey::WORKFLOW[$unit->workflow_status], ['pending' => 'لم يُقرر', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision], 'بانتظار الأسعار', $unit->synced_at?->toDateTimeString()];
-                $engineering = $this->scoring->engineering($unit);
-                $score = $canSeeScores ? $this->scoring->calculate($unit) : null;
-                $row = [...$row, $engineering['subtotal'], $engineering['pending_count'], $canSeeScores ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب', $canSeeScores ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION, $unit->code, $unit->building->name];
+            fputcsv($output, $export->headings());
+            foreach ($export->generator() as $row) {
                 fputcsv($output, array_map(static fn (mixed $value): string => preg_match('/^[\s]*[=+@\-]/u', (string) $value) ? "'".$value : (string) $value, $row));
             }
             fclose($output);
@@ -255,7 +275,7 @@ class RehController extends Controller
     {
         $filters = $request->validated();
         $query = $this->units($filters)->with('building')->orderBy('id');
-        abort_if((clone $query)->count() > 500, 422, 'تصدير PDF يدعم حتى 500 وحدة في التقرير. ضيّق الفلاتر أو استخدم CSV لجميع النتائج.');
+        abort_if((clone $query)->count() > 500, 422, 'تصدير PDF يدعم حتى 500 وحدة في التقرير. ضيّق الفلاتر أو استخدم Excel لجميع النتائج.');
 
         return $pdf->results($query->get(), $filters, $request->user());
     }
@@ -291,9 +311,9 @@ class RehController extends Controller
         return app(RehAdvancedFilters::class)->units($query, $filters);
     }
 
-    private function workspace(?string $initialDetail, array $filters): View
+    private function workspace(?string $initialDetail, array $filters, bool $exportPage = false): View
     {
-        return view('reh::workspace', ['initialDetail' => $initialDetail, 'filters' => ['survey_status' => 'completed', ...$filters], 'engineers' => RehBuilding::query()->whereNotNull('engineer')->distinct()->orderBy('engineer')->pluck('engineer')]);
+        return view('reh::workspace', ['exportPage' => $exportPage, 'initialDetail' => $initialDetail, 'filters' => ['survey_status' => 'completed', ...$filters], 'engineers' => RehBuilding::query()->whereNotNull('engineer')->distinct()->orderBy('engineer')->pluck('engineer')]);
     }
 
     private function buildings(array $filters): Builder

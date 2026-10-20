@@ -12,7 +12,9 @@
     <div class="reh-filter-bottom">
         <button type="button" data-open-filters class="btn reh-advanced-trigger" aria-haspopup="dialog" aria-controls="reh-advanced-filters">فلاتر متقدمة <span data-advanced-count>0</span></button>
         <span class="reh-filter-result-count" data-result-count aria-live="polite"></span>
-        @can('reh.export')<div class="reh-export-actions"><button type="button" data-export class="btn btn-light btn-sm">تصدير CSV</button><button type="button" data-export-pdf class="btn btn-light-primary btn-sm">تقرير النتائج PDF</button></div>@endcan
+        @if(!($exportPage ?? false))
+        @can('reh.export')<div class="reh-export-actions"><button type="button" data-export class="btn btn-light btn-sm">تصدير CSV</button><button type="button" data-export-pdf class="btn btn-light-primary btn-sm">تقرير النتائج PDF</button><a href="{{ route('reh.exports') }}" data-open-export-page class="btn btn-light btn-sm">صفحة التصدير</a></div>@endcan
+        @endif
     </div>
     <div class="reh-active-filters" data-active-filters aria-label="الفلاتر المطبقة"></div>
     <dialog id="reh-advanced-filters" class="reh-advanced-dialog" aria-labelledby="reh-advanced-title">
