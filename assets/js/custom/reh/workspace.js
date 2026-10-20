@@ -66,7 +66,7 @@
             const value = state[input.name];
             if (!input.name || value === undefined || value === null || value === '') continue;
             if (advancedFilters.contains(input)) advancedCount++;
-            const label = filters.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent || input.name;
+            const label = input.dataset.filterLabel || [input.closest('.reh-filter-range')?.querySelector('strong')?.textContent, filters.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent].filter(Boolean).join(' ') || input.name;
             const text = input.tagName === 'SELECT' ? input.selectedOptions[0]?.textContent : value;
             const chip = document.createElement('button');
             chip.type = 'button'; chip.className = 'reh-filter-chip'; chip.dataset.removeFilter = input.name;
@@ -75,6 +75,7 @@
             chips.append(chip);
         }
         filters.querySelector('[data-advanced-count]').textContent = advancedCount;
+        updateSurveyFilters();
     }
 
     async function load(push = true, quiet = false) {
@@ -395,8 +396,46 @@
         if (group.getLayers().length) map.fitBounds(group.getBounds(), { padding: [25, 25], maxZoom: 16 });
     }
 
+    function updateSurveyFilters() {
+        const value = name => filters.elements.namedItem(name)?.value || '';
+        advancedFilters.querySelectorAll('[data-filter-parent], [data-work-condition]').forEach(field => {
+            const eligible = field.dataset.filterParent
+                ? value(field.dataset.filterParent) === field.dataset.filterParentValue
+                : Boolean(value('work_item')) && (field.dataset.workCondition === 'item' || value('work_state') === 'positive');
+            field.dataset.inapplicable = String(!eligible);
+            field.querySelectorAll('[name]').forEach(input => {
+                input.disabled = !eligible;
+                if (!eligible && input.value !== '') {
+                    input.value = '';
+                    if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
+                }
+            });
+        });
+        const normalize = text => text.normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g, '').replace(/[أإآ]/g, 'ا').replace(/ء/g, '').replace(/ى/g, 'ي').trim().toLowerCase();
+        const search = normalize(advancedFilters.querySelector('#reh-filter-search').value);
+        let sections = 0;
+        advancedFilters.querySelectorAll('[data-filter-section]').forEach(section => {
+            const fields = [...new Set(section.querySelectorAll('[data-filter-field], .reh-advanced-grid > div, .reh-filter-range'))];
+            const sectionMatch = search && normalize(section.querySelector('summary').textContent).includes(search);
+            let matches = 0;
+            fields.forEach(field => {
+                const visible = field.dataset.inapplicable !== 'true' && (!search || sectionMatch || normalize(field.textContent).includes(search));
+                field.hidden = !visible;
+                if (visible) matches++;
+            });
+            section.hidden = Boolean(search) && matches === 0;
+            if (!section.hidden) sections++;
+            if (search && !section.hidden) section.open = true;
+            const count = [...section.querySelectorAll('[name]')].filter(input => !input.disabled && input.value !== '').length;
+            section.querySelector('[data-section-count]').textContent = count ? `${count} محدد` : '';
+        });
+        advancedFilters.querySelector('[data-filter-search-status]').textContent = search ? `${sections} أقسام مطابقة` : 'اختر قسمًا، أو ابحث عن سؤال أو خيار إجابة.';
+    }
+
     function changeFilters() {
-        state = { ...state, ...Object.fromEntries(new FormData(filters)), mine: '', page: 1 };
+        updateSurveyFilters();
+        const cleared = Object.fromEntries([...filters.elements].filter(input => input.name).map(input => [input.name, '']));
+        state = { ...state, ...cleared, ...Object.fromEntries(new FormData(filters)), mine: '', page: 1 };
         return load();
     }
     filters.addEventListener('submit', async event => {
@@ -406,11 +445,12 @@
         try { if (await changeFilters()) advancedFilters.close(); }
         finally { apply.disabled = false; }
     });
-    filters.addEventListener('input', event => { if (event.target.name === 'q') { clearTimeout(debounce); debounce = setTimeout(changeFilters, 350); } });
-    filters.addEventListener('change', event => { if (event.target.name !== 'q' && !advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
-    if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', event => { if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
+    filters.addEventListener('input', event => { if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (event.target.name === 'q') { clearTimeout(debounce); debounce = setTimeout(changeFilters, 350); } });
+    filters.addEventListener('change', event => { if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (event.target.name !== 'q' && !advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
+    if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', event => { if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
     filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1 }; setTimeout(() => load(), 0); });
-    advancedFilters.addEventListener('close', () => reflectFilters());
+    advancedFilters.addEventListener('close', () => { advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
+    advancedFilters.querySelector('#reh-filter-search').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
 
     async function downloadPdf(button, url) {
         const label = button.textContent;
@@ -454,6 +494,7 @@
             clearTimeout(debounce); reflectFilters();
             advancedFilters.querySelector('[data-advanced-message]').hidden = true;
             advancedFilters.showModal();
+            advancedFilters.querySelectorAll('[data-filter-section]').forEach((section, index) => { section.open = index === 0 || Boolean(section.querySelector('[data-section-count]').textContent); });
         }
         else if (button.matches('[data-cancel-filters]')) { advancedFilters.close(); }
         else if (button.matches('[data-clear-advanced]')) {
@@ -461,8 +502,13 @@
                 input.value = '';
                 if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
             });
+            updateSurveyFilters();
         }
         else if (button.matches('[data-remove-filter]')) {
+            advancedFilters.querySelectorAll('[data-filter-parent]').forEach(field => {
+                if (field.dataset.filterParent === button.dataset.removeFilter) field.querySelectorAll('[name]').forEach(input => { state[input.name] = ''; });
+            });
+            if (['work_item', 'work_state'].includes(button.dataset.removeFilter)) ['work_item', 'work_state', 'work_min', 'work_max'].forEach(key => { state[key] = ''; });
             clearTimeout(debounce);
             state[button.dataset.removeFilter] = button.dataset.removeFilter === 'survey_status' ? 'all' : '';
             state.page = 1; await load();

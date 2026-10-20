@@ -19,6 +19,7 @@ use App\Modules\Reh\Services\RehPdf;
 use App\Modules\Reh\Services\RehReviewService;
 use App\Modules\Reh\Services\RehScoring;
 use App\Modules\Reh\Services\RehSurvey;
+use App\Modules\Reh\Services\RehSurveyFilters;
 use App\Modules\Reh\Services\RehSyncWorker;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +46,7 @@ class RehController extends Controller
         $query = $this->units($filters);
         $groups = (clone $query)->selectRaw('workflow_status, decision, count(*) as total')->groupBy('workflow_status', 'decision')->get();
         $counts = $groups->groupBy('workflow_status')->map(fn ($rows): int => (int) $rows->sum('total'))->all();
-        $advancedUnitFilter = count(array_filter(array_intersect_key($filters, array_flip(RehAdvancedFilters::UNIT_FILTERS)), fn ($value): bool => $value !== null && $value !== '')) > 0;
+        $advancedUnitFilter = count(array_filter(array_intersect_key($filters, array_flip([...RehAdvancedFilters::UNIT_FILTERS, ...app(RehSurveyFilters::class)->keys('unit')])), fn ($value): bool => $value !== null && $value !== '')) > 0;
         $hasUnitFilter = $advancedUnitFilter || ! empty($filters['q']) || ! empty($filters['status']) || ! empty($filters['mine']) || ! empty($filters['building_id']) || ! empty($filters['building_object_id']) || ! empty($filters['building_old_objectid']) || ! empty($filters['priority']);
         $selectedBuilding = ! empty($filters['building_id']) ? RehBuilding::query()->find($filters['building_id']) : (! empty($filters['building_object_id']) ? RehBuilding::query()->where('object_id', $filters['building_object_id'])->first() : null);
         $buildingObjectId = $selectedBuilding?->old_objectid ?? ($filters['building_old_objectid'] ?? null);
