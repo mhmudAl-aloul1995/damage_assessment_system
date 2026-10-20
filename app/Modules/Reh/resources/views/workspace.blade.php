@@ -3,6 +3,7 @@
 @section('pageName', 'المرحلة الثانية · التقييم والتدقيق')
 @section('content')
 @php($survey = app(\App\Modules\Reh\Services\RehSurvey::class))
+@can('reh.export')<script type="application/json" id="reh-export-column-catalog">@json(\App\Modules\Reh\Services\RehExportColumns::catalog(auth()->user()))</script>@endcan
 <link rel="stylesheet" href="{{ asset('assets/css/reh.css') }}?v={{ filemtime(base_path('assets/css/reh.css')) }}">
 <link rel="stylesheet" href="{{ asset('assets/plugins/custom/leaflet/leaflet.bundle.rtl.css') }}">
 <div id="reh-workspace" dir="rtl" data-index-url="{{ route($exportPage ? 'reh.exports' : 'reh.index') }}" data-data-url="{{ route($exportPage ? 'reh.exports.data' : 'reh.data') }}" data-workspace-url="{{ route('reh.index') }}" data-export-page="{{ $exportPage ? 'true' : 'false' }}" data-export-page-url="{{ route('reh.exports') }}" data-excel-url="{{ route('reh.export.excel') }}" data-sync-url="{{ route('reh.sync') }}" data-export-url="{{ route('reh.export') }}" data-pdf-url="{{ route('reh.export.pdf') }}" data-initial="{{ json_encode($filters) }}">

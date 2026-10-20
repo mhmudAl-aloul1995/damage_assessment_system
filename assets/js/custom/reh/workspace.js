@@ -15,6 +15,8 @@
     let state = { tab: 'overview', survey_status: 'completed', ...JSON.parse(root.dataset.initial) };
     let mapMode = 'survey';
     let exportFormat = 'excel';
+    let exportColumnsExpanded = false;
+    const exportColumnCatalog = JSON.parse(document.getElementById('reh-export-column-catalog')?.textContent || 'null');
     let listRequest, detailRequest, debounce, poll, map, dirty = false, saving = false;
 
     function notify(text, target = message, success = false) {
@@ -49,7 +51,15 @@
     function query() {
         const params = new URLSearchParams();
         for (const [name, value] of Object.entries(state)) {
-            if (Array.isArray(value)) value.forEach(item => params.append(name + '[]', item));
+            if (name === 'column_set' && state.columns !== undefined) continue;
+            if (name === 'columns' && exportColumnCatalog && Array.isArray(value)) {
+                if (value.length) {
+                    const digits = Array(exportColumnCatalog.length).fill(0);
+                    value.forEach(key => { const index = exportColumnCatalog.indexes[key]; if (index !== undefined) digits[Math.floor(index / 4)] |= 1 << (index % 4); });
+                    params.set('column_set', exportColumnCatalog.version + '.' + digits.map(digit => digit.toString(16)).join(''));
+                }
+            }
+            else if (Array.isArray(value)) value.forEach(item => params.append(name + '[]', item));
             else if (value !== '' && value !== null && value !== undefined && value !== false) params.set(name, value);
         }
         return params;
@@ -552,18 +562,23 @@
         if (!select) return;
         const selected = state.columns ?? inputValues(select);
         [...select.options].forEach(option => { option.selected = selected.includes(option.value); });
-        state.columns = inputValues(select);
+        state.columns = selectedExportColumns(select);
         if (window.jQuery?.fn.select2) {
-            window.jQuery(select).select2({ dir: 'rtl', width: '100%', closeOnSelect: false, placeholder: 'ابحث واختر الأعمدة', dropdownParent: window.jQuery(select.closest('.reh-export-columns')) });
+            window.jQuery(select).select2({ dir: 'rtl', width: '100%', closeOnSelect: false, placeholder: 'ابحث باسم السؤال أو العمود', dropdownParent: window.jQuery(select.closest('.reh-export-columns')) });
             window.jQuery(select).on('change.rehColumns', exportColumnsChanged);
         }
         updateExportColumns();
     }
 
+    function selectedExportColumns(select) {
+        const selected = inputValues(select);
+        return exportColumnCatalog ? selected.sort((a, b) => exportColumnCatalog.indexes[a] - exportColumnCatalog.indexes[b]) : selected;
+    }
+
     function updateExportColumns() {
         const select = results.querySelector('[data-export-columns]');
         if (!select) return;
-        const selected = inputValues(select);
+        const selected = selectedExportColumns(select);
         results.querySelector('[data-export-column-count]').textContent = `${selected.length} من ${select.options.length} عمود`;
         results.querySelector('[data-export-column-warning]').hidden = selected.length > 0;
         results.querySelectorAll('[data-export-column-key]').forEach(cell => { cell.hidden = !selected.includes(cell.dataset.exportColumnKey); });
@@ -573,11 +588,17 @@
                 if (cell) row.append(cell);
             });
         });
-        results.querySelectorAll('.reh-export-column-actions button').forEach(button => { button.disabled = button.matches('[data-export-select-all]') ? selected.length === select.options.length : !selected.length; });
+        results.querySelector('[data-export-select-all]').disabled = selected.length === select.options.length;
+        results.querySelector('[data-export-clear-columns]').disabled = !selected.length;
+        const toggle = results.querySelector('[data-export-toggle-columns]');
+        toggle.hidden = selected.length <= 8;
+        toggle.setAttribute('aria-expanded', String(exportColumnsExpanded));
+        toggle.textContent = exportColumnsExpanded ? 'طيّ الاختيارات' : `عرض بقية الاختيارات (${Math.max(0, selected.length - 8)})`;
+        results.querySelector('#select2-reh-export-columns-container')?.classList.toggle('is-expanded', exportColumnsExpanded);
     }
 
     function exportColumnsChanged() {
-        state.columns = inputValues(results.querySelector('[data-export-columns]'));
+        state.columns = selectedExportColumns(results.querySelector('[data-export-columns]'));
         history.replaceState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query());
         updateExportColumns();
         updateExportFormat();
@@ -643,9 +664,14 @@
             else params.set('tab', 'units');
             window.location.assign((button.dataset.workspaceTab ? root.dataset.workspaceUrl : root.dataset.exportPageUrl) + '?' + params);
         }
-        else if (button.matches('[data-export-select-all], [data-export-clear-columns]')) {
+        else if (button.matches('[data-export-toggle-columns]')) {
+            exportColumnsExpanded = !exportColumnsExpanded;
+            updateExportColumns();
+        }
+        else if (button.matches('[data-export-select-all], [data-export-clear-columns], [data-export-basic-columns]')) {
             const select = results.querySelector('[data-export-columns]');
-            [...select.options].forEach(option => { option.selected = button.matches('[data-export-select-all]'); });
+            [...select.options].forEach(option => { option.selected = button.matches('[data-export-select-all]') || button.matches('[data-export-basic-columns]') && option.hasAttribute('data-export-basic'); });
+            exportColumnsExpanded = false;
             if (window.jQuery) window.jQuery(select).trigger('change.select2');
             exportColumnsChanged();
         }

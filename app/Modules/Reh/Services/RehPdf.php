@@ -14,6 +14,19 @@ class RehPdf
 {
     public function __construct(private RehSurvey $survey, private RehScoring $scoring) {}
 
+    public static function columnValue(string $key, mixed $value): string
+    {
+        if ($value === null) {
+            return 'غير متوفر';
+        }
+        $text = (string) $value;
+        if ($key === 'sf_location') {
+            $text = str_replace(',', ', ', $text);
+        }
+
+        return preg_replace('/(\S{40})(?=\S)/u', '$1 ', $text) ?? $text;
+    }
+
     public function results(Collection $units, array $filters, User $user): Response
     {
         $rows = $units->map(function (RehUnit $unit) use ($user): array {
@@ -43,7 +56,14 @@ class RehPdf
             $anchor = [$columns[0] => $headings[$columns[0]]];
             $columnGroups = array_map(fn (array $group): array => $anchor + $group, array_chunk(array_slice($headings, 1, null, true), 4, true));
         }
-        $html = view('reh::pdf.results', ['rows' => $rows, 'columnRows' => $columnRows, 'columnGroups' => $columnGroups, 'buildingCount' => $units->pluck('building_id')->unique()->count(), 'filterSummary' => $summary, 'generatedAt' => now()->format('Y-m-d H:i'), 'generatedBy' => $user->name])->render();
+        $columnSections = [];
+        if (count($columns ?? []) > 30) {
+            $definitions = RehExportColumns::definitions();
+            foreach ($columns as $key) {
+                $columnSections[$definitions[$key]['group']][$key] = $definitions[$key]['label'];
+            }
+        }
+        $html = view('reh::pdf.results', ['rows' => $rows, 'columnRows' => $columnRows, 'columnGroups' => $columnGroups, 'columnSections' => $columnSections, 'buildingCount' => $units->pluck('building_id')->unique()->count(), 'filterSummary' => $summary, 'generatedAt' => now()->format('Y-m-d H:i'), 'generatedBy' => $user->name])->render();
 
         return $this->download($html, 'REH-results-'.now()->format('Y-m-d').'.pdf');
     }

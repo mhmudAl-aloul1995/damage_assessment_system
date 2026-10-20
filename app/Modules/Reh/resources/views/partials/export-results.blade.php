@@ -6,13 +6,13 @@
             <label class="reh-export-format"><input type="radio" name="export_format" value="pdf"><span class="reh-format-icon">PDF</span><span><strong>PDF</strong><small>تقرير عربي للطباعة يتضمن ملخص الفلاتر وقائمة الوحدات.</small></span></label>
         </div>
         <div class="reh-export-columns">
-            <div class="reh-section-heading"><div><label for="reh-export-columns">الأعمدة التي ستظهر في الملف</label><p>اختر الأعمدة المطلوبة؛ الاختيار نفسه يُطبّق على Excel وPDF.</p></div><span class="reh-export-column-count" data-export-column-count aria-live="polite">{{ count($selectedColumns) }} من {{ count($availableColumns) }} عمود</span></div>
+            <div class="reh-section-heading"><div><label for="reh-export-columns">الأعمدة التي ستظهر في الملف</label><p>حقول الاستبيان كاملة، مع أعمدة الملخص والتقييم. ابحث باسم السؤال واختر ما يلزم.</p></div><span class="reh-export-column-count" data-export-column-count aria-live="polite">{{ count($selectedColumns) }} من {{ count($availableColumns) }} عمود</span></div>
             <select id="reh-export-columns" class="form-select" multiple data-export-columns aria-describedby="reh-export-columns-help">
                 @foreach(collect($availableColumns)->groupBy('group', preserveKeys: true) as $group => $columns)
-                    <optgroup label="{{ $group }}">@foreach($columns as $key => $column)<option value="{{ $key }}" @selected(in_array($key, $selectedColumns, true))>{{ $column['label'] }}</option>@endforeach</optgroup>
+                    <optgroup label="{{ $group }}">@foreach($columns as $key => $column)<option value="{{ $key }}" @if(!isset($column['field'])) data-export-basic @endif @selected(in_array($key, $selectedColumns, true))>{{ $column['label'] }}</option>@endforeach</optgroup>
                 @endforeach
             </select>
-            <div class="reh-export-column-actions"><div><button type="button" data-export-select-all>تحديد الكل</button><button type="button" data-export-clear-columns>مسح الاختيار</button></div><small id="reh-export-columns-help">تظهر الأعمدة المتاحة حسب صلاحياتك. اختر عمودًا واحدًا على الأقل.</small></div>
+            <div class="reh-export-column-actions"><div><button type="button" data-export-select-all>تحديد الكل</button><button type="button" data-export-basic-columns>الأعمدة الأساسية</button><button type="button" data-export-clear-columns>مسح الاختيار</button><button type="button" data-export-toggle-columns aria-expanded="false" hidden>عرض بقية المختار</button></div><small id="reh-export-columns-help">تظهر الحقول حسب صلاحياتك. حقول الصور تُصدّر كمراجع ملفات.</small></div>
             <p class="reh-export-column-warning" data-export-column-warning role="status" hidden>اختر عمودًا واحدًا على الأقل لتفعيل التنزيل.</p>
         </div>
         <div class="reh-export-footer"><div><p data-export-format-help>Excel يشمل جميع النتائج المطابقة، وليس المعاينة فقط.</p><small>تُحجب بيانات الهوية والتقييم بحسب صلاحياتك. حد PDF: حتى 500 وحدة.</small></div><button type="button" class="btn btn-primary" data-download-filtered @disabled($totalUnits === 0)>تنزيل Excel</button></div>

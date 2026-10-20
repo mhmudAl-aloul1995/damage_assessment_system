@@ -12,6 +12,12 @@ class RehFilterRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        if ($this->filled('column_set')) {
+            if (! is_string($this->input('column_set')) || $this->exists('columns')) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['columns' => 'اختيار أعمدة غير صالح.']);
+            }
+            $this->merge(['columns' => RehExportColumns::decode($this->input('column_set'))]);
+        }
         foreach (RehSurveyFilters::DEPENDENCIES as $child => [$parent, $value]) {
             if ($this->filled($child) && ! $this->filled($parent) && ! in_array($this->input($child.'_op'), ['blank', 'not_blank'], true)) {
                 $this->merge([$parent => $value]);
@@ -35,8 +41,9 @@ class RehFilterRequest extends FormRequest
 
     private function canExportColumns(): bool
     {
+        $definitions = RehExportColumns::definitions();
         foreach (is_array($this->input('columns')) ? $this->input('columns') : [] as $key) {
-            $definition = is_string($key) ? (RehExportColumns::definitions()[$key] ?? []) : [];
+            $definition = is_string($key) ? ($definitions[$key] ?? []) : [];
             if (isset($definition['permission']) && ! $this->user()?->can($definition['permission'])) {
                 return false;
             }

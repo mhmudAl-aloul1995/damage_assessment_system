@@ -23,7 +23,7 @@ class RehUnitsExport extends DefaultValueBinder implements FromGenerator, WithCu
 
     public function __construct(private Builder $query, private bool $sensitive, private bool $canSeeScores, ?array $columns = null)
     {
-        $this->columns = $columns ?? array_keys(RehExportColumns::definitions());
+        $this->columns = $columns ?? RehExportColumns::defaults();
     }
 
     public function headings(): array
@@ -52,7 +52,29 @@ class RehUnitsExport extends DefaultValueBinder implements FromGenerator, WithCu
             $this->canSeeScores ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب',
             $this->canSeeScores ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION, $unit->code, $unit->building->name];
 
-        $row = array_combine(array_keys(RehExportColumns::definitions()), $values);
+        $row = array_combine(RehExportColumns::defaults(), $values);
+        $definitions = RehExportColumns::definitions();
+        $data = ['unit' => $unit->surveyData(), 'building' => $unit->building->surveyData()];
+        foreach ($this->columns as $key) {
+            if (! isset($definitions[$key]['field'])) {
+                continue;
+            }
+            $definition = $definitions[$key];
+            if (isset($definition['permission']) && ! $this->sensitive) {
+                $row[$key] = 'محجوب';
+
+                continue;
+            }
+            $field = $definition['field'];
+            $value = $field === 'location' ? $unit->building->geometry : ($data[$definition['scope']][$field] ?? null);
+            $storageType = RehSurveyColumns::FIELDS[$definition['scope']][$field][1] ?? 'geometry';
+            $row[$key] = match (true) {
+                $value === null || $value === '' => null,
+                is_array($value) => json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                in_array($storageType, ['integer', 'decimal'], true) => is_numeric($value) ? ($storageType === 'integer' ? (int) $value : (float) $value) : null,
+                default => $survey->value($field, $value),
+            };
+        }
 
         return array_map(fn (string $key): mixed => $row[$key], $this->columns);
     }
@@ -82,7 +104,7 @@ class RehUnitsExport extends DefaultValueBinder implements FromGenerator, WithCu
         $sheet->setAutoFilter('A1:'.$lastColumn.$sheet->getHighestRow());
         $sheet->getDefaultColumnDimension()->setWidth(19);
         foreach ($this->columns as $index => $key) {
-            if (in_array($key, ['owner', 'workflow', 'decision', 'pricing', 'synced_at', 'total_score', 'priority', 'building_name'], true)) {
+            if (str_starts_with($key, 'sf_') || in_array($key, ['owner', 'workflow', 'decision', 'pricing', 'synced_at', 'total_score', 'priority', 'building_name'], true)) {
                 $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($index + 1))->setWidth(27);
             }
         }

@@ -247,7 +247,7 @@ class RehController extends Controller
         $preview = (clone $query)->with('building')->orderBy('id')->limit(10)->get();
         $summary = app(RehAdvancedFilters::class)->summary($filters);
         $availableColumns = RehExportColumns::available($request->user());
-        $selectedColumns = $filters['columns'] ?? array_keys($availableColumns);
+        $selectedColumns = $filters['columns'] ?? array_values(array_intersect(RehExportColumns::defaults(), array_keys($availableColumns)));
         $export = new RehUnitsExport($query, $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'), array_keys($availableColumns));
         $previewRows = $preview->map(fn (RehUnit $unit): array => array_combine(array_keys($availableColumns), $export->row($unit)));
         $html = view('reh::partials.export-results', compact('totalUnits', 'totalBuildings', 'preview', 'summary', 'availableColumns', 'selectedColumns', 'previewRows'))->render();
