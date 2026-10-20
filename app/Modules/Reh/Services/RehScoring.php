@@ -37,7 +37,7 @@ class RehScoring
 
     public function calculate(\App\Modules\Reh\Models\RehUnit $unit): array
     {
-        $source = $unit->source ?? [];
+        $source = $unit->surveyData() ?? [];
         $owner = $this->social($source);
         $hasOtherFamily = ($source['hosts_other_households'] ?? null) !== 'no'
             || ($source['current_unit_occupancy'] ?? null) === 'displaced_family'
@@ -75,7 +75,7 @@ class RehScoring
     public function engineering(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $catalog = [];
-        $source = $unit->source ?? [];
+        $source = $unit->surveyData() ?? [];
         $quantities = $this->survey->quantities($unit);
         $hasAssessment = ($source['unit_needs_intervention'] ?? null) === 'no'
             || collect($quantities)->every(fn (array $item): bool => $this->number($item['quantity'], $item['type'] === 'integer')['status'] === 'calculated')

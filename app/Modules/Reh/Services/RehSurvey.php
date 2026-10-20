@@ -82,7 +82,7 @@ class RehSurvey
     public function quantities(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $items = [];
-        $source = $unit->source ?? [];
+        $source = $unit->surveyData() ?? [];
         $overrides = $unit->quantity_overrides ?? [];
         foreach ($this->dictionary()['fields'] as $field => $definition) {
             if (! str_starts_with($field, 'boq_')) {
@@ -99,8 +99,8 @@ class RehSurvey
     public function issues(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $issues = [];
-        $source = $unit->source;
-        $building = $unit->building->source;
+        $source = $unit->surveyData();
+        $building = $unit->building->surveyData();
         if ($unit->source_missing || $unit->building->source_missing) {
             $issues[] = 'السجل أو المبنى غير موجود في آخر مزامنة؛ يلزم التحقق من المصدر.';
         }

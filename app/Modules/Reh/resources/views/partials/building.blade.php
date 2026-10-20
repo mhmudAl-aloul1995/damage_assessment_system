@@ -3,6 +3,6 @@
 @if($building->source_missing)<div class="alert alert-warning">المبنى غير موجود في آخر مزامنة مكتملة. راجع المصدر.</div>@endif
 @include('reh::partials.identifiers', ['referenceBuilding' => $building, 'referenceUnit' => null])
 <div class="reh-field-group"><h4>صور المبنى</h4><button type="button" class="btn btn-light" data-load-attachments="{{ route('reh.attachments', ['building', $building->id]) }}">تحميل الصور والوثائق</button><div class="reh-attachments" aria-live="polite"></div></div>
-@include('reh::partials.fields', ['sections' => $survey->sections($building->source, 'building', auth()->user()->can('reh.sensitive'))])
+@include('reh::partials.fields', ['sections' => $survey->sections($building->surveyData(), 'building', auth()->user()->can('reh.sensitive'))])
 @include('reh::partials.audit-history')
 </div>

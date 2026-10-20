@@ -73,7 +73,7 @@ class RehController extends Controller
             $buildingRows = $buildingQuery->withCount('units')->with(['units' => fn ($units) => $units
                 ->whereIn('id', clone $matchingUnitIds)->orderBy('object_id')])->orderBy('id')->paginate(20)->withQueryString();
             $mapBuildings = $buildingRows->getCollection()->map(function (RehBuilding $building) use ($request): array {
-                $fieldStatus = $building->source['Field_status'] ?? null;
+                $fieldStatus = $building->surveyData()['Field_status'] ?? null;
                 $canViewPriority = $request->user()->can('reh.scores.view');
                 $units = $building->units->map(fn (RehUnit $unit): array => [
                     'old_objectid' => $unit->old_objectid,
@@ -319,22 +319,15 @@ class RehController extends Controller
     {
         $reference = trim($reference);
 
-        return $query->where(function (Builder $record) use ($reference): void {
-            foreach (RehSurvey::REFERENCE_FIELDS as $field) {
-                $record->orWhere('source->'.$field, $reference);
-                if (ctype_digit($reference)) {
-                    $record->orWhere('source->'.$field, (int) $reference);
-                }
-            }
-        });
+        return $query->where('reference_id', $reference);
     }
 
     private function filterSurveyStatus(Builder $query, string $status): Builder
     {
         return match ($status) {
-            'completed' => $query->where('source->Field_status', 'COMPLETED'),
-            'not_completed' => $query->whereIn('source->Field_status', ['Not_Completed', 'notcomplete']),
-            default => $query->where(fn (Builder $query) => $query->whereNull('source->Field_status')->orWhereNotIn('source->Field_status', ['COMPLETED', 'Not_Completed', 'notcomplete'])),
+            'completed' => $query->where('field_status', 'COMPLETED'),
+            'not_completed' => $query->whereIn('field_status', ['Not_Completed', 'notcomplete']),
+            default => $query->where(fn (Builder $query) => $query->whereNull('field_status')->orWhereNotIn('field_status', ['COMPLETED', 'Not_Completed', 'notcomplete'])),
         };
     }
 

@@ -35,7 +35,7 @@ class RehFieldAudit
 
     public function revision(RehUnit|RehBuilding $record): string
     {
-        return hash('sha256', json_encode([$record->source, $record->source_hash, $record->source_missing, $record->version, $record->decision, $record->updated_at?->toJSON()], JSON_THROW_ON_ERROR));
+        return hash('sha256', json_encode([$record->surveyData(), $record->source_hash, $record->source_missing, $record->version, $record->decision, $record->updated_at?->toJSON()], JSON_THROW_ON_ERROR));
     }
 
     public function fields(RehUnit|RehBuilding $record, User $user): array
@@ -112,7 +112,7 @@ class RehFieldAudit
                 throw ValidationException::withMessages(['field' => 'الحقل غير متاح للتحرير في طبقة ArcGIS.']);
             }
             $value = $this->normalize($data['value'], $definition, $remoteField);
-            $before = $record->source[$field] ?? null;
+            $before = $record->surveyData()[$field] ?? null;
             $remote = $this->remote($record, $layer);
             abort_unless(array_key_exists($field, $remote) && $this->same($remote[$field], $before), 409, 'تغيّرت الإجابة في ArcGIS. استقبل آخر البيانات قبل تعديلها.');
             $hasOverride = $record instanceof RehUnit && array_key_exists($field, $record->quantity_overrides ?? []);
@@ -181,13 +181,13 @@ class RehFieldAudit
                 }
                 if ($this->same($actual[$log->field], $log->values['after'])) {
                     abort_if($this->blocked($current), 409, $this->blocked($current) ?? '');
-                    abort_unless($this->same($current->source[$log->field] ?? null, $log->values['before']) || $this->same($current->source[$log->field] ?? null, $log->values['after']), 409, 'تغيّرت الإجابة المحلية؛ يلزم مراجعة الاختلاف مع المصدر.');
+                    abort_unless($this->same($current->surveyData()[$log->field] ?? null, $log->values['before']) || $this->same($current->surveyData()[$log->field] ?? null, $log->values['after']), 409, 'تغيّرت الإجابة المحلية؛ يلزم مراجعة الاختلاف مع المصدر.');
                     $this->applyLocal($current, $log);
                     $log->update(['status' => 'completed', 'message' => 'تم التحقق من ArcGIS وإكمال الحفظ المحلي.']);
                 } elseif ($this->same($actual[$log->field], $log->values['before'])) {
                     $log->update(['status' => 'failed', 'message' => 'تم التحقق: القيمة القديمة ما زالت في ArcGIS؛ يمكن إعادة المحاولة.']);
                 } else {
-                    abort_unless($this->same($current->source[$log->field] ?? null, $actual[$log->field]), 409, 'تغيّرت الإجابة إلى قيمة أخرى في المصدر. استقبل آخر البيانات ثم تحقق مجددًا.');
+                    abort_unless($this->same($current->surveyData()[$log->field] ?? null, $actual[$log->field]), 409, 'تغيّرت الإجابة إلى قيمة أخرى في المصدر. استقبل آخر البيانات ثم تحقق مجددًا.');
                     $log->update(['status' => 'superseded', 'message' => 'القيمة الحالية في المصدرين متطابقة، لكنها تختلف عن هذه المحاولة؛ تم إغلاقها دون إعادة تطبيقها.']);
                 }
             });

@@ -3,9 +3,7 @@
 namespace App\Modules\Reh\Services;
 
 use App\Modules\Reh\Models\RehAuditLog;
-use App\Modules\Reh\Models\RehBuilding;
 use App\Modules\Reh\Models\RehUnit;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 
 class RehAdvancedFilters
@@ -31,22 +29,8 @@ class RehAdvancedFilters
     public function buildings(Builder $query, array $filters): Builder
     {
         $query->when($filters['neighborhood'] ?? null, fn (Builder $q, string $value) => $q->where('neighborhood', $value));
-        if (! empty($filters['visit_from']) || ! empty($filters['visit_to'])) {
-            $ids = [];
-            foreach (RehBuilding::query()->select(['id', 'source'])->lazyById(200) as $building) {
-                $value = $building->source['visit_date'] ?? null;
-                try {
-                    $date = is_numeric($value) ? CarbonImmutable::createFromTimestampMs((int) $value)->timezone(config('app.timezone'))->toDateString()
-                        : (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value) ? CarbonImmutable::parse($value)->toDateString() : null);
-                } catch (\Throwable) {
-                    $date = null;
-                }
-                if ($date !== null && (empty($filters['visit_from']) || $date >= $filters['visit_from']) && (empty($filters['visit_to']) || $date <= $filters['visit_to'])) {
-                    $ids[] = $building->id;
-                }
-            }
-            $query->whereIntegerInRaw('id', $ids);
-        }
+        $query->when($filters['visit_from'] ?? null, fn (Builder $q, string $value) => $q->where('visit_date', '>=', $value));
+        $query->when($filters['visit_to'] ?? null, fn (Builder $q, string $value) => $q->where('visit_date', '<=', $value));
 
         return $query;
     }
@@ -55,7 +39,15 @@ class RehAdvancedFilters
     {
         $query->when($filters['decision'] ?? null, fn (Builder $q, string $value) => $q->where('decision', $value));
         foreach (['hosting' => 'hosts_other_households', 'owner_disability' => 'owner_has_disability'] as $filter => $field) {
-            $query->when($filters[$filter] ?? null, fn (Builder $q, string $value) => $q->where('source->'.$field, $value));
+            $query->when($filters[$filter] ?? null, fn (Builder $q, string $value) => $q->where($field, $value));
+        }
+        foreach (['min' => '>=', 'max' => '<='] as $bound => $operator) {
+            if (isset($filters['household_'.$bound]) && $filters['household_'.$bound] !== '') {
+                $query->where('household_size', $operator, $filters['household_'.$bound]);
+            }
+        }
+        if (! empty($filters['family_chronic'])) {
+            $query->where('household_chronic_count', $filters['family_chronic'] === 'yes' ? '>' : '=', 0);
         }
         if (! empty($filters['edits'])) {
             $logs = RehAuditLog::query()->where('status', 'completed')->when(! auth()->user()->can('reh.sensitive'), fn (Builder $q) => $q->where('sensitive', false));
@@ -66,7 +58,7 @@ class RehAdvancedFilters
                 $q->$orMethod('building_id', (clone $logs)->where('record_kind', 'building')->select('record_id'));
             });
         }
-        $computed = array_intersect_key($filters, array_flip(['priority', 'family_chronic', 'household_min', 'household_max', 'social_min', 'social_max', ...self::SCORE_FILTERS]));
+        $computed = array_intersect_key($filters, array_flip(['priority', 'social_min', 'social_max', ...self::SCORE_FILTERS]));
         if (count(array_filter($computed, fn ($value): bool => $value !== null && $value !== '')) > 0) {
             $ids = [];
             foreach ((clone $query)->lazyById(200) as $unit) {
@@ -82,15 +74,6 @@ class RehAdvancedFilters
 
     private function matches(RehUnit $unit, array $filters): bool
     {
-        if (! $this->range($unit->source['household_size'] ?? null, $filters, 'household')) {
-            return false;
-        }
-        if (! empty($filters['family_chronic'])) {
-            $count = $unit->source['household_chronic_count'] ?? null;
-            if (! is_numeric($count) || $count < 0 || ($filters['family_chronic'] === 'yes' ? $count <= 0 : $count != 0)) {
-                return false;
-            }
-        }
         if (array_filter(array_intersect_key($filters, array_flip(['priority', 'social_min', 'social_max', ...self::SCORE_FILTERS])), fn ($value): bool => $value !== '' && $value !== null)) {
             $score = app(RehScoring::class)->calculate($unit);
             if (! empty($filters['priority']) && ($score['priority'] ?? 'unclassified') !== $filters['priority']) {

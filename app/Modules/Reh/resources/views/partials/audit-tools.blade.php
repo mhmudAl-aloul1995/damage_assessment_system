@@ -4,7 +4,7 @@
 @php
     $editorFields = [];
     foreach ($auditFields as $name => $definition) {
-        $raw = $auditRecord->source[$name] ?? null;
+        $raw = $auditRecord->surveyData()[$name] ?? null;
         $editorFields[$name] = ['label' => $definition['label'], 'type' => $definition['input_type'], 'choices' => $definition['choices'], 'value' => $definition['input_type'] === 'date' && is_numeric($raw) ? \Carbon\CarbonImmutable::createFromTimestampMs((int) $raw)->utc()->format('Y-m-d') : $raw, 'display' => $survey->value($name, $raw), 'group' => $definition['group']['label'] ?? 'بيانات عامة'];
     }
 @endphp

@@ -6,18 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class RehUnit extends Model
 {
+    use HasSurveyColumns;
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $guarded = [];
 
     protected function oldObjectid(): \Illuminate\Database\Eloquent\Casts\Attribute
     {
-        return \Illuminate\Database\Eloquent\Casts\Attribute::get(fn (): string => \App\Modules\Reh\Services\RehSurvey::reference($this->source ?? []));
+        return \Illuminate\Database\Eloquent\Casts\Attribute::get(fn (): string => \App\Modules\Reh\Services\RehSurvey::reference($this->surveyData()));
     }
 
     protected function casts(): array
     {
-        return ['source' => 'array', 'quantity_overrides' => 'array', 'version' => 'integer', 'source_missing' => 'boolean', 'synced_at' => 'datetime'];
+        return [...$this->surveyCasts(), 'source' => 'array', 'quantity_overrides' => 'array', 'version' => 'integer', 'source_missing' => 'boolean', 'synced_at' => 'datetime'];
     }
 
     protected static function newFactory(): \Database\Factories\RehUnitFactory
