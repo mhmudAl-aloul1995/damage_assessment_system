@@ -255,6 +255,20 @@ it('renders both translations and the role entry point', function (): void {
         ->assertSee(route('access-preview.create', ['user_id' => $this->target->id]));
 });
 
+it('renders the access preview role control for browser interaction', function (string $mode): void {
+    $response = $this->actingAs($this->officer)
+        ->get(route('access-preview.create', ['mode' => $mode]))
+        ->assertOk();
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+    $roleControl = $document->getElementById('preview-role');
+
+    expect($roleControl->hasAttribute('disabled'))->toBe($mode !== 'role')
+        ->and($roleControl->hasAttribute('required'))->toBe($mode === 'role');
+
+    file_put_contents(sys_get_temp_dir().'/phc-access-preview-'.$mode.'.html', $response->getContent());
+})->with(['user', 'role']);
+
 it('uses the preview users workspaces instead of the officers damage assessment workspace', function (string $mode): void {
     $borrowersRole = Role::findOrCreate('Project Officer - Borrowers', 'web');
     $rehRole = Role::findOrCreate('مسؤول موديول REH', 'web');

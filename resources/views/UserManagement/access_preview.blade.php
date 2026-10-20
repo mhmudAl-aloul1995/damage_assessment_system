@@ -34,7 +34,8 @@
                 </div>
                 <div class="col-lg-6">
                     <label for="preview-role" class="form-label">{{ __('access_preview.role') }}</label>
-                    <select id="preview-role" name="role_id" class="form-select" aria-describedby="preview-role-help">
+                    <select id="preview-role" name="role_id" class="form-select" aria-describedby="preview-role-help"
+                        @disabled(old('mode', request('mode')) !== 'role') @required(old('mode', request('mode')) === 'role')>
                         <option value="">{{ __('access_preview.choose_role') }}</option>
                         @foreach($roles as $previewRole)
                             <option value="{{ $previewRole->id }}" @selected((int) old('role_id') === $previewRole->id)>{{ $previewRole->name }}</option>
@@ -59,7 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
         role.disabled = mode.value !== 'role';
         role.required = mode.value === 'role';
     };
-    mode.addEventListener('change', updateRole);
+    if (window.jQuery) {
+        window.jQuery(mode).on('change.accessPreview', updateRole);
+    } else {
+        mode.addEventListener('change', updateRole);
+    }
     updateRole();
 });
 </script>
