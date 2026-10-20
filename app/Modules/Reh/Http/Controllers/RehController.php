@@ -118,7 +118,8 @@ class RehController extends Controller
     {
         $unit->load(['building', 'reviewer:id,name', 'reviews' => fn ($query) => $query->with('user:id,name')->latest('id')->limit(100)]);
         $score = $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)];
-        $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit), 'score' => $score, ...$this->auditView($unit, $request)])->render();
+        $missingScoreFields = $this->scoring->missingFields($score, $unit->surveyData(), $request->user()->can('reh.sensitive'));
+        $html = view('reh::partials.unit', ['unit' => $unit, 'survey' => $this->survey, 'issues' => $this->survey->issues($unit), 'quantities' => $this->survey->quantities($unit), 'score' => $score, 'missingScoreFields' => $missingScoreFields, ...$this->auditView($unit, $request)])->render();
 
         return $request->expectsJson() ? response()->json(['html' => $html])->header('Cache-Control', 'private, no-store') : $this->workspace($html, ['tab' => 'units']);
     }

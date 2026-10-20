@@ -58,11 +58,11 @@ class RehSurvey
         return is_scalar($value) ? (string) $value : '—';
     }
 
-    public function sections(array $source, string $scope, bool $sensitive): array
+    public function sections(array $source, string $scope, bool $sensitive, array $includeFields = []): array
     {
         $sections = [];
         foreach ($this->dictionary()['fields'] as $field => $definition) {
-            if ($definition['scope'] !== $scope || ! array_key_exists($field, $source) || in_array($definition['type'], ['image', 'hidden', 'calculate', 'geoshape'], true) || str_starts_with($field, 'boq_')) {
+            if ($definition['scope'] !== $scope || (! array_key_exists($field, $source) && ! in_array($field, $includeFields, true)) || in_array($definition['type'], ['image', 'hidden', 'calculate', 'geoshape'], true) || str_starts_with($field, 'boq_')) {
                 continue;
             }
             $group = $definition['group']['name'] ?? 'general';
@@ -73,7 +73,7 @@ class RehSurvey
             $sections[$group]['label'] = $definition['group']['label'] ?? 'بيانات عامة';
             $sections[$group]['fields'][] = $field === 'objectid'
                 ? ['field' => 'old_objectid', 'label' => 'معرّف المبنى', 'value' => self::reference($source)]
-                : ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field])];
+                : ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field] ?? null)];
         }
 
         return $sections;

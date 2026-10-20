@@ -23,7 +23,7 @@
         <div class="reh-section-heading"><h4>أسرة المالك ومجموعة الأسر الأخرى</h4><small class="text-muted">{{ $score['selected_family'] !== null ? 'المعتمد: '.($score['selected_family'] === 'owner' ? 'أسرة المالك' : 'مجموعة الأسر المقيمة / المستضافة') : 'المقارنة بانتظار استكمال البيانات' }}</small></div>
         <div class="reh-score-families">
         @foreach(['owner' => 'أسرة المالك', 'other' => 'مجموعة الأسر المقيمة / المستضافة'] as $family => $label)
-            @if($score[$family] !== null)<button type="button" data-score-family="{{ $family }}" aria-pressed="{{ $family === 'owner' ? 'true' : 'false' }}"><span>{{ $label }}<small>{{ $score[$family]['calculated_count'] }} من 23 مؤشرًا محسوبًا</small></span><strong>{{ $score[$family]['subtotal'] }}<small>نقطة محسومة</small></strong></button>@endif
+            @if($score[$family] !== null)<button type="button" data-score-family="{{ $family }}" data-score-pending="{{ $score[$family]['pending_count'] > 0 ? 'true' : 'false' }}" aria-pressed="{{ $family === 'owner' ? 'true' : 'false' }}"><span>{{ $label }}<small>{{ $score[$family]['calculated_count'] }} من 23 مؤشرًا محسوبًا</small></span><strong>{{ $score[$family]['subtotal'] }}<small>نقطة محسومة</small></strong></button>@endif
         @endforeach
         </div>
         @foreach(['owner' => 'أسرة المالك', 'other' => 'مجموعة الأسر المقيمة / المستضافة'] as $family => $label)

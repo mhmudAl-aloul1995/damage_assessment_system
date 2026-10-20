@@ -551,3 +551,47 @@ it('summarizes map priority using the highest calculated unit and counts incompl
     'all source records missing' => [[['priority' => 'very_high', 'source_missing' => true]], ['priority' => 'unclassified', 'unclassified_units' => 0, 'missing_units' => 1]],
     'no matching units' => [[], ['priority' => 'unclassified', 'unclassified_units' => 0, 'missing_units' => 0]],
 ]);
+
+it('highlights only missing scoring fields including required fields absent from the source', function (): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo(['reh.view', 'reh.sensitive']);
+    $source = [...rehScoringSource(), 'owner_age' => null, 'household_size' => 0];
+    unset($source['household_chronic_count']);
+    $unit = RehUnit::factory()->create(['source' => $source]);
+    $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $doc = new DOMDocument;
+    $doc->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($doc);
+    foreach (['owner_age', 'household_chronic_count'] as $field) {
+        expect($xpath->query('//*[@data-source-field="'.$field.'" and @data-score-missing-field]')->length)->toBe(1);
+    }
+    expect($xpath->query('//*[@data-source-field="household_size" and @data-score-missing-field]')->length)->toBe(0)
+        ->and($xpath->query('//details[@data-score-row="age"]//small[contains(@class,"reh-score-status-badge")]')->length)->toBe(1);
+    $unit->update(['source' => [...$source, 'owner_age' => 40, 'household_chronic_count' => 0]]);
+    $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->not->toContain('data-score-missing-field', 'class="reh-missing-field"');
+});
+
+it('keeps missing engineering quantities visible and never highlights saved zero quantities', function (): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo('reh.view');
+    $source = [...rehScoringSource(), ...rehScoringBlankBoq(), 'unit_needs_intervention' => 'yes'];
+    $unit = RehUnit::factory()->create(['source' => $source, 'quantity_overrides' => ['boq_1_1_water_tank_repair_qty' => 0]]);
+    $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $doc = new DOMDocument;
+    $doc->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($doc);
+    expect($xpath->query('//tr[@data-quantity-field="boq_3_1_wood_door_frame_qty" and @data-score-missing-field and not(@hidden)]')->length)->toBe(1)
+        ->and($xpath->query('//tr[@data-quantity-field="boq_1_1_water_tank_repair_qty" and @data-score-missing-field]')->length)->toBe(0);
+});
+
+it('does not expose social missing fields through highlighting without sensitive access', function (): void {
+    $this->seed(RehPermissionsSeeder::class);
+    $user = User::factory()->create();
+    $user->givePermissionTo(['reh.view', 'reh.scores.view']);
+    $unit = RehUnit::factory()->create(['source' => [...rehScoringSource(), 'owner_age' => null]]);
+    $html = $this->actingAs($user)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    expect($html)->not->toContain('data-source-field="owner_age"', 'data-score-missing-field', 'data-score-family="owner"');
+});

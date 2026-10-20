@@ -779,7 +779,7 @@
         } else if (button.matches('[data-score-source]')) {
             showScoreSource(button);
         } else if (button.matches('[data-show-all-quantities]')) {
-            detailBody.querySelectorAll('[data-quantity-row]').forEach(row => { row.hidden = !button.checked && row.dataset.hasQuantity !== '1'; });
+            detailBody.querySelectorAll('[data-quantity-row]').forEach(row => { row.hidden = !button.checked && row.dataset.hasQuantity !== '1' && !row.hasAttribute('data-score-missing-field'); });
         } else if (button.matches('[data-export]')) {
             window.location.assign(root.dataset.exportUrl + '?' + query());
         } else if (button.matches('[data-sync]')) {

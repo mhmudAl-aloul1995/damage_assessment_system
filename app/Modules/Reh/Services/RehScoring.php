@@ -72,6 +72,27 @@ class RehScoring
         return $score;
     }
 
+    /** @return array<string, bool> */
+    public function missingFields(array $score, array $source, bool $includeSocial): array
+    {
+        $fields = [];
+        foreach ($includeSocial ? ['engineering', 'owner', 'other'] : ['engineering'] as $section) {
+            foreach ($score[$section]['rows'] ?? [] as $row) {
+                if (! in_array($row['status'], ['missing', 'invalid'], true)) {
+                    continue;
+                }
+                foreach ($row['inputs'] as $input) {
+                    $value = $section === 'engineering' ? $input['quantity'] : ($source[$input['field']] ?? null);
+                    if (! ($input['not_requested'] ?? false) && ($value === null || is_string($value) && trim($value) === '')) {
+                        $fields[$input['field']] = true;
+                    }
+                }
+            }
+        }
+
+        return $fields;
+    }
+
     public function engineering(\App\Modules\Reh\Models\RehUnit $unit): array
     {
         $catalog = [];
