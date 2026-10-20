@@ -74,16 +74,17 @@ class RehSurveyFilters
                 $rules[$key.'_min'] = ['nullable', $definition['type'] === 'integer' ? 'integer' : 'numeric', 'min:0', 'max:1000000'];
                 $rules[$key.'_max'] = [...$rules[$key.'_min'], ...(isset($input[$key.'_min']) && $input[$key.'_min'] !== '' ? ['gte:'.$key.'_min'] : [])];
             } else {
-                $rules[$key] = ['nullable', 'string', Rule::in(array_map('strval', array_keys($definition['choices'])))];
+                $rules = [...$rules, ...RehFilterChoices::rules($input, $key, array_keys($definition['choices']))];
             }
         }
         foreach (self::DEPENDENCIES as $key => [$parent, $value]) {
-            $rules[$key][] = Rule::prohibitedIf(($input[$parent] ?? null) !== $value);
+            $rules[$key][] = Rule::prohibitedIf(! RehFilterChoices::contains($input[$parent] ?? null, $value));
         }
-        $rules['work_item'] = ['nullable', 'string', Rule::in(array_keys($this->workItems()))];
-        $rules['work_state'] = ['nullable', 'in:positive,zero,missing', 'required_with:work_item'];
+        $rules = [...$rules, ...RehFilterChoices::rules($input, 'work_item', array_keys($this->workItems()))];
+        $rules = [...$rules, ...RehFilterChoices::rules($input, 'work_state', ['positive', 'zero', 'missing'])];
+        $rules['work_state'][] = 'required_with:work_item';
         foreach (['min', 'max'] as $bound) {
-            $rules['work_'.$bound] = ['nullable', 'numeric', 'min:0', 'max:1000000', Rule::prohibitedIf(($input['work_state'] ?? null) !== 'positive')];
+            $rules['work_'.$bound] = ['nullable', 'numeric', 'min:0', 'max:1000000', Rule::prohibitedIf(! RehFilterChoices::contains($input['work_state'] ?? null, 'positive'))];
             $rules['intervention_'.$bound] = ['nullable', 'numeric', 'min:0', 'max:1000000'];
         }
         if (isset($input['work_min']) && $input['work_min'] !== '') {
@@ -93,7 +94,7 @@ class RehSurveyFilters
             $rules['intervention_max'][] = 'gte:intervention_min';
         }
         $rules['work_item'][] = 'required_with:work_state,work_min,work_max';
-        $rules['additional_work'] = ['nullable', 'in:yes,no'];
+        $rules = [...$rules, ...RehFilterChoices::rules($input, 'additional_work', ['yes', 'no'])];
 
         return $rules;
     }
@@ -114,30 +115,44 @@ class RehSurveyFilters
             if ($value === null || $value === '') {
                 continue;
             }
-            if ($value === '__missing') {
-                $query->where(fn (Builder $q) => $q->whereNull($column)->orWhere($column, ''));
-            } elseif ($definition['type'] === 'multiple') {
-                $this->token($query, $column, $value);
-            } else {
-                $query->where($column, $value);
-            }
+            $query->where(function (Builder $q) use ($definition, $column, $value): void {
+                foreach (RehFilterChoices::values($value) as $choice) {
+                    $q->orWhere(function (Builder $branch) use ($definition, $column, $choice): void {
+                        if ($definition['type'] === 'multiple' && $choice !== '__missing') {
+                            $this->token($branch, $column, $choice);
+                        } else {
+                            RehFilterChoices::apply($branch, $column, $choice);
+                        }
+                    });
+                }
+            });
         }
         if ($scope === 'unit') {
             if (! empty($filters['work_item'])) {
-                $column = $query->qualifyColumn($filters['work_item']);
-                match ($filters['work_state']) {
-                    'positive' => $query->where($column, '>', 0),
-                    'zero' => $query->where($column, 0),
-                    'missing' => $query->whereNull($column),
-                };
-                $this->range($query, $column, $filters, 'work');
+                $query->where(function (Builder $q) use ($filters): void {
+                    foreach (RehFilterChoices::values($filters['work_item']) as $item) {
+                        foreach (RehFilterChoices::values($filters['work_state']) as $state) {
+                            $q->orWhere(function (Builder $branch) use ($filters, $item, $state): void {
+                                $column = $branch->qualifyColumn($item);
+                                match ($state) {
+                                    'positive' => $branch->where($column, '>', 0),
+                                    'zero' => $branch->where($column, 0),
+                                    'missing' => $branch->whereNull($column),
+                                };
+                                if ($state === 'positive') {
+                                    $this->range($branch, $column, $filters, 'work');
+                                }
+                            });
+                        }
+                    }
+                });
             }
             $this->range($query, $query->qualifyColumn('intervention_area_sqm'), $filters, 'intervention');
-            if (! empty($filters['additional_work'])) {
+            if (count(RehFilterChoices::values($filters['additional_work'] ?? null)) === 1) {
                 $query->where(function (Builder $q) use ($filters): void {
                     for ($index = 1; $index <= 3; $index++) {
                         $column = $q->qualifyColumn('additional_item_description_'.$index);
-                        if ($filters['additional_work'] === 'yes') {
+                        if (RehFilterChoices::contains($filters['additional_work'], 'yes')) {
                             $q->orWhere(fn (Builder $part) => $part->whereNotNull($column)->where($column, '!=', ''));
                         } else {
                             $q->where(fn (Builder $part) => $part->whereNull($column)->orWhere($column, ''));
@@ -192,12 +207,12 @@ class RehSurveyFilters
             if ($value === null || $value === '') {
                 continue;
             }
-            $summary[$label] = $this->definitions()[$key]['choices'][$value] ?? match ($key) {
-                'work_item' => $this->workItems()[$value]['label'],
-                'work_state' => ['positive' => 'أكبر من صفر', 'zero' => 'صفر مسجل', 'missing' => 'غير مسجل'][$value],
-                'additional_work' => $value === 'yes' ? 'نعم' : 'لا',
-                default => (string) $value,
-            };
+            $summary[$label] = implode('، ', array_map(fn ($choice): string => (string) ($this->definitions()[$key]['choices'][$choice] ?? match ($key) {
+                'work_item' => $this->workItems()[$choice]['label'],
+                'work_state' => ['positive' => 'أكبر من صفر', 'zero' => 'صفر مسجل', 'missing' => 'غير مسجل'][$choice],
+                'additional_work' => $choice === 'yes' ? 'نعم' : 'لا',
+                default => (string) $choice,
+            }), RehFilterChoices::values($value)));
         }
 
         return $summary;

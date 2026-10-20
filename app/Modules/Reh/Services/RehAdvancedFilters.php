@@ -28,7 +28,7 @@ class RehAdvancedFilters
 
     public function buildings(Builder $query, array $filters): Builder
     {
-        $query->when($filters['neighborhood'] ?? null, fn (Builder $q, string $value) => $q->where('neighborhood', $value));
+        $query->when($filters['neighborhood'] ?? null, fn (Builder $q, $value) => $q->whereIn('neighborhood', RehFilterChoices::values($value)));
         $query->when($filters['visit_from'] ?? null, fn (Builder $q, string $value) => $q->where('visit_date', '>=', $value));
         $query->when($filters['visit_to'] ?? null, fn (Builder $q, string $value) => $q->where('visit_date', '<=', $value));
 
@@ -38,9 +38,9 @@ class RehAdvancedFilters
     public function units(Builder $query, array $filters): Builder
     {
         app(RehSurveyFilters::class)->apply($query, $filters, 'unit');
-        $query->when($filters['decision'] ?? null, fn (Builder $q, string $value) => $q->where('decision', $value));
+        $query->when($filters['decision'] ?? null, fn (Builder $q, $value) => $q->whereIn('decision', RehFilterChoices::values($value)));
         foreach (['hosting' => 'hosts_other_households', 'owner_disability' => 'owner_has_disability'] as $filter => $field) {
-            $query->when($filters[$filter] ?? null, fn (Builder $q, string $value) => $value === '__missing' ? $q->whereNull($field) : $q->where($field, $value));
+            $query->when($filters[$filter] ?? null, fn (Builder $q, $value) => RehFilterChoices::apply($q, $field, $value));
         }
         foreach (['min' => '>=', 'max' => '<='] as $bound => $operator) {
             if (isset($filters['household_'.$bound]) && $filters['household_'.$bound] !== '') {
@@ -48,17 +48,18 @@ class RehAdvancedFilters
             }
         }
         if (! empty($filters['family_chronic'])) {
-            if ($filters['family_chronic'] === '__missing') {
-                $query->whereNull('household_chronic_count');
-            } else {
-                $query->where('household_chronic_count', $filters['family_chronic'] === 'yes' ? '>' : '=', 0);
-            }
+            $query->where(function (Builder $q) use ($filters): void {
+                foreach (RehFilterChoices::values($filters['family_chronic']) as $value) {
+                    $q->orWhere(fn (Builder $part) => $value === '__missing' ? $part->whereNull('household_chronic_count') : $part->where('household_chronic_count', $value === 'yes' ? '>' : '=', 0));
+                }
+            });
         }
-        if (! empty($filters['edits'])) {
+        if (count(RehFilterChoices::values($filters['edits'] ?? null)) === 1) {
             $logs = RehAuditLog::query()->where('status', 'completed')->when(! auth()->user()->can('reh.sensitive'), fn (Builder $q) => $q->where('sensitive', false));
             $query->where(function (Builder $q) use ($logs, $filters): void {
-                $method = $filters['edits'] === 'yes' ? 'whereIn' : 'whereNotIn';
-                $orMethod = $filters['edits'] === 'yes' ? 'orWhereIn' : 'whereNotIn';
+                $yes = RehFilterChoices::contains($filters['edits'], 'yes');
+                $method = $yes ? 'whereIn' : 'whereNotIn';
+                $orMethod = $yes ? 'orWhereIn' : 'whereNotIn';
                 $q->$method('id', (clone $logs)->where('record_kind', 'unit')->select('record_id'));
                 $q->$orMethod('building_id', (clone $logs)->where('record_kind', 'building')->select('record_id'));
             });
@@ -81,10 +82,10 @@ class RehAdvancedFilters
     {
         if (array_filter(array_intersect_key($filters, array_flip(['priority', 'social_min', 'social_max', ...self::SCORE_FILTERS])), fn ($value): bool => $value !== '' && $value !== null)) {
             $score = app(RehScoring::class)->calculate($unit);
-            if (! empty($filters['priority']) && ($score['priority'] ?? 'unclassified') !== $filters['priority']) {
+            if (! empty($filters['priority']) && ! RehFilterChoices::contains($filters['priority'], $score['priority'] ?? 'unclassified')) {
                 return false;
             }
-            if (! empty($filters['evaluation']) && ($score['total'] === null ? 'incomplete' : 'complete') !== $filters['evaluation']) {
+            if (! empty($filters['evaluation']) && ! RehFilterChoices::contains($filters['evaluation'], $score['total'] === null ? 'incomplete' : 'complete')) {
                 return false;
             }
 
@@ -118,7 +119,7 @@ class RehAdvancedFilters
             if ($value === null || $value === '') {
                 continue;
             }
-            $summary[$label] = $options[$key][$value] ?? (in_array($key, ['governorate', 'neighborhood', 'engineer'], true) ? $survey->value($key === 'engineer' ? 'engineer_name' : $key, $value) : (['yes' => 'نعم', 'no' => 'لا', '__missing' => 'غير مسجل'][$value] ?? (string) $value));
+            $summary[$label] = implode('، ', array_map(fn ($choice): string => (string) ($options[$key][$choice] ?? (in_array($key, ['governorate', 'neighborhood', 'engineer'], true) ? $survey->value($key === 'engineer' ? 'engineer_name' : $key, $choice) : (['yes' => 'نعم', 'no' => 'لا', '__missing' => 'غير مسجل'][$choice] ?? (string) $choice))), RehFilterChoices::values($value)));
         }
 
         return [...$summary, ...app(RehSurveyFilters::class)->summary($filters)];

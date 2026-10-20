@@ -15,6 +15,7 @@ use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehAdvancedFilters;
 use App\Modules\Reh\Services\RehArcgisClient;
 use App\Modules\Reh\Services\RehFieldAudit;
+use App\Modules\Reh\Services\RehFilterChoices;
 use App\Modules\Reh\Services\RehPdf;
 use App\Modules\Reh\Services\RehReviewService;
 use App\Modules\Reh\Services\RehScoring;
@@ -300,12 +301,12 @@ class RehController extends Controller
                     }
                 });
             })
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->where('workflow_status', $status))
+            ->when($filters['status'] ?? null, fn (Builder $query, $status) => $query->whereIn('workflow_status', RehFilterChoices::values($status)))
             ->when($filters['building_old_objectid'] ?? null, fn (Builder $query, string $reference) => $query->whereHas('building', fn (Builder $building) => $this->filterReference($building, $reference)))
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->where('building_id', $id))
             ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->whereHas('building', fn (Builder $building) => $building->where('object_id', $objectId)))
-            ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('governorate', $value)))
-            ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->whereHas('building', fn (Builder $building) => $building->where('engineer', $value)))
+            ->when($filters['governorate'] ?? null, fn (Builder $query, $value) => $query->whereHas('building', fn (Builder $building) => $building->whereIn('governorate', RehFilterChoices::values($value))))
+            ->when($filters['engineer'] ?? null, fn (Builder $query, $value) => $query->whereHas('building', fn (Builder $building) => $building->whereIn('engineer', RehFilterChoices::values($value))))
             ->whereHas('building', fn (Builder $building) => app(RehAdvancedFilters::class)->buildings($building, $filters));
 
         return app(RehAdvancedFilters::class)->units($query, $filters);
@@ -330,8 +331,8 @@ class RehController extends Controller
             ->when($filters['building_old_objectid'] ?? null, fn (Builder $query, string $reference) => $this->filterReference($query, $reference))
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->whereKey($id))
             ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->where('object_id', $objectId))
-            ->when($filters['governorate'] ?? null, fn (Builder $query, string $value) => $query->where('governorate', $value))
-            ->when($filters['engineer'] ?? null, fn (Builder $query, string $value) => $query->where('engineer', $value));
+            ->when($filters['governorate'] ?? null, fn (Builder $query, $value) => $query->whereIn('governorate', RehFilterChoices::values($value)))
+            ->when($filters['engineer'] ?? null, fn (Builder $query, $value) => $query->whereIn('engineer', RehFilterChoices::values($value)));
 
         return app(RehAdvancedFilters::class)->buildings($query, $filters);
     }
@@ -343,13 +344,22 @@ class RehController extends Controller
         return $query->where('reference_id', $reference);
     }
 
-    private function filterSurveyStatus(Builder $query, string $status): Builder
+    private function filterSurveyStatus(Builder $query, array|string $status): Builder
     {
-        return match ($status) {
-            'completed' => $query->where('field_status', 'COMPLETED'),
-            'not_completed' => $query->whereIn('field_status', ['Not_Completed', 'notcomplete']),
-            default => $query->where(fn (Builder $query) => $query->whereNull('field_status')->orWhereNotIn('field_status', ['COMPLETED', 'Not_Completed', 'notcomplete'])),
-        };
+        $values = RehFilterChoices::values($status);
+        if ($values === [] || in_array('all', $values, true)) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $q) use ($values): void {
+            foreach ($values as $value) {
+                $q->orWhere(fn (Builder $part) => match ($value) {
+                    'completed' => $part->where('field_status', 'COMPLETED'),
+                    'not_completed' => $part->whereIn('field_status', ['Not_Completed', 'notcomplete']),
+                    default => $part->where(fn (Builder $missing) => $missing->whereNull('field_status')->orWhereNotIn('field_status', ['COMPLETED', 'Not_Completed', 'notcomplete'])),
+                });
+            }
+        });
     }
 
     private function attachmentRecord(string $kind, int $id): array

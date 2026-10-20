@@ -37,8 +37,28 @@
         return data;
     }
 
+    function values(value) { return (Array.isArray(value) ? value : [value]).filter(item => item !== '' && item !== null && item !== undefined); }
+    function readQuery() {
+        const parsed = {};
+        for (const [name, value] of new URLSearchParams(location.search)) {
+            if (name.endsWith('[]')) { const key = name.slice(0, -2); (parsed[key] ||= []).push(value); }
+            else parsed[name] = value;
+        }
+        return parsed;
+    }
     function query() {
-        return new URLSearchParams(Object.entries(state).filter(([, value]) => value !== '' && value !== null && value !== false));
+        const params = new URLSearchParams();
+        for (const [name, value] of Object.entries(state)) {
+            if (Array.isArray(value)) value.forEach(item => params.append(name + '[]', item));
+            else if (value !== '' && value !== null && value !== undefined && value !== false) params.set(name, value);
+        }
+        return params;
+    }
+    function inputValues(input) { return input?.multiple ? [...input.selectedOptions].map(option => option.value) : values(input?.value); }
+    function clearInput(input) {
+        if (input.multiple) [...input.options].forEach(option => { option.selected = false; });
+        else input.value = '';
+        if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
     }
 
     function reflectFilters() {
@@ -46,6 +66,7 @@
         for (const input of [...filters.elements]) {
             if (!input.name) continue;
             if (input.type === 'checkbox') input.checked = String(state[input.name]) === '1';
+            else if (input.multiple) [...input.options].forEach(option => { option.selected = values(state[input.name]).includes(option.value); });
             else input.value = state[input.name] ?? '';
             if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
         }
@@ -56,24 +77,26 @@
         });
         for (const name of ['status']) filters.elements[name].disabled = state.tab === 'sync';
         const filterSummary = filters.querySelector('[data-filter-summary]');
-        filterSummary.textContent = filters.elements.survey_status.selectedOptions[0]?.textContent || '';
-        filterSummary.dataset.default = String(state.survey_status === 'completed');
+        filterSummary.textContent = [...filters.elements.survey_status.selectedOptions].map(option => option.textContent).join('، ') || 'كل حالات الاستبيان';
+        filterSummary.dataset.default = String(values(state.survey_status).length === 1 && values(state.survey_status).includes('completed'));
         if (filters.elements.priority) filters.elements.priority.disabled = state.tab === 'sync';
         filters.hidden = state.tab === 'sync';
         const chips = filters.querySelector('[data-active-filters]');
         chips.replaceChildren();
         let advancedCount = 0;
         for (const input of [...filters.elements]) {
-            const value = state[input.name];
-            if (!input.name || value === undefined || value === null || value === '') continue;
-            if (advancedFilters.contains(input)) advancedCount++;
+            const selected = values(state[input.name]);
+            if (!input.name || !selected.length) continue;
+            if (advancedFilters.contains(input)) advancedCount += selected.length;
             const label = input.dataset.filterLabel || [input.closest('.reh-filter-range')?.querySelector('strong')?.textContent, filters.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent].filter(Boolean).join(' ') || input.name;
-            const text = input.tagName === 'SELECT' ? input.selectedOptions[0]?.textContent : value;
-            const chip = document.createElement('button');
-            chip.type = 'button'; chip.className = 'reh-filter-chip'; chip.dataset.removeFilter = input.name;
-            chip.textContent = `${label}: ${text} ×`;
-            chip.setAttribute('aria-label', `إزالة فلتر ${label}`);
-            chips.append(chip);
+            selected.forEach(value => {
+                const text = input.tagName === 'SELECT' ? [...input.options].find(option => option.value === String(value))?.textContent : value;
+                const chip = document.createElement('button');
+                chip.type = 'button'; chip.className = 'reh-filter-chip'; chip.dataset.removeFilter = input.name; chip.dataset.removeValue = value;
+                chip.textContent = `${label}: ${text} ×`;
+                chip.setAttribute('aria-label', `إزالة ${text} من فلتر ${label}`);
+                chips.append(chip);
+            });
         }
         filters.querySelector('[data-advanced-count]').textContent = advancedCount;
         updateSurveyFilters();
@@ -400,18 +423,21 @@
     }
 
     function updateSurveyFilters() {
-        const value = name => filters.elements.namedItem(name)?.value || '';
+        const value = name => inputValues(filters.elements.namedItem(name));
+        const workItem = filters.elements.namedItem('work_item');
+        const workState = filters.elements.namedItem('work_state');
+        if (value('work_item').length && !value('work_state').length) {
+            [...workState.options].forEach(option => { option.selected = option.value === 'positive'; });
+            if (window.jQuery) window.jQuery(workState).trigger('change.select2');
+        }
         advancedFilters.querySelectorAll('[data-filter-parent], [data-work-condition]').forEach(field => {
             const eligible = field.dataset.filterParent
-                ? value(field.dataset.filterParent) === field.dataset.filterParentValue
-                : Boolean(value('work_item')) && (field.dataset.workCondition === 'item' || value('work_state') === 'positive');
+                ? value(field.dataset.filterParent).includes(field.dataset.filterParentValue)
+                : value('work_item').length > 0 && (field.dataset.workCondition === 'item' || value('work_state').includes('positive'));
             field.dataset.inapplicable = String(!eligible);
             field.querySelectorAll('[name]').forEach(input => {
                 input.disabled = !eligible;
-                if (!eligible && input.value !== '') {
-                    input.value = '';
-                    if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
-                }
+                if (!eligible) clearInput(input);
             });
         });
         const normalize = text => text.normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g, '').replace(/[أإآ]/g, 'ا').replace(/ء/g, '').replace(/ى/g, 'ي').trim().toLowerCase();
@@ -429,7 +455,7 @@
             section.hidden = Boolean(search) && matches === 0;
             if (!section.hidden) sections++;
             if (search && !section.hidden) section.open = true;
-            const count = [...section.querySelectorAll('[name]')].filter(input => !input.disabled && input.value !== '').length;
+            const count = [...section.querySelectorAll('[name]')].reduce((sum, input) => sum + (input.disabled ? 0 : inputValues(input).length), 0);
             section.querySelector('[data-section-count]').textContent = count ? `${count} محدد` : '';
         });
         advancedFilters.querySelector('[data-filter-search-status]').textContent = search ? `${sections} أقسام مطابقة` : 'اختر قسمًا، أو ابحث عن سؤال أو خيار إجابة.';
@@ -438,7 +464,12 @@
     function changeFilters() {
         updateSurveyFilters();
         const cleared = Object.fromEntries([...filters.elements].filter(input => input.name).map(input => [input.name, '']));
-        state = { ...state, ...cleared, ...Object.fromEntries(new FormData(filters)), mine: '', page: 1 };
+        const collected = {};
+        for (const input of [...filters.elements]) {
+            if (input.name && !input.disabled) collected[input.name] = input.multiple ? inputValues(input) : input.value;
+        }
+        if (!values(collected.survey_status).length) collected.survey_status = ['all'];
+        state = { ...state, ...cleared, ...collected, mine: '', page: 1 };
         return load();
     }
     filters.addEventListener('submit', async event => {
@@ -450,7 +481,12 @@
     });
     filters.addEventListener('input', event => { if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (event.target.name === 'q') { clearTimeout(debounce); debounce = setTimeout(changeFilters, 350); } });
     filters.addEventListener('change', event => { if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (event.target.name !== 'q' && !advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
-    if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:clear.reh', 'select', event => { if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
+    if (window.jQuery) window.jQuery(filters).on('select2:select.reh select2:unselect.reh select2:clear.reh', 'select', event => { if (event.type === 'select2:select' && event.target.name === 'survey_status') {
+            const selected = event.params?.data?.id;
+            if (selected === 'all') [...event.target.options].forEach(option => { option.selected = option.value === 'all'; });
+            else { const all = [...event.target.options].find(option => option.value === 'all'); if (all) all.selected = false; }
+            window.jQuery(event.target).trigger('change.select2');
+        } if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
     filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1 }; setTimeout(() => load(), 0); });
     advancedFilters.addEventListener('close', () => { advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
     advancedFilters.querySelector('#reh-filter-search').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
@@ -524,18 +560,19 @@
         else if (button.matches('[data-cancel-filters]')) { advancedFilters.close(); }
         else if (button.matches('[data-clear-advanced]')) {
             advancedFilters.querySelectorAll('[name]').forEach(input => {
-                input.value = '';
-                if (input.tagName === 'SELECT' && window.jQuery) window.jQuery(input).trigger('change.select2');
+                clearInput(input);
             });
             updateSurveyFilters();
         }
         else if (button.matches('[data-remove-filter]')) {
-            advancedFilters.querySelectorAll('[data-filter-parent]').forEach(field => {
-                if (field.dataset.filterParent === button.dataset.removeFilter) field.querySelectorAll('[name]').forEach(input => { state[input.name] = ''; });
-            });
-            if (['work_item', 'work_state'].includes(button.dataset.removeFilter)) ['work_item', 'work_state', 'work_min', 'work_max'].forEach(key => { state[key] = ''; });
             clearTimeout(debounce);
-            state[button.dataset.removeFilter] = button.dataset.removeFilter === 'survey_status' ? 'all' : '';
+            const key = button.dataset.removeFilter;
+            const remaining = values(state[key]).filter(value => String(value) !== button.dataset.removeValue);
+            state[key] = remaining.length ? remaining : key === 'survey_status' ? ['all'] : '';
+            advancedFilters.querySelectorAll('[data-filter-parent]').forEach(field => {
+                if (field.dataset.filterParent === key && !remaining.includes(field.dataset.filterParentValue)) field.querySelectorAll('[name]').forEach(input => { state[input.name] = ''; });
+            });
+            if (['work_item', 'work_state'].includes(key) && !remaining.length) ['work_item', 'work_state', 'work_min', 'work_max'].forEach(name => { state[name] = ''; });
             state.page = 1; await load();
         }
         else if (button.matches('[data-export-pdf], [data-pdf-download]')) { await downloadFile(button, button.dataset.pdfDownload || root.dataset.pdfUrl + '?' + query()); }
@@ -654,7 +691,7 @@
     });
 
     window.addEventListener('popstate', event => {
-        state = event.state?.filters || { tab: 'overview', survey_status: 'completed', ...Object.fromEntries(new URLSearchParams(location.search)) };
+        state = event.state?.filters || { tab: 'overview', survey_status: 'completed', ...readQuery() };
         load(false);
         if (event.state?.detailUrl) openDetail(event.state.detailUrl, false);
         else if (detail.open) closeDetail();

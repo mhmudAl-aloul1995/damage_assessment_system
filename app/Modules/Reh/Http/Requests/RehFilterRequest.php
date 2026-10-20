@@ -3,6 +3,7 @@
 namespace App\Modules\Reh\Http\Requests;
 
 use App\Modules\Reh\Services\RehAdvancedFilters;
+use App\Modules\Reh\Services\RehFilterChoices;
 use App\Modules\Reh\Services\RehSurveyFilters;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -63,6 +64,23 @@ class RehFilterRequest extends FormRequest
         foreach (['score' => 100, 'engineering' => 40, 'social' => 60, 'household' => 1000000] as $prefix => $maximum) {
             $rules[$prefix.'_min'] = ['nullable', 'integer', 'min:0', 'max:'.$maximum];
             $rules[$prefix.'_max'] = ['nullable', 'integer', 'min:0', 'max:'.$maximum, ...($this->filled($prefix.'_min') ? ['gte:'.$prefix.'_min'] : [])];
+        }
+
+        $choices = [
+            'priority' => [...array_keys(\App\Modules\Reh\Services\RehScoring::PRIORITIES), 'unclassified'],
+            'survey_status' => array_keys(\App\Modules\Reh\Services\RehSurvey::FIELD_STATUSES),
+            'status' => array_keys(\App\Modules\Reh\Services\RehSurvey::WORKFLOW),
+            'governorate' => array_keys(app(\App\Modules\Reh\Services\RehSurvey::class)->dictionary()['choices']['governorate']),
+            'neighborhood' => array_keys(app(\App\Modules\Reh\Services\RehSurvey::class)->dictionary()['choices']['neighborhood']),
+            'evaluation' => ['complete', 'incomplete'], 'decision' => ['pending', 'selected', 'excluded'],
+            'edits' => ['yes', 'no'], 'hosting' => ['yes', 'no', '__missing'], 'owner_disability' => ['yes', 'no', '__missing'], 'family_chronic' => ['yes', 'no', '__missing'],
+        ];
+        foreach ($choices as $key => $options) {
+            $rules = [...$rules, ...RehFilterChoices::rules($this->all(), $key, $options, $key === 'survey_status')];
+        }
+        if (is_array($this->input('engineer'))) {
+            $rules['engineer'] = ['nullable', 'array', 'max:100'];
+            $rules['engineer.*'] = ['required', 'string', 'distinct', 'max:100'];
         }
 
         return [...$rules, ...app(RehSurveyFilters::class)->rules($this->all())];
