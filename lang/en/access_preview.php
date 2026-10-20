@@ -7,7 +7,7 @@ return [
     'user_mode' => 'As a user — all their roles and permissions',
     'role_mode' => 'As a role — only this role’s permissions',
     'user' => 'User / data context',
-    'user_help' => 'Uses this user’s identity, region, phases and assignments. Role mode temporarily replaces their permissions with those of the selected role only.',
+    'user_help' => 'All accounts are listed. Activate an inactive account in user management before trying it. Uses this user’s identity, region, phases and assignments. Role mode temporarily replaces their permissions with those of the selected role only.',
     'role' => 'Role to try',
     'choose_role' => 'Choose a role',
     'role_help' => 'Used for role mode. The account’s saved roles and permissions remain unchanged.',

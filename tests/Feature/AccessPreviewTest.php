@@ -49,6 +49,26 @@ it('only allows database officers to open and start a preview', function (): voi
         ->assertSee($this->target->email)->assertSee(__('access_preview.live_notice'));
 });
 
+it('lists active and inactive users and labels inactive accounts without enabling them', function (string $locale): void {
+    $inactiveUser = User::factory()->create(['is_active' => false]);
+    $this->officer->update(['preferred_locale' => $locale]);
+
+    $response = $this->actingAs($this->officer)->get(route('access-preview.create'))->assertOk()
+        ->assertViewHas('users', fn ($users): bool => $users->modelKeys() === User::query()->orderBy('name')->pluck('id')->all())
+        ->assertSee($inactiveUser->email)
+        ->assertSee($this->target->email);
+
+    $document = new DOMDocument;
+    @$document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+    $options = collect($document->getElementById('preview-user')->getElementsByTagName('option'))
+        ->keyBy(fn (DOMElement $option): string => $option->getAttribute('value'));
+
+    expect($options[$inactiveUser->id]->textContent)->toContain(__('ui.users.inactive'))
+        ->and($options[$inactiveUser->id]->hasAttribute('disabled'))->toBeTrue()
+        ->and($options[$this->target->id]->hasAttribute('disabled'))->toBeFalse()
+        ->and($inactiveUser->fresh()->is_active)->toBeFalse();
+})->with(['ar', 'en']);
+
 it('uses the target identity permissions and phase without changing the login or remember token', function (): void {
     $this->target->assignRole(Role::findOrCreate('Field Engineer', 'web'));
     $this->target->givePermissionTo(Permission::findOrCreate('users.view', 'web'));

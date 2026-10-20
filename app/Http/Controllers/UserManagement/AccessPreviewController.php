@@ -20,7 +20,7 @@ class AccessPreviewController extends Controller
         abort_unless($this->preview->canStart($request->user(), $request), 403);
 
         return view('UserManagement.access_preview', [
-            'users' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'email']),
+            'users' => User::query()->orderBy('name')->get(['id', 'name', 'email', 'is_active']),
             'roles' => Role::query()->where('guard_name', 'web')->orderBy('name')->get(['id', 'name']),
             'selectedUserId' => $request->integer('user_id', $request->user()->id),
         ]);

@@ -27,7 +27,7 @@
                     <label for="preview-user" class="form-label required">{{ __('access_preview.user') }}</label>
                     <select id="preview-user" name="user_id" class="form-select" data-control="select2" aria-describedby="preview-user-help" required>
                         @foreach($users as $previewUser)
-                            <option value="{{ $previewUser->id }}" @selected((int) old('user_id', $selectedUserId) === $previewUser->id)>{{ $previewUser->name }} — {{ $previewUser->email }}</option>
+                            <option value="{{ $previewUser->id }}" @disabled(! $previewUser->is_active) @selected($previewUser->is_active && (int) old('user_id', $selectedUserId) === $previewUser->id)>{{ $previewUser->name }} — {{ $previewUser->email }}@unless($previewUser->is_active) — {{ __('ui.users.inactive') }}@endunless</option>
                         @endforeach
                     </select>
                     <p id="preview-user-help" class="form-text">{{ __('access_preview.user_help') }}</p>
