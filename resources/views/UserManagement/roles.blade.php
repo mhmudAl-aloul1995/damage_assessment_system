@@ -38,6 +38,9 @@
     }
 </style>
 <div class="app-container container-fluid access-center" id="access-center">
+    @if(app(\App\Support\Access\AccessPreview::class)->canStart(auth()->user(), request()))
+        <div class="mb-5"><a href="{{ route('access-preview.create', ['mode' => 'role']) }}" class="btn btn-warning">{{ __('access_preview.title') }}</a></div>
+    @endif
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-4 mb-7">
         <div><h2 class="fs-2x fw-bold mb-2">{{ __('access.title') }}</h2><p class="text-muted mb-0">{{ __('access.subtitle') }}</p></div>
         @if($canViewUsers)<a href="{{ route('users.index') }}" class="btn btn-light">{{ __('access.users') }}</a>@endif

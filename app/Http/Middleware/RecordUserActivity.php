@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\UserActivityLog;
+use App\Support\Access\AccessPreview;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -91,6 +92,10 @@ class RecordUserActivity
     {
         $path = trim($request->path(), '/');
 
+        if ($request->attributes->has(AccessPreview::SESSION_KEY) && ! $request->isMethod('GET') && $request->is('livewire/*')) {
+            return false;
+        }
+
         if (in_array($path, self::TECHNICAL_PATHS, true)) {
             return true;
         }
@@ -140,6 +145,11 @@ class RecordUserActivity
 
     private function description(Request $request, ?string $routeName): string
     {
+        if ($preview = $request->attributes->get(AccessPreview::SESSION_KEY)) {
+            return Str::limit('Access preview by '.$preview['actor_name'].' (#'.$preview['actor_id'].') as '.$preview['user_name']
+                .($preview['role_name'] ? ' / '.$preview['role_name'] : '').': '.($routeName ?? $request->path()), 250);
+        }
+
         if ($routeName !== null) {
             return Str::headline(str_replace(['.', '-'], ' ', $routeName));
         }
@@ -153,6 +163,8 @@ class RecordUserActivity
     private function metadata(Request $request): array
     {
         return [
+            ...($request->attributes->has(AccessPreview::SESSION_KEY)
+                ? ['access_preview' => $request->attributes->get(AccessPreview::SESSION_KEY)] : []),
             'query' => $request->query(),
             'input_keys' => array_values(array_diff(
                 array_keys(Arr::except($request->input(), [

@@ -12,6 +12,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemLogController;
 use App\Http\Controllers\UserActivityLogController;
+use App\Http\Controllers\UserManagement\AccessPreviewController;
 use App\Http\Controllers\UserManagement\PermissionController;
 use App\Http\Controllers\UserManagement\RoleController;
 use App\Http\Controllers\UserManagement\UserAccessController;
@@ -244,6 +245,11 @@ Route::get('/dashboard', function (Request $request) {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/access-preview', [AccessPreviewController::class, 'create'])->name('access-preview.create');
+    Route::post('/access-preview', [AccessPreviewController::class, 'store'])->name('access-preview.store');
+    Route::get('/access-preview/active', [AccessPreviewController::class, 'show'])->name('access-preview.show');
+    Route::post('/access-preview/stop', [AccessPreviewController::class, 'destroy'])->name('access-preview.destroy');
+
     Route::get('/notifications/{notification}/open', [NotificationController::class, 'open'])
         ->name('notifications.open');
 

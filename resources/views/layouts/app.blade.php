@@ -1593,6 +1593,7 @@
 								</div>
 							</div>
 
+							@include('layouts.partials.access-preview-banner')
 							@yield('content')
 
 						</div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApplyAccessPreview;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\NormalizeDuplicatedBasePath;
 use App\Http\Middleware\NormalizeLegacyLoginRedirects;
@@ -26,11 +27,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            ApplyAccessPreview::class,
             SetLocale::class,
             SetSelectedPhase::class,
             EnsureUserIsActive::class,
             RecordUserActivity::class,
         ]);
+
+        $middleware->prependToPriorityList(\Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class, ApplyAccessPreview::class);
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -42,6 +46,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(fn (\Illuminate\Http\Request $request, \Throwable $exception): bool => $request->is('api/v1/*') || $request->routeIs('api.v1.*') || $request->expectsJson());
 
         $exceptions->respond(function ($response) {
+            if ($response->getStatusCode() === 403 && request()->attributes->has(\App\Support\Access\AccessPreview::SESSION_KEY) && ! request()->expectsJson()) {
+                return response()->view('UserManagement.access_preview_denied', [], 403);
+            }
+
             if ($response->getStatusCode() === 419) {
                 return redirect()->to(app_route('login'))->with('error', __('ui.messages.session_expired'));
             }

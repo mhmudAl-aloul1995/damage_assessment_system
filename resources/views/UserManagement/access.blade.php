@@ -9,6 +9,9 @@
         <a href="{{ route('users.index') }}" class="btn btn-light">{{ __('access.users') }}</a>
     </div>
     @unless($user->is_active)<div class="alert alert-warning">{{ __('access.inactive_notice') }}</div>@endunless
+    @if($user->is_active && app(\App\Support\Access\AccessPreview::class)->canStart(auth()->user(), request()))
+        <div class="mb-5"><a href="{{ route('access-preview.create', ['user_id' => $user->id]) }}" class="btn btn-warning">{{ __('access_preview.title') }}</a></div>
+    @endif
     @if($user->hasRole('Database Officer'))<div class="alert alert-info">{{ __('access.admin_notice') }}</div>@endif
     <div class="alert alert-light border">{{ __('access.legacy_notice') }}</div>
     <div class="row g-5 mb-6">

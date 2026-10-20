@@ -4,6 +4,9 @@
 @section('pageName', __('ui.users.title'))
 
 @section('content')
+    @if(app(\App\Support\Access\AccessPreview::class)->canStart(auth()->user(), request()))
+        <div class="mb-5"><a href="{{ route('access-preview.create') }}" class="btn btn-warning">{{ __('access_preview.title') }}</a></div>
+    @endif
     <div class="card">
         <div class="card-header border-0 pt-6">
             <div class="card-title">
