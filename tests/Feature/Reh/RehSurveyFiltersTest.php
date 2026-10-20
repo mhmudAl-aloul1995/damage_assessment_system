@@ -79,7 +79,11 @@ it('enforces scope permissions and valid dependencies on every result endpoint',
 
 it('binds every offered field to an existing column and renders the survey choice labels', function (): void {
     foreach (app(RehSurveyFilters::class)->definitions() as $definition) {
-        expect(RehSurveyColumns::FIELDS[$definition['scope']])->toHaveKey($definition['field']);
+        if ($definition['field'] === 'location') {
+            expect($definition['column'])->toBe('geometry');
+        } else {
+            expect(RehSurveyColumns::FIELDS[$definition['scope']])->toHaveKey($definition['field']);
+        }
     }
     $this->get(route('reh.index'))->assertOk()->assertSee('نعم، غير متاح')->assertSee('غير معروف')->assertSee('يشمل أيًّا من الإجابات المختارة')->assertSee('أعمال التأهيل والكميات')->assertSee('استخدم كلمة محددة بدل «هل».')->assertSee('aria-describedby="reh-filter-search-help"', false);
 });

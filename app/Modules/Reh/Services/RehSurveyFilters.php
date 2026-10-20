@@ -31,21 +31,72 @@ class RehSurveyFilters
         }
         $survey = app(RehSurvey::class)->dictionary();
         $definitions = [];
+        $assigned = [];
         foreach (self::GROUPS as $group => [$title, $scope, $sensitive, $fields]) {
             foreach ($fields as $field) {
-                $source = $survey['fields'][$field];
-                $type = $source['type'];
-                $choices = str_starts_with($type, 'select_') ? ($survey['choices'][explode(' ', $type, 2)[1]] ?? []) : [];
-                $definitions['sf_'.$field] = [
-                    'field' => $field, 'column' => RehSurveyColumns::FIELDS[$scope][$field][0],
-                    'type' => in_array($type, ['integer', 'decimal'], true) ? $type : (str_starts_with($type, 'select_multiple') ? 'multiple' : 'choice'),
-                    'label' => $source['label'], 'group' => $group, 'title' => $title, 'scope' => $scope,
-                    'sensitive' => $sensitive, 'choices' => [...$choices, '__missing' => 'غير مسجل'],
-                ];
+                $assigned[$field] = [$group, $title, $sensitive];
             }
+        }
+        foreach ($survey['fields'] as $field => $source) {
+            $scope = $source['scope'];
+            $groupName = $source['group']['name'] ?? '';
+            if (! isset(RehSurveyColumns::FIELDS[$scope][$field]) && $field !== 'location') {
+                throw new \LogicException('Survey filter column is not mapped: '.$field);
+            }
+            [$column, $storageType] = RehSurveyColumns::FIELDS[$scope][$field] ?? ['geometry', 'geometry'];
+            $sourceType = $source['type'];
+            $choices = str_starts_with($sourceType, 'select_') ? ($survey['choices'][explode(' ', $sourceType, 2)[1]] ?? []) : [];
+            $type = match (true) {
+                in_array($sourceType, ['image', 'geoshape'], true) => 'presence',
+                $storageType === 'reference' => 'text',
+                in_array($sourceType, ['integer', 'decimal'], true) => $sourceType,
+                $sourceType === 'date' => 'date',
+                in_array($sourceType, ['dateTime', 'end'], true) => 'datetime',
+                str_starts_with($sourceType, 'select_multiple') => 'multiple',
+                $choices !== [] => 'choice',
+                default => 'text',
+            };
+            if (isset($assigned[$field])) {
+                [$group, $title, $sensitive] = $assigned[$field];
+            } elseif ($scope === 'building') {
+                [$group, $title, $sensitive] = ['building', self::GROUPS['building'][0], false];
+            } elseif (str_starts_with($field, 'boq_')) {
+                [$group, $title, $sensitive] = [$groupName, $source['group']['label'], false];
+            } elseif (in_array($groupName, ['group_additional_work_items', 'group_photo_documentation'], true)) {
+                [$group, $title, $sensitive] = [$groupName, $source['group']['label'], false];
+            } elseif (str_starts_with($groupName, 'group_nonowner') || $groupName === 'group_hosted_person') {
+                [$group, $title, $sensitive] = ['other', self::GROUPS['other'][0], true];
+            } elseif (in_array($groupName, ['group_household_composition', 'group_social_vulnerability'], true) || $field === 'hosts_other_households') {
+                [$group, $title, $sensitive] = ['family', self::GROUPS['family'][0], true];
+            } elseif (in_array($groupName, ['group_unit_identification', 'group_unit_characteristics', 'group_unit_safety'], true)) {
+                [$group, $title, $sensitive] = ['unit', self::GROUPS['unit'][0], false];
+            } else {
+                [$group, $title, $sensitive] = ['owner', self::GROUPS['owner'][0], true];
+            }
+            $label = ['Field_status' => 'حالة الاستبيان في المصدر', 'Old_objectID' => 'معرّف المبنى', 'objectid' => 'معرّف السجل في المصدر', 'collector_display_ip' => 'بيانات الباحث المسجلة', 'breadwinner_child_age' => 'عمر الابن أو الابنة المعيلين'][$field] ?? $source['label'];
+            $definitions['sf_'.$field] = [
+                'field' => $field, 'column' => $column, 'type' => $type,
+                'label' => $label, 'group' => $group, 'title' => $title, 'scope' => $scope,
+                'sensitive' => $sensitive, 'choices' => [...$choices, '__missing' => 'غير مسجل'],
+                'operators' => RehFilterOperators::choices($type), 'default_operator' => RehFilterOperators::default($type),
+                'context' => $source['group']['label'] ?? '',
+            ];
         }
 
         return $this->definitions = $definitions;
+    }
+
+    public function groups(): array
+    {
+        $groups = [];
+        foreach (self::GROUPS as $key => [$title, $scope, $sensitive]) {
+            $groups[$key] = [$title, $scope, $sensitive];
+        }
+        foreach ($this->definitions() as $definition) {
+            $groups[$definition['group']] = [$definition['title'], $definition['scope'], $definition['sensitive']];
+        }
+
+        return $groups;
     }
 
     public function keys(?string $scope = null, bool $sensitiveOnly = false): array
@@ -55,7 +106,7 @@ class RehSurveyFilters
             if (($scope !== null && $definition['scope'] !== $scope) || ($sensitiveOnly && ! $definition['sensitive'])) {
                 continue;
             }
-            $keys = [...$keys, ...(in_array($definition['type'], ['integer', 'decimal'], true) ? [$key.'_min', $key.'_max'] : [$key])];
+            $keys = [...$keys, $key, $key.'_op', ...(in_array($definition['type'], ['integer', 'decimal', 'date', 'datetime'], true) ? [$key.'_min', $key.'_max'] : [])];
         }
 
         return $scope === 'building' || $sensitiveOnly ? $keys : [...$keys, 'work_item', 'work_state', 'work_min', 'work_max', 'intervention_min', 'intervention_max', 'additional_work'];
@@ -70,15 +121,41 @@ class RehSurveyFilters
     {
         $rules = [];
         foreach ($this->definitions() as $key => $definition) {
-            if (in_array($definition['type'], ['integer', 'decimal'], true)) {
-                $rules[$key.'_min'] = ['nullable', $definition['type'] === 'integer' ? 'integer' : 'numeric', 'min:0', 'max:1000000'];
-                $rules[$key.'_max'] = [...$rules[$key.'_min'], ...(isset($input[$key.'_min']) && $input[$key.'_min'] !== '' ? ['gte:'.$key.'_min'] : [])];
-            } else {
+            $type = $definition['type'];
+            $operator = $input[$key.'_op'] ?? $definition['default_operator'];
+            $presence = in_array($operator, ['blank', 'not_blank'], true);
+            $rules[$key.'_op'] = ['nullable', 'string', Rule::in(array_keys($definition['operators']))];
+            if (in_array($type, ['integer', 'decimal', 'date', 'datetime'], true)) {
+                $valueRules = match ($type) {
+                    'integer' => ['integer', 'between:-1000000,1000000'],
+                    'decimal' => ['numeric', 'between:-1000000,1000000'],
+                    'date' => ['date_format:Y-m-d'],
+                    'datetime' => ['date_format:Y-m-d\\TH:i,Y-m-d\\TH:i:s'],
+                };
+                $rules[$key] = ['nullable', ...$valueRules, Rule::prohibitedIf($presence || $operator === 'between')];
+                foreach (['min', 'max'] as $bound) {
+                    $rules[$key.'_'.$bound] = ['nullable', ...$valueRules, Rule::prohibitedIf($presence || $operator !== 'between')];
+                }
+                if (isset($input[$key.'_min']) && $input[$key.'_min'] !== '') {
+                    $rules[$key.'_max'][] = in_array($type, ['date', 'datetime'], true) ? 'after_or_equal:'.$key.'_min' : 'gte:'.$key.'_min';
+                }
+            } elseif (in_array($type, ['choice', 'multiple'], true)) {
                 $rules = [...$rules, ...RehFilterChoices::rules($input, $key, array_keys($definition['choices']))];
+                $rules[$key][] = Rule::prohibitedIf($presence);
+            } else {
+                $rules[$key] = ['nullable', 'string', 'max:1000', Rule::prohibitedIf($presence || $type === 'presence')];
+            }
+            if (! empty($input[$key.'_op']) && ! $presence) {
+                $rules[$operator === 'between' ? $key.'_min' : $key][] = Rule::requiredIf($operator !== 'between' || ! isset($input[$key.'_max']) || $input[$key.'_max'] === '');
             }
         }
         foreach (self::DEPENDENCIES as $key => [$parent, $value]) {
-            $rules[$key][] = Rule::prohibitedIf(! RehFilterChoices::contains($input[$parent] ?? null, $value));
+            $operator = $input[$key.'_op'] ?? null;
+            $parentOperator = $input[$parent.'_op'] ?? 'is';
+            $allowed = in_array($operator, ['blank', 'not_blank'], true) || $parentOperator === 'is' && RehFilterChoices::contains($input[$parent] ?? null, $value);
+            foreach ([$key, $key.'_op'] as $part) {
+                $rules[$part][] = Rule::prohibitedIf(! $allowed);
+            }
         }
         $rules = [...$rules, ...RehFilterChoices::rules($input, 'work_item', array_keys($this->workItems()))];
         $rules = [...$rules, ...RehFilterChoices::rules($input, 'work_state', ['positive', 'zero', 'missing'])];
@@ -105,27 +182,9 @@ class RehSurveyFilters
             if ($definition['scope'] !== $scope) {
                 continue;
             }
-            $column = $query->qualifyColumn($definition['column']);
-            if (in_array($definition['type'], ['integer', 'decimal'], true)) {
-                $this->range($query, $column, $filters, $key);
-
-                continue;
+            if (RehFilterOperators::active($filters, $key)) {
+                app(RehFilterOperators::class)->apply($query, $query->qualifyColumn($definition['column']), $definition, $filters, $key);
             }
-            $value = $filters[$key] ?? null;
-            if ($value === null || $value === '') {
-                continue;
-            }
-            $query->where(function (Builder $q) use ($definition, $column, $value): void {
-                foreach (RehFilterChoices::values($value) as $choice) {
-                    $q->orWhere(function (Builder $branch) use ($definition, $column, $choice): void {
-                        if ($definition['type'] === 'multiple' && $choice !== '__missing') {
-                            $this->token($branch, $column, $choice);
-                        } else {
-                            RehFilterChoices::apply($branch, $column, $choice);
-                        }
-                    });
-                }
-            });
         }
         if ($scope === 'unit') {
             if (! empty($filters['work_item'])) {
@@ -174,21 +233,14 @@ class RehSurveyFilters
         }
     }
 
-    private function token(Builder $query, string $column, string $value): void
-    {
-        $column = $query->getQuery()->getGrammar()->wrap($column);
-        $normalized = "REPLACE(REPLACE(REPLACE(REPLACE($column, ',', ' '), CHAR(9), ' '), CHAR(10), ' '), CHAR(13), ' ')";
-        $expression = $query->getConnection()->getDriverName() === 'sqlite' ? "' ' || $normalized || ' '" : "CONCAT(' ', $normalized, ' ')";
-        $value = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value);
-        $query->whereRaw("($expression) LIKE ? ESCAPE '!'", ['% '.$value.' %']);
-    }
-
     public function labels(): array
     {
         $labels = ['work_item' => 'بند الأعمال', 'work_state' => 'حالة الكمية', 'work_min' => 'كمية الأعمال من', 'work_max' => 'كمية الأعمال إلى', 'intervention_min' => 'مساحة التدخل من', 'intervention_max' => 'مساحة التدخل إلى', 'additional_work' => 'بنود إضافية'];
         foreach ($this->definitions() as $key => $definition) {
             $label = $definition['title'].' · '.$definition['label'];
-            if (in_array($definition['type'], ['integer', 'decimal'], true)) {
+            $labels[$key] = $label;
+            $labels[$key.'_op'] = $label.' · الشرط';
+            if (in_array($definition['type'], ['integer', 'decimal', 'date', 'datetime'], true)) {
                 $labels[$key.'_min'] = $label.' من';
                 $labels[$key.'_max'] = $label.' إلى';
             } else {
@@ -202,17 +254,28 @@ class RehSurveyFilters
     public function summary(array $filters): array
     {
         $summary = [];
-        foreach ($this->labels() as $key => $label) {
-            $value = $filters[$key] ?? null;
-            if ($value === null || $value === '') {
+        foreach ($this->definitions() as $key => $definition) {
+            if (! RehFilterOperators::active($filters, $key)) {
                 continue;
             }
-            $summary[$label] = implode('، ', array_map(fn ($choice): string => (string) ($this->definitions()[$key]['choices'][$choice] ?? match ($key) {
+            $operator = $filters[$key.'_op'] ?? $definition['default_operator'];
+            $values = in_array($operator, ['blank', 'not_blank'], true) ? [] : ($operator === 'between' ? [$filters[$key.'_min'] ?? '…', $filters[$key.'_max'] ?? '…'] : RehFilterChoices::values($filters[$key] ?? null));
+            $answers = array_map(fn ($value): string => (string) ($definition['choices'][$value] ?? $value), array_values($values));
+            $operatorLabel = $definition['operators'][$operator] ?? '';
+            $answer = implode($operator === 'between' ? ' — ' : '، ', $answers);
+            $summary[$definition['title'].' · '.$definition['label']] = in_array($operator, ['blank', 'not_blank'], true) ? $operatorLabel : ($operator === $definition['default_operator'] && ! isset($filters[$key.'_op']) && $operator !== 'between' ? '' : $operatorLabel.' · ').$answer;
+        }
+        foreach (['work_item', 'work_state', 'work_min', 'work_max', 'intervention_min', 'intervention_max', 'additional_work'] as $key) {
+            $values = RehFilterChoices::values($filters[$key] ?? null);
+            if ($values === []) {
+                continue;
+            }
+            $summary[$this->labels()[$key]] = implode('، ', array_map(fn ($choice): string => match ($key) {
                 'work_item' => $this->workItems()[$choice]['label'],
                 'work_state' => ['positive' => 'أكبر من صفر', 'zero' => 'صفر مسجل', 'missing' => 'غير مسجل'][$choice],
                 'additional_work' => $choice === 'yes' ? 'نعم' : 'لا',
                 default => (string) $choice,
-            }), RehFilterChoices::values($value)));
+            }, $values));
         }
 
         return $summary;

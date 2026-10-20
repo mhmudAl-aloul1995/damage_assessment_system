@@ -13,7 +13,7 @@ class RehFilterRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         foreach (RehSurveyFilters::DEPENDENCIES as $child => [$parent, $value]) {
-            if ($this->filled($child) && ! $this->filled($parent)) {
+            if ($this->filled($child) && ! $this->filled($parent) && ! in_array($this->input($child.'_op'), ['blank', 'not_blank'], true)) {
                 $this->merge([$parent => $value]);
             }
         }

@@ -86,7 +86,7 @@
         let advancedCount = 0;
         for (const input of [...filters.elements]) {
             const selected = values(state[input.name]);
-            if (!input.name || !selected.length) continue;
+            if (!input.name || !selected.length || input.closest('[data-survey-condition]')) continue;
             if (advancedFilters.contains(input)) advancedCount += selected.length;
             const label = input.dataset.filterLabel || [input.closest('.reh-filter-range')?.querySelector('strong')?.textContent, filters.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent].filter(Boolean).join(' ') || input.name;
             selected.forEach(value => {
@@ -98,6 +98,23 @@
                 chips.append(chip);
             });
         }
+        advancedFilters.querySelectorAll('[data-survey-condition]').forEach(field => {
+            const key = field.dataset.surveyCondition;
+            const operator = state[key + '_op'] || field.dataset.conditionDefault;
+            const presence = ['blank', 'not_blank'].includes(operator);
+            const selected = presence ? [] : operator === 'between' ? [state[key + '_min'] || '', state[key + '_max'] || ''] : values(state[key]);
+            if (!presence && !selected.some(value => value !== '' && value !== null && value !== undefined)) return;
+            advancedCount++;
+            const label = field.querySelector('.reh-condition-heading label').textContent;
+            const operatorLabel = field.querySelector(`[data-condition-option="${CSS.escape(operator)}"]`)?.textContent || '';
+            const input = filters.elements.namedItem(key);
+            const texts = selected.map(value => value === '' ? '…' : input?.tagName === 'SELECT' ? [...input.options].find(option => option.value === String(value))?.textContent || value : value);
+            const chip = document.createElement('button');
+            chip.type = 'button'; chip.className = 'reh-filter-chip'; chip.dataset.removeCondition = key;
+            chip.textContent = `${label}: ${operatorLabel}${texts.length ? ' · ' + texts.join(operator === 'between' ? ' — ' : '، ') : ''} ×`;
+            chip.setAttribute('aria-label', `إزالة شرط ${label}`);
+            chips.append(chip);
+        });
         filters.querySelector('[data-advanced-count]').textContent = advancedCount;
         updateSurveyFilters();
     }
@@ -425,7 +442,32 @@
         if (group.getLayers().length) map.fitBounds(group.getBounds(), { padding: [25, 25], maxZoom: 16 });
     }
 
+    function closeConditionMenus() {
+        advancedFilters.querySelectorAll('[data-condition-trigger]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+        advancedFilters.querySelectorAll('.reh-condition-menu').forEach(menu => { menu.hidden = true; });
+    }
+
+    function updateConditionFields() {
+        advancedFilters.querySelectorAll('[data-survey-condition]').forEach(field => {
+            const operator = field.querySelector('[data-condition-operator]').value || field.dataset.conditionDefault;
+            const presence = ['blank', 'not_blank'].includes(operator);
+            const option = field.querySelector(`[data-condition-option="${CSS.escape(operator)}"]`);
+            field.querySelector('[data-condition-label]').textContent = option?.textContent || 'الكل';
+            field.querySelector('[data-condition-trigger]').dataset.active = String(operator !== field.dataset.conditionDefault);
+            field.querySelectorAll('[data-condition-option]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.conditionOption === operator)));
+            field.querySelectorAll('[data-condition-single], [data-condition-range]').forEach(part => {
+                const visible = !presence && (part.hasAttribute('data-condition-range') ? operator === 'between' : operator !== 'between');
+                part.hidden = !visible;
+                part.querySelectorAll('[name]').forEach(input => { input.disabled = !visible; if (!visible) clearInput(input); });
+            });
+            const noValue = field.querySelector('[data-condition-no-value]');
+            noValue.hidden = !presence && field.dataset.conditionType !== 'presence';
+            noValue.textContent = presence ? 'لا يلزم اختيار إجابة' : 'اختر فارغ أو غير فارغ';
+        });
+    }
+
     function updateSurveyFilters() {
+        updateConditionFields();
         const value = name => inputValues(filters.elements.namedItem(name));
         const workItem = filters.elements.namedItem('work_item');
         const workState = filters.elements.namedItem('work_state');
@@ -458,7 +500,8 @@
             section.hidden = Boolean(search) && matches === 0;
             if (!section.hidden) sections++;
             if (search && !section.hidden) section.open = true;
-            const count = [...section.querySelectorAll('[name]')].reduce((sum, input) => sum + (input.disabled ? 0 : inputValues(input).length), 0);
+            const count = [...section.querySelectorAll('[name]')].filter(input => !input.closest('[data-survey-condition]')).reduce((sum, input) => sum + (input.disabled ? 0 : inputValues(input).length), 0)
+                + [...section.querySelectorAll('[data-survey-condition]')].filter(field => ['blank', 'not_blank'].includes(field.querySelector('[data-condition-operator]').value) || [...field.querySelectorAll('[data-condition-value]')].some(input => !input.disabled && inputValues(input).length)).length;
             section.querySelector('[data-section-count]').textContent = count ? `${count} محدد` : '';
         });
         advancedFilters.querySelector('[data-filter-search-status]').textContent = search ? `${sections} أقسام مطابقة` : 'اختر قسمًا، أو ابحث عن سؤال أو خيار إجابة.';
@@ -471,6 +514,10 @@
         for (const input of [...filters.elements]) {
             if (input.name && !input.disabled) collected[input.name] = input.multiple ? inputValues(input) : input.value;
         }
+        advancedFilters.querySelectorAll('[data-survey-condition]').forEach(field => {
+            const operator = field.querySelector('[data-condition-operator]');
+            if (!['blank', 'not_blank'].includes(operator.value) && ![...field.querySelectorAll('[data-condition-value]')].some(input => !input.disabled && inputValues(input).length)) collected[operator.name] = '';
+        });
         if (!values(collected.survey_status).length) collected.survey_status = ['all'];
         state = { ...state, ...cleared, ...collected, mine: '', page: 1 };
         return load();
@@ -491,7 +538,13 @@
             window.jQuery(event.target).trigger('change.select2');
         } if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
     filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1, ...(state.columns ? { columns: state.columns } : {}) }; setTimeout(() => load(), 0); });
-    advancedFilters.addEventListener('close', () => { advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
+    advancedFilters.addEventListener('close', () => { closeConditionMenus(); advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
+    advancedFilters.querySelector('.reh-advanced-body').addEventListener('scroll', closeConditionMenus, { passive: true });
+    window.addEventListener('resize', closeConditionMenus);
+    advancedFilters.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && advancedFilters.querySelector('.reh-condition-menu:not([hidden])')) { event.preventDefault(); closeConditionMenus(); }
+    });
+    document.addEventListener('click', event => { if (!event.target.closest('[data-condition-trigger], .reh-condition-menu')) closeConditionMenus(); });
     advancedFilters.querySelector('#reh-filter-search').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
 
     function initializeExportColumns() {
@@ -606,11 +659,37 @@
             advancedFilters.querySelectorAll('[data-filter-section]').forEach((section, index) => { section.open = index === 0 || Boolean(section.querySelector('[data-section-count]').textContent); });
         }
         else if (button.matches('[data-cancel-filters]')) { advancedFilters.close(); }
+        else if (button.matches('[data-condition-trigger]')) {
+            const field = button.closest('[data-survey-condition]');
+            const menu = field.querySelector('.reh-condition-menu');
+            const opening = menu.hidden;
+            closeConditionMenus();
+            if (opening) {
+                menu.hidden = false; button.setAttribute('aria-expanded', 'true');
+                const rect = button.getBoundingClientRect();
+                const dialog = advancedFilters.getBoundingClientRect();
+                const width = Math.min(230, dialog.width - 32);
+                menu.style.width = width + 'px';
+                menu.style.left = Math.max(dialog.left + 16, Math.min(rect.right - width, dialog.right - width - 16)) + 'px';
+                menu.style.top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 12)) + 'px';
+                menu.querySelector('[aria-pressed="true"]')?.focus();
+            }
+        }
+        else if (button.matches('[data-condition-option]')) {
+            const field = button.closest('[data-survey-condition]');
+            field.querySelector('[data-condition-operator]').value = button.dataset.conditionOption;
+            closeConditionMenus(); updateSurveyFilters(); field.querySelector('[data-condition-trigger]').focus();
+        }
         else if (button.matches('[data-clear-advanced]')) {
             advancedFilters.querySelectorAll('[name]').forEach(input => {
                 clearInput(input);
             });
             updateSurveyFilters();
+        }
+        else if (button.matches('[data-remove-condition]')) {
+            const key = button.dataset.removeCondition;
+            [key, key + '_op', key + '_min', key + '_max'].forEach(name => { delete state[name]; });
+            state.page = 1; await load();
         }
         else if (button.matches('[data-remove-filter]')) {
             clearTimeout(debounce);
