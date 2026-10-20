@@ -17,7 +17,7 @@
     <div class="reh-active-filters" data-active-filters aria-label="الفلاتر المطبقة"></div>
     <dialog id="reh-advanced-filters" class="reh-advanced-dialog" aria-labelledby="reh-advanced-title">
         <header><div><span class="reh-eyebrow">تخصيص النتائج</span><h3 id="reh-advanced-title">فلاتر متقدمة</h3><p>اجمع أكثر من شرط للوصول إلى الملفات المطلوبة.</p></div><button type="button" data-cancel-filters class="btn btn-light btn-sm" aria-label="إغلاق الفلاتر">إغلاق ✕</button></header>
-        <div class="reh-filter-search"><label for="reh-filter-search">ابحث داخل الفلاتر</label><input id="reh-filter-search" type="search" class="form-control" placeholder="مثال: كهرباء، ملكية، بصرية…" autocomplete="off"><small data-filter-search-status role="status" aria-live="polite"></small></div>
+        <div class="reh-filter-search"><label for="reh-filter-search">ابحث داخل الفلاتر</label><input id="reh-filter-search" type="search" class="form-control" placeholder="اكتب موضوع الفلتر: كهرباء، ركام، ملكية…" autocomplete="off" aria-describedby="reh-filter-search-help"><span id="reh-filter-search-help" class="reh-filter-search-help">البحث داخل أسماء الفلاتر وخياراتها؛ استخدم كلمة محددة بدل «هل».</span><small data-filter-search-status role="status" aria-live="polite"></small></div>
         <div class="reh-advanced-body">
             <div data-advanced-message class="alert alert-danger" role="alert" hidden></div>
             <details data-filter-section class="reh-filter-section"><summary><span>01</span> الموقع والزيارة <b data-section-count></b></summary><div class="reh-advanced-grid">

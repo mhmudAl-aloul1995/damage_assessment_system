@@ -81,7 +81,7 @@ it('binds every offered field to an existing column and renders the survey choic
     foreach (app(RehSurveyFilters::class)->definitions() as $definition) {
         expect(RehSurveyColumns::FIELDS[$definition['scope']])->toHaveKey($definition['field']);
     }
-    $this->get(route('reh.index'))->assertOk()->assertSee('نعم، غير متاح')->assertSee('غير معروف')->assertSee('يشمل الإجابة المختارة')->assertSee('أعمال التأهيل والكميات');
+    $this->get(route('reh.index'))->assertOk()->assertSee('نعم، غير متاح')->assertSee('غير معروف')->assertSee('يشمل الإجابة المختارة')->assertSee('أعمال التأهيل والكميات')->assertSee('استخدم كلمة محددة بدل «هل».')->assertSee('aria-describedby="reh-filter-search-help"', false);
 });
 
 it('supports missing legacy social answers without conflating them with no', function (): void {
