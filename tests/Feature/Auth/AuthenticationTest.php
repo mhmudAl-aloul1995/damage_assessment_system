@@ -120,7 +120,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/damage-assessment/damageAssessment');
+    $response->assertRedirect('/profile');
 });
 
 test('field engineers are redirected to their audit page after login', function () {
@@ -197,13 +197,14 @@ test('login ignores stale localhost intended urls', function () {
         ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/damage-assessment/damageAssessment');
+    $response->assertRedirect('/profile');
 });
 
 test('login redirects to configured subdirectory damage assessment dashboard', function () {
     config(['app.url' => 'http://localhost/phc']);
 
     $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Database Officer', 'web'));
 
     $response = $this->post('/login', [
         'email' => $user->email,
@@ -235,8 +236,23 @@ test('users can authenticate from the server subdirectory login path', function 
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect('/damage_assessment_system/damage-assessment/damageAssessment');
+    $response->assertRedirect('/damage_assessment_system/profile');
 });
+
+test('login and dashboard use a permitted workspace for borrowers and reh roles', function (bool $includeBorrowers): void {
+    $user = User::factory()->create();
+    $rehRole = Role::findOrCreate('مسؤول موديول REH', 'web');
+    $rehRole->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('reh.view', 'web'));
+    $user->assignRole($rehRole);
+
+    if ($includeBorrowers) {
+        $user->assignRole(Role::findOrCreate('Project Officer - Borrowers', 'web'));
+    }
+
+    $destination = $includeBorrowers ? '/damage-assessment-borrowers' : '/reh';
+    $this->post('/login', ['email' => $user->email, 'password' => '123456'])->assertRedirect($destination);
+    $this->get('/dashboard')->assertRedirect($destination);
+})->with([true, false]);
 
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();

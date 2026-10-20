@@ -237,11 +237,7 @@ Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('loca
 /* Route::get('/', action: [damageAssessmentController::class, 'index']);
  */
 Route::get('/dashboard', function (Request $request) {
-    if ($request->user()?->hasAnyRole(['Field Engineer', 'field Engineer'])) {
-        return redirect()->to(app_route('audit.fieldEngineer'));
-    }
-
-    return redirect()->to(app_route('damageAssessment.index'));
+    return redirect()->to(\App\Support\Navigation\Sidebar::homeUrl($request->user()));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

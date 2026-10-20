@@ -6,6 +6,7 @@ use App\Support\Navigation\Sidebar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function (): void {
@@ -32,6 +33,36 @@ function sidebarUrlsFor(User $user): array
         ->filter()
         ->all();
 }
+
+it('does not show damage assessment for borrowers and reh users', function (): void {
+    $user = User::factory()->create();
+    $borrowersRole = Role::findOrCreate('Project Officer - Borrowers', 'web');
+    $rehRole = Role::findOrCreate('مسؤول موديول REH', 'web');
+    $rehRole->givePermissionTo(Permission::findOrCreate('reh.view', 'web'));
+    $user->assignRole($borrowersRole, $rehRole);
+
+    $modules = Sidebar::forUser($user);
+
+    expect($modules->pluck('key')->all())->toBe(['damage_assessment_borrowers', 'reh'])
+        ->and(Sidebar::currentModule($modules)['key'])->toBe('damage_assessment_borrowers')
+        ->and(sidebarUrlsFor($user))->not->toContain('damage-assessment/building-deletions')
+        ->and(Sidebar::homeUrl($user))->toBe(app_route('damage-assessment-borrowers.index'));
+});
+
+it('does not invent a damage assessment workspace for users without access', function (): void {
+    $user = User::factory()->create();
+
+    expect(Sidebar::forUser($user))->toBeEmpty()
+        ->and(Sidebar::homeUrl($user))->toBe(app_route('profile.edit'));
+});
+
+it('keeps the deletion menu available through an explicit permission', function (): void {
+    $user = User::factory()->create();
+    $user->givePermissionTo(Permission::findOrCreate('damage-assessment.building-deletion.view', 'web'));
+
+    expect(sidebarUrlsFor($user))->toContain('damage-assessment/building-deletions')
+        ->and(Sidebar::homeUrl($user))->toBe(app_route('building-deletions.index'));
+});
 
 it('shows the sidebar menu for infrastructure Team Leaders', function () {
     $role = Role::findOrCreate('Team Leader -INF', 'web');

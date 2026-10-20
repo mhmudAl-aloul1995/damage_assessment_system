@@ -107,8 +107,8 @@ return [
                         'title' => 'menu.damage_assessment.building_deletion_management',
                         'url' => 'damage-assessment/building-deletions',
                         'pattern' => 'damage-assessment/building-deletions*',
-                        'roles' => ['Database Officer', 'Project Officer', 'Auditing Supervisor', 'QC/QA Engineer'],
-                        'visible_when' => 'building_deletion_requests',
+                        'roles' => ['Database Officer', 'Project Officer', 'MOPWH', 'undp-Project Manager', 'Team Leader', 'Team Leader -INF', 'Area Manager', 'Auditing Supervisor', 'QC/QA Engineer', 'Inf - QC/QA Engineer', 'Legal Auditor', 'Audit Reviewer', 'Field Engineer', 'field Engineer', 'Gis Officer'],
+                        'permissions' => ['damage-assessment.building-deletion.view'],
                     ],
                     [
                         'title' => 'menu.damage_assessment.building_survey_return_requests',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\Navigation\Sidebar;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,42 +31,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $user = Auth::user();
-        $roleNames = $user->getRoleNames();
-
-        if ($roleNames->count() === 1 && $roleNames->contains('Project Officer - Borrowers')) {
-            return redirect()->to(app_route('damage-assessment-borrowers.index'));
-        }
-
-        if ($user->hasRole('Database Officer')) {
-            return redirect()->to(app_route('damageAssessment.index'));
-        }
-
-        if ($user->hasRole('Area Manager')) {
-            return redirect()->to(app_route('damageAssessment.index'));
-        }
-
-        if ($user->hasAnyRole(['Team Leader', 'Team Leader -INF'])) {
-            return redirect()->to(app_route('damageAssessment.index'));
-        }
-
-        if ($user->hasRole('QC/QA Engineer')) {
-            return redirect()->to(app_route('audit.auditBuilding'));
-        }
-
-        if ($user->hasRole('Legal Auditor')) {
-            return redirect()->to(app_route('audit.auditBuilding'));
-        }
-
-        if ($user->hasRole('Auditing Supervisor')) {
-            return redirect()->to(app_route('audit.index'));
-        }
-
-        if ($user->hasAnyRole(['Field Engineer', 'field Engineer'])) {
-            return redirect()->to(app_route('audit.fieldEngineer'));
-        }
-
-        return redirect()->to(app_route('damageAssessment.index'));
+        return redirect()->to(Sidebar::homeUrl($request->user()));
     }
 
     /**

@@ -254,3 +254,24 @@ it('renders both translations and the role entry point', function (): void {
     $this->get(route('users.access', $this->target))->assertOk()
         ->assertSee(route('access-preview.create', ['user_id' => $this->target->id]));
 });
+
+it('uses the preview users workspaces instead of the officers damage assessment workspace', function (string $mode): void {
+    $borrowersRole = Role::findOrCreate('Project Officer - Borrowers', 'web');
+    $rehRole = Role::findOrCreate('مسؤول موديول REH', 'web');
+    $rehRole->givePermissionTo(Permission::findOrCreate('reh.view', 'web'));
+    $this->target->assignRole($borrowersRole, $rehRole);
+
+    $this->actingAs($this->officer)->post(route('access-preview.store'), [
+        'mode' => $mode,
+        'user_id' => $mode === 'user' ? $this->target->id : $this->officer->id,
+        'role_id' => $borrowersRole->id,
+    ])->assertRedirect();
+
+    $this->get(route('access-preview.show'))->assertOk()
+        ->assertSee('title="'.__('مقترضو بنك التنمية الإسلامي').'"', false)
+        ->assertDontSee('data-module-option="damage_assessment"', false)
+        ->assertSee(__('access_preview.stop'));
+    $this->get(route('dashboard'))->assertRedirect(app_route('damage-assessment-borrowers.index'));
+    $this->post(route('access-preview.destroy'))->assertRedirect();
+    $this->get(route('dashboard'))->assertRedirect(app_route('damageAssessment.index'));
+})->with(['user', 'role']);

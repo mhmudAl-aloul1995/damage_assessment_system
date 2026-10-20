@@ -86,6 +86,29 @@ class Sidebar
         return $modules->firstWhere('is_active', true) ?? $modules->first();
     }
 
+    public static function homeUrl(User $user): string
+    {
+        $modules = self::forUser($user);
+
+        if ($modules->contains('key', 'damage_assessment')) {
+            $route = match (true) {
+                $user->hasAnyRole(['Database Officer', 'Area Manager', 'Team Leader', 'Team Leader -INF']) => 'damageAssessment.index',
+                $user->hasAnyRole(['QC/QA Engineer', 'Legal Auditor']) => 'audit.auditBuilding',
+                $user->hasRole('Auditing Supervisor') => 'audit.index',
+                $user->hasAnyRole(['Field Engineer', 'field Engineer']) => 'audit.fieldEngineer',
+                default => null,
+            };
+
+            if ($route !== null) {
+                return app_route($route);
+            }
+        }
+
+        $destination = $modules->first()['url'] ?? null;
+
+        return $destination ? app_path_url($destination) : app_route('profile.edit');
+    }
+
     /**
      * @param  array<string, mixed>  $item
      */
@@ -231,28 +254,9 @@ class Sidebar
     private static function isCustomVisibleItem(array $item, User $user): bool
     {
         return match ($item['visible_when'] ?? null) {
-            'building_deletion_requests' => ! self::isCsoOfficerOnly($user),
             'restricted_lawyer_audit_assignments' => RestrictedLawyerAuditAccess::canViewAssignments($user),
             default => false,
         };
-    }
-
-    private static function isCsoOfficerOnly(User $user): bool
-    {
-        return $user->hasRole('CSO Officer')
-            && ! $user->hasAnyRole([
-                'Database Officer',
-                'Project Officer',
-                'undp-Project Manager',
-                'Team Leader',
-                'Team Leader -INF',
-                'Area Manager',
-                'Auditing Supervisor',
-                'QC/QA Engineer',
-                'Inf - QC/QA Engineer',
-                'Field Engineer',
-                'Gis Officer',
-            ]);
     }
 
     private static function isTemporaryAuditHomeItem(array $item, User $user): bool
