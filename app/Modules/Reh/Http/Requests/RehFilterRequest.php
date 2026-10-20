@@ -47,6 +47,6 @@ class RehFilterRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['priority.in' => 'مستوى الأولوية غير صالح.', 'survey_status.in' => 'حالة الاستبيان غير صالحة.', 'q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'رقم OBJECTID للمبنى غير صالح.', 'building_object_id.min' => 'رقم OBJECTID للمبنى يجب أن يكون موجبًا.'];
+        return ['priority.in' => 'مستوى الأولوية غير صالح.', 'survey_status.in' => 'حالة الاستبيان غير صالحة.', 'q.max' => 'اكتب عبارة بحث لا تتجاوز 100 حرف.', 'status.in' => 'حالة التدقيق غير صالحة.', 'page.integer' => 'رقم الصفحة غير صالح.', 'tab.in' => 'القسم المطلوب غير صالح.', 'building_object_id.integer' => 'معرّف المبنى غير صالح.', 'building_object_id.min' => 'معرّف المبنى يجب أن يكون موجبًا.'];
     }
 }

@@ -333,7 +333,7 @@
             building.units.forEach(unit => {
                 const link = element('a', undefined, 'reh-map-unit');
                 link.href = unit.url; link.dataset.detail = '';
-                link.append(element('strong', `وحدة · old_objectid ${unit.old_objectid}`));
+                link.append(element('strong', `وحدة ${unit.old_objectid}`));
                 const status = unit.source_missing ? common.missing : categories.status[unit.status] || ['غير مسجل', '#64748b'];
                 link.append(badge(...status));
                 if ('priority' in unit) link.append(badge(...(categories.priority[unit.priority] || categories.priority.unclassified)));

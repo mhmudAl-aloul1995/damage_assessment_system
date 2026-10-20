@@ -153,9 +153,9 @@ it('uses source object ids as the visible unit and building references throughou
     [$building, $unit] = rehObjectIdRecords();
     $this->actingAs($this->officer);
     $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('ملف الوحدة · old_objectid 876543', 'مبنى 987654', 'SOURCE-CODE');
+    expect($html)->toContain('ملف الوحدة · المعرّف 876543', 'مبنى 987654', 'SOURCE-CODE');
     $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
-    expect($html)->toContain('ملف المبنى · old_objectid 987654', 'data-building-units="17"');
+    expect($html)->toContain('ملف المبنى · المعرّف 987654', 'data-building-units="17"');
     $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
     expect($html)->toContain('وحدة 876543', 'مبنى 987654', 'SOURCE-CODE');
     $html = $this->getJson(route('reh.data', ['tab' => 'buildings']))->assertOk()->json('html');
@@ -182,7 +182,7 @@ it('filters building units by object id and keeps legacy filters displaying the 
     $this->actingAs($this->officer);
     foreach ([['building_old_objectid' => '987654'], ['building_id' => 17]] as $filters) {
         $html = $this->getJson(route('reh.data', ['tab' => 'units', ...$filters]))->assertOk()->json('html');
-        expect($html)->toContain('النتائج مقيّدة بالمبنى old_objectid 987654', 'SOURCE-CODE')->not->toContain('DECOY-CODE');
+        expect($html)->toContain('النتائج مقيّدة بالمبنى 987654', 'SOURCE-CODE')->not->toContain('DECOY-CODE');
     }
     $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'building_old_objectid' => '987654']))->assertOk()->json('html');
     expect($html)->toContain('اسم المبنى الأصلي')->not->toContain('مبنى مختلف');
@@ -194,8 +194,8 @@ it('exports both source object ids as primary references and retains the code an
     $csv = $this->actingAs($this->officer)->get(route('reh.export', ['building_old_objectid' => '987654']))->assertOk()->streamedContent();
     $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
     expect($rows)->toHaveCount(2)
-        ->and($rows[0][0])->toBe('old_objectid الوحدة')
-        ->and($rows[0][1])->toBe('old_objectid المبنى')
+        ->and($rows[0][0])->toBe('معرّف الوحدة')
+        ->and($rows[0][1])->toBe('معرّف المبنى')
         ->and($rows[1][0])->toBe('876543')->and($rows[1][1])->toBe('987654')
         ->and($rows[1][15])->toBe('SOURCE-CODE')->and($rows[1][16])->toBe('اسم المبنى الأصلي');
 });
@@ -439,9 +439,9 @@ it('displays unavailable for absent old references without substituting current 
     $unit = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 991133]);
     $this->actingAs($this->officer);
     $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('ملف الوحدة · old_objectid غير متوفر', 'مبنى غير متوفر')->not->toContain('OBJECTID 991133', 'وحدة 991133', 'مبنى 991122');
+    expect($html)->toContain('ملف الوحدة · المعرّف غير متوفر', 'مبنى غير متوفر')->not->toContain('OBJECTID 991133', 'وحدة 991133', 'مبنى 991122');
     $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
-    expect($html)->toContain('ملف المبنى · old_objectid غير متوفر');
+    expect($html)->toContain('ملف المبنى · المعرّف غير متوفر');
     $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
     $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
     expect($rows[1][0])->toBe('غير متوفر')->and($rows[1][1])->toBe('غير متوفر');
@@ -506,3 +506,22 @@ it('shows previous and current identifiers as read only general data for each re
         }
     }
 })->with([false, true]);
+
+it('uses primary reference labels throughout the interface while preserving general data identifier labels', function (): void {
+    [$building, $unit] = rehObjectIdRecords();
+    $this->actingAs($this->officer);
+    foreach ([route('reh.units.show', $unit), route('reh.buildings.show', $building), route('reh.data', ['tab' => 'units']), route('reh.data', ['tab' => 'buildings'])] as $url) {
+        $html = $this->getJson($url)->assertOk()->json('html');
+        $document = new DOMDocument;
+        $previousErrors = libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousErrors);
+        $xpath = new DOMXPath($document);
+        foreach ($xpath->query('//script | //section[@data-record-identifiers]') as $node) {
+            $node->parentNode->removeChild($node);
+        }
+        expect($document->textContent)->not->toContain('old_objectid', 'Old_objectID', 'OldUnit_objectID', 'معرّف المبنى السابق', 'معرّف الوحدة السابق');
+    }
+    $this->get(route('reh.index'))->assertOk()->assertSee('اكتب معرّف الوحدة أو المبنى، الاسم أو الكود…');
+});

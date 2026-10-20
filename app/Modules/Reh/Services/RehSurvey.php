@@ -72,7 +72,7 @@ class RehSurvey
             }
             $sections[$group]['label'] = $definition['group']['label'] ?? 'بيانات عامة';
             $sections[$group]['fields'][] = $field === 'objectid'
-                ? ['field' => 'old_objectid', 'label' => 'old_objectid', 'value' => self::reference($source)]
+                ? ['field' => 'old_objectid', 'label' => 'معرّف المبنى', 'value' => self::reference($source)]
                 : ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field])];
         }
 
