@@ -532,3 +532,24 @@ it('keeps census and rehabilitation values paired with their source field labels
     expect($fields['Old_objectID'])->toMatchArray(['label' => 'معرّف حصر المبنى', 'value' => '2328'])
         ->and($fields['objectid'])->toMatchArray(['label' => 'معرّف تأهيل المبنى', 'value' => '3770']);
 });
+
+it('shows the building survey engineer in unit field data for readers without sensitive access', function (?string $engineer, string $expected): void {
+    $building = RehBuilding::factory()->create(['source' => ['engineer_name' => 'eng1']]);
+    $building->update(['engineer_name' => $engineer]);
+    $unit = RehUnit::factory()->create(['building_id' => $building->id]);
+    $reader = User::factory()->create(['name' => 'مستخدم العرض']);
+    $reader->givePermissionTo('reh.view');
+    $html = $this->actingAs($reader)->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $field = $xpath->query('//section[@data-detail-panel="data"]//div[@data-survey-engineer]')->item(0);
+    expect($field)->not->toBeNull()
+        ->and(trim($xpath->query('./dt', $field)->item(0)->textContent))->toBe('مهندس الحصر الميداني')
+        ->and(trim($xpath->query('./dd', $field)->item(0)->textContent))->toBe($expected)
+        ->and($xpath->query('.//button | .//input', $field)->length)->toBe(0);
+})->with([
+    'coded name from survey columns' => ['eng5', 'حاتم مطر'],
+    'uncoded engineer name' => ['مهندس الحصر التجريبي', 'مهندس الحصر التجريبي'],
+    'missing engineer' => [null, 'غير مسجل'],
+]);

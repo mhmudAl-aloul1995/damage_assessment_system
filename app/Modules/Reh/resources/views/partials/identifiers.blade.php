@@ -6,6 +6,7 @@
         @if($referenceUnit)
             <div data-reference="unit-previous"><dt>معرّف حصر الوحدة</dt><dd><bdi>{{ $referenceUnit->old_objectid }}</bdi></dd></div>
             <div data-reference="unit-current"><dt>معرّف تأهيل الوحدة</dt><dd><bdi>{{ $referenceUnit->object_id ?? 'غير متوفر' }}</bdi></dd></div>
+            <div data-survey-engineer><dt>مهندس الحصر الميداني</dt><dd>{{ $survey->value('engineer_name', $referenceBuilding->surveyData()['engineer_name'] ?? null) }}</dd></div>
         @endif
     </dl>
 </section>
