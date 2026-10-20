@@ -499,7 +499,9 @@ it('shows the selected social total in ajax results only with sensitive access a
     $xpath = new DOMXPath($document);
     $summaries = $xpath->query('//a[@data-social-score]');
     expect($summaries->length)->toBe($sensitive ? 1 : 0)
-        ->and($html)->toContain('reh-engineering-summary');
+        ->and($html)->toContain('reh-engineering-summary')
+        ->and($xpath->query('//div[@class="reh-score-breakdown"]/a')->length)->toBe($sensitive ? 2 : 1)
+        ->and($xpath->query('//a[contains(@class,"reh-final-summary")]/strong[@data-final-score]')->length)->toBe(1);
     if ($sensitive) {
         $summary = $summaries->item(0);
         expect($summary->getAttribute('data-social-score'))->toBe($total === null ? '' : (string) $total)
@@ -507,7 +509,9 @@ it('shows the selected social total in ajax results only with sensitive access a
             ->and($summary->getAttribute('data-detail-section'))->toBe('scoring')
             ->and($summary->hasAttribute('data-detail'))->toBeTrue();
         if ($total === null) {
-            expect($summary->textContent)->toContain('بانتظار الاستكمال');
+            expect($summary->textContent)->toContain('بانتظار الاستكمال')
+                ->and($summary->getAttribute('title'))->toBe('الاجتماعي: بانتظار الاستكمال')
+                ->and($xpath->query('//a[@data-social-score]/span[@class="visually-hidden"]')->length)->toBe(1);
         }
     }
 })->with([
