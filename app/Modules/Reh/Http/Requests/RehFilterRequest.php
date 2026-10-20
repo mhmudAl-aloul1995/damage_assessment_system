@@ -3,6 +3,7 @@
 namespace App\Modules\Reh\Http\Requests;
 
 use App\Modules\Reh\Services\RehAdvancedFilters;
+use App\Modules\Reh\Services\RehExportColumns;
 use App\Modules\Reh\Services\RehFilterChoices;
 use App\Modules\Reh\Services\RehSurveyFilters;
 use Illuminate\Foundation\Http\FormRequest;
@@ -28,7 +29,20 @@ class RehFilterRequest extends FormRequest
     {
         return ($this->user()?->can('reh.view') ?? false)
             && (! $this->anyFilled(['priority', ...RehAdvancedFilters::SCORE_FILTERS]) || $this->user()->can('reh.scores.view'))
-            && (! $this->anyFilled([...RehAdvancedFilters::SENSITIVE_FILTERS, ...app(RehSurveyFilters::class)->keys(sensitiveOnly: true)]) || $this->user()->can('reh.sensitive'));
+            && (! $this->anyFilled([...RehAdvancedFilters::SENSITIVE_FILTERS, ...app(RehSurveyFilters::class)->keys(sensitiveOnly: true)]) || $this->user()->can('reh.sensitive'))
+            && $this->canExportColumns();
+    }
+
+    private function canExportColumns(): bool
+    {
+        foreach (is_array($this->input('columns')) ? $this->input('columns') : [] as $key) {
+            $definition = is_string($key) ? (RehExportColumns::definitions()[$key] ?? []) : [];
+            if (isset($definition['permission']) && ! $this->user()?->can($definition['permission'])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -39,6 +53,8 @@ class RehFilterRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
+            'columns' => ['sometimes', 'required', 'array', 'list', 'min:1', 'max:'.count(RehExportColumns::definitions())],
+            'columns.*' => ['required', 'string', 'distinct', \Illuminate\Validation\Rule::in(array_keys(RehExportColumns::definitions()))],
             'q' => ['nullable', 'string', 'max:100'],
             'priority' => ['nullable', \Illuminate\Validation\Rule::in([...array_keys(\App\Modules\Reh\Services\RehScoring::PRIORITIES), 'unclassified'])],
             'survey_status' => ['required', \Illuminate\Validation\Rule::in(array_keys(\App\Modules\Reh\Services\RehSurvey::FIELD_STATUSES))],
@@ -88,7 +104,7 @@ class RehFilterRequest extends FormRequest
 
     public function attributes(): array
     {
-        return [...RehAdvancedFilters::LABELS, ...app(RehSurveyFilters::class)->labels()];
+        return ['columns' => 'أعمدة التصدير', 'columns.*' => 'عمود التصدير', ...RehAdvancedFilters::LABELS, ...app(RehSurveyFilters::class)->labels()];
     }
 
     public function messages(): array

@@ -34,7 +34,16 @@ class RehPdf
         if ($selectedBuilding && (! empty($filters['building_id']) || ! empty($filters['building_object_id']))) {
             $summary['معرّف المبنى'] = $selectedBuilding->old_objectid;
         }
-        $html = view('reh::pdf.results', ['rows' => $rows, 'buildingCount' => $units->pluck('building_id')->unique()->count(), 'filterSummary' => $summary, 'generatedAt' => now()->format('Y-m-d H:i'), 'generatedBy' => $user->name])->render();
+        $columns = $filters['columns'] ?? null;
+        $export = new RehUnitsExport(RehUnit::query(), $user->can('reh.sensitive'), $user->can('reh.scores.view'), $columns);
+        $columnRows = $columns ? $units->map(fn (RehUnit $unit): array => array_combine($columns, $export->row($unit))) : collect();
+        $columnGroups = $columns ? array_chunk(array_combine($columns, $export->headings()), 5, true) : [];
+        if (count($columnGroups) > 1) {
+            $headings = array_combine($columns, $export->headings());
+            $anchor = [$columns[0] => $headings[$columns[0]]];
+            $columnGroups = array_map(fn (array $group): array => $anchor + $group, array_chunk(array_slice($headings, 1, null, true), 4, true));
+        }
+        $html = view('reh::pdf.results', ['rows' => $rows, 'columnRows' => $columnRows, 'columnGroups' => $columnGroups, 'buildingCount' => $units->pluck('building_id')->unique()->count(), 'filterSummary' => $summary, 'generatedAt' => now()->format('Y-m-d H:i'), 'generatedBy' => $user->name])->render();
 
         return $this->download($html, 'REH-results-'.now()->format('Y-m-d').'.pdf');
     }

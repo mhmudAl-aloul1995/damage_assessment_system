@@ -5,11 +5,21 @@
             <label class="reh-export-format"><input type="radio" name="export_format" value="excel" checked><span class="reh-format-icon">XLSX</span><span><strong>Excel</strong><small>جدول قابل للتحليل والفرز، يشمل جميع النتائج المطابقة.</small></span></label>
             <label class="reh-export-format"><input type="radio" name="export_format" value="pdf"><span class="reh-format-icon">PDF</span><span><strong>PDF</strong><small>تقرير عربي للطباعة يتضمن ملخص الفلاتر وقائمة الوحدات.</small></span></label>
         </div>
+        <div class="reh-export-columns">
+            <div class="reh-section-heading"><div><label for="reh-export-columns">الأعمدة التي ستظهر في الملف</label><p>اختر الأعمدة المطلوبة؛ الاختيار نفسه يُطبّق على Excel وPDF.</p></div><span class="reh-export-column-count" data-export-column-count aria-live="polite">{{ count($selectedColumns) }} من {{ count($availableColumns) }} عمود</span></div>
+            <select id="reh-export-columns" class="form-select" multiple data-export-columns aria-describedby="reh-export-columns-help">
+                @foreach(collect($availableColumns)->groupBy('group', preserveKeys: true) as $group => $columns)
+                    <optgroup label="{{ $group }}">@foreach($columns as $key => $column)<option value="{{ $key }}" @selected(in_array($key, $selectedColumns, true))>{{ $column['label'] }}</option>@endforeach</optgroup>
+                @endforeach
+            </select>
+            <div class="reh-export-column-actions"><div><button type="button" data-export-select-all>تحديد الكل</button><button type="button" data-export-clear-columns>مسح الاختيار</button></div><small id="reh-export-columns-help">تظهر الأعمدة المتاحة حسب صلاحياتك. اختر عمودًا واحدًا على الأقل.</small></div>
+            <p class="reh-export-column-warning" data-export-column-warning role="status" hidden>اختر عمودًا واحدًا على الأقل لتفعيل التنزيل.</p>
+        </div>
         <div class="reh-export-footer"><div><p data-export-format-help>Excel يشمل جميع النتائج المطابقة، وليس المعاينة فقط.</p><small>تُحجب بيانات الهوية والتقييم بحسب صلاحياتك. حد PDF: حتى 500 وحدة.</small></div><button type="button" class="btn btn-primary" data-download-filtered @disabled($totalUnits === 0)>تنزيل Excel</button></div>
         @if($totalUnits === 0)<div class="reh-empty">لا توجد نتائج مطابقة للتصدير. عدّل الفلاتر للمتابعة.</div>@endif
     </section>
     <section class="reh-card" aria-labelledby="reh-export-preview-title"><div class="reh-section-heading"><h4 id="reh-export-preview-title">معاينة نطاق التصدير</h4><span>أول {{ $preview->count() }} وحدات من {{ number_format($totalUnits) }}</span></div>
         @if($summary)<details class="reh-export-summary"><summary>الفلاتر المعتمدة · {{ count($summary) }}</summary><dl>@foreach($summary as $label => $value)<div><dt>{{ $label }}</dt><dd>{{ $value }}</dd></div>@endforeach</dl></details>@endif
-        <div class="table-responsive"><table class="table reh-table"><thead><tr><th>معرّف الوحدة</th><th>معرّف المبنى</th><th>المالك</th><th>حالة التدقيق</th><th>القرار</th></tr></thead><tbody>@forelse($preview as $unit)<tr><td>{{ $unit->old_objectid }}</td><td>{{ $unit->building->old_objectid }}</td><td>{{ $unit->owner_name ?: 'غير مسجل' }}</td><td>{{ \App\Modules\Reh\Services\RehSurvey::WORKFLOW[$unit->workflow_status] }}</td><td>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] }}</td></tr>@empty<tr><td colspan="5">لا توجد وحدات مطابقة.</td></tr>@endforelse</tbody></table></div>
+        <div class="table-responsive"><table class="table reh-table"><thead><tr>@foreach($availableColumns as $key => $column)<th data-export-column-key="{{ $key }}" @if(!in_array($key, $selectedColumns, true)) hidden @endif>{{ $column['label'] }}</th>@endforeach</tr></thead><tbody>@forelse($previewRows as $row)<tr>@foreach($availableColumns as $key => $column)<td data-export-column-key="{{ $key }}" @if(!in_array($key, $selectedColumns, true)) hidden @endif>{{ $row[$key] ?? 'غير متوفر' }}</td>@endforeach</tr>@empty<tr><td colspan="{{ count($availableColumns) }}">لا توجد وحدات مطابقة.</td></tr>@endforelse</tbody></table></div>
     </section>
 </div>

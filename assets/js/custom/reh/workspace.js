@@ -115,8 +115,11 @@
             const data = await request(root.dataset.dataUrl + '?' + query(), { signal: controller.signal });
             if (controller.signal.aborted) return;
             if (map) { map.remove(); map = null; }
+            const oldColumnSelect = results.querySelector('[data-export-columns].select2-hidden-accessible');
+            if (oldColumnSelect && window.jQuery) window.jQuery(oldColumnSelect).off('.rehColumns').select2('destroy');
             results.innerHTML = data.html;
             filters.querySelector('[data-result-count]').textContent = `${data.total_units ?? 0} وحدة · ${data.total_buildings ?? 0} مبنى`;
+            initializeExportColumns();
             updateExportFormat();
             renderMap();
             if (data.sync_active && state.tab === 'sync') poll = setTimeout(() => { if (!document.hidden) load(false, true); }, 5000);
@@ -125,7 +128,7 @@
             if (error.name !== 'AbortError') notify(error.message, advancedFilters.open ? advancedFilters.querySelector('[data-advanced-message]') : message);
             return false;
         } finally {
-            if (listRequest === controller) { results.setAttribute('aria-busy', 'false'); loading.hidden = true; }
+            if (listRequest === controller) { results.setAttribute('aria-busy', 'false'); loading.hidden = true; updateExportFormat(); }
         }
     }
 
@@ -487,9 +490,45 @@
             else { const all = [...event.target.options].find(option => option.value === 'all'); if (all) all.selected = false; }
             window.jQuery(event.target).trigger('change.select2');
         } if (advancedFilters.contains(event.target)) updateSurveyFilters(); if (!advancedFilters.contains(event.target)) { clearTimeout(debounce); changeFilters(); } });
-    filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1 }; setTimeout(() => load(), 0); });
+    filters.addEventListener('reset', () => { clearTimeout(debounce); state = { tab: state.tab, survey_status: 'completed', page: 1, ...(state.columns ? { columns: state.columns } : {}) }; setTimeout(() => load(), 0); });
     advancedFilters.addEventListener('close', () => { advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
     advancedFilters.querySelector('#reh-filter-search').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
+
+    function initializeExportColumns() {
+        const select = results.querySelector('[data-export-columns]');
+        if (!select) return;
+        const selected = state.columns ?? inputValues(select);
+        [...select.options].forEach(option => { option.selected = selected.includes(option.value); });
+        state.columns = inputValues(select);
+        if (window.jQuery?.fn.select2) {
+            window.jQuery(select).select2({ dir: 'rtl', width: '100%', closeOnSelect: false, placeholder: 'ابحث واختر الأعمدة', dropdownParent: window.jQuery(select.closest('.reh-export-columns')) });
+            window.jQuery(select).on('change.rehColumns', exportColumnsChanged);
+        }
+        updateExportColumns();
+    }
+
+    function updateExportColumns() {
+        const select = results.querySelector('[data-export-columns]');
+        if (!select) return;
+        const selected = inputValues(select);
+        results.querySelector('[data-export-column-count]').textContent = `${selected.length} من ${select.options.length} عمود`;
+        results.querySelector('[data-export-column-warning]').hidden = selected.length > 0;
+        results.querySelectorAll('[data-export-column-key]').forEach(cell => { cell.hidden = !selected.includes(cell.dataset.exportColumnKey); });
+        results.querySelectorAll('.reh-table tr').forEach(row => {
+            selected.forEach(key => {
+                const cell = row.querySelector(`[data-export-column-key="${CSS.escape(key)}"]`);
+                if (cell) row.append(cell);
+            });
+        });
+        results.querySelectorAll('.reh-export-column-actions button').forEach(button => { button.disabled = button.matches('[data-export-select-all]') ? selected.length === select.options.length : !selected.length; });
+    }
+
+    function exportColumnsChanged() {
+        state.columns = inputValues(results.querySelector('[data-export-columns]'));
+        history.replaceState({ filters: { ...state } }, '', root.dataset.indexUrl + '?' + query());
+        updateExportColumns();
+        updateExportFormat();
+    }
 
     function updateExportFormat() {
         const panel = results.querySelector('[data-export-total]');
@@ -497,11 +536,14 @@
         const total = Number(panel.dataset.exportTotal);
         panel.querySelectorAll('[name="export_format"]').forEach(input => { input.checked = input.value === exportFormat; });
         const button = panel.querySelector('[data-download-filtered]');
-        button.disabled = total === 0 || (exportFormat === 'pdf' && total > 500);
+        button.disabled = total === 0 || state.columns?.length === 0 || results.getAttribute('aria-busy') === 'true' || (exportFormat === 'pdf' && total > 500);
         button.textContent = exportFormat === 'excel' ? 'تنزيل Excel' : 'تنزيل PDF';
         panel.querySelector('[data-export-format-help]').textContent = exportFormat === 'excel' ? 'Excel يشمل جميع النتائج المطابقة، وليس المعاينة فقط.' : total > 500 ? 'النتائج أكثر من 500 وحدة؛ ضيّق الفلاتر أو اختر Excel لتصديرها جميعًا.' : 'PDF يشمل جميع النتائج المطابقة مع الفلاتر المعتمدة.';
     }
-    results.addEventListener('change', event => { if (event.target.name === 'export_format') { exportFormat = event.target.value; updateExportFormat(); } });
+    results.addEventListener('change', event => {
+        if (event.target.name === 'export_format') { exportFormat = event.target.value; updateExportFormat(); }
+        if (event.target.matches('[data-export-columns]')) exportColumnsChanged();
+    });
 
     async function downloadFile(button, url, format = 'pdf') {
         const label = button.textContent;
@@ -521,7 +563,7 @@
             setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
             notify(format === 'excel' ? 'تم تجهيز ملف Excel وتنزيله.' : 'تم تجهيز تقرير PDF وتنزيله.', target, true);
         } catch (error) { notify(error.message, target); }
-        finally { button.disabled = false; button.textContent = label; }
+        finally { button.disabled = false; button.textContent = label; if (button.matches('[data-download-filtered]')) updateExportFormat(); }
     }
     detailBody.addEventListener('input', event => { if (event.target.closest('[data-review-form]')) dirty = true; });
     detailBody.addEventListener('change', event => {
@@ -547,6 +589,12 @@
             if (button.dataset.workspaceTab) params.set('tab', button.dataset.workspaceTab);
             else params.set('tab', 'units');
             window.location.assign((button.dataset.workspaceTab ? root.dataset.workspaceUrl : root.dataset.exportPageUrl) + '?' + params);
+        }
+        else if (button.matches('[data-export-select-all], [data-export-clear-columns]')) {
+            const select = results.querySelector('[data-export-columns]');
+            [...select.options].forEach(option => { option.selected = button.matches('[data-export-select-all]'); });
+            if (window.jQuery) window.jQuery(select).trigger('change.select2');
+            exportColumnsChanged();
         }
         else if (button.matches('[data-download-filtered]')) {
             await downloadFile(button, (exportFormat === 'excel' ? root.dataset.excelUrl : root.dataset.pdfUrl) + '?' + query(), exportFormat);

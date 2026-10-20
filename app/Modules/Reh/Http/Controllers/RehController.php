@@ -14,6 +14,7 @@ use App\Modules\Reh\Models\RehSyncRun;
 use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehAdvancedFilters;
 use App\Modules\Reh\Services\RehArcgisClient;
+use App\Modules\Reh\Services\RehExportColumns;
 use App\Modules\Reh\Services\RehFieldAudit;
 use App\Modules\Reh\Services\RehFilterChoices;
 use App\Modules\Reh\Services\RehPdf;
@@ -245,21 +246,25 @@ class RehController extends Controller
         $totalBuildings = (clone $query)->distinct()->count('building_id');
         $preview = (clone $query)->with('building')->orderBy('id')->limit(10)->get();
         $summary = app(RehAdvancedFilters::class)->summary($filters);
-        $html = view('reh::partials.export-results', compact('totalUnits', 'totalBuildings', 'preview', 'summary'))->render();
+        $availableColumns = RehExportColumns::available($request->user());
+        $selectedColumns = $filters['columns'] ?? array_keys($availableColumns);
+        $export = new RehUnitsExport($query, $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'), array_keys($availableColumns));
+        $previewRows = $preview->map(fn (RehUnit $unit): array => array_combine(array_keys($availableColumns), $export->row($unit)));
+        $html = view('reh::partials.export-results', compact('totalUnits', 'totalBuildings', 'preview', 'summary', 'availableColumns', 'selectedColumns', 'previewRows'))->render();
 
         return response()->json(['html' => $html, 'total_units' => $totalUnits, 'total_buildings' => $totalBuildings])->header('Cache-Control', 'private, no-store');
     }
 
     public function exportExcel(RehFilterRequest $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        $export = new RehUnitsExport($this->units($request->validated())->with('building'), $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'));
+        $export = new RehUnitsExport($this->units($request->validated())->with('building'), $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'), $request->validated('columns'));
 
         return \Maatwebsite\Excel\Facades\Excel::download($export, 'REH-units-'.now()->format('Y-m-d').'.xlsx', \Maatwebsite\Excel\Excel::XLSX, ['Cache-Control' => 'private, no-store']);
     }
 
     public function export(RehFilterRequest $request): StreamedResponse
     {
-        $export = new RehUnitsExport($this->units($request->validated())->with('building'), $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'));
+        $export = new RehUnitsExport($this->units($request->validated())->with('building'), $request->user()->can('reh.sensitive'), $request->user()->can('reh.scores.view'), $request->validated('columns'));
 
         return response()->streamDownload(function () use ($export): void {
             $output = fopen('php://output', 'w');

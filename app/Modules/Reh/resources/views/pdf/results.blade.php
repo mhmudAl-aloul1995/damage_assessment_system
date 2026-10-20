@@ -7,8 +7,20 @@
 <div class="notice">يشمل التقرير جميع الوحدات المطابقة، وليس الصفحة الحالية فقط. البيانات الناقصة لا تُستبدل بصفر. القبول المبدئي منفصل عن اعتماد التكلفة، والأسعار غير متوفرة حاليًا.</div>
 @if($rows->isNotEmpty())<pagebreak />@endif
 <h2 class="section-title">قائمة الوحدات · {{ $rows->count() }}</h2>
+@if($columnGroups)
+@if(count($columnGroups) > 1)<p class="muted">قُسّمت الأعمدة المختارة إلى {{ count($columnGroups) }} أجزاء لسهولة القراءة؛ يتكرر العمود الأول لربط الصفوف بين الأجزاء، مع ثبات ترتيب الوحدات.</p>@endif
+@foreach($columnGroups as $group)
+@if(!$loop->first)<pagebreak />@endif
+@if(count($columnGroups) > 1)<h3>الأعمدة المختارة · الجزء {{ $loop->iteration }} من {{ count($columnGroups) }}</h3>@endif
+<table class="listing"><thead><tr>@foreach($group as $key => $label)<th>{{ $label }}</th>@endforeach</tr></thead><tbody>
+@forelse($columnRows as $row)<tr>@foreach($group as $key => $label)<td>{{ $row[$key] ?? 'غير متوفر' }}</td>@endforeach</tr>
+@empty<tr><td colspan="{{ count($group) }}">لا توجد وحدات مطابقة للفلاتر المحددة.</td></tr>@endforelse
+</tbody></table>
+@endforeach
+@else
 <table class="listing"><thead><tr><th style="width:13%">الوحدة / المبنى</th><th style="width:23%">المالك والموقع</th><th style="width:23%">حالة التدقيق</th><th style="width:14%">الدرجة / 100</th><th style="width:27%">الأولوية</th></tr></thead><tbody>
 @forelse($rows as $row)<tr><td><strong>{{ $row['unit'] }}</strong><br><span class="muted">مبنى {{ $row['building'] }}</span></td><td>{{ $row['owner'] }}<br><span class="small">{{ $row['location'] }}</span></td><td>{{ $row['workflow'] }}@if($row['missing'])<br><span class="small">يلزم التحقق من المصدر</span>@endif</td><td>{{ $row['score'] }}</td><td>{{ $row['priority'] }}</td></tr>
 @empty<tr><td colspan="5">لا توجد وحدات مطابقة للفلاتر المحددة.</td></tr>@endforelse
 </tbody></table>
+@endif
 </body></html>
