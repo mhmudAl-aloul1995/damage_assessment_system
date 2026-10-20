@@ -471,3 +471,38 @@ it('reads the original ArcGIS reference casing and retains compatibility with ea
     expect(RehSurvey::reference(['Old_objectID' => 2328, 'old_objectid' => 999]))->toBe('2328')
         ->and(RehSurvey::reference(['OldUnit_objectID' => 456, 'Old_objectID' => 2328]))->toBe('456');
 });
+
+it('shows previous and current identifiers as read only general data for each record type', function (bool $missingPrevious): void {
+    $building = RehBuilding::factory()->create(['object_id' => 3770]);
+    $building->update(['source' => [...$building->source, 'Old_objectID' => $missingPrevious ? null : 2328]]);
+    $unit = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 4621]);
+    $unit->update(['source' => [...$unit->source, 'OldUnit_objectID' => $missingPrevious ? null : 5087]]);
+    $reader = User::factory()->create();
+    $reader->givePermissionTo('reh.view');
+    $this->actingAs($reader);
+    $expectedBuilding = $missingPrevious ? 'غير متوفر' : '2328';
+    $expectedUnit = $missingPrevious ? 'غير متوفر' : '5087';
+    foreach (['unit' => route('reh.units.show', $unit), 'building' => route('reh.buildings.show', $building)] as $kind => $url) {
+        $html = $this->getJson($url)->assertOk()->json('html');
+        $document = new DOMDocument;
+        $previousErrors = libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousErrors);
+        $xpath = new DOMXPath($document);
+        $section = $xpath->query('//section[@data-record-identifiers]')->item(0);
+        expect($section)->not->toBeNull();
+        $expected = ['building-previous' => ['معرّف المبنى السابق', $expectedBuilding], 'building-current' => ['معرّف المبنى الحالي', '3770']];
+        if ($kind === 'unit') {
+            $expected += ['unit-previous' => ['معرّف الوحدة السابق', $expectedUnit], 'unit-current' => ['معرّف الوحدة الحالي', '4621']];
+            expect($xpath->query('ancestor::section[@data-detail-panel="data"]', $section)->length)->toBe(1);
+        }
+        expect($xpath->query('.//*[@data-reference]', $section)->length)->toBe(count($expected))
+            ->and($xpath->query('.//input | .//button | .//select | .//textarea | .//*[@contenteditable]', $section)->length)->toBe(0);
+        foreach ($expected as $key => [$label, $value]) {
+            $field = $xpath->query('.//*[@data-reference="'.$key.'"]', $section)->item(0);
+            expect(trim($xpath->query('./dt', $field)->item(0)->textContent))->toBe($label)
+                ->and(trim($xpath->query('./dd', $field)->item(0)->textContent))->toBe($value);
+        }
+    }
+})->with([false, true]);

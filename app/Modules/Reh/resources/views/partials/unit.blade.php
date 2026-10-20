@@ -67,6 +67,7 @@
     @include('reh::partials.scoring')
 </section>
 <section id="reh-detail-panel-data" data-detail-panel="data" hidden>
+    @include('reh::partials.identifiers', ['referenceBuilding' => $unit->building, 'referenceUnit' => $unit])
     @cannot('reh.sensitive')<div class="alert alert-info">بيانات الهوية والأسرة والصحة والحماية تحتاج صلاحية الاطلاع على البيانات الحساسة.</div>@endcannot
     @include('reh::partials.fields', ['sections' => $survey->sections($unit->source, 'unit', auth()->user()->can('reh.sensitive'))])
 </section>
