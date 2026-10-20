@@ -41,7 +41,8 @@ it('uses identical selected columns in preview and pdf and splits wide reports i
     $doc->loadHTML('<?xml encoding="UTF-8">'.$preview, LIBXML_NOERROR | LIBXML_NOWARNING);
     $xpath = new DOMXPath($doc);
     expect($xpath->query('//th[@data-export-column-key and not(@hidden)]')->length)->toBe(6)
-        ->and($xpath->query('//select[@data-export-columns]/optgroup/option[@selected]')->length)->toBe(6);
+        ->and($xpath->query('//select[@data-export-columns]/optgroup/option[@selected]')->length)->toBe(6)
+        ->and($xpath->query('//div[@role="region" and @aria-label="معاينة أعمدة التصدير" and @tabindex="0"]/table')->length)->toBe(1);
     $captured = null;
     View::composer('reh::pdf.results', function ($view) use (&$captured): void {
         $captured = $view->getData();
