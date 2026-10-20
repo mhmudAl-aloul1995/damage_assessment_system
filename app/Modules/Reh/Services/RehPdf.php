@@ -45,7 +45,7 @@ class RehPdf
         $summary = app(RehAdvancedFilters::class)->summary($filters);
         $selectedBuilding = $units->first()?->building;
         if ($selectedBuilding && (! empty($filters['building_id']) || ! empty($filters['building_object_id']))) {
-            $summary['معرّف المبنى'] = $selectedBuilding->old_objectid;
+            $summary['معرّف حصر المبنى'] = $selectedBuilding->old_objectid;
         }
         $columns = $filters['columns'] ?? null;
         $export = new RehUnitsExport(RehUnit::query(), $user->can('reh.sensitive'), $user->can('reh.scores.view'), $columns);
@@ -101,7 +101,7 @@ class RehPdf
             'priority' => $canSeeScores ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب',
             'social' => $sensitive ? ($score['social_total'] ?? 'بانتظار الاستكمال') : 'محجوب',
             'engineering' => $score['engineering']['total'] ?? 'بانتظار الاستكمال',
-            'identifiers' => ['معرّف المبنى السابق' => $unit->building->old_objectid, 'معرّف المبنى الحالي' => $unit->building->object_id ?? 'غير متوفر', 'معرّف الوحدة السابق' => $unit->old_objectid, 'معرّف الوحدة الحالي' => $unit->object_id ?? 'غير متوفر'],
+            'identifiers' => ['معرّف حصر المبنى' => $unit->building->old_objectid, 'معرّف تأهيل المبنى' => $unit->building->object_id ?? 'غير متوفر', 'معرّف حصر الوحدة' => $unit->old_objectid, 'معرّف تأهيل الوحدة' => $unit->object_id ?? 'غير متوفر'],
             'buildingSections' => $this->survey->sections($unit->building->surveyData() ?? [], 'building', $sensitive),
             'unitSections' => $this->survey->sections($unit->surveyData() ?? [], 'unit', $sensitive),
             'scoreGroups' => $scoreGroups, 'sensitive' => $sensitive,

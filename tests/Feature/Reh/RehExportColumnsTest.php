@@ -26,11 +26,29 @@ it('exports only the requested columns in order with matching headings and sprea
     $book = IOFactory::load($response->baseResponse->getFile()->getPathname());
     $sheet = $book->getActiveSheet();
     expect($sheet->getHighestColumn())->toBe('C')->and($sheet->getHighestRow())->toBe(2)
-        ->and($sheet->rangeToArray('A1:C2'))->toBe([['الهوية', 'معرّف الوحدة', 'كود الوحدة'], ['001234567', '005087', 'COLUMNS-MATCH']])
+        ->and($sheet->rangeToArray('A1:C2'))->toBe([['الهوية', 'معرّف حصر الوحدة', 'كود الوحدة'], ['001234567', '005087', 'COLUMNS-MATCH']])
         ->and($sheet->getAutoFilter()->getRange())->toBe('A1:C2')->and($sheet->getRightToLeft())->toBeTrue();
     $book->disconnectWorksheets();
     $csv = $this->get(route('reh.export', $filters))->assertOk()->streamedContent();
     expect($csv)->toContain('COLUMNS-MATCH', '005087')->not->toContain('COLUMNS-OUTSIDE', 'التسعير');
+});
+
+it('distinguishes census identifiers from rehabilitation identifiers in filters and exported values', function (): void {
+    $unit = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => '005087']]);
+    $unit->building->update(['source' => [...$unit->building->source, 'Old_objectID' => '002328', 'objectid' => '3770']]);
+    $definitions = app(\App\Modules\Reh\Services\RehSurveyFilters::class)->definitions();
+    expect($definitions['sf_Old_objectID']['label'])->toBe('معرّف حصر المبنى')
+        ->and($definitions['sf_objectid']['label'])->toBe('معرّف تأهيل المبنى')
+        ->and(app(\App\Modules\Reh\Services\RehSurvey::class)->label('OldUnit_objectID'))->toBe('معرّف حصر الوحدة');
+    $columns = ['unit_reference', 'building_reference', 'sf_Old_objectID', 'sf_objectid'];
+    $response = $this->get(route('reh.export.excel', ['columns' => $columns]))->assertOk();
+    Cell::setValueBinder(new DefaultValueBinder);
+    $book = IOFactory::load($response->baseResponse->getFile()->getPathname());
+    expect($book->getActiveSheet()->rangeToArray('A1:D2'))->toBe([
+        ['معرّف حصر الوحدة', 'معرّف حصر المبنى', 'معرّف حصر المبنى', 'معرّف تأهيل المبنى'],
+        ['005087', '002328', '002328', '3770'],
+    ]);
+    $book->disconnectWorksheets();
 });
 
 it('uses identical selected columns in preview and pdf and splits wide reports into readable tables', function (): void {

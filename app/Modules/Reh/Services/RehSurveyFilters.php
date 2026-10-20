@@ -73,7 +73,7 @@ class RehSurveyFilters
             } else {
                 [$group, $title, $sensitive] = ['owner', self::GROUPS['owner'][0], true];
             }
-            $label = ['Field_status' => 'حالة الاستبيان في المصدر', 'Old_objectID' => 'معرّف المبنى', 'objectid' => 'معرّف السجل في المصدر', 'collector_display_ip' => 'بيانات الباحث المسجلة', 'breadwinner_child_age' => 'عمر الابن أو الابنة المعيلين'][$field] ?? $source['label'];
+            $label = RehSurvey::IDENTIFIER_LABELS[$field] ?? ['Field_status' => 'حالة الاستبيان في المصدر', 'collector_display_ip' => 'بيانات الباحث المسجلة', 'breadwinner_child_age' => 'عمر الابن أو الابنة المعيلين'][$field] ?? $source['label'];
             $definitions['sf_'.$field] = [
                 'field' => $field, 'column' => $column, 'type' => $type,
                 'label' => $label, 'group' => $group, 'title' => $title, 'scope' => $scope,

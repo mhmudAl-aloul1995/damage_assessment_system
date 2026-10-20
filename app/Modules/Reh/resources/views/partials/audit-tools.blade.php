@@ -13,7 +13,7 @@
 <section class="reh-audit-editor" data-audit-editor hidden aria-labelledby="reh-audit-title">
     <form data-audit-form action="{{ route('reh.audit.save', [$auditKind, $auditRecord->id]) }}">
         @csrf<input type="hidden" name="revision" value="{{ $auditRevision }}"><input type="hidden" name="field">
-        <header><div><span class="reh-eyebrow" data-audit-group></span><h3 id="reh-audit-title" data-audit-title></h3><small>{{ $auditKind === 'unit' ? 'وحدة' : 'مبنى' }} · المعرّف {{ $auditRecord->old_objectid }}</small></div><button type="button" data-audit-cancel class="btn btn-light btn-sm">إلغاء</button></header>
+        <header><div><span class="reh-eyebrow" data-audit-group></span><h3 id="reh-audit-title" data-audit-title></h3><small>{{ $auditKind === 'unit' ? 'وحدة' : 'مبنى' }} · معرّف الحصر {{ $auditRecord->old_objectid }}</small></div><button type="button" data-audit-cancel class="btn btn-light btn-sm">إلغاء</button></header>
         <div class="reh-audit-comparison"><div><span>القيمة الحالية</span><strong data-audit-before></strong></div><div><label for="reh-audit-value">القيمة الصحيحة <span aria-hidden="true">*</span></label><div data-audit-input></div></div></div>
         <label for="reh-audit-reason">لماذا تم التصحيح؟ <span aria-hidden="true">*</span></label><textarea id="reh-audit-reason" class="form-control" name="reason" rows="2" required minlength="3" maxlength="2000" placeholder="مثال: مطابقة العدد مع استمارة الزيارة الميدانية."></textarea>
         <p class="reh-audit-impact">بعد الحفظ يُعاد حساب التقييم، وتعود مراجعة البيانات المتأثرة إلى الانتظار. تعديل المبنى يعيد تدقيق وحداته. لا تكتب تفاصيل صحية في سبب التعديل.</p>

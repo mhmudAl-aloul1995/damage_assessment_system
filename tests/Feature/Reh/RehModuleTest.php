@@ -153,15 +153,15 @@ it('uses source object ids as the visible unit and building references throughou
     [$building, $unit] = rehObjectIdRecords();
     $this->actingAs($this->officer);
     $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('ملف الوحدة · المعرّف 876543', 'مبنى 987654', 'SOURCE-CODE');
+    expect($html)->toContain('ملف الوحدة · معرّف الحصر 876543', 'مبنى 987654', 'SOURCE-CODE');
     $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
-    expect($html)->toContain('ملف المبنى · المعرّف 987654', 'data-building-units="17"');
+    expect($html)->toContain('ملف المبنى · معرّف الحصر 987654', 'data-building-units="17"');
     $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
     expect($html)->toContain('وحدة 876543', 'مبنى 987654', 'SOURCE-CODE');
     $html = $this->getJson(route('reh.data', ['tab' => 'buildings']))->assertOk()->json('html');
     preg_match('/data-buildings="([^"]+)"/', $html, $matches);
     $map = collect(json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true));
-    expect($map->firstWhere('id', 17)['name'])->toBe('مبنى 987654 · اسم المبنى الأصلي');
+    expect($map->firstWhere('id', 17)['name'])->toBe('معرّف حصر المبنى 987654 · اسم المبنى الأصلي');
 });
 
 it('finds source object ids without confusing them with local primary keys', function (): void {
@@ -194,8 +194,8 @@ it('exports both source object ids as primary references and retains the code an
     $csv = $this->actingAs($this->officer)->get(route('reh.export', ['building_old_objectid' => '987654']))->assertOk()->streamedContent();
     $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
     expect($rows)->toHaveCount(2)
-        ->and($rows[0][0])->toBe('معرّف الوحدة')
-        ->and($rows[0][1])->toBe('معرّف المبنى')
+        ->and($rows[0][0])->toBe('معرّف حصر الوحدة')
+        ->and($rows[0][1])->toBe('معرّف حصر المبنى')
         ->and($rows[1][0])->toBe('876543')->and($rows[1][1])->toBe('987654')
         ->and($rows[1][15])->toBe('SOURCE-CODE')->and($rows[1][16])->toBe('اسم المبنى الأصلي');
 });
@@ -439,9 +439,9 @@ it('displays unavailable for absent old references without substituting current 
     $unit = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 991133]);
     $this->actingAs($this->officer);
     $html = $this->getJson(route('reh.units.show', $unit))->assertOk()->json('html');
-    expect($html)->toContain('ملف الوحدة · المعرّف غير متوفر', 'مبنى غير متوفر')->not->toContain('OBJECTID 991133', 'وحدة 991133', 'مبنى 991122');
+    expect($html)->toContain('ملف الوحدة · معرّف الحصر غير متوفر', 'مبنى غير متوفر')->not->toContain('OBJECTID 991133', 'وحدة 991133', 'مبنى 991122');
     $html = $this->getJson(route('reh.buildings.show', $building))->assertOk()->json('html');
-    expect($html)->toContain('ملف المبنى · المعرّف غير متوفر');
+    expect($html)->toContain('ملف المبنى · معرّف الحصر غير متوفر');
     $csv = $this->get(route('reh.export'))->assertOk()->streamedContent();
     $rows = array_map('str_getcsv', explode("\n", trim(ltrim($csv, "\xEF\xBB\xBF"))));
     expect($rows[1][0])->toBe('غير متوفر')->and($rows[1][1])->toBe('غير متوفر');
@@ -492,9 +492,9 @@ it('shows previous and current identifiers as read only general data for each re
         $xpath = new DOMXPath($document);
         $section = $xpath->query('//section[@data-record-identifiers]')->item(0);
         expect($section)->not->toBeNull();
-        $expected = ['building-previous' => ['معرّف المبنى السابق', $expectedBuilding], 'building-current' => ['معرّف المبنى الحالي', '3770']];
+        $expected = ['building-previous' => ['معرّف حصر المبنى', $expectedBuilding], 'building-current' => ['معرّف تأهيل المبنى', '3770']];
         if ($kind === 'unit') {
-            $expected += ['unit-previous' => ['معرّف الوحدة السابق', $expectedUnit], 'unit-current' => ['معرّف الوحدة الحالي', '4621']];
+            $expected += ['unit-previous' => ['معرّف حصر الوحدة', $expectedUnit], 'unit-current' => ['معرّف تأهيل الوحدة', '4621']];
             expect($xpath->query('ancestor::section[@data-detail-panel="data"]', $section)->length)->toBe(1);
         }
         expect($xpath->query('.//*[@data-reference]', $section)->length)->toBe(count($expected))
@@ -523,5 +523,12 @@ it('uses primary reference labels throughout the interface while preserving gene
         }
         expect($document->textContent)->not->toContain('old_objectid', 'Old_objectID', 'OldUnit_objectID', 'معرّف المبنى السابق', 'معرّف الوحدة السابق');
     }
-    $this->get(route('reh.index'))->assertOk()->assertSee('اكتب معرّف الوحدة أو المبنى، الاسم أو الكود…');
+    $this->get(route('reh.index'))->assertOk()->assertSee('اكتب معرّف الحصر للوحدة أو المبنى، الاسم أو الكود…');
+});
+
+it('keeps census and rehabilitation values paired with their source field labels', function (): void {
+    $sections = app(RehSurvey::class)->sections(['Old_objectID' => 2328, 'objectid' => 3770], 'building', false);
+    $fields = collect($sections)->flatMap(fn (array $section): array => $section['fields'])->keyBy('field');
+    expect($fields['Old_objectID'])->toMatchArray(['label' => 'معرّف حصر المبنى', 'value' => '2328'])
+        ->and($fields['objectid'])->toMatchArray(['label' => 'معرّف تأهيل المبنى', 'value' => '3770']);
 });

@@ -17,7 +17,7 @@ class RehAdvancedFilters
     public const LABELS = [
         'q' => 'البحث', 'survey_status' => 'حالة الاستبيان', 'status' => 'التدقيق', 'priority' => 'الأولوية',
         'governorate' => 'المحافظة', 'neighborhood' => 'الحي', 'engineer' => 'المهندس',
-        'building_old_objectid' => 'معرّف المبنى', 'visit_from' => 'الزيارة من', 'visit_to' => 'الزيارة إلى',
+        'building_old_objectid' => 'معرّف حصر المبنى', 'visit_from' => 'الزيارة من', 'visit_to' => 'الزيارة إلى',
         'score_min' => 'النهائي من', 'score_max' => 'النهائي إلى',
         'engineering_min' => 'الهندسي من', 'engineering_max' => 'الهندسي إلى',
         'social_min' => 'الاجتماعي من', 'social_max' => 'الاجتماعي إلى',

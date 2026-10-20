@@ -11,8 +11,8 @@ class RehExportColumns
     public static function summaryColumns(): array
     {
         return [
-            'unit_reference' => ['label' => 'معرّف الوحدة', 'group' => 'الوحدة والمبنى'],
-            'building_reference' => ['label' => 'معرّف المبنى', 'group' => 'الوحدة والمبنى'],
+            'unit_reference' => ['label' => 'معرّف حصر الوحدة', 'group' => 'الوحدة والمبنى'],
+            'building_reference' => ['label' => 'معرّف حصر المبنى', 'group' => 'الوحدة والمبنى'],
             'owner' => ['label' => 'المالك', 'group' => 'الوحدة والمبنى'],
             'identity' => ['label' => 'الهوية', 'group' => 'الوحدة والمبنى', 'permission' => 'reh.sensitive'],
             'governorate' => ['label' => 'المحافظة', 'group' => 'الموقع'],

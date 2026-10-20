@@ -6,6 +6,8 @@ class RehSurvey
 {
     public const REFERENCE_FIELDS = ['OldUnit_objectID', 'Old_objectID', 'old_objectID', 'old_objectid'];
 
+    public const IDENTIFIER_LABELS = ['objectid' => 'معرّف تأهيل المبنى', 'Old_objectID' => 'معرّف حصر المبنى', 'OldUnit_objectID' => 'معرّف حصر الوحدة', 'old_objectID' => 'معرّف الحصر', 'old_objectid' => 'معرّف الحصر'];
+
     public const FIELD_STATUSES = ['completed' => 'مكتمل ميدانيًا', 'not_completed' => 'غير مكتمل ميدانيًا', 'unrecorded' => 'غير مسجل', 'all' => 'كل حالات الاستبيان'];
 
     public const WORKFLOW = ['new' => 'وارد جديد', 'in_review' => 'قيد التدقيق', 'returned' => 'معاد للاستكمال', 'second_assessment' => 'بانتظار تقييم ثانٍ', 'ready' => 'مكتمل التدقيق', 'decided' => 'تم توثيق القرار', 'source_changed' => 'تغيّرت بيانات المصدر'];
@@ -33,7 +35,7 @@ class RehSurvey
 
     public function label(string $field): string
     {
-        return $this->dictionary()['fields'][$field]['label'] ?? $field;
+        return self::IDENTIFIER_LABELS[$field] ?? $this->dictionary()['fields'][$field]['label'] ?? $field;
     }
 
     public function value(string $field, mixed $value): string
@@ -71,9 +73,7 @@ class RehSurvey
                 continue;
             }
             $sections[$group]['label'] = $definition['group']['label'] ?? 'بيانات عامة';
-            $sections[$group]['fields'][] = $field === 'objectid'
-                ? ['field' => 'old_objectid', 'label' => 'معرّف المبنى', 'value' => self::reference($source)]
-                : ['field' => $field, 'label' => $definition['label'], 'value' => $this->value($field, $source[$field] ?? null)];
+            $sections[$group]['fields'][] = ['field' => $field, 'label' => $this->label($field), 'value' => $this->value($field, $source[$field] ?? null)];
         }
 
         return $sections;

@@ -10,7 +10,7 @@
 @if($columnSections)
 @forelse($columnRows as $row)
 @if(!$loop->first)<pagebreak />@endif
-<h2 class="section-title">الملف {{ $loop->iteration }} من {{ $columnRows->count() }}@if(isset($row['unit_reference'])) · معرّف الوحدة {{ $row['unit_reference'] }}@endif</h2>
+<h2 class="section-title">الملف {{ $loop->iteration }} من {{ $columnRows->count() }}@if(isset($row['unit_reference'])) · معرّف حصر الوحدة {{ $row['unit_reference'] }}@endif</h2>
 @foreach($columnSections as $group => $fields)
 <h3>{{ $group }}</h3><table class="data">@foreach($fields as $key => $label)<tr><td>{{ $label }}</td><td>{{ \App\Modules\Reh\Services\RehPdf::columnValue($key, $row[$key] ?? null) }}</td></tr>@endforeach</table>
 @endforeach
@@ -26,7 +26,7 @@
 </tbody></table>
 @endforeach
 @else
-<table class="listing"><thead><tr><th style="width:13%">الوحدة / المبنى</th><th style="width:23%">المالك والموقع</th><th style="width:23%">حالة التدقيق</th><th style="width:14%">الدرجة / 100</th><th style="width:27%">الأولوية</th></tr></thead><tbody>
+<table class="listing"><thead><tr><th style="width:13%">معرّف الحصر<br>الوحدة / المبنى</th><th style="width:23%">المالك والموقع</th><th style="width:23%">حالة التدقيق</th><th style="width:14%">الدرجة / 100</th><th style="width:27%">الأولوية</th></tr></thead><tbody>
 @forelse($rows as $row)<tr><td><strong>{{ $row['unit'] }}</strong><br><span class="muted">مبنى {{ $row['building'] }}</span></td><td>{{ $row['owner'] }}<br><span class="small">{{ $row['location'] }}</span></td><td>{{ $row['workflow'] }}@if($row['missing'])<br><span class="small">يلزم التحقق من المصدر</span>@endif</td><td>{{ $row['score'] }}</td><td>{{ $row['priority'] }}</td></tr>
 @empty<tr><td colspan="5">لا توجد وحدات مطابقة للفلاتر المحددة.</td></tr>@endforelse
 </tbody></table>

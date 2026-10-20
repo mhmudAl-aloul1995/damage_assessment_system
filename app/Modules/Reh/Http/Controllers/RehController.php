@@ -89,7 +89,7 @@ class RehController extends Controller
 
                 return [
                     'id' => $building->id,
-                    'name' => 'مبنى '.$building->old_objectid.($building->name ? ' · '.$building->name : ''),
+                    'name' => 'معرّف حصر المبنى '.$building->old_objectid.($building->name ? ' · '.$building->name : ''),
                     'geometry' => $building->geometry,
                     'url' => route('reh.buildings.show', $building),
                     'survey' => match ($fieldStatus) {

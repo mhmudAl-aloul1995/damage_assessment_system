@@ -20,7 +20,7 @@ it('downloads a real arabic unit pdf with old references and redacts restricted 
     $unit->building->update(['source' => [...$unit->building->source, 'Old_objectID' => 2328]]);
     $data = app(RehPdf::class)->unitData($unit->fresh('building'), $this->exporter);
     $html = view('reh::pdf.unit', $data)->render();
-    expect($html)->toContain('5087', '2328', 'معرّف الوحدة الحالي')->not->toContain('SECRET-IDENTITY', 'SECRET-HEALTH', 'التقييم الاجتماعي · أسرة المالك');
+    expect($html)->toContain('5087', '2328', 'معرّف حصر المبنى', 'معرّف تأهيل المبنى', 'معرّف حصر الوحدة', 'معرّف تأهيل الوحدة')->not->toContain('SECRET-IDENTITY', 'SECRET-HEALTH', 'التقييم الاجتماعي · أسرة المالك', 'معرّف المبنى السابق', 'معرّف الوحدة الحالي');
     expect($data['total'])->toBe('محجوب')->and($data['social'])->toBe('محجوب');
     $response = $this->get(route('reh.units.pdf', $unit))->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertDownload('REH-unit-5087.pdf');
     expect($response->getContent())->toStartWith('%PDF-');
