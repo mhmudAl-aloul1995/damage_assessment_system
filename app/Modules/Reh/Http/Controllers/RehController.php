@@ -308,7 +308,6 @@ class RehController extends Controller
     public function budgetPdf(RehFilterRequest $request, RehPdf $pdf): Response
     {
         $query = $this->units($request->validated());
-        abort_if((clone $query)->count() > 500, 422, 'تصدير PDF يدعم حتى 500 وحدة؛ ضيق الفلاتر أو استخدم Excel.');
         $budget = app(\App\Modules\Reh\Services\RehPricing::class)->budget($query);
 
         return $pdf->budget($budget, app(RehAdvancedFilters::class)->summary($request->validated()));

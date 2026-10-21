@@ -263,3 +263,17 @@ it('compares dollar costs using each editions own rate and preserves approved do
     expect($catalog)->toContain('السعر USD', '-1.6667');
     expect((float) RehCostEstimate::query()->first()->total_usd)->toBe(13.33);
 });
+
+it('downloads the full filtered budget PDF beyond five hundred units', function (): void {
+    $building = \App\Modules\Reh\Models\RehBuilding::factory()->create(['field_status' => 'COMPLETED']);
+    RehUnit::factory()->count(501)->create(['building_id' => $building->id, 'decision' => 'selected', 'source' => ['unit_needs_intervention' => 'no']]);
+    RehUnit::factory()->create(['building_id' => $building->id, 'decision' => 'excluded']);
+    $budget = app(RehPricing::class)->budget(RehUnit::query()->where('decision', 'selected'));
+    $html = view('reh::pricing.pdf', ['budget' => $budget, 'filters' => []])->render();
+    expect($budget['units'])->toHaveCount(501)
+        ->and(substr_count($html, 'معرّف حصر الوحدة'))->toBe(6)
+        ->and($html)->toContain('501 وحدة');
+    $response = $this->get(route('reh.budget.pdf', ['decision' => 'selected']))
+        ->assertOk()->assertDownload()->assertHeader('Content-Type', 'application/pdf');
+    expect($response->getContent())->toStartWith('%PDF-');
+});
