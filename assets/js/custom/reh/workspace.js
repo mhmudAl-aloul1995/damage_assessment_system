@@ -460,18 +460,22 @@
     function updateConditionFields() {
         filters.querySelectorAll('[data-filter-condition]').forEach(field => {
             const operator = field.querySelector('[data-condition-operator]').value || field.dataset.conditionDefault;
+            const expanded = !field.hasAttribute('data-condition-lazy') || Boolean(field.querySelector('[data-condition-operator]').value) || [...field.querySelectorAll('[data-condition-value]')].some(input => inputValues(input).length);
+            field.dataset.conditionExpanded = String(expanded);
             const presence = ['blank', 'not_blank'].includes(operator);
             const option = field.querySelector(`[data-condition-option="${CSS.escape(operator)}"]`);
-            field.querySelector('[data-condition-label]').textContent = option?.textContent || 'الكل';
-            field.querySelector('[data-condition-trigger]').dataset.active = String(operator !== field.dataset.conditionDefault);
-            field.querySelectorAll('[data-condition-option]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.conditionOption === operator)));
+            field.querySelector('[data-condition-label]').textContent = expanded ? option?.textContent || 'الكل' : 'إضافة شرط';
+            field.querySelector('[data-condition-trigger]').dataset.active = String(expanded && operator !== field.dataset.conditionDefault);
+            field.querySelectorAll('[data-condition-option]').forEach(button => button.setAttribute('aria-pressed', String(expanded && button.dataset.conditionOption === operator)));
+            const clear = field.querySelector('[data-condition-clear]');
+            if (clear) clear.hidden = !expanded;
             field.querySelectorAll('[data-condition-single], [data-condition-range]').forEach(part => {
-                const visible = !presence && (part.hasAttribute('data-condition-range') ? operator === 'between' : operator !== 'between');
+                const visible = expanded && !presence && (part.hasAttribute('data-condition-range') ? operator === 'between' : operator !== 'between');
                 part.hidden = !visible;
                 part.querySelectorAll('[name]').forEach(input => { input.disabled = !visible; if (!visible) clearInput(input); });
             });
             const noValue = field.querySelector('[data-condition-no-value]');
-            noValue.hidden = !presence && field.dataset.conditionType !== 'presence';
+            noValue.hidden = !expanded || !presence && field.dataset.conditionType !== 'presence';
             noValue.textContent = presence ? 'لا يلزم اختيار إجابة' : 'اختر فارغ أو غير فارغ';
         });
     }
@@ -705,6 +709,11 @@
                 menu.style.top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 12)) + 'px';
                 menu.querySelector('[aria-pressed="true"]')?.focus();
             }
+        }
+        else if (button.matches('[data-condition-clear]')) {
+            const field = button.closest('[data-filter-condition]');
+            field.querySelectorAll('[name]').forEach(clearInput);
+            closeConditionMenus(); updateSurveyFilters(); field.querySelector('[data-condition-trigger]').focus();
         }
         else if (button.matches('[data-condition-option]')) {
             const field = button.closest('[data-filter-condition]');

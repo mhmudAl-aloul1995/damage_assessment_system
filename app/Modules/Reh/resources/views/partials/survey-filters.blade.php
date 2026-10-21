@@ -7,23 +7,26 @@
             @foreach($surveyFilters->definitions() as $key => $definition)
                 @continue($definition['group'] !== $group)
                 @php($range = in_array($definition['type'], ['integer', 'decimal', 'date', 'datetime'], true))
+                @php($hasCondition = !empty($filters[$key.'_op']) || \App\Modules\Reh\Services\RehFilterOperators::active($filters ?? [], $key))
+                @php($conditionOperator = $filters[$key.'_op'] ?? $definition['default_operator'])
                 @php($inputType = match($definition['type']) { 'integer', 'decimal' => 'number', 'date' => 'date', 'datetime' => 'datetime-local', default => 'text' })
-                <div data-filter-field data-survey-condition="{{ $key }}" data-filter-condition="{{ $key }}" data-condition-type="{{ $definition['type'] }}" data-condition-default="{{ $definition['default_operator'] }}">
+                <div data-filter-field data-survey-condition="{{ $key }}" data-filter-condition="{{ $key }}" data-condition-type="{{ $definition['type'] }}" data-condition-default="{{ $definition['default_operator'] }}" @if($range) data-condition-lazy data-condition-expanded="{{ $hasCondition ? 'true' : 'false' }}" @endif>
                     <div class="reh-condition-heading">
                         <label for="reh-{{ $key }}">{{ $definition['label'] }}</label>
-                        <button type="button" class="reh-condition-trigger" data-condition-trigger aria-expanded="false" aria-controls="reh-{{ $key }}-conditions" aria-label="تغيير شرط {{ $definition['label'] }}"><span data-condition-label>{{ $definition['operators'][$definition['default_operator']] ?? 'الكل' }}</span> <span aria-hidden="true">⌄</span></button>
+                        <button type="button" class="reh-condition-trigger" data-condition-trigger aria-expanded="false" aria-controls="reh-{{ $key }}-conditions" aria-label="تغيير شرط {{ $definition['label'] }}"><span data-condition-label>{{ $range && !$hasCondition ? 'إضافة شرط' : ($definition['operators'][$conditionOperator] ?? 'الكل') }}</span> <span aria-hidden="true">⌄</span></button>
                     </div>
                     <input type="hidden" id="reh-{{ $key }}-operator" name="{{ $key }}_op" value="" data-filter-label="{{ $title }} · {{ $definition['label'] }} · الشرط" data-condition-operator>
                     <div class="reh-condition-menu" id="reh-{{ $key }}-conditions" role="group" aria-label="شروط {{ $definition['label'] }}" hidden>
                         @foreach($definition['operators'] as $operator => $operatorLabel)<button type="button" data-condition-option="{{ $operator }}" aria-pressed="false">{{ $operatorLabel }}</button>@endforeach
+                        @if($range)<button type="button" data-condition-clear @if(!$hasCondition) hidden @endif>إزالة الشرط</button>@endif
                     </div>
                     @if($range)
-                        <div class="reh-survey-range" data-condition-range>
+                        <div class="reh-survey-range" data-condition-range @if(!$hasCondition || $conditionOperator !== 'between') hidden @endif>
                             @foreach(['min' => 'من', 'max' => 'إلى'] as $bound => $boundLabel)
-                                <div><label for="reh-{{ $key }}-{{ $bound }}">{{ $boundLabel }}</label><input id="reh-{{ $key }}-{{ $bound }}" name="{{ $key }}_{{ $bound }}" data-filter-label="{{ $title }} · {{ $definition['label'] }} {{ $boundLabel }}" type="{{ $inputType }}" @if($inputType === 'number') min="-1000000" max="1000000" step="{{ $definition['type'] === 'integer' ? '1' : 'any' }}" @elseif($inputType === 'datetime-local') step="1" @endif class="form-control" data-condition-value></div>
+                                <div><label for="reh-{{ $key }}-{{ $bound }}">{{ $boundLabel }}</label><input id="reh-{{ $key }}-{{ $bound }}" name="{{ $key }}_{{ $bound }}" data-filter-label="{{ $title }} · {{ $definition['label'] }} {{ $boundLabel }}" type="{{ $inputType }}" @if($inputType === 'number') min="-1000000" max="1000000" step="{{ $definition['type'] === 'integer' ? '1' : 'any' }}" @elseif($inputType === 'datetime-local') step="1" @endif class="form-control" data-condition-value @if(!$hasCondition || $conditionOperator !== 'between') disabled @endif></div>
                             @endforeach
                         </div>
-                        <div data-condition-single hidden><input id="reh-{{ $key }}" name="{{ $key }}" data-filter-label="{{ $title }} · {{ $definition['label'] }}" type="{{ $inputType }}" @if($inputType === 'number') min="-1000000" max="1000000" step="{{ $definition['type'] === 'integer' ? '1' : 'any' }}" @elseif($inputType === 'datetime-local') step="1" @endif class="form-control" data-condition-value disabled></div>
+                        <div data-condition-single @if(!$hasCondition || $conditionOperator === 'between' || in_array($conditionOperator, ['blank', 'not_blank'], true)) hidden @endif><input id="reh-{{ $key }}" name="{{ $key }}" data-filter-label="{{ $title }} · {{ $definition['label'] }}" type="{{ $inputType }}" @if($inputType === 'number') min="-1000000" max="1000000" step="{{ $definition['type'] === 'integer' ? '1' : 'any' }}" @elseif($inputType === 'datetime-local') step="1" @endif class="form-control" data-condition-value @if(!$hasCondition || $conditionOperator === 'between' || in_array($conditionOperator, ['blank', 'not_blank'], true)) disabled @endif></div>
                     @elseif(in_array($definition['type'], ['choice', 'multiple'], true))
                         <div data-condition-single><select multiple data-control="select2" data-placeholder="الكل" data-close-on-select="false" id="reh-{{ $key }}" name="{{ $key }}" data-filter-label="{{ $title }} · {{ $definition['label'] }}" class="form-select" data-dropdown-parent="#reh-advanced-filters" data-condition-value>@foreach($definition['choices'] as $value => $choice)<option value="{{ $value }}">{{ $choice }}</option>@endforeach</select></div>
                         @if($definition['type'] === 'multiple')<small>يشمل أيًّا من الإجابات المختارة ضمن الإجابات المسجلة.</small>@endif
@@ -31,7 +34,7 @@
                         <div data-condition-single><input id="reh-{{ $key }}" name="{{ $key }}" data-filter-label="{{ $title }} · {{ $definition['label'] }}" class="form-control" maxlength="1000" placeholder="اكتب القيمة المطلوبة…" data-condition-value></div>
                     @endif
                     <div class="reh-condition-no-value" data-condition-no-value @if($definition['type'] !== 'presence') hidden @endif>{{ $definition['type'] === 'presence' ? 'اختر فارغ أو غير فارغ' : 'لا يلزم اختيار إجابة' }}</div>
-                    <small class="reh-condition-context">{{ $definition['context'] }}</small>
+                    @if(trim($definition['context']) !== trim($title))<small class="reh-condition-context">{{ $definition['context'] }}</small>@endif
                 </div>
             @endforeach
             </div>

@@ -316,6 +316,13 @@
 #reh-workspace [data-survey-condition]{min-width:0}
 #reh-workspace .reh-condition-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:36px;margin-bottom:7px}
 #reh-workspace .reh-condition-heading label{margin:0;min-width:0}
+#reh-workspace .reh-filter-section .reh-advanced-grid:has(>[data-condition-lazy]){align-items:start;row-gap:14px}
+#reh-workspace [data-condition-lazy]{padding-block:4px 10px;border-bottom:1px solid var(--reh-line)}
+#reh-workspace [data-condition-lazy] .reh-condition-heading{align-items:flex-start;min-height:0;margin:0;gap:10px}
+#reh-workspace [data-condition-lazy] .reh-condition-heading label{font-size:12px;font-weight:500;line-height:1.7}
+#reh-workspace [data-condition-lazy] .reh-condition-trigger{font-size:10px;padding:2px 5px;line-height:1.8}
+#reh-workspace [data-condition-lazy][data-condition-expanded=true] .reh-condition-heading{margin-bottom:9px}
+#reh-workspace .reh-condition-menu [data-condition-clear]{border-top:1px solid var(--reh-line);border-radius:0;margin-top:5px;color:var(--reh-muted)}
 #reh-workspace .reh-filter-primary .reh-condition-heading{min-height:24px;margin-bottom:7px}
 #reh-workspace .reh-filter-primary .reh-condition-heading label{margin:0}
 #reh-workspace .reh-filter-section>.reh-core-condition{margin-block:16px}

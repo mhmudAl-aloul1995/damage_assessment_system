@@ -36,6 +36,35 @@ it('covers every survey field with an existing database column and a condition c
             expect((new DOMXPath($doc))->query('//*[@data-filter-condition="'.$key.'"]//*[@data-condition-trigger]')->length)->toBe(1);
         }
         expect($html)->not->toContain('استخدم كلمة محددة بدل «هل».', 'reh-filter-search-help');
+        $xpath = new DOMXPath($doc);
+        $quantity = $xpath->query('//*[@data-survey-condition="sf_boq_1_1_water_tank_repair_qty"]')->item(0);
+        expect($quantity->hasAttribute('data-condition-lazy'))->toBeTrue()
+            ->and($quantity->getAttribute('data-condition-expanded'))->toBe('false')
+            ->and($xpath->query('.//*[@data-condition-label]', $quantity)->item(0)->textContent)->toBe('إضافة شرط')
+            ->and($xpath->query('.//*[@data-condition-range and @hidden]//input[@disabled]', $quantity)->length)->toBe(2)
+            ->and($xpath->query('.//small[contains(@class,"reh-condition-context")]', $quantity)->length)->toBe(0);
+    }
+});
+
+it('restores compact quantity controls for saved single range and presence filters', function (): void {
+    $key = 'sf_boq_1_1_water_tank_repair_qty';
+    foreach (['reh.index', 'reh.exports'] as $route) {
+        foreach ([
+            [[$key.'_min' => 0, $key.'_max' => 5], 'بين قيمتين', false, true],
+            [[$key.'_op' => 'gt', $key => 0], 'أكبر من', true, false],
+            [[$key.'_op' => 'blank'], 'فارغ', true, true],
+        ] as [$filters, $label, $rangeHidden, $singleHidden]) {
+            $html = $this->get(route($route, $filters))->assertOk()->getContent();
+            $document = new DOMDocument;
+            $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
+            $xpath = new DOMXPath($document);
+            $field = $xpath->query('//*[@data-filter-condition="'.$key.'"]')->item(0);
+            expect($field->getAttribute('data-condition-expanded'))->toBe('true')
+                ->and($xpath->query('.//*[@data-condition-label]', $field)->item(0)->textContent)->toBe($label)
+                ->and($xpath->query('.//*[@data-condition-range]', $field)->item(0)->hasAttribute('hidden'))->toBe($rangeHidden)
+                ->and($xpath->query('.//*[@data-condition-single]', $field)->item(0)->hasAttribute('hidden'))->toBe($singleHidden)
+                ->and($xpath->query('.//*[@data-condition-clear]', $field)->item(0)->hasAttribute('hidden'))->toBeFalse();
+        }
     }
 });
 
