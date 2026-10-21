@@ -23,7 +23,7 @@ it('downloads a real arabic unit pdf with old references and redacts restricted 
     expect($html)->toContain('5087', '2328', 'معرّف حصر المبنى', 'معرّف تأهيل المبنى', 'معرّف حصر الوحدة', 'معرّف تأهيل الوحدة')->not->toContain('SECRET-IDENTITY', 'SECRET-HEALTH', 'التقييم الاجتماعي · أسرة المالك', 'معرّف المبنى السابق', 'معرّف الوحدة الحالي');
     expect($data['total'])->toBe('محجوب')->and($data['social'])->toBe('محجوب');
     $response = $this->get(route('reh.units.pdf', $unit))->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertDownload('REH-unit-5087.pdf');
-    expect($response->getContent())->toStartWith('%PDF-');
+    expect($response->getContent())->toStartWith('%PDF-')->toContain('DroidArabicKufi', 'DejaVuSans');
     $this->exporter->givePermissionTo(['reh.sensitive', 'reh.scores.view']);
     $html = view('reh::pdf.unit', app(RehPdf::class)->unitData($unit->fresh('building'), $this->exporter))->render();
     expect($html)->toContain('SECRET-IDENTITY', 'SECRET-HEALTH', 'التقييم الاجتماعي · أسرة المالك');
@@ -37,7 +37,7 @@ it('exports all filtered records rather than the current page and preserves the 
         $captured = $view->getData();
     });
     $response = $this->get(route('reh.export.pdf', ['decision' => 'selected', 'page' => 2]))->assertOk()->assertHeader('Content-Type', 'application/pdf');
-    expect($response->getContent())->toStartWith('%PDF-')->and($captured['rows'])->toHaveCount(21)
+    expect($response->getContent())->toStartWith('%PDF-')->toContain('DroidArabicKufi', 'DejaVuSans')->and($captured['rows'])->toHaveCount(21)
         ->and($captured['filterSummary']['القرار'])->toBe('مقبول مبدئيًا')
         ->and($captured['rows']->pluck('owner')->all())->not->toContain('EXCLUDED-OWNER')
         ->and($captured['rows']->pluck('score')->unique()->all())->toBe(['محجوب']);

@@ -7,6 +7,8 @@ use App\Modules\Reh\Models\RehUnit;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
 
@@ -115,10 +117,15 @@ class RehPdf
     {
         $directory = storage_path('app/mpdf');
         File::ensureDirectoryExists($directory);
+        $defaults = (new ConfigVariables)->getDefaults();
+        $fonts = (new FontVariables)->getDefaults();
         $pdf = new Mpdf([
-            'mode' => 'utf-8', 'format' => 'A4', 'default_font' => 'dejavusans', 'default_font_size' => 10,
+            'mode' => 'utf-8', 'format' => 'A4', 'default_font' => 'droidarabickufi', 'default_font_size' => 10,
+            'fontDir' => [...$defaults['fontDir'], base_path()],
+            'fontdata' => $fonts['fontdata'] + ['droidarabickufi' => ['R' => 'DroidArabicKufi.ttf', 'useOTL' => 0xFF, 'useKashida' => 75]],
+            'useSubstitutions' => true, 'backupSubsFont' => ['dejavusans'],
             'margin_left' => 15, 'margin_right' => 15, 'margin_top' => 18, 'margin_bottom' => 18,
-            'autoScriptToLang' => true, 'autoLangToFont' => true, 'tempDir' => $directory,
+            'autoScriptToLang' => true, 'autoLangToFont' => false, 'tempDir' => $directory,
         ]);
         $pdf->SetDirectionality('rtl');
         $pdf->SetTitle('REH - Palestinian Housing Council');
