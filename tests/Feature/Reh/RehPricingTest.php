@@ -315,3 +315,28 @@ it('waits for an effective approved price book and hides row pricing without per
     $html = $this->actingAs($viewer)->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
     expect($html)->toContain('تحتاج صلاحية عرض التسعير')->not->toContain('data-unit-pricing', '13.33 USD', 'تفاصيل التكلفة');
 });
+
+it('explains the actual cost approval blockers and shows the form only when all prerequisites are ready', function (): void {
+    $book = rehPricingBook($this->user);
+    $unit = rehPricedUnit();
+    $unit->update(['engineering_status' => 'pending']);
+    $html = $this->getJson(route('reh.pricing.unit', $unit))->assertOk()->json('html');
+    expect($html)->toContain('مسودة ولم تُعتمد بعد', 'التدقيق الهندسي لهذه الوحدة لم يُعتمد بعد')
+        ->not->toContain('تكلفة الوحدة غير مكتملة', 'data-price-estimate');
+    $book->update(['status' => 'approved', 'approved_at' => now()]);
+    $html = $this->getJson(route('reh.pricing.unit', $unit))->assertOk()->json('html');
+    expect($html)->toContain('التدقيق الهندسي لهذه الوحدة لم يُعتمد بعد')
+        ->not->toContain('مسودة ولم تُعتمد بعد', 'data-price-estimate');
+    $unit->update(['engineering_status' => 'approved']);
+    $html = $this->getJson(route('reh.pricing.unit', $unit))->assertOk()->json('html');
+    expect($html)->toContain('data-price-estimate', 'اعتماد هذه النسخة من التكلفة')
+        ->not->toContain('data-cost-approval-blockers');
+    $book->update(['effective_date' => now()->addDay()]);
+    $html = $this->getJson(route('reh.pricing.unit', ['unit' => $unit, 'book' => $book->id]))->assertOk()->json('html');
+    expect($html)->toContain('يبدأ سريانها بتاريخ', now()->addDay()->format('Y-m-d'))
+        ->not->toContain('data-price-estimate', 'التدقيق الهندسي لهذه الوحدة لم يُعتمد بعد');
+    $book->update(['effective_date' => now()->toDateString()]);
+    $unit->update(['source' => [...$unit->source, 'boq_3_3_wood_door_frame_qty' => 1]]);
+    $html = $this->getJson(route('reh.pricing.unit', $unit))->assertOk()->json('html');
+    expect($html)->toContain('تكلفة الوحدة غير مكتملة')->not->toContain('data-price-estimate', 'يبدأ سريانها بتاريخ');
+});

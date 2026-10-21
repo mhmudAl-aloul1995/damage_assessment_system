@@ -8,9 +8,21 @@
 @foreach($calculation['lines'] as $line)<tr><td>{{ $line['code'] }} · {{ $line['label'] }}@if($line['issue'])<small class="text-warning">{{ $line['issue'] }}</small>@endif</td><td>{{ (float)$line['quantity'] }}</td><td>{{ $line['unit'] }}</td><td>{{ $line['rate_usd'] === null ? '—' : number_format($line['rate_usd'],4) }}<small>{{ $line['rate'] === null ? '—' : number_format((float)$line['rate'],2).' ₪' }}</small></td><td>{{ $line['amount_usd'] === null ? '—' : number_format($line['amount_usd'],2) }}<small>{{ $line['amount'] === null ? '—' : number_format($line['amount'],2).' ₪' }}</small></td></tr>@endforeach
 </tbody></table></div>
 @can('reh.pricing.approve')
-@if($book && $book->status === 'approved' && $calculation['complete'] && $unit->engineering_status === 'approved')
+@php($priceBookReady = $book && $book->status === 'approved' && !$book->effective_date->isFuture())
+@if($priceBookReady && $calculation['complete'] && $unit->engineering_status === 'approved')
 <form data-price-form data-price-estimate data-reload-url="{{ route('reh.pricing.unit',$unit) }}?book={{ $book->id }}" action="{{ route('reh.pricing.estimate.approve',$unit) }}" method="post"><input type="hidden" name="book_id" value="{{ $book->id }}"><input type="hidden" name="fingerprint" value="{{ $calculation['fingerprint'] }}"><label>ملاحظة اعتماد التكلفة<textarea class="form-control" name="reason" required minlength="3"></textarea></label><button class="btn btn-primary mt-4">اعتماد هذه النسخة من التكلفة</button></form>
-@else<p class="reh-price-warning">اعتماد التكلفة يتطلب اكتمال الأسعار والتدقيق الهندسي وإصدار أسعار معتمد وساري.</p>@endif
+@else
+<div class="reh-price-warning" data-cost-approval-blockers>
+<strong>المطلوب لإظهار زر اعتماد التكلفة</strong>
+<ul class="mb-0 mt-2">
+@if(!$book)<li>لا توجد قائمة أسعار؛ استوردها واعتمدها من مكتبة الأسعار.</li>
+@elseif($book->status !== 'approved')<li>قائمة الأسعار المحددة مسودة ولم تُعتمد بعد. اعتمد الإصدار من مكتبة الأسعار، أو اختر إصدارًا معتمدًا.</li>
+@elseif($book->effective_date->isFuture())<li>قائمة الأسعار معتمدة، لكن يبدأ سريانها بتاريخ {{ $book->effective_date->format('Y-m-d') }}.</li>@endif
+@if(!$calculation['complete'])<li>تكلفة الوحدة غير مكتملة. راجع «ما الذي يمنع اكتمال التكلفة؟» أعلاه لمعرفة البنود الناقصة.</li>@endif
+@if($unit->engineering_status !== 'approved')<li>التدقيق الهندسي لهذه الوحدة لم يُعتمد بعد. افتح ملف الوحدة واعتمد التدقيق الهندسي بعد مراجعته.</li>@endif
+</ul>
+</div>
+@endif
 @endcan
 <h4 class="mt-6">نسخ التكلفة المعتمدة</h4>
 @forelse($estimates as $estimate)<details class="reh-price-log"><summary>{{ number_format((float)$estimate->total_usd,2) }} USD · {{ $estimate->book->name }} · {{ $estimate->created_at->format('Y-m-d H:i') }} @if($estimate->fingerprint !== $calculation['fingerprint'])<span class="badge badge-light-warning">تغيرت الكميات منذ الاعتماد</span>@endif</summary><p>{{ $estimate->approver?->name }} · {{ $estimate->reason }}</p><p>سعر الصرف المحفوظ {{ (float)$estimate->exchange_rate }} · {{ number_format((float)$estimate->total,2) }} ₪</p><div class="reh-price-table-wrap"><table class="table reh-price-table"><thead><tr><th>البند</th><th>الكمية المعتمدة</th><th>السعر USD</th><th>الإجمالي USD</th></tr></thead><tbody>@foreach($estimate->lines as $line)<tr><td>{{ $line->code }} · {{ $line->label }}</td><td>{{ (float)$line->quantity }} {{ $line->unit }}</td><td>{{ number_format((float)$line->rate/(float)$estimate->exchange_rate,4) }}<small>{{ number_format((float)$line->rate,2) }} ₪</small></td><td>{{ number_format((float)$line->amount/(float)$estimate->exchange_rate,2) }}<small>{{ number_format((float)$line->amount,2) }} ₪</small></td></tr>@endforeach</tbody></table></div></details>@empty<p class="text-muted">لا توجد تكلفة معتمدة بعد.</p>@endforelse
