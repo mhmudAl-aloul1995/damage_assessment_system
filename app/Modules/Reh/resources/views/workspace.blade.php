@@ -5,13 +5,15 @@
 @php($survey = app(\App\Modules\Reh\Services\RehSurvey::class))
 @can('reh.export')<script type="application/json" id="reh-export-column-catalog">@json(\App\Modules\Reh\Services\RehExportColumns::catalog(auth()->user()))</script>@endcan
 <link rel="stylesheet" href="{{ asset('assets/css/reh.css') }}?v={{ filemtime(base_path('assets/css/reh.css')) }}">
+<link rel="stylesheet" href="{{ asset('assets/css/reh-pricing.css') }}?v={{ filemtime(base_path('assets/css/reh-pricing.css')) }}">
 <link rel="stylesheet" href="{{ asset('assets/plugins/custom/leaflet/leaflet.bundle.rtl.css') }}">
 <div id="reh-workspace" dir="rtl" data-index-url="{{ route($exportPage ? 'reh.exports' : 'reh.index') }}" data-data-url="{{ route($exportPage ? 'reh.exports.data' : 'reh.data') }}" data-workspace-url="{{ route('reh.index') }}" data-export-page="{{ $exportPage ? 'true' : 'false' }}" data-export-page-url="{{ route('reh.exports') }}" data-excel-url="{{ route('reh.export.excel') }}" data-sync-url="{{ route('reh.sync') }}" data-export-url="{{ route('reh.export') }}" data-pdf-url="{{ route('reh.export.pdf') }}" data-initial="{{ json_encode($filters) }}">
     <header class="reh-hero">
         <div><span class="reh-eyebrow">REH / PHASE 02</span><h2>{{ $exportPage ? 'تصدير بيانات المشروع' : 'كل وحدة، خطوة نحو التعافي' }}</h2><p>{{ $exportPage ? 'حدد نطاق البيانات بالفلاتر نفسها، ثم نزّل النتائج بصيغة Excel أو PDF.' : 'مساحة عمل التقييم والتدقيق لمشروع تأهيل المساكن المتضررة' }}</p></div>
-        <div class="reh-hero-note"><span class="badge badge-light">المرحلة الثانية</span><span>التسعير بانتظار قائمة الأسعار</span></div>
+        <div class="reh-hero-note"><span class="badge badge-light">المرحلة الثانية</span><span>{{ app(\App\Modules\Reh\Services\RehPricing::class)->statusLabel() }}</span></div>
     </header>
     <nav class="reh-tabs" aria-label="أقسام مشروع REH">
+        @can('reh.pricing.view')<a href="{{ route('reh.pricing.index') }}">مكتبة الأسعار</a><a href="{{ route('reh.index', ['tab'=>'budget']) }}" @if($exportPage) data-workspace-tab="budget" @else data-tab="budget" @endif>الميزانية والاحتياجات</a>@endcan
         @foreach(['overview' => 'نظرة عامة', 'units' => 'الوحدات السكنية', 'buildings' => 'المباني والخريطة', 'reports' => 'التقارير'] as $key => $label)
             <a href="{{ route('reh.index', ['tab' => $key]) }}" @if($exportPage) data-workspace-tab="{{ $key }}" @else data-tab="{{ $key }}" @endif>{{ $label }}</a>
         @endforeach
@@ -31,8 +33,10 @@
         <div data-audit-history-body class="reh-audit-log-body"></div>
     </dialog>
 </div>
+@include('reh::pricing.dialog')
 @endsection
 @section('script')
+<script src="{{ asset('assets/js/custom/reh/pricing.js') }}?v={{ filemtime(base_path('assets/js/custom/reh/pricing.js')) }}" defer></script>
 <script src="{{ asset('assets/plugins/custom/leaflet/leaflet.bundle.js') }}"></script>
 <script src="{{ asset('assets/js/custom/reh/workspace.js') }}?v={{ filemtime(base_path('assets/js/custom/reh/workspace.js')) }}" defer></script>
 @endsection

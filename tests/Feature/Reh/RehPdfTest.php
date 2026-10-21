@@ -24,6 +24,11 @@ it('downloads a real arabic unit pdf with old references and redacts restricted 
     expect($data['total'])->toBe('محجوب')->and($data['social'])->toBe('محجوب');
     $response = $this->get(route('reh.units.pdf', $unit))->assertOk()->assertHeader('Content-Type', 'application/pdf')->assertDownload('REH-unit-5087.pdf');
     expect($response->getContent())->toStartWith('%PDF-')->toContain('DroidArabicKufi', 'DejaVuSans');
+    preg_match_all('/stream\r?\n(.*?)\r?\nendstream/s', $response->getContent(), $streams);
+    $content = collect($streams[1])->map(fn (string $stream): string => @gzuncompress($stream) ?: $stream)->implode('');
+    expect($content)->toContain(mb_convert_encoding('ﺔﻴﻨﻜﺴﻟا', 'UTF-16BE', 'UTF-8'));
+    $font = json_decode(file_get_contents(storage_path('app/mpdf/reh-kufi/mpdf/ttfontdata/rehkufi.mtx.json')), true, flags: JSON_THROW_ON_ERROR);
+    expect($font['useOTL'])->toBe(0xFF)->and($font['GSUBScriptLang'])->toHaveKey('arab');
     $this->exporter->givePermissionTo(['reh.sensitive', 'reh.scores.view']);
     $html = view('reh::pdf.unit', app(RehPdf::class)->unitData($unit->fresh('building'), $this->exporter))->render();
     expect($html)->toContain('SECRET-IDENTITY', 'SECRET-HEALTH', 'التقييم الاجتماعي · أسرة المالك');

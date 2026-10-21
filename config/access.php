@@ -1,11 +1,11 @@
 <?php
 
-$rehPermissions = ['reh.view', 'reh.review', 'reh.review.engineering', 'reh.review.social', 'reh.decide', 'reh.scores.view', 'reh.sensitive', 'reh.sync', 'reh.export'];
+$rehPermissions = ['reh.view', 'reh.review', 'reh.review.engineering', 'reh.review.social', 'reh.decide', 'reh.scores.view', 'reh.sensitive', 'reh.sync', 'reh.export', 'reh.pricing.view', 'reh.pricing.manage', 'reh.pricing.approve'];
 $rehRoles = [
     'REH Viewer' => ['viewer', ['reh.view']],
-    'مدقق هندسي REH' => ['engineering', ['reh.view', 'reh.review', 'reh.review.engineering']],
+    'مدقق هندسي REH' => ['engineering', ['reh.view', 'reh.review', 'reh.review.engineering', 'reh.pricing.view', 'reh.pricing.manage']],
     'مدقق اجتماعي REH' => ['social', ['reh.view', 'reh.review', 'reh.review.social', 'reh.sensitive', 'reh.scores.view']],
-    'REH Project Officer' => ['decision', ['reh.view', 'reh.scores.view', 'reh.decide']],
+    'REH Project Officer' => ['decision', ['reh.view', 'reh.scores.view', 'reh.decide', 'reh.pricing.view', 'reh.pricing.approve']],
     'REH Module Manager' => ['manager', $rehPermissions],
 ];
 $rehProfiles = [];

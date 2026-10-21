@@ -1,5 +1,5 @@
 <style>
-body{font-family:droidarabickufi;font-size:10pt;color:#183f36;line-height:1.6}
+body{font-family:rehkufi;font-size:10pt;color:#183f36;line-height:1.6}
 table{border-collapse:collapse;width:100%;table-layout:fixed}
 td,th{text-align:right;vertical-align:top;padding:9px;overflow-wrap:break-word}
 th{background:#eaf2ef;color:#183f36;font-weight:bold;font-size:9pt}

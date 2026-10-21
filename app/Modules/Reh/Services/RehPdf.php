@@ -115,14 +115,14 @@ class RehPdf
 
     private function download(string $html, string $filename): Response
     {
-        $directory = storage_path('app/mpdf');
+        $directory = storage_path('app/mpdf/reh-kufi');
         File::ensureDirectoryExists($directory);
         $defaults = (new ConfigVariables)->getDefaults();
         $fonts = (new FontVariables)->getDefaults();
         $pdf = new Mpdf([
-            'mode' => 'utf-8', 'format' => 'A4', 'default_font' => 'droidarabickufi', 'default_font_size' => 10,
-            'fontDir' => [...$defaults['fontDir'], base_path()],
-            'fontdata' => $fonts['fontdata'] + ['droidarabickufi' => ['R' => 'DroidArabicKufi.ttf', 'useOTL' => 0xFF, 'useKashida' => 75]],
+            'mode' => 'utf-8', 'format' => 'A4', 'default_font' => 'rehkufi', 'default_font_size' => 10,
+            'fontDir' => [base_path(), ...$defaults['fontDir']],
+            'fontdata' => array_replace($fonts['fontdata'], ['rehkufi' => ['R' => 'DroidArabicKufi.ttf', 'useOTL' => 0xFF, 'useKashida' => 75]]),
             'useSubstitutions' => true, 'backupSubsFont' => ['dejavusans'],
             'margin_left' => 15, 'margin_right' => 15, 'margin_top' => 18, 'margin_bottom' => 18,
             'autoScriptToLang' => true, 'autoLangToFont' => false, 'tempDir' => $directory,
@@ -138,5 +138,10 @@ class RehPdf
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    public function budget(array $budget, array $filters): Response
+    {
+        return $this->download(view('reh::pricing.pdf', compact('budget', 'filters'))->render(), 'REH-budget-'.now()->format('Y-m-d').'.pdf');
     }
 }

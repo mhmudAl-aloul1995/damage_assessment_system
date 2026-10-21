@@ -21,6 +21,8 @@ class RehUnitsExport extends DefaultValueBinder implements FromGenerator, WithCu
 {
     private array $columns;
 
+    private ?string $pricingStatus = null;
+
     public function __construct(private Builder $query, private bool $sensitive, private bool $canSeeScores, ?array $columns = null)
     {
         $this->columns = $columns ?? RehExportColumns::defaults();
@@ -48,7 +50,7 @@ class RehUnitsExport extends DefaultValueBinder implements FromGenerator, WithCu
         $values = [$unit->old_objectid, $unit->building->old_objectid, $unit->owner_name, $this->sensitive ? $unit->owner_identity : 'محجوب',
             $survey->value('governorate', $unit->building->governorate), $survey->value('neighborhood', $unit->building->neighborhood),
             RehSurvey::WORKFLOW[$unit->workflow_status], ['pending' => 'لم يُقرر', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision],
-            'بانتظار الأسعار', $unit->synced_at?->toDateTimeString(), $engineering['subtotal'], $engineering['pending_count'],
+            $this->pricingStatus ??= app(RehPricing::class)->statusLabel(), $unit->synced_at?->toDateTimeString(), $engineering['subtotal'], $engineering['pending_count'],
             $this->canSeeScores ? ($score['total'] ?? 'بانتظار استكمال البيانات') : 'محجوب',
             $this->canSeeScores ? (RehScoring::PRIORITIES[$score['priority']] ?? 'غير مصنفة') : 'محجوب', RehScoring::VERSION, $unit->code, $unit->building->name];
 

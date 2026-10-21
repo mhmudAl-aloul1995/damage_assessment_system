@@ -34,6 +34,7 @@ class RehFilterRequest extends FormRequest
     public function authorize(): bool
     {
         return ($this->user()?->can('reh.view') ?? false)
+            && ($this->input('tab') !== 'budget' || $this->user()->can('reh.pricing.view'))
             && (! $this->anyFilled(['priority', ...RehAdvancedFilters::SCORE_FILTERS]) || $this->user()->can('reh.scores.view'))
             && (! $this->anyFilled([...RehAdvancedFilters::SENSITIVE_FILTERS, ...app(RehSurveyFilters::class)->keys(sensitiveOnly: true)]) || $this->user()->can('reh.sensitive'))
             && $this->canExportColumns();
@@ -82,7 +83,7 @@ class RehFilterRequest extends FormRequest
             'building_object_id' => ['nullable', 'integer', 'min:1'],
             'mine' => ['nullable', 'boolean'],
             'page' => ['nullable', 'integer', 'min:1'],
-            'tab' => ['nullable', \Illuminate\Validation\Rule::in(['overview', 'units', 'buildings', 'reports', 'sync'])],
+            'tab' => ['nullable', \Illuminate\Validation\Rule::in(['overview', 'units', 'buildings', 'reports', 'sync', 'budget'])],
         ];
         foreach (['score' => 100, 'engineering' => 40, 'social' => 60, 'household' => 1000000] as $prefix => $maximum) {
             $rules[$prefix.'_min'] = ['nullable', 'integer', 'min:0', 'max:'.$maximum];

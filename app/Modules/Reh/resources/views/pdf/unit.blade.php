@@ -3,7 +3,7 @@
 <div class="hero"><div class="eyebrow">التقييم الهندسي والاجتماعي · المرحلة الثانية</div><h1>تقييم الوحدة السكنية<br>معرّف حصر الوحدة {{ $unitReference }}</h1><p>معرّف حصر المبنى {{ $buildingReference }} · {{ $ownerName }}</p></div>
 <table class="meta"><tr><td><span>تاريخ الزيارة</span><br>{{ $visitDate }}</td><td><span>المحافظة / الحي</span><br>{{ $location }}</td></tr><tr><td><span>المهندس</span><br>{{ $engineer }}</td><td><span>حالة التدقيق</span><br>{{ $workflow }}</td></tr><tr><td><span>تاريخ إصدار التقرير</span><br>{{ $generatedAt }}</td><td><span>آخر مزامنة</span><br>{{ $syncedAt }}</td></tr></table>
 <table class="scorecard"><tr><td><span>الدرجة النهائية / 100</span><br><strong class="score">{{ $total }}</strong><br>{{ $priority }}</td><td><span>الهندسي / 40</span><br><strong>{{ $engineering }}</strong><br><span>الاجتماعي / 60</span><br><strong>{{ $social }}</strong></td></tr></table>
-<div class="notice">المشاركة في التقييم لا تعني الحصول على المساعدة. التكلفة بانتظار قائمة الأسعار. لا تُستبدل الإجابة الناقصة بصفر. التقرير يعكس البيانات المتاحة وصلاحيات مُصدِره.</div>
+<div class="notice">المشاركة في التقييم لا تعني الحصول على المساعدة. التكلفة تُراجع بصورة مستقلة في شاشة التسعير. لا تُستبدل الإجابة الناقصة بصفر. التقرير يعكس البيانات المتاحة وصلاحيات مُصدِره.</div>
 @if($sourceMissing)<div class="notice">السجل أو المبنى غير موجود في آخر مزامنة. يلزم التحقق من المصدر قبل الاعتماد.</div>@endif
 <p class="muted">أُعد بواسطة: {{ $generatedBy }}</p>
 <pagebreak />

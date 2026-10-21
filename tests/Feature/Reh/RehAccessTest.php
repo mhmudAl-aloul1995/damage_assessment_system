@@ -134,7 +134,7 @@ it('groups and explains REH permissions and role profiles in Arabic and English'
         ->assertSee(__('access.reh'))->assertSee(__('access.reh_permissions.reh_scores_view.label'))->assertSee(__('access.reh_permissions.reh_scores_view.description'));
     $catalog = app(PermissionCatalog::class);
     expect($catalog->groupKey('reh.scores.view'))->toBe('reh')
-        ->and($catalog->groups()->firstWhere('key', 'reh')['permissions'])->toHaveCount(9);
+        ->and($catalog->groups()->firstWhere('key', 'reh')['permissions'])->toHaveCount(12);
     $role = Role::findByName('REH Project Officer', 'web');
     $this->getJson(route('roles.edit', $role))->assertOk()->assertJsonPath('role.profile.description', __('access.reh_roles.decision'));
     Permission::findOrCreate('users.update', 'web');

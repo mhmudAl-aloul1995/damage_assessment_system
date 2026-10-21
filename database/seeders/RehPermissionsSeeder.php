@@ -28,6 +28,7 @@ class RehPermissionsSeeder extends Seeder
             }
         });
         $scoresPermissionIsNew = ! Permission::query()->where('guard_name', 'web')->where('name', 'reh.scores.view')->exists();
+        $newPricingPermissions = collect(['reh.pricing.view', 'reh.pricing.manage', 'reh.pricing.approve'])->reject(fn (string $permission): bool => Permission::query()->where('guard_name', 'web')->where('name', $permission)->exists())->all();
         foreach (config('access.reh_permissions') as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
@@ -42,6 +43,10 @@ class RehPermissionsSeeder extends Seeder
             $role = Role::findOrCreate($name, 'web');
             if ($role->wasRecentlyCreated) {
                 $role->givePermissionTo($profile['default_permissions']);
+            }
+            $pricingDefaults = array_intersect($newPricingPermissions, $profile['default_permissions']);
+            if ($pricingDefaults) {
+                $role->givePermissionTo($pricingDefaults);
             }
         }
         app(PermissionRegistrar::class)->forgetCachedPermissions();

@@ -77,6 +77,9 @@ return [
         'manager' => 'All REH operations, including synchronization and exports. Does not grant user or access administration.',
     ],
     'reh_permissions' => [
+        'reh_pricing_view' => ['label' => 'View prices and costs', 'description' => 'View price books, unit estimates and budget.', 'sensitive' => false],
+        'reh_pricing_manage' => ['label' => 'Manage draft prices', 'description' => 'Import and review price analyses and create revisions.', 'sensitive' => true],
+        'reh_pricing_approve' => ['label' => 'Approve prices and estimates', 'description' => 'Approve price books and unit cost snapshots after engineering review.', 'sensitive' => true],
         'reh_view' => ['label' => 'Open REH and view files', 'description' => 'View buildings, units, general indicators and action history.'],
         'reh_review' => ['label' => 'Claim files and request completion', 'description' => 'Assign a file to yourself or return it for completion with a recorded reason.', 'sensitive' => true],
         'reh_review_engineering' => ['label' => 'Engineering review and quantities', 'description' => 'Edit reviewed quantities, approve engineering reviews and request a second assessment.', 'sensitive' => true],

@@ -47,6 +47,11 @@ class RehController extends Controller
         $filters = $request->validated();
         $tab = $filters['tab'] ?? 'overview';
         $query = $this->units($filters);
+        if ($tab === 'budget') {
+            $budget = app(\App\Modules\Reh\Services\RehPricing::class)->budget($query);
+
+            return response()->json(['html' => view('reh::pricing.budget', compact('budget', 'filters'))->render(), 'total_units' => $budget['complete'] + $budget['partial'], 'total_buildings' => (clone $query)->distinct()->count('building_id')])->header('Cache-Control', 'private, no-store');
+        }
         $groups = (clone $query)->selectRaw('workflow_status, decision, count(*) as total')->groupBy('workflow_status', 'decision')->get();
         $counts = $groups->groupBy('workflow_status')->map(fn ($rows): int => (int) $rows->sum('total'))->all();
         $advancedUnitFilter = count(array_filter(array_intersect_key($filters, array_flip([...RehAdvancedFilters::UNIT_FILTERS, ...app(RehSurveyFilters::class)->keys('unit')])), fn ($value): bool => $value !== null && $value !== '')) > 0;
@@ -290,6 +295,23 @@ class RehController extends Controller
     public function unitPdf(Request $request, RehUnit $unit, RehPdf $pdf): Response
     {
         return $pdf->unit($unit->load('building'), $request->user());
+    }
+
+    public function budgetExcel(RehFilterRequest $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $budget = app(\App\Modules\Reh\Services\RehPricing::class)->budget($this->units($request->validated()));
+        $export = new \App\Modules\Reh\Services\RehBudgetExport($budget, app(RehAdvancedFilters::class)->summary($request->validated()));
+
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'REH-budget-'.now()->format('Y-m-d').'.xlsx', \Maatwebsite\Excel\Excel::XLSX, ['Cache-Control' => 'private, no-store']);
+    }
+
+    public function budgetPdf(RehFilterRequest $request, RehPdf $pdf): Response
+    {
+        $query = $this->units($request->validated());
+        abort_if((clone $query)->count() > 500, 422, 'تصدير PDF يدعم حتى 500 وحدة؛ ضيق الفلاتر أو استخدم Excel.');
+        $budget = app(\App\Modules\Reh\Services\RehPricing::class)->budget($query);
+
+        return $pdf->budget($budget, app(RehAdvancedFilters::class)->summary($request->validated()));
     }
 
     private function units(array $filters): Builder
