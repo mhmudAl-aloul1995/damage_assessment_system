@@ -16,19 +16,19 @@
 <div><small>غير متوفر بالسوق</small><strong>{{ $items->where('availability','unavailable')->count() }}</strong></div>
 <div><small>يحتاج مراجعة</small><strong>{{ $items->whereNotNull('issue')->count() }}</strong></div>
 </div>
-<div class="reh-price-meta"><span class="badge {{ $book->status === 'approved' ? 'badge-light-success' : 'badge-light-warning' }}">{{ $book->status === 'approved' ? 'إصدار معتمد' : 'مسودة للمراجعة' }}</span><span>السريان {{ $book->effective_date->format('Y-m-d') }}</span><span>1 دولار = {{ (float)$book->exchange_rate }} ₪</span><span>الأسعار دون إضافة ضريبة</span></div>
+<div class="reh-price-meta"><span class="badge {{ $book->status === 'approved' ? 'badge-light-success' : 'badge-light-warning' }}">{{ $book->status === 'approved' ? 'إصدار معتمد' : 'مسودة للمراجعة' }}</span><span>السريان {{ $book->effective_date->format('Y-m-d') }}</span><span>1 دولار = {{ (float)$book->exchange_rate }} ₪</span><span>عملة الميزانية: USD</span><span>الأسعار دون إضافة ضريبة</span></div>
 <div class="reh-price-toolbar reh-price-filters">
 <label>بحث عن بند<input type="search" class="form-control" data-price-search placeholder="الكود أو الاسم…"></label>
 <label>المجموعة<select class="form-select" multiple data-price-filter="category">@foreach($items->pluck('category')->unique() as $category)<option>{{ $category }}</option>@endforeach</select></label>
 <label>الحالة<select class="form-select" multiple data-price-filter="status"><option value="available">متوفر</option><option value="unavailable">غير متوفر بالسوق</option><option value="review">يحتاج مراجعة</option><option value="changed">سعر متغير</option></select></label>
 </div>
 @if($previous)<p class="text-muted">الفروق مقارنة بإصدار «{{ $previous->name }}». تغيير السعر لا يغيّر التكاليف المعتمدة سابقًا.</p>@endif
-<div class="reh-price-table-wrap"><table class="table reh-price-table"><thead><tr><th>البند</th><th>الوحدة</th><th>السعر ₪</th><th>الفارق ₪</th><th>الحالة</th><th></th></tr></thead><tbody>
+<div class="reh-price-table-wrap"><table class="table reh-price-table"><thead><tr><th>البند</th><th>الوحدة</th><th>السعر USD</th><th>الفارق USD</th><th>الحالة</th><th></th></tr></thead><tbody>
 @foreach($items as $item)
 @php($old = $previousPrices->get($item->field))
-@php($delta = $old?->rate !== null && $item->rate !== null ? round((float)$item->rate - (float)$old->rate,6) : null)
-<tr data-price-row data-category="{{ $item->category }}" data-status="{{ $item->issue ? 'review' : $item->availability }}" data-changed="{{ $old && ($old->rate !== $item->rate || $old->availability !== $item->availability) ? '1' : '0' }}">
-<td><span class="reh-price-code">{{ $item->code }}</span><strong>{{ $item->label }}</strong><small>{{ $item->category }}</small></td><td>{{ $item->unit }}</td><td class="reh-price-number">{{ $item->rate === null ? '—' : number_format((float)$item->rate,2) }}</td><td>{{ $delta === null ? '—' : ($delta > 0 ? '+' : '').number_format($delta,2) }}</td><td><span class="badge {{ $item->issue ? 'badge-light-warning' : ($item->availability === 'available' ? 'badge-light-success' : 'badge-light') }}">{{ $item->issue ? 'يحتاج مراجعة' : ($item->availability === 'available' ? 'متوفر' : 'غير متوفر بالسوق') }}</span></td><td><button class="btn btn-light-primary btn-sm" data-price-open="{{ route('reh.pricing.item',$item) }}">تحليل السعر</button></td>
+@php($delta = $old?->rate !== null && $item->rate !== null ? round((float)$item->rate/(float)$book->exchange_rate - (float)$old->rate/(float)$previous->exchange_rate,6) : null)
+<tr data-price-row data-category="{{ $item->category }}" data-status="{{ $item->issue ? 'review' : $item->availability }}" data-changed="{{ $old && ($old->rate !== $item->rate || $old->availability !== $item->availability || $previous->exchange_rate !== $book->exchange_rate) ? '1' : '0' }}">
+<td><span class="reh-price-code">{{ $item->code }}</span><strong>{{ $item->label }}</strong><small>{{ $item->category }}</small></td><td>{{ $item->unit }}</td><td class="reh-price-number">{{ $item->rate === null ? '—' : number_format((float)$item->rate/(float)$book->exchange_rate,4) }}<small>{{ $item->rate === null ? '—' : number_format((float)$item->rate,2).' ₪' }}</small></td><td>{{ $delta === null ? '—' : ($delta > 0 ? '+' : '').number_format($delta,4) }}</td><td><span class="badge {{ $item->issue ? 'badge-light-warning' : ($item->availability === 'available' ? 'badge-light-success' : 'badge-light') }}">{{ $item->issue ? 'يحتاج مراجعة' : ($item->availability === 'available' ? 'متوفر' : 'غير متوفر بالسوق') }}</span></td><td><button class="btn btn-light-primary btn-sm" data-price-open="{{ route('reh.pricing.item',$item) }}">تحليل السعر</button></td>
 </tr>@endforeach
 </tbody></table><p data-price-empty hidden>لا توجد بنود مطابقة لهذه الفلاتر.</p></div>
 @if($book->status === 'draft')
@@ -52,7 +52,7 @@
 @if($log->action === 'settings_updated')
 @foreach(['name'=>'اسم الإصدار','exchange_rate'=>'سعر الصرف','effective_date'=>'تاريخ السريان'] as $key=>$label)<p>{{ $label }}: {{ $log->changes['before'][$key] ?? 'غير متوفر' }} ← {{ $log->changes['after'][$key] ?? 'غير متوفر' }}</p>@endforeach
 @endif
-@if(isset($log->changes['total']))<p>التكلفة المعتمدة: {{ $log->changes['total'] }} ₪</p>@endif
+@if(isset($log->changes['total']))<p>التكلفة المعتمدة: {{ number_format((float)($log->changes['total_usd'] ?? ((float)$log->changes['total']/(float)$book->exchange_rate)),2) }} USD · المقابل {{ $log->changes['total'] }} ₪</p>@endif
 </details>@empty<p>لا توجد تعديلات.</p>@endforelse</section>
 @endif
 

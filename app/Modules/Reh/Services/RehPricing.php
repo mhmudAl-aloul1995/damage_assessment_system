@@ -162,7 +162,9 @@ class RehPricing
             $amount = $issue ? null : round((float) $value * (float) $price->rate, 2);
             $lines[] = ['code' => $code, 'field' => $quantity['field'], 'label' => $price?->label ?? preg_replace('/^\s*\d+\.\d+\s*[—–-]\s*/u', '', $quantity['label']),
                 'unit' => $price?->unit ?? strtok($quantity['unit'], "\n"), 'category' => $price?->category ?? $quantity['group'],
-                'quantity' => $value, 'rate' => $issue ? null : $price->rate, 'amount' => $amount, 'issue' => $issue];
+                'quantity' => $value, 'rate' => $issue ? null : $price->rate, 'amount' => $amount, 'issue' => $issue,
+                'rate_usd' => $issue ? null : round((float) $price->rate / (float) $book->exchange_rate, 6),
+                'amount_usd' => $amount === null ? null : round($amount / (float) $book->exchange_rate, 2)];
             if ($issue) {
                 $missing[] = $code.' · '.$issue;
             }
@@ -203,8 +205,8 @@ class RehPricing
             }
             $estimate = RehCostEstimate::query()->create(['unit_id' => $unit->id, 'book_id' => $book->id, 'fingerprint' => $result['fingerprint'],
                 'total' => $result['total'], 'total_usd' => $result['usd'], 'exchange_rate' => $book->exchange_rate, 'approved_by' => $user->id, 'reason' => $data['reason']]);
-            $estimate->lines()->createMany(array_map(fn (array $line): array => array_diff_key($line, array_flip(['issue', 'category'])), $result['lines']));
-            $this->log($book, $user, 'estimate_approved', $data['reason'], ['unit_id' => $unit->id, 'estimate_id' => $estimate->id, 'total' => $estimate->total]);
+            $estimate->lines()->createMany(array_map(fn (array $line): array => array_diff_key($line, array_flip(['issue', 'category', 'rate_usd', 'amount_usd'])), $result['lines']));
+            $this->log($book, $user, 'estimate_approved', $data['reason'], ['unit_id' => $unit->id, 'estimate_id' => $estimate->id, 'total' => $estimate->total, 'total_usd' => $estimate->total_usd, 'exchange_rate' => $estimate->exchange_rate]);
 
             return $estimate;
         });
@@ -223,27 +225,32 @@ class RehPricing
         $partial = 0;
         $total = 0;
         $partialTotal = 0;
+        $usd = 0;
+        $partialUsd = 0;
         $items = [];
         $regions = [];
         $units = [];
-        $query->with('building')->chunkById(200, function ($chunk) use ($book, &$complete, &$partial, &$total, &$partialTotal, &$items, &$regions, &$units): void {
+        $query->with('building')->chunkById(200, function ($chunk) use ($book, &$complete, &$partial, &$total, &$partialTotal, &$usd, &$partialUsd, &$items, &$regions, &$units): void {
             foreach ($chunk as $unit) {
                 $cost = $this->calculate($unit, $book);
                 if ($cost['complete']) {
                     $complete++;
                     $total += (int) round($cost['total'] * 100);
+                    $usd += (int) round(($cost['usd'] ?? 0) * 100);
                 } else {
                     $partial++;
                     $partialTotal += (int) round($cost['total'] * 100);
+                    $partialUsd += (int) round(($cost['usd'] ?? 0) * 100);
                 }
                 $region = $this->survey->value('governorate', $unit->building?->governorate);
-                $regions[$region] ??= ['units' => 0, 'complete' => 0, 'total' => 0];
+                $regions[$region] ??= ['units' => 0, 'complete' => 0, 'total' => 0, 'usd' => 0];
                 $regions[$region]['units']++;
                 if ($cost['complete']) {
                     $regions[$region]['complete']++;
                     $regions[$region]['total'] += (int) round($cost['total'] * 100);
+                    $regions[$region]['usd'] += (int) round(($cost['usd'] ?? 0) * 100);
                 }
-                $units[] = ['id' => $unit->id, 'reference' => $unit->old_objectid, 'building' => $unit->building?->old_objectid ?? 'غير متوفر', 'total' => $cost['total'], 'complete' => $cost['complete'], 'missing' => count($cost['missing'])];
+                $units[] = ['id' => $unit->id, 'reference' => $unit->old_objectid, 'building' => $unit->building?->old_objectid ?? 'غير متوفر', 'total' => $cost['total'], 'usd' => $cost['usd'], 'complete' => $cost['complete'], 'missing' => count($cost['missing'])];
                 foreach ($cost['lines'] as $line) {
                     $items[$line['code']] ??= ['code' => $line['code'], 'label' => $line['label'], 'category' => $line['category'], 'unit' => $line['unit'], 'quantity' => 0, 'total' => 0, 'missing' => false];
                     $items[$line['code']]['quantity'] += (float) $line['quantity'];
@@ -254,14 +261,18 @@ class RehPricing
         });
         foreach ($items as &$item) {
             $item['total'] /= 100;
+            $item['usd'] = $book && ! $item['missing'] ? round($item['total'] / (float) $book->exchange_rate, 2) : null;
         }
         unset($item);
         foreach ($regions as &$region) {
             $region['total'] /= 100;
+            $region['usd'] = $book ? $region['usd'] / 100 : null;
         }
         unset($region);
 
-        return ['book' => $book, 'complete' => $complete, 'partial' => $partial, 'total' => $total / 100, 'partialTotal' => $partialTotal / 100, 'items' => collect($items)->sortByDesc('total')->values()->all(), 'regions' => $regions, 'units' => $units];
+        return ['book' => $book, 'complete' => $complete, 'partial' => $partial, 'total' => $total / 100, 'partialTotal' => $partialTotal / 100,
+            'usd' => $book ? $usd / 100 : null, 'partialUsd' => $book ? $partialUsd / 100 : null,
+            'items' => collect($items)->sortByDesc('total')->values()->all(), 'regions' => $regions, 'units' => $units];
     }
 
     private function log(RehPriceBook $book, User $user, string $action, string $reason, array $changes): void

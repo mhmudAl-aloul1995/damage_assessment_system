@@ -202,3 +202,64 @@ it('exports exact item codes and literal text while keeping amounts numeric', fu
         ->and($sheet->getCell('A3')->getDataType())->toBe(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING)
         ->and($sheet->getCell('A4')->getDataType())->toBe(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
 });
+
+it('converts original prices without rounding dollar unit rates before multiplication', function (): void {
+    $book = rehPricingBook($this->user);
+    $unit = rehPricedUnit();
+    $unit->update(['source' => [...$unit->source, 'boq_1_1_water_tank_repair_qty' => 7]]);
+    $result = app(RehPricing::class)->calculate($unit->fresh(), $book);
+    expect($result['total'])->toEqual(140)->and($result['usd'])->toEqual(46.67)
+        ->and($result['lines'][0]['rate_usd'])->toEqual(6.666667)
+        ->and($result['lines'][0]['amount_usd'])->toEqual(46.67);
+    $book->items()->where('code', '1.1')->update(['availability' => 'unavailable', 'rate' => null]);
+    $result = app(RehPricing::class)->calculate($unit->fresh(), $book->fresh());
+    expect($result['complete'])->toBeFalse()->and($result['lines'][0]['rate_usd'])->toBeNull()
+        ->and($result['lines'][0]['amount_usd'])->toBeNull();
+});
+
+it('reconciles dollar budget totals to converted units and separates partial costs in views and exports', function (): void {
+    $book = rehPricingBook($this->user);
+    $book->update(['status' => 'approved', 'approved_at' => now()]);
+    $book->items()->where('code', '1.1')->update(['rate' => 1]);
+    $first = rehPricedUnit();
+    $second = rehPricedUnit();
+    $partial = rehPricedUnit();
+    foreach ([$first, $second, $partial] as $unit) {
+        $unit->update(['building_id' => $first->building_id, 'source' => [...$unit->source, 'boq_1_1_water_tank_repair_qty' => 1]]);
+    }
+    $partial->update(['source' => [...$partial->source, 'boq_3_3_wood_door_frame_qty' => 1]]);
+    $budget = app(RehPricing::class)->budget(RehUnit::query());
+    expect($budget['complete'])->toBe(2)->and($budget['partial'])->toBe(1)
+        ->and($budget['usd'])->toEqual(0.66)->and($budget['partialUsd'])->toEqual(0.33)
+        ->and(array_values($budget['regions'])[0]['usd'])->toEqual(0.66)
+        ->and(array_sum(array_column(array_filter($budget['units'], fn (array $row): bool => $row['complete']), 'usd')))->toEqual(0.66);
+    $html = view('reh::pricing.budget', ['budget' => $budget, 'filters' => []])->render();
+    expect($html)->toContain('0.66 USD', 'القيمة المحسوبة USD');
+    $pdf = view('reh::pricing.pdf', ['budget' => $budget, 'filters' => []])->render();
+    expect($pdf)->toContain('0.66 USD', 'القيمة USD', 'المقابل ₪');
+    $rows = (new \App\Modules\Reh\Services\RehBudgetExport($budget, []))->array();
+    expect(collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'تكلفة الوحدات مكتملة التسعير USD')[1])->toEqual(0.66);
+    expect(collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'معرّف حصر الوحدة')[2])->toBe('التكلفة المحسوبة USD');
+    $unpriced = app(RehPricing::class)->budget(RehUnit::query()->whereKey($partial->id));
+    expect($unpriced['items'][1]['usd'])->toBeNull();
+    $book->update(['status' => 'draft']);
+    expect(app(RehPricing::class)->budget(RehUnit::query())['usd'])->toBeNull();
+});
+
+it('compares dollar costs using each editions own rate and preserves approved dollar snapshots', function (): void {
+    $book = rehPricingBook($this->user);
+    $this->postJson(route('reh.pricing.approve', $book), ['revision' => 1, 'reason' => 'اعتماد أسعار الاختبار'])->assertOk();
+    $unit = rehPricedUnit();
+    $service = app(RehPricing::class);
+    $calculation = $service->calculate($unit, $book->fresh());
+    $service->approveEstimate($unit, $book, ['fingerprint' => $calculation['fingerprint'], 'reason' => 'اعتماد نسخة اختبار'], $this->user);
+    $copy = $service->revise($book, $this->user, 'مراجعة سعر الصرف');
+    $copy->update(['exchange_rate' => 4]);
+    $impact = $this->getJson(route('reh.pricing.impact', $copy))->assertOk()->json('html');
+    expect($impact)->toContain('-3.33', 'فرق التكلفة USD');
+    $html = $this->getJson(route('reh.pricing.unit', ['unit' => $unit, 'book' => $copy->id]))->assertOk()->json('html');
+    expect($html)->toContain('10.00 USD', '13.33 USD');
+    $catalog = $this->getJson(route('reh.pricing.index', ['book' => $copy->id]))->assertOk()->json('html');
+    expect($catalog)->toContain('السعر USD', '-1.6667');
+    expect((float) RehCostEstimate::query()->first()->total_usd)->toBe(13.33);
+});

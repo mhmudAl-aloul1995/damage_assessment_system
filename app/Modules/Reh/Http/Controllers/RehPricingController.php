@@ -112,7 +112,7 @@ class RehPricingController extends Controller
                         continue;
                     }
                     $comparable++;
-                    $delta = (int) round(($after['total'] - $before['total']) * 100);
+                    $delta = (int) round(($after['usd'] - $before['usd']) * 100);
                     $difference += $delta;
                     if ($delta !== 0) {
                         $changed++;
@@ -145,7 +145,7 @@ class RehPricingController extends Controller
     public function approveEstimate(RehPricingRequest $request, RehUnit $unit): JsonResponse
     {
         $book = RehPriceBook::query()->findOrFail($request->validated('book_id'));
-        $this->pricing->approveEstimate($unit,$book,$request->validated(),$request->user());
+        $this->pricing->approveEstimate($unit, $book, $request->validated(), $request->user());
 
         return response()->json(['message' => 'حُفظت نسخة التكلفة المعتمدة مع الكميات والأسعار.']);
     }
