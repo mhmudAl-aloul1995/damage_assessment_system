@@ -18,6 +18,7 @@ use App\Modules\Reh\Services\RehExportColumns;
 use App\Modules\Reh\Services\RehFieldAudit;
 use App\Modules\Reh\Services\RehFilterChoices;
 use App\Modules\Reh\Services\RehPdf;
+use App\Modules\Reh\Services\RehPricing;
 use App\Modules\Reh\Services\RehReviewService;
 use App\Modules\Reh\Services\RehScoring;
 use App\Modules\Reh\Services\RehSurvey;
@@ -114,7 +115,15 @@ class RehController extends Controller
         $issueCount = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->count() : 0;
         $syncIssues = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->select(['id', 'source', 'reason'])->orderBy('id')->limit(100)->get() : collect();
         $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)]]) ?? collect();
-        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'mapBuildings', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId') + ['survey' => $this->survey])->render();
+        $unitPricing = collect();
+        if ($unitRows && $request->user()->can('reh.pricing.view')) {
+            $pricing = app(RehPricing::class);
+            $priceBook = $pricing->latest()?->load('items');
+            if ($priceBook) {
+                $unitPricing = $unitRows->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $pricing->calculate($unit, $priceBook)]);
+            }
+        }
+        $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'mapBuildings', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId', 'unitPricing') + ['survey' => $this->survey])->render();
 
         return response()->json(['html' => $view, 'total_units' => $stats['units'], 'total_buildings' => $stats['buildings'], 'sync_active' => $runs->contains(fn (RehSyncRun $run): bool => in_array($run->status, ['queued', 'running'], true))])->header('Cache-Control', 'private, no-store');
     }

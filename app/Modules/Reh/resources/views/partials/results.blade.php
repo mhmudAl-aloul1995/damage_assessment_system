@@ -1,4 +1,3 @@
-@php($pricingStatus = app(\App\Modules\Reh\Services\RehPricing::class)->statusLabel())
 <div class="reh-section-heading"><div><h3>{{ ['overview' => 'المشروع في لمحة', 'units' => 'ملفات الوحدات السكنية', 'buildings' => 'المباني والتوزيع الجغرافي', 'reports' => 'مؤشرات المتابعة', 'sync' => 'استقبال البيانات الميدانية'][$tab] }}</h3><p>{{ $lastSync ? 'آخر مزامنة مكتملة: '.$lastSync->finished_at->format('Y-m-d H:i') : 'لم تكتمل المزامنة الأولى بعد' }}</p></div><span class="badge badge-light-primary">المرحلة 2</span></div>
 @if($buildingObjectId)<div class="alert alert-info">النتائج مقيّدة بالمبنى {{ $buildingObjectId }}. استخدم «مسح الفلاتر» للعودة إلى جميع السجلات.</div>@endif
 @if(in_array($tab, ['overview', 'reports']))
@@ -17,7 +16,25 @@
     <div class="reh-card"><div class="reh-section-heading"><h4>{{ $tab === 'overview' ? 'أحدث ملفات العمل' : 'الوحدات' }}</h4><span>{{ $unitRows->total() }} وحدة</span></div>
     <div class="table-responsive"><table class="table align-middle reh-table"><thead><tr><th>معرّف حصر الوحدة / المالك</th><th>معرّف حصر المبنى والموقع</th><th>الفريق</th><th>حالة التدقيق</th><th>القرار</th><th>التسعير</th><th>التقييم والأولوية</th><th></th></tr></thead><tbody>
     @forelse($unitRows as $unit)
-        <tr><td><a data-detail href="{{ route('reh.units.show', $unit) }}" class="fw-bold">وحدة {{ $unit->old_objectid }}</a>@if($unit->code)<small>الكود: {{ $unit->code }}</small>@endif<small>{{ $unit->owner_name ?: 'اسم المالك غير مسجل' }}</small><small>طابق {{ $unit->floor_number ?? '—' }} · شقة {{ $unit->apartment_number ?? '—' }}</small></td><td>مبنى {{ $unit->building->old_objectid }}<small>{{ $unit->building->name }}</small><small>{{ $survey->value('governorate', $unit->building->governorate) }} · {{ $survey->value('neighborhood', $unit->building->neighborhood) }}</small></td><td>{{ $survey->value('engineer_name', $unit->building->engineer) }}</td><td><span class="badge badge-light-{{ in_array($unit->workflow_status, ['returned', 'source_changed', 'second_assessment']) ? 'warning' : ($unit->workflow_status === 'ready' ? 'success' : 'primary') }}">{{ $survey::WORKFLOW[$unit->workflow_status] }}</span>@if($unit->source_missing || $unit->building->source_missing)<small class="text-danger">غير موجود في المصدر</small>@endif</td><td>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] }}</td><td><span class="badge badge-light">{{ $pricingStatus }}</span></td><td><div class="reh-score-cell">
+        <tr><td><a data-detail href="{{ route('reh.units.show', $unit) }}" class="fw-bold">وحدة {{ $unit->old_objectid }}</a>@if($unit->code)<small>الكود: {{ $unit->code }}</small>@endif<small>{{ $unit->owner_name ?: 'اسم المالك غير مسجل' }}</small><small>طابق {{ $unit->floor_number ?? '—' }} · شقة {{ $unit->apartment_number ?? '—' }}</small></td><td>مبنى {{ $unit->building->old_objectid }}<small>{{ $unit->building->name }}</small><small>{{ $survey->value('governorate', $unit->building->governorate) }} · {{ $survey->value('neighborhood', $unit->building->neighborhood) }}</small></td><td>{{ $survey->value('engineer_name', $unit->building->engineer) }}</td><td><span class="badge badge-light-{{ in_array($unit->workflow_status, ['returned', 'source_changed', 'second_assessment']) ? 'warning' : ($unit->workflow_status === 'ready' ? 'success' : 'primary') }}">{{ $survey::WORKFLOW[$unit->workflow_status] }}</span>@if($unit->source_missing || $unit->building->source_missing)<small class="text-danger">غير موجود في المصدر</small>@endif</td><td>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] }}</td><td>
+            @can('reh.pricing.view')
+                @php($cost = $unitPricing->get($unit->id))
+                <div data-unit-pricing="{{ $unit->id }}">
+                @if($cost)
+                    @php($hasPricedLines = collect($cost['lines'])->contains(fn (array $line): bool => $line['amount'] !== null))
+                    @if($cost['complete'] || $hasPricedLines)
+                        <strong class="d-block text-nowrap" dir="ltr">{{ number_format($cost['usd'],2) }} USD</strong>
+                        @if(!$cost['complete'])<small>مبلغ جزئي</small>@endif
+                    @endif
+                    <span class="badge badge-light-{{ $cost['complete'] ? 'success' : 'warning' }}">{{ $cost['complete'] ? 'مكتمل التسعير' : 'تسعير غير مكتمل' }}</span>
+                    @if(!$cost['complete'])<small>{{ $cost['missing'][0] }}@if(count($cost['missing']) > 1) · و{{ count($cost['missing']) - 1 }} ملاحظة أخرى@endif</small>@endif
+                @else
+                    <span class="badge badge-light">بانتظار قائمة أسعار معتمدة</span>
+                @endif
+                <button type="button" class="btn btn-sm btn-light-primary mt-2" data-price-unit="{{ route('reh.pricing.unit',$unit) }}">تفاصيل التكلفة</button>
+                </div>
+            @else<small>تحتاج صلاحية عرض التسعير</small>@endcan
+        </td><td><div class="reh-score-cell">
             @can('reh.scores.view')
                 <a data-detail data-detail-section="scoring" href="{{ route('reh.units.show', $unit) }}" class="reh-final-summary {{ $scores[$unit->id]['total'] === null ? 'is-pending' : '' }}" aria-label="الدرجة النهائية للوحدة {{ $unit->old_objectid }}: {{ $scores[$unit->id]['total'] ?? 'بانتظار الاستكمال' }}">
                     <span class="reh-final-label">الدرجة النهائية</span>

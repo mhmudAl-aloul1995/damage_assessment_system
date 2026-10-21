@@ -277,3 +277,41 @@ it('downloads the full filtered budget PDF beyond five hundred units', function 
         ->assertOk()->assertDownload()->assertHeader('Content-Type', 'application/pdf');
     expect($response->getContent())->toStartWith('%PDF-');
 });
+
+it('shows each listed units dollar cost and distinguishes partial and unpriced quantities', function (): void {
+    $book = rehPricingBook($this->user);
+    $book->update(['status' => 'approved', 'approved_at' => now()]);
+    $complete = rehPricedUnit();
+    $partial = rehPricedUnit();
+    $unpriced = rehPricedUnit();
+    $partial->update(['source' => [...$partial->source, 'boq_3_3_wood_door_frame_qty' => 1]]);
+    $unpriced->update(['source' => [...$unpriced->source, 'boq_1_1_water_tank_repair_qty' => null]]);
+    foreach ([$complete, $partial, $unpriced] as $unit) {
+        $unit->building->update(['field_status' => 'COMPLETED']);
+    }
+    $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
+    $cells = [];
+    foreach ([$complete, $partial, $unpriced] as $unit) {
+        preg_match('/<div data-unit-pricing="'.$unit->id.'">(.*?)<\/div>/s', $html, $match);
+        $cells[$unit->id] = $match[1];
+    }
+    expect($cells[$complete->id])->toContain('13.33 USD', 'مكتمل التسعير', 'تفاصيل التكلفة')->not->toContain('مبلغ جزئي')
+        ->and($cells[$partial->id])->toContain('13.33 USD', 'مبلغ جزئي', 'تسعير غير مكتمل', 'غير متوفر بالسوق')
+        ->and($cells[$unpriced->id])->toContain('تسعير غير مكتمل', 'كمية غير مسجلة')->not->toContain('USD');
+});
+
+it('waits for an effective approved price book and hides row pricing without permission', function (): void {
+    $book = rehPricingBook($this->user);
+    $unit = rehPricedUnit();
+    $unit->building->update(['field_status' => 'COMPLETED']);
+    $html = $this->getJson(route('reh.data', ['tab' => 'overview']))->assertOk()->json('html');
+    expect($html)->toContain('بانتظار قائمة أسعار معتمدة')->not->toContain('13.33 USD');
+    $book->update(['status' => 'approved', 'approved_at' => now(), 'effective_date' => now()->addDay()]);
+    $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
+    expect($html)->toContain('بانتظار قائمة أسعار معتمدة')->not->toContain('13.33 USD');
+    $book->update(['effective_date' => now()->toDateString()]);
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('reh.view');
+    $html = $this->actingAs($viewer)->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
+    expect($html)->toContain('تحتاج صلاحية عرض التسعير')->not->toContain('data-unit-pricing', '13.33 USD', 'تفاصيل التكلفة');
+});
