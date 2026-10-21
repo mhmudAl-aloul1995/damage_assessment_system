@@ -19,19 +19,18 @@
         <tr><td><a data-detail href="{{ route('reh.units.show', $unit) }}" class="fw-bold">وحدة {{ $unit->old_objectid }}</a>@if($unit->code)<small>الكود: {{ $unit->code }}</small>@endif<small>{{ $unit->owner_name ?: 'اسم المالك غير مسجل' }}</small><small>طابق {{ $unit->floor_number ?? '—' }} · شقة {{ $unit->apartment_number ?? '—' }}</small></td><td>مبنى {{ $unit->building->old_objectid }}<small>{{ $unit->building->name }}</small><small>{{ $survey->value('governorate', $unit->building->governorate) }} · {{ $survey->value('neighborhood', $unit->building->neighborhood) }}</small></td><td>{{ $survey->value('engineer_name', $unit->building->engineer) }}</td><td><span class="badge badge-light-{{ in_array($unit->workflow_status, ['returned', 'source_changed', 'second_assessment']) ? 'warning' : ($unit->workflow_status === 'ready' ? 'success' : 'primary') }}">{{ $survey::WORKFLOW[$unit->workflow_status] }}</span>@if($unit->source_missing || $unit->building->source_missing)<small class="text-danger">غير موجود في المصدر</small>@endif</td><td>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] }}</td><td>
             @can('reh.pricing.view')
                 @php($cost = $unitPricing->get($unit->id))
-                <div data-unit-pricing="{{ $unit->id }}">
-                @if($cost)
-                    @php($hasPricedLines = collect($cost['lines'])->contains(fn (array $line): bool => $line['amount'] !== null))
-                    @if($cost['complete'] || $hasPricedLines)
-                        <strong class="d-block text-nowrap" dir="ltr">{{ number_format($cost['usd'],2) }} USD</strong>
-                        @if(!$cost['complete'])<small>مبلغ جزئي</small>@endif
-                    @endif
-                    <span class="badge badge-light-{{ $cost['complete'] ? 'success' : 'warning' }}">{{ $cost['complete'] ? 'مكتمل التسعير' : 'تسعير غير مكتمل' }}</span>
-                    @if(!$cost['complete'])<small>{{ $cost['missing'][0] }}@if(count($cost['missing']) > 1) · و{{ count($cost['missing']) - 1 }} ملاحظة أخرى@endif</small>@endif
-                @else
-                    <span class="badge badge-light">بانتظار قائمة أسعار معتمدة</span>
-                @endif
-                <button type="button" class="btn btn-sm btn-light-primary mt-2" data-price-unit="{{ route('reh.pricing.unit',$unit) }}">تفاصيل التكلفة</button>
+                @php($hasPricedLines = $cost && collect($cost['lines'])->contains(fn (array $line): bool => $line['amount'] !== null))
+                <div class="reh-cost-cell {{ !$cost ? 'is-pending' : ($cost['complete'] ? 'is-complete' : 'is-partial') }}" data-unit-pricing="{{ $unit->id }}">
+                    <span class="reh-cost-amount">
+                        <span class="reh-cost-label">{{ $cost && !$cost['complete'] && $hasPricedLines ? 'مبلغ جزئي' : 'التكلفة المحسوبة' }}</span>
+                        <strong class="reh-cost-value" dir="ltr">@if($cost && ($cost['complete'] || $hasPricedLines)){{ number_format($cost['usd'],2) }} <span>USD</span>@else<span class="reh-cost-unavailable">—</span>@endif</strong>
+                    </span>
+                    <span class="reh-cost-footer">
+                        <span class="reh-cost-status">{{ !$cost ? 'بانتظار الأسعار' : ($cost['complete'] ? 'مكتمل التسعير' : 'تسعير غير مكتمل') }}</span>
+                        <button type="button" class="reh-cost-details" data-price-unit="{{ route('reh.pricing.unit',$unit) }}" aria-label="تفاصيل تكلفة الوحدة {{ $unit->old_objectid }}">تفاصيل التكلفة <span aria-hidden="true">←</span></button>
+                    </span>
+                    @if($cost && !$cost['complete'])<small class="reh-cost-reason" title="{{ implode(' · ',array_slice($cost['missing'],0,3)) }}">{{ $cost['missing'][0] }}@if(count($cost['missing']) > 1) · و{{ count($cost['missing']) - 1 }} ملاحظة أخرى@endif</small>
+                    @elseif(!$cost)<small class="reh-cost-reason">بانتظار قائمة أسعار معتمدة</small>@endif
                 </div>
             @else<small>تحتاج صلاحية عرض التسعير</small>@endcan
         </td><td><div class="reh-score-cell">

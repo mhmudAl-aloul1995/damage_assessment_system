@@ -292,8 +292,8 @@ it('shows each listed units dollar cost and distinguishes partial and unpriced q
     $html = $this->getJson(route('reh.data', ['tab' => 'units']))->assertOk()->json('html');
     $cells = [];
     foreach ([$complete, $partial, $unpriced] as $unit) {
-        preg_match('/<div data-unit-pricing="'.$unit->id.'">(.*?)<\/div>/s', $html, $match);
-        $cells[$unit->id] = $match[1];
+        preg_match('/data-unit-pricing="'.$unit->id.'">(.*?)<\/div>/s', $html, $match);
+        $cells[$unit->id] = preg_replace('/\s+/u', ' ', strip_tags($match[1]));
     }
     expect($cells[$complete->id])->toContain('13.33 USD', 'مكتمل التسعير', 'تفاصيل التكلفة')->not->toContain('مبلغ جزئي')
         ->and($cells[$partial->id])->toContain('13.33 USD', 'مبلغ جزئي', 'تسعير غير مكتمل', 'غير متوفر بالسوق')
