@@ -106,12 +106,22 @@ class RehFilterRequest extends FormRequest
             $rules['engineer.*'] = ['required', 'string', 'distinct', 'max:100'];
         }
 
-        return [...$rules, ...app(RehSurveyFilters::class)->rules($this->all())];
+        $rules = [...$rules, ...app(RehSurveyFilters::class)->rules($this->all())];
+        foreach (app(RehAdvancedFilters::class)->conditionRules($this->all()) as $key => $conditions) {
+            $rules[$key] = [...($rules[$key] ?? []), ...$conditions];
+        }
+
+        return $rules;
     }
 
     public function attributes(): array
     {
-        return ['columns' => 'أعمدة التصدير', 'columns.*' => 'عمود التصدير', ...RehAdvancedFilters::LABELS, ...app(RehSurveyFilters::class)->labels()];
+        $conditions = [];
+        foreach (array_keys(RehAdvancedFilters::conditions()) as $key) {
+            $conditions[$key.'_op'] = (RehAdvancedFilters::LABELS[$key] ?? $key).' · الشرط';
+        }
+
+        return ['columns' => 'أعمدة التصدير', 'columns.*' => 'عمود التصدير', ...RehAdvancedFilters::LABELS, ...$conditions, ...app(RehSurveyFilters::class)->labels()];
     }
 
     public function messages(): array

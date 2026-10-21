@@ -32,6 +32,10 @@ it('covers every survey field with an existing database column and a condition c
         $doc = new DOMDocument;
         $doc->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING);
         expect((new DOMXPath($doc))->query('//*[@data-survey-condition]')->length)->toBe(count($fields));
+        foreach (array_keys(\App\Modules\Reh\Services\RehAdvancedFilters::conditions()) as $key) {
+            expect((new DOMXPath($doc))->query('//*[@data-filter-condition="'.$key.'"]//*[@data-condition-trigger]')->length)->toBe(1);
+        }
+        expect($html)->not->toContain('استخدم كلمة محددة بدل «هل».', 'reh-filter-search-help');
     }
 });
 
@@ -91,7 +95,7 @@ it('searches text literally and filters presence of photos and geometry', functi
 it('shares conditions across map preview excel csv and pdf and preserves their descriptions', function (): void {
     RehUnit::factory()->create(['code' => 'CONDITION-MATCH', 'source' => ['engineer_technical_notes' => 'repair']]);
     RehUnit::factory()->create(['code' => 'CONDITION-OTHER', 'source' => ['engineer_technical_notes' => 'replace']]);
-    $filters = ['sf_engineer_technical_notes_op' => 'is_not', 'sf_engineer_technical_notes' => 'replace'];
+    $filters = ['q' => 'CONDITION-MATCH', 'q_op' => 'is', 'sf_engineer_technical_notes_op' => 'is_not', 'sf_engineer_technical_notes' => 'replace'];
     $this->getJson(route('reh.data', [...$filters, 'tab' => 'buildings']))->assertOk()->assertJsonPath('total_units', 1);
     $this->getJson(route('reh.exports.data', $filters))->assertOk()->assertJsonPath('total_units', 1);
     $csv = $this->get(route('reh.export', $filters))->assertOk()->streamedContent();
@@ -107,6 +111,70 @@ it('shares conditions across map preview excel csv and pdf and preserves their d
     });
     $this->get(route('reh.export.pdf', $filters))->assertOk();
     expect($captured['rows'])->toHaveCount(1)->and(implode(' ', $captured['filterSummary']))->toContain('لا يساوي', 'replace');
+});
+
+it('applies main search operators literally across unit and building fields and map results', function (): void {
+    foreach ([['بيت اول', 2345, 'CODE-PART-100'], ['بيت ثان', 3456, 'CODE-PART-200'], ['literal%_', 5555, null]] as [$name, $reference, $code]) {
+        $building = RehBuilding::factory()->create(['name' => $name, 'source' => ['Field_status' => 'COMPLETED', 'Old_objectID' => $reference]]);
+        RehUnit::factory()->create(['building_id' => $building->id, 'code' => $code, 'owner_name' => null, 'owner_identity' => null]);
+    }
+    foreach ([['contains', 'CODE-PART', 2], ['is', 'CODE-PART-100', 1], ['not_contains', 'CODE-PART', 1], ['contains', '%_', 1], ['contains', '345', 2], ['is', '3456', 1]] as [$operator, $value, $count]) {
+        foreach (['units', 'buildings'] as $tab) {
+            $this->getJson(route('reh.data', ['tab' => $tab, 'q_op' => $operator, 'q' => $value]))->assertOk()->assertJsonPath('total_units', $count)->assertJsonPath('total_buildings', $count);
+        }
+    }
+});
+
+it('supports legacy field operators for text choices missing values numbers and dates', function (): void {
+    foreach ([[1234, 'COMPLETED', 'ready', 0, 0, '2026-10-01'], [1256, 'Not_Completed', 'returned', 5, 1, '2026-10-20'], [null, null, 'new', null, null, null]] as [$reference, $status, $workflow, $size, $chronic, $visit]) {
+        $building = RehBuilding::factory()->create(['source' => ['Old_objectID' => $reference, 'Field_status' => $status, 'visit_date' => $visit]]);
+        RehUnit::factory()->create(['building_id' => $building->id, 'workflow_status' => $workflow, 'source' => ['household_size' => $size, 'household_chronic_count' => $chronic]]);
+    }
+    foreach ([
+        [['survey_status_op' => 'is_not', 'survey_status' => ['completed']], 2],
+        [['survey_status_op' => 'is_not', 'survey_status' => ['all']], 0],
+        [['status_op' => 'is_not', 'status' => ['ready', 'returned']], 1],
+        [['building_old_objectid_op' => 'contains', 'building_old_objectid' => '12'], 2],
+        [['building_old_objectid_op' => 'not_contains', 'building_old_objectid' => '34'], 1],
+        [['building_old_objectid_op' => 'blank'], 1],
+        [['household_op' => 'is', 'household' => 0], 1],
+        [['household_op' => 'gt', 'household' => 0], 1],
+        [['household_op' => 'blank'], 1],
+        [['family_chronic_op' => 'is_not', 'family_chronic' => ['yes']], 1],
+        [['family_chronic_op' => 'blank'], 1],
+        [['visit_op' => 'gt', 'visit' => '2026-10-01'], 1],
+        [['visit_op' => 'blank'], 1],
+    ] as [$filters, $count]) {
+        $response = $this->getJson(route('reh.data', ['survey_status' => 'all', ...$filters]))->assertOk()->assertJsonPath('total_units', $count);
+        if (isset($filters['building_old_objectid_op']) && $filters['building_old_objectid_op'] !== 'is') {
+            expect($response->json('html'))->not->toContain('النتائج مقيّدة بالمبنى');
+        }
+    }
+});
+
+it('keeps buildings with matching units visible when a different unit contains the excluded search text', function (): void {
+    $building = RehBuilding::factory()->create(['name' => 'المنزل']);
+    RehUnit::factory()->create(['building_id' => $building->id, 'code' => 'FIND-ME', 'owner_name' => null]);
+    $matching = RehUnit::factory()->create(['building_id' => $building->id, 'code' => 'KEEP-ME', 'owner_name' => null]);
+    $html = $this->getJson(route('reh.data', ['tab' => 'buildings', 'q_op' => 'not_contains', 'q' => 'FIND-ME']))->assertOk()->assertJsonPath('total_units', 1)->assertJsonPath('total_buildings', 1)->json('html');
+    preg_match('/data-buildings="([^"]+)"/', $html, $matches);
+    $map = json_decode(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), true);
+    expect($map[0]['units'])->toHaveCount(1)
+        ->and($map[0]['units'][0]['url'])->toBe(route('reh.units.show', $matching));
+});
+
+it('rejects unsupported core operators conflicting bounds and sensitive operator probes', function (): void {
+    foreach ([['q_op' => 'gt', 'q' => '1'], ['q_op' => 'is'], ['status_op' => 'contains', 'status' => ['new']], ['household_op' => 'gt', 'household' => 1, 'household_min' => 2], ['visit_op' => 'blank', 'visit_from' => '2026-10-01']] as $filters) {
+        $this->getJson(route('reh.data', $filters))->assertUnprocessable();
+    }
+    $reader = User::factory()->create();
+    $reader->givePermissionTo(['reh.view', 'reh.export']);
+    $this->actingAs($reader);
+    foreach (['reh.data', 'reh.exports.data', 'reh.export', 'reh.export.excel', 'reh.export.pdf'] as $route) {
+        foreach (['household_op', 'family_chronic_op', 'score_op', 'priority_op'] as $key) {
+            $this->getJson(route($route, [$key => 'blank']))->assertForbidden();
+        }
+    }
 });
 
 it('rejects invalid operators incomplete conditions conflicting values and hidden sensitive probes', function (): void {

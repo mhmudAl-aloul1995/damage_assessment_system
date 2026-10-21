@@ -56,6 +56,9 @@ it('uses complete scores and inclusive boundaries for score ranges without treat
     $html = $this->getJson(route('reh.data', ['score_min' => $score['total'], 'score_max' => $score['total'], 'engineering_min' => 0, 'engineering_max' => 0, 'social_min' => $score['social_total'], 'social_max' => $score['social_total'], 'evaluation' => 'complete']))->assertOk()->json('html');
     expect($html)->toContain('SCORED')->not->toContain('UNSCORED');
     $this->getJson(route('reh.data', ['evaluation' => 'incomplete']))->assertOk()->assertJsonPath('total_units', 1);
+    foreach ([['score_op' => 'is', 'score' => $score['total']], ['score_op' => 'gte', 'score' => 0], ['score_op' => 'blank'], ['score_op' => 'not_blank'], ['priority_op' => 'is_not', 'priority' => 'unclassified'], ['evaluation_op' => 'is_not', 'evaluation' => 'complete']] as $filters) {
+        $this->getJson(route('reh.data', $filters))->assertOk()->assertJsonPath('total_units', 1);
+    }
 });
 
 it('matches successful visible edits on a unit or its building and ignores failed edits', function (): void {
@@ -66,6 +69,8 @@ it('matches successful visible edits on a unit or its building and ignores faile
     RehAuditLog::query()->create([...$base, 'record_kind' => 'unit', 'record_id' => $other->id, 'status' => 'failed']);
     $this->getJson(route('reh.data', ['edits' => 'yes']))->assertOk()->assertJsonPath('total_units', 1);
     $this->getJson(route('reh.data', ['edits' => 'no']))->assertOk()->assertJsonPath('total_units', 1);
+    $this->getJson(route('reh.data', ['edits_op' => 'is_not', 'edits' => 'yes']))->assertOk()->assertJsonPath('total_units', 1);
+    $this->getJson(route('reh.data', ['edits_op' => 'is_not', 'edits' => ['yes', 'no']]))->assertOk()->assertJsonPath('total_units', 0);
 });
 
 it('validates advanced ranges and denies restricted filtering on every endpoint', function (): void {

@@ -87,8 +87,8 @@
         });
         for (const name of ['status']) filters.elements[name].disabled = state.tab === 'sync';
         const filterSummary = filters.querySelector('[data-filter-summary]');
-        filterSummary.textContent = [...filters.elements.survey_status.selectedOptions].map(option => option.textContent).join('، ') || 'كل حالات الاستبيان';
-        filterSummary.dataset.default = String(values(state.survey_status).length === 1 && values(state.survey_status).includes('completed'));
+        filterSummary.textContent = (state.survey_status_op === 'is_not' ? 'باستثناء: ' : '') + ([...filters.elements.survey_status.selectedOptions].map(option => option.textContent).join('، ') || 'كل حالات الاستبيان');
+        filterSummary.dataset.default = String(state.survey_status_op !== 'is_not' && values(state.survey_status).length === 1 && values(state.survey_status).includes('completed'));
         if (filters.elements.priority) filters.elements.priority.disabled = state.tab === 'sync';
         filters.hidden = state.tab === 'sync';
         const chips = filters.querySelector('[data-active-filters]');
@@ -96,7 +96,7 @@
         let advancedCount = 0;
         for (const input of [...filters.elements]) {
             const selected = values(state[input.name]);
-            if (!input.name || !selected.length || input.closest('[data-survey-condition]')) continue;
+            if (!input.name || !selected.length || input.closest('[data-filter-condition]')) continue;
             if (advancedFilters.contains(input)) advancedCount += selected.length;
             const label = input.dataset.filterLabel || [input.closest('.reh-filter-range')?.querySelector('strong')?.textContent, filters.querySelector(`label[for="${CSS.escape(input.id)}"]`)?.textContent].filter(Boolean).join(' ') || input.name;
             selected.forEach(value => {
@@ -108,13 +108,13 @@
                 chips.append(chip);
             });
         }
-        advancedFilters.querySelectorAll('[data-survey-condition]').forEach(field => {
-            const key = field.dataset.surveyCondition;
+        filters.querySelectorAll('[data-filter-condition]').forEach(field => {
+            const key = field.dataset.filterCondition;
             const operator = state[key + '_op'] || field.dataset.conditionDefault;
             const presence = ['blank', 'not_blank'].includes(operator);
-            const selected = presence ? [] : operator === 'between' ? [state[key + '_min'] || '', state[key + '_max'] || ''] : values(state[key]);
+            const selected = presence ? [] : operator === 'between' ? [...field.querySelectorAll('[data-condition-range] [name]')].map(input => state[input.name] ?? '') : values(state[key]);
             if (!presence && !selected.some(value => value !== '' && value !== null && value !== undefined)) return;
-            advancedCount++;
+            if (advancedFilters.contains(field)) advancedCount++;
             const label = field.querySelector('.reh-condition-heading label').textContent;
             const operatorLabel = field.querySelector(`[data-condition-option="${CSS.escape(operator)}"]`)?.textContent || '';
             const input = filters.elements.namedItem(key);
@@ -453,12 +453,12 @@
     }
 
     function closeConditionMenus() {
-        advancedFilters.querySelectorAll('[data-condition-trigger]').forEach(button => button.setAttribute('aria-expanded', 'false'));
-        advancedFilters.querySelectorAll('.reh-condition-menu').forEach(menu => { menu.hidden = true; });
+        filters.querySelectorAll('[data-condition-trigger]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+        filters.querySelectorAll('.reh-condition-menu').forEach(menu => { menu.hidden = true; });
     }
 
     function updateConditionFields() {
-        advancedFilters.querySelectorAll('[data-survey-condition]').forEach(field => {
+        filters.querySelectorAll('[data-filter-condition]').forEach(field => {
             const operator = field.querySelector('[data-condition-operator]').value || field.dataset.conditionDefault;
             const presence = ['blank', 'not_blank'].includes(operator);
             const option = field.querySelector(`[data-condition-option="${CSS.escape(operator)}"]`);
@@ -510,8 +510,8 @@
             section.hidden = Boolean(search) && matches === 0;
             if (!section.hidden) sections++;
             if (search && !section.hidden) section.open = true;
-            const count = [...section.querySelectorAll('[name]')].filter(input => !input.closest('[data-survey-condition]')).reduce((sum, input) => sum + (input.disabled ? 0 : inputValues(input).length), 0)
-                + [...section.querySelectorAll('[data-survey-condition]')].filter(field => ['blank', 'not_blank'].includes(field.querySelector('[data-condition-operator]').value) || [...field.querySelectorAll('[data-condition-value]')].some(input => !input.disabled && inputValues(input).length)).length;
+            const count = [...section.querySelectorAll('[name]')].filter(input => !input.closest('[data-filter-condition]')).reduce((sum, input) => sum + (input.disabled ? 0 : inputValues(input).length), 0)
+                + [...section.querySelectorAll('[data-filter-condition]')].filter(field => ['blank', 'not_blank'].includes(field.querySelector('[data-condition-operator]').value) || [...field.querySelectorAll('[data-condition-value]')].some(input => !input.disabled && inputValues(input).length)).length;
             section.querySelector('[data-section-count]').textContent = count ? `${count} محدد` : '';
         });
         advancedFilters.querySelector('[data-filter-search-status]').textContent = search ? `${sections} أقسام مطابقة` : 'اختر قسمًا، أو ابحث عن سؤال أو خيار إجابة.';
@@ -524,7 +524,7 @@
         for (const input of [...filters.elements]) {
             if (input.name && !input.disabled) collected[input.name] = input.multiple ? inputValues(input) : input.value;
         }
-        advancedFilters.querySelectorAll('[data-survey-condition]').forEach(field => {
+        filters.querySelectorAll('[data-filter-condition]').forEach(field => {
             const operator = field.querySelector('[data-condition-operator]');
             if (!['blank', 'not_blank'].includes(operator.value) && ![...field.querySelectorAll('[data-condition-value]')].some(input => !input.disabled && inputValues(input).length)) collected[operator.name] = '';
         });
@@ -551,8 +551,13 @@
     advancedFilters.addEventListener('close', () => { closeConditionMenus(); advancedFilters.querySelector('#reh-filter-search').value = ''; reflectFilters(); });
     advancedFilters.querySelector('.reh-advanced-body').addEventListener('scroll', closeConditionMenus, { passive: true });
     window.addEventListener('resize', closeConditionMenus);
-    advancedFilters.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && advancedFilters.querySelector('.reh-condition-menu:not([hidden])')) { event.preventDefault(); closeConditionMenus(); }
+    window.addEventListener('scroll', closeConditionMenus, { passive: true });
+    filters.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && filters.querySelector('.reh-condition-menu:not([hidden])')) {
+            event.preventDefault();
+            const trigger = filters.querySelector('[data-condition-trigger][aria-expanded="true"]');
+            closeConditionMenus(); trigger?.focus();
+        }
     });
     document.addEventListener('click', event => { if (!event.target.closest('[data-condition-trigger], .reh-condition-menu')) closeConditionMenus(); });
     advancedFilters.querySelector('#reh-filter-search').addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
@@ -686,14 +691,14 @@
         }
         else if (button.matches('[data-cancel-filters]')) { advancedFilters.close(); }
         else if (button.matches('[data-condition-trigger]')) {
-            const field = button.closest('[data-survey-condition]');
+            const field = button.closest('[data-filter-condition]');
             const menu = field.querySelector('.reh-condition-menu');
             const opening = menu.hidden;
             closeConditionMenus();
             if (opening) {
                 menu.hidden = false; button.setAttribute('aria-expanded', 'true');
                 const rect = button.getBoundingClientRect();
-                const dialog = advancedFilters.getBoundingClientRect();
+                const dialog = advancedFilters.contains(field) ? advancedFilters.getBoundingClientRect() : { left: 0, right: window.innerWidth, width: window.innerWidth };
                 const width = Math.min(230, dialog.width - 32);
                 menu.style.width = width + 'px';
                 menu.style.left = Math.max(dialog.left + 16, Math.min(rect.right - width, dialog.right - width - 16)) + 'px';
@@ -702,9 +707,10 @@
             }
         }
         else if (button.matches('[data-condition-option]')) {
-            const field = button.closest('[data-survey-condition]');
+            const field = button.closest('[data-filter-condition]');
             field.querySelector('[data-condition-operator]').value = button.dataset.conditionOption;
             closeConditionMenus(); updateSurveyFilters(); field.querySelector('[data-condition-trigger]').focus();
+            if (!advancedFilters.contains(field) && [...field.querySelectorAll('[data-condition-value]')].some(input => !input.disabled && inputValues(input).length)) { clearTimeout(debounce); await changeFilters(); }
         }
         else if (button.matches('[data-clear-advanced]')) {
             advancedFilters.querySelectorAll('[name]').forEach(input => {
@@ -714,7 +720,9 @@
         }
         else if (button.matches('[data-remove-condition]')) {
             const key = button.dataset.removeCondition;
-            [key, key + '_op', key + '_min', key + '_max'].forEach(name => { delete state[name]; });
+            const field = filters.querySelector(`[data-filter-condition="${CSS.escape(key)}"]`);
+            field?.querySelectorAll('[name]').forEach(input => { delete state[input.name]; });
+            if (key === 'survey_status') state.survey_status = ['all'];
             state.page = 1; await load();
         }
         else if (button.matches('[data-remove-filter]')) {

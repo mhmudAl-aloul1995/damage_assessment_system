@@ -8,7 +8,7 @@
                 @continue($definition['group'] !== $group)
                 @php($range = in_array($definition['type'], ['integer', 'decimal', 'date', 'datetime'], true))
                 @php($inputType = match($definition['type']) { 'integer', 'decimal' => 'number', 'date' => 'date', 'datetime' => 'datetime-local', default => 'text' })
-                <div data-filter-field data-survey-condition="{{ $key }}" data-condition-type="{{ $definition['type'] }}" data-condition-default="{{ $definition['default_operator'] }}">
+                <div data-filter-field data-survey-condition="{{ $key }}" data-filter-condition="{{ $key }}" data-condition-type="{{ $definition['type'] }}" data-condition-default="{{ $definition['default_operator'] }}">
                     <div class="reh-condition-heading">
                         <label for="reh-{{ $key }}">{{ $definition['label'] }}</label>
                         <button type="button" class="reh-condition-trigger" data-condition-trigger aria-expanded="false" aria-controls="reh-{{ $key }}-conditions" aria-label="تغيير شرط {{ $definition['label'] }}"><span data-condition-label>{{ $definition['operators'][$definition['default_operator']] ?? 'الكل' }}</span> <span aria-hidden="true">⌄</span></button>

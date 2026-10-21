@@ -52,7 +52,7 @@ class RehController extends Controller
         $advancedUnitFilter = count(array_filter(array_intersect_key($filters, array_flip([...RehAdvancedFilters::UNIT_FILTERS, ...app(RehSurveyFilters::class)->keys('unit')])), fn ($value): bool => $value !== null && $value !== '')) > 0;
         $hasUnitFilter = $advancedUnitFilter || ! empty($filters['q']) || ! empty($filters['status']) || ! empty($filters['mine']) || ! empty($filters['building_id']) || ! empty($filters['building_object_id']) || ! empty($filters['building_old_objectid']) || ! empty($filters['priority']);
         $selectedBuilding = ! empty($filters['building_id']) ? RehBuilding::query()->find($filters['building_id']) : (! empty($filters['building_object_id']) ? RehBuilding::query()->where('object_id', $filters['building_object_id'])->first() : null);
-        $buildingObjectId = $selectedBuilding?->old_objectid ?? ($filters['building_old_objectid'] ?? null);
+        $buildingObjectId = $selectedBuilding?->old_objectid ?? (($filters['building_old_objectid_op'] ?? 'is') === 'is' ? ($filters['building_old_objectid'] ?? null) : null);
         $stats = [
             'units' => (int) $groups->sum('total'),
             'buildings' => $hasUnitFilter ? (clone $query)->distinct()->count('building_id') : $this->buildings($filters)->count(),
@@ -295,25 +295,12 @@ class RehController extends Controller
     private function units(array $filters): Builder
     {
         $query = RehUnit::query()
-            ->when(($filters['survey_status'] ?? 'completed') !== 'all', fn (Builder $query) => $query->whereHas('building', fn (Builder $building) => $this->filterSurveyStatus($building, $filters['survey_status'] ?? 'completed')))
-            ->when($filters['q'] ?? null, function (Builder $query, string $search): void {
-                $search = trim($search);
-                $query->where(function (Builder $query) use ($search): void {
-                    $query->where('code', 'like', '%'.$search.'%')->orWhere('owner_name', 'like', '%'.$search.'%')
-                        ->orWhere(fn (Builder $unit) => $this->filterReference($unit, $search))
-                        ->orWhereHas('building', fn (Builder $building) => $building->where(fn (Builder $match) => $match->where('name', 'like', '%'.$search.'%')->orWhere(fn (Builder $reference) => $this->filterReference($reference, $search))));
-                    if (auth()->user()->can('reh.sensitive')) {
-                        $query->orWhere('owner_identity', $search);
-                    }
-                });
-            })
-            ->when($filters['status'] ?? null, fn (Builder $query, $status) => $query->whereIn('workflow_status', RehFilterChoices::values($status)))
-            ->when($filters['building_old_objectid'] ?? null, fn (Builder $query, string $reference) => $query->whereHas('building', fn (Builder $building) => $this->filterReference($building, $reference)))
+            ->when(($filters['survey_status'] ?? 'completed') !== 'all' || ($filters['survey_status_op'] ?? 'is') === 'is_not', fn (Builder $query) => $query->whereHas('building', fn (Builder $building) => $this->filterSurveyStatus($building, $filters['survey_status'] ?? 'completed', $filters['survey_status_op'] ?? 'is')))
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->where('building_id', $id))
             ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->whereHas('building', fn (Builder $building) => $building->where('object_id', $objectId)))
-            ->when($filters['governorate'] ?? null, fn (Builder $query, $value) => $query->whereHas('building', fn (Builder $building) => $building->whereIn('governorate', RehFilterChoices::values($value))))
-            ->when($filters['engineer'] ?? null, fn (Builder $query, $value) => $query->whereHas('building', fn (Builder $building) => $building->whereIn('engineer', RehFilterChoices::values($value))))
             ->whereHas('building', fn (Builder $building) => app(RehAdvancedFilters::class)->buildings($building, $filters));
+
+        app(RehAdvancedFilters::class)->search($query, $filters);
 
         return app(RehAdvancedFilters::class)->units($query, $filters);
     }
@@ -326,35 +313,30 @@ class RehController extends Controller
     private function buildings(array $filters): Builder
     {
         $query = RehBuilding::query()
-            ->when(($filters['survey_status'] ?? 'completed') !== 'all', fn (Builder $query) => $this->filterSurveyStatus($query, $filters['survey_status'] ?? 'completed'))
-            ->when($filters['q'] ?? null, function (Builder $query, string $value): void {
-                $value = trim($value);
-                $query->where(function (Builder $query) use ($value): void {
-                    $query->where('name', 'like', '%'.$value.'%')->orWhere(fn (Builder $building) => $this->filterReference($building, $value))
-                        ->orWhereHas('units', fn (Builder $units) => $units->whereIn('id', $this->units(['survey_status' => 'all', 'q' => $value])->select('id')));
-                });
-            })
-            ->when($filters['building_old_objectid'] ?? null, fn (Builder $query, string $reference) => $this->filterReference($query, $reference))
+            ->when(($filters['survey_status'] ?? 'completed') !== 'all' || ($filters['survey_status_op'] ?? 'is') === 'is_not', fn (Builder $query) => $this->filterSurveyStatus($query, $filters['survey_status'] ?? 'completed', $filters['survey_status_op'] ?? 'is'))
             ->when($filters['building_id'] ?? null, fn (Builder $query, int $id) => $query->whereKey($id))
-            ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->where('object_id', $objectId))
-            ->when($filters['governorate'] ?? null, fn (Builder $query, $value) => $query->whereIn('governorate', RehFilterChoices::values($value)))
-            ->when($filters['engineer'] ?? null, fn (Builder $query, $value) => $query->whereIn('engineer', RehFilterChoices::values($value)));
+            ->when($filters['building_object_id'] ?? null, fn (Builder $query, int $objectId) => $query->where('object_id', $objectId));
+
+        app(RehAdvancedFilters::class)->search($query, $filters, true);
 
         return app(RehAdvancedFilters::class)->buildings($query, $filters);
     }
 
-    private function filterReference(Builder $query, string $reference): Builder
-    {
-        $reference = trim($reference);
-
-        return $query->where('reference_id', $reference);
-    }
-
-    private function filterSurveyStatus(Builder $query, array|string $status): Builder
+    private function filterSurveyStatus(Builder $query, array|string $status, string $operator = 'is'): Builder
     {
         $values = RehFilterChoices::values($status);
+        if (in_array('all', $values, true) && $operator === 'is_not') {
+            return $query->whereRaw('1 = 0');
+        }
         if ($values === [] || in_array('all', $values, true)) {
             return $query;
+        }
+
+        if ($operator === 'is_not') {
+            $values = array_values(array_diff(['completed', 'not_completed', 'unrecorded'], $values));
+            if ($values === []) {
+                return $query->whereRaw('1 = 0');
+            }
         }
 
         return $query->where(function (Builder $q) use ($values): void {
