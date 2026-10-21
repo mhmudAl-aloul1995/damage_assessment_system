@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Modules\Reh\Jobs\SyncRehSurvey;
 use App\Modules\Reh\Models\RehBuilding;
+use App\Modules\Reh\Models\RehSyncIssue;
 use App\Modules\Reh\Models\RehSyncRun;
 use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehArcgisClient;
@@ -33,6 +34,24 @@ function rehReviewActionInputs(string $html): array
 
     return $inputs;
 }
+
+it('shows unresolved building link warnings only on the authorized sync page', function (): void {
+    foreach (range(1, 7) as $identifier) {
+        RehSyncIssue::factory()->create(['object_id' => $identifier, 'source' => ['attributes' => ['OldUnit_objectID' => $identifier]], 'reason' => 'رابط المبنى غير موجود']);
+    }
+    RehSyncIssue::factory()->create(['object_id' => 8, 'source' => [], 'reason' => 'حالة تم إصلاحها', 'resolved_at' => now()]);
+    $this->actingAs($this->officer);
+    foreach (['overview', 'units', 'buildings', 'reports'] as $tab) {
+        $html = $this->getJson(route('reh.data', ['tab' => $tab]))->assertOk()->json('html');
+        expect($html)->not->toContain('وحدة محفوظة تحتاج إصلاح الربط بالمبنى');
+    }
+    $html = $this->getJson(route('reh.data', ['tab' => 'sync']))->assertOk()->json('html');
+    expect($html)->toContain('7 وحدة محفوظة تحتاج إصلاح الربط بالمبنى', 'وحدات تحتاج إصلاح الربط — أول 100 حالة', 'رابط المبنى غير موجود')->not->toContain('حالة تم إصلاحها');
+    $reader = User::factory()->create();
+    $reader->givePermissionTo('reh.view');
+    $html = $this->actingAs($reader)->getJson(route('reh.data', ['tab' => 'sync']))->assertOk()->json('html');
+    expect($html)->toContain('قسم المزامنة يحتاج صلاحية إدارة المزامنة.')->not->toContain('وحدة محفوظة تحتاج إصلاح الربط بالمبنى', 'رابط المبنى غير موجود');
+});
 
 it('explains review actions without a dropdown or a preselected decision and shows acceptance requirements', function (): void {
     $unit = RehUnit::factory()->create();

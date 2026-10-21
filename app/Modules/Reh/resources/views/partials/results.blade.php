@@ -1,6 +1,5 @@
 <div class="reh-section-heading"><div><h3>{{ ['overview' => 'المشروع في لمحة', 'units' => 'ملفات الوحدات السكنية', 'buildings' => 'المباني والتوزيع الجغرافي', 'reports' => 'مؤشرات المتابعة', 'sync' => 'استقبال البيانات الميدانية'][$tab] }}</h3><p>{{ $lastSync ? 'آخر مزامنة مكتملة: '.$lastSync->finished_at->format('Y-m-d H:i') : 'لم تكتمل المزامنة الأولى بعد' }}</p></div><span class="badge badge-light-primary">المرحلة 2</span></div>
 @if($buildingObjectId)<div class="alert alert-info">النتائج مقيّدة بالمبنى {{ $buildingObjectId }}. استخدم «مسح الفلاتر» للعودة إلى جميع السجلات.</div>@endif
-@if($issueCount > 0)<div class="alert alert-warning">{{ $issueCount }} وحدة محفوظة تحتاج إصلاح الربط بالمبنى في المصدر. لا تدخل هذه الوحدات في أعداد الملفات الجاهزة للتدقيق.</div>@endif
 @if(in_array($tab, ['overview', 'reports']))
     <div class="reh-metrics">
         @foreach([['units', 'الوحدات المستقبلة', 'units', ''], ['buildings', 'المباني', 'buildings', ''], ['ready', 'مكتمل التدقيق', 'units', 'ready'], ['returned', 'تحتاج استكمالًا', 'units', 'returned'], ['second_assessment', 'تقييم هندسي ثانٍ', 'units', 'second_assessment']] as [$key, $label, $target, $status])
@@ -58,6 +57,7 @@
 @endif
 @if($tab === 'sync')
     @can('reh.sync')
+    @if($issueCount > 0)<div class="alert alert-warning">{{ $issueCount }} وحدة محفوظة تحتاج إصلاح الربط بالمبنى في المصدر. لا تدخل هذه الوحدات في أعداد الملفات الجاهزة للتدقيق.</div>@endif
     @php($syncRunning = $runs->contains('status', 'running'))
     <div class="reh-card"><div class="reh-section-heading"><div><h4>Survey123 → مساحة التدقيق</h4><p>تُقرأ المباني والوحدات من الخدمة، وتُحفظ القرارات محليًا مع سجل إجراءات.</p></div><button type="button" class="btn btn-primary" data-sync @disabled($syncRunning)>{{ $syncRunning ? 'المزامنة قيد التنفيذ…' : 'مزامنة الآن' }}</button></div><p class="text-muted">تبدأ المزامنة تلقائيًا بالخلفية عند الضغط على الزر، وتُحدّث الحالة والأعداد تلقائيًا. يمكنك متابعة العمل أثناء المزامنة.</p>
     <div class="table-responsive"><table class="table reh-table"><thead><tr><th>الوقت</th><th>الحالة</th><th>المباني</th><th>الوحدات</th><th>التفاصيل</th></tr></thead><tbody>@forelse($runs as $run)<tr><td>{{ $run->created_at->format('Y-m-d H:i') }}</td><td>{{ ['queued' => 'بانتظار التنفيذ', 'running' => 'قيد التنفيذ', 'completed' => 'مكتملة', 'completed_with_warnings' => 'مكتملة مع ملاحظات ربط', 'failed' => 'لم تكتمل'][$run->status] }}</td><td>{{ $run->buildings_count }}</td><td>{{ $run->units_count }}</td><td>{{ $run->message ?? 'بانتظار عامل قائمة الانتظار' }}</td></tr>@empty<tr><td colspan="5"><div class="reh-empty">لم تبدأ أي مزامنة بعد.</div></td></tr>@endforelse</tbody></table></div>

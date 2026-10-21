@@ -106,7 +106,7 @@ class RehController extends Controller
         }
         $runs = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncRun::query()->latest()->limit(10)->get() : collect();
         $lastSync = RehSyncRun::query()->whereIn('status', ['completed', 'completed_with_warnings'])->latest('finished_at')->first();
-        $issueCount = RehSyncIssue::query()->whereNull('resolved_at')->count();
+        $issueCount = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->count() : 0;
         $syncIssues = $tab === 'sync' && $request->user()->can('reh.sync') ? RehSyncIssue::query()->whereNull('resolved_at')->select(['id', 'source', 'reason'])->orderBy('id')->limit(100)->get() : collect();
         $scores = $unitRows?->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $request->user()->canAny(['reh.sensitive', 'reh.scores.view']) ? $this->scoring->calculate($unit) : ['engineering' => $this->scoring->engineering($unit)]]) ?? collect();
         $view = view('reh::partials.results', compact('tab', 'filters', 'stats', 'counts', 'unitRows', 'buildingRows', 'mapBuildings', 'runs', 'lastSync', 'issueCount', 'syncIssues', 'scores', 'buildingObjectId') + ['survey' => $this->survey])->render();
