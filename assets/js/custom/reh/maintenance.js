@@ -68,6 +68,7 @@
         if (!value) return;
         operationPanel.hidden = false;
         operationPanel.querySelector('[data-bulk-state]').textContent = {queued:'بانتظار التنفيذ', running:'قيد التنفيذ', completed:'مكتمل', partial:'نتيجة جزئية', failed:'توقفت المعالجة'}[value.status] || value.status;
+        operationPanel.querySelector('.reh-maintenance-heading strong').textContent = value.total === 1 ? 'متابعة طلب حذف الوحدة' : 'متابعة طلب الحذف الجماعي';
         operationPanel.querySelector('[data-bulk-progress]').value = value.percent;
         operationPanel.querySelector('[data-bulk-summary]').textContent = `تمت معالجة ${value.processed} من ${value.total} · حُذفت: ${value.counts.completed} · متجاوزة: ${value.counts.skipped} · تعذّر حذفها: ${value.counts.failed} · تحتاج تحققًا: ${value.counts.needs_review}`;
         operationPanel.querySelector('[data-bulk-message]').textContent = value.message || '';
@@ -164,6 +165,7 @@
         form.action = button.dataset.url;
         form.elements._method.value = 'DELETE';
         form.elements.revision.value = button.dataset.revision;
+        form.dataset.unitId = button.closest('[data-maintenance-unit]').dataset.maintenanceUnit;
         dialog.querySelector('#reh-unit-delete-title').textContent = 'حذف الوحدة';
         dialog.querySelector('#reh-unit-delete-caption').textContent = `معرّف الحصر: ${button.dataset.reference} · معرّف التأهيل: ${button.dataset.objectId}`;
         showDialog();
@@ -176,8 +178,12 @@
         const payload = new FormData(form);
         setBusy(true); errorBox.hidden = true;
         try {
-            const data = await request(form.action, payload);
-            if (!bulkDialog) { location.reload(); return; }
+            if (!bulkDialog) {
+                const preview = await request(page.dataset.bulkPreviewUrl, JSON.stringify({scope:'selected', filters:{kind:'all'}, units:[{id:Number(form.dataset.unitId), revision:form.elements.revision.value}]}));
+                payload.set('selection_token', preview.selection_token);
+                payload.delete('_method');
+            }
+            const data = await request(bulkDialog ? form.action : page.dataset.bulkDeleteUrl, payload);
             setBusy(false); dialog.close(); clearSelection(); renderOperation(data.operation); schedulePoll();
             operationPanel.scrollIntoView({block:'center'});
         }
@@ -188,4 +194,49 @@
     renderOperation(JSON.parse(operationPanel.dataset.initial || 'null'));
     renderSelection();
     schedulePoll();
+
+    const restoreDialog = document.getElementById('reh-unit-restore-dialog');
+    const restoreForm = restoreDialog.querySelector('form');
+    let restoring = false;
+    page.addEventListener('click', async event => {
+        const button = event.target.closest('[data-restore-unit],[data-close-restore],[data-resume-restore]');
+        if (!button) return;
+        if (button.hasAttribute('data-close-restore')) { if (!restoring) restoreDialog.close(); return; }
+        if (button.hasAttribute('data-resume-restore')) {
+            button.disabled = true;
+            try { await request(button.dataset.resumeRestore, new FormData()); location.hash = 'reh-maintenance-history'; location.reload(); }
+            catch (error) { button.closest('[data-restoration]').querySelector('[data-restoration-message]').textContent = error.message; button.disabled = false; }
+            return;
+        }
+        restoreForm.reset();
+        restoreForm.action = button.dataset.restoreUnit;
+        restoreDialog.querySelector('[data-restore-caption]').textContent = `معرّف الحصر: ${button.dataset.reference} · الوجهة: ${button.dataset.destination}`;
+        restoreDialog.querySelector('[data-restore-error]').hidden = true;
+        restoreDialog.showModal();
+    });
+    restoreDialog.addEventListener('cancel', event => { if (restoring) event.preventDefault(); });
+    restoreForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (restoring || !restoreForm.reportValidity()) return;
+        restoring = true;
+        restoreForm.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        try { await request(restoreForm.action, new FormData(restoreForm)); location.hash = 'reh-maintenance-history'; location.reload(); }
+        catch (error) { const message = restoreDialog.querySelector('[data-restore-error]'); message.textContent = error.message; message.hidden = false; restoring = false; restoreForm.querySelectorAll('button').forEach(button => { button.disabled = false; }); }
+    });
+    page.querySelectorAll('[data-restore-status]').forEach(panel => {
+        async function pollRestore() {
+            try {
+                const data = await request(panel.dataset.restoreStatus, undefined, 'GET');
+                panel.querySelector('[data-restoration-message]').textContent = data.message;
+                if (data.status === 'completed') {
+                    panel.querySelector('[data-resume-restore]').hidden = true;
+                    const link = panel.querySelector('[data-restored-link]'); link.href = data.url; link.hidden = false;
+                    return;
+                }
+                if (!['queued','running'].includes(data.status)) return;
+            } catch (error) { panel.querySelector('[data-restoration-message]').textContent = error.message; }
+            setTimeout(pollRestore, 5000);
+        }
+        setTimeout(pollRestore, 3000);
+    });
 })();

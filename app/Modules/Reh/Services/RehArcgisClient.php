@@ -5,6 +5,8 @@ namespace App\Modules\Reh\Services;
 use Generator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Throwable;
 
 class RehArcgisClient
@@ -173,6 +175,142 @@ class RehArcgisClient
         }
 
         throw new RehSyncException('لم تصل نتيجة مؤكدة لحذف الوحدة من ArcGIS.', 2001);
+    }
+
+    public function unitSnapshot(int $objectId, string $globalId): array
+    {
+        $metadata = $this->metadata((int) config('reh.units_layer'));
+        $data = $this->request(config('reh.units_layer').'/query', ['objectIds' => $objectId, 'outFields' => '*', 'returnGeometry' => 'true']);
+        if (! isset($data['features']) || ! is_array($data['features']) || count($data['features']) > 1 || ($data['exceededTransferLimit'] ?? false)) {
+            throw new RehSyncException('تعذر أخذ نسخة كاملة من سجل ArcGIS.', 2002);
+        }
+        if ($data['features'] === []) {
+            return ['absent' => true];
+        }
+        $feature = $data['features'][0];
+        if (array_diff(array_column($metadata['fields'], 'name'), array_keys($feature['attributes'] ?? [])) !== []) {
+            throw new RehSyncException('استجابة ArcGIS لا تتضمن جميع حقول السجل؛ لم يتم الحذف.', 2002);
+        }
+        if ((int) ($feature['attributes']['objectid'] ?? 0) !== $objectId || strtolower(trim($feature['attributes']['globalid'] ?? '', '{} ')) !== strtolower($globalId)) {
+            throw new RehSyncException('هوية سجل النسخة لا تطابق الوحدة المحلية.', 2002);
+        }
+        if (($metadata['supportsApplyEditsWithGlobalIds'] ?? false) !== true) {
+            throw new RehSyncException('الطبقة لا تدعم استرجاع GlobalID؛ أُوقف الحذف لحماية إمكانية الاسترجاع.', 2002);
+        }
+
+        return ['absent' => false, 'feature' => $feature, 'metadata' => $metadata];
+    }
+
+    public function unitByGlobalId(string $globalId): ?array
+    {
+        $globalId = trim($globalId, '{} ');
+        if (! Str::isUuid($globalId)) {
+            throw new RehSyncException('معرّف الاسترجاع غير صالح.', 2002);
+        }
+        $data = $this->request(config('reh.units_layer').'/query', ['where' => "globalid = '{$globalId}'", 'outFields' => '*', 'returnGeometry' => 'true']);
+        if (! isset($data['features']) || ! is_array($data['features']) || count($data['features']) > 1 || ($data['exceededTransferLimit'] ?? false)) {
+            throw new RehSyncException('لم تصل نتيجة مؤكدة للتحقق من الاسترجاع.', 2001);
+        }
+        $feature = $data['features'][0] ?? null;
+        if ($feature && (strtolower(trim($feature['attributes']['globalid'] ?? '', '{} ')) !== strtolower($globalId) || (int) ($feature['attributes']['objectid'] ?? 0) < 1)) {
+            throw new RehSyncException('هوية السجل المسترجع غير مطابقة.', 2002);
+        }
+
+        return $feature;
+    }
+
+    public function restoreUnit(array $remote, string $globalId, bool $wasAttempted, callable $markAttempted): array
+    {
+        if (($remote['service_url'] ?? '') !== rtrim(config('reh.service_url'), '/') || ($remote['layer_id'] ?? null) !== (int) config('reh.units_layer')) {
+            throw new RehSyncException('مصدر النسخة يختلف عن طبقة REH الحالية.', 2002);
+        }
+        $metadata = $this->metadata((int) config('reh.units_layer'));
+        if (($metadata['supportsApplyEditsWithGlobalIds'] ?? false) !== true) {
+            throw new RehSyncException('الطبقة لا تدعم الاسترجاع مع الحفاظ على GlobalID.', 2002);
+        }
+        $attributes = [];
+        if (array_diff(array_keys($remote['feature']['attributes']), array_column($metadata['fields'], 'name')) !== []) {
+            throw new RehSyncException('تغيّرت حقول الطبقة منذ أخذ النسخة. راجع بنية الطبقة قبل الاسترجاع.', 2002);
+        }
+        foreach ($metadata['fields'] as $field) {
+            $name = $field['name'];
+            if ($name !== 'objectid' && (($field['editable'] ?? true) || in_array($name, ['globalid', 'parentglobalid'], true)) && array_key_exists($name, $remote['feature']['attributes'])) {
+                $attributes[$name] = $remote['feature']['attributes'][$name];
+            }
+        }
+        $existing = $this->unitByGlobalId($globalId);
+        if ($existing && ! $wasAttempted) {
+            throw new RehSyncException('يوجد سجل بهذا GlobalID في ArcGIS؛ لن تُستبدل بياناته.', 2002);
+        }
+        if (! $existing) {
+            $parentId = trim($attributes['parentglobalid'] ?? '', '{} ');
+            if (! Str::isUuid($parentId)) {
+                throw new RehSyncException('ربط المبنى في النسخة غير صالح.', 2002);
+            }
+            $parent = $this->request(config('reh.buildings_layer').'/query', ['where' => "globalid = '{$parentId}'", 'outFields' => 'objectid,globalid', 'returnGeometry' => 'false']);
+            if (count($parent['features'] ?? []) !== 1 || ($parent['exceededTransferLimit'] ?? false) || strtolower(trim($parent['features'][0]['attributes']['globalid'] ?? '', '{} ')) !== strtolower($parentId)) {
+                throw new RehSyncException('المبنى المرتبط بالنسخة غير موجود في ArcGIS؛ لم تتم إضافة الوحدة.', 2002);
+            }
+            $markAttempted();
+            $feature = [...$remote['feature'], 'attributes' => $attributes];
+            $this->restoreEdits(['adds' => json_encode([$feature], JSON_THROW_ON_ERROR)]);
+            $existing = $this->unitByGlobalId($globalId);
+        }
+        if (! $existing) {
+            throw new RehSyncException('لم يتأكد وجود السجل المسترجع بعد.', 2001);
+        }
+        foreach ($attributes as $name => $value) {
+            $actual = $existing['attributes'][$name] ?? null;
+            $matches = in_array($name, ['globalid', 'parentglobalid'], true) ? strtolower(trim((string) $actual, '{} ')) === strtolower(trim((string) $value, '{} ')) : $actual === $value || (is_numeric($actual) && is_numeric($value) && (string) $actual === (string) $value);
+            if (! $matches) {
+                throw new RehSyncException('حقول ArcGIS لا تطابق النسخة؛ يلزم مراجعة نتيجة الاسترجاع.', 2001);
+            }
+        }
+        if (($existing['geometry'] ?? null) != ($remote['feature']['geometry'] ?? null)) {
+            throw new RehSyncException('هندسة السجل المسترجع لا تطابق النسخة.', 2001);
+        }
+        foreach ($remote['attachments'] ?? [] as $attachment) {
+            $infos = $this->attachments((int) config('reh.units_layer'), (int) $existing['attributes']['objectid']);
+            $found = collect($infos)->first(fn (array $info): bool => strtolower(trim($info['globalId'] ?? '', '{} ')) === strtolower(trim($attachment['global_id'], '{} ')));
+            if (! $found) {
+                $markAttempted();
+                $this->restoreEdits(['attachments' => json_encode(['adds' => [['globalId' => $attachment['global_id'], 'parentGlobalId' => $globalId,
+                    'name' => $attachment['info']['name'], 'contentType' => $attachment['info']['contentType'], 'data' => base64_encode(Storage::disk('local')->get($attachment['path']))]]], JSON_THROW_ON_ERROR)]);
+                $infos = $this->attachments((int) config('reh.units_layer'), (int) $existing['attributes']['objectid']);
+                $found = collect($infos)->first(fn (array $info): bool => strtolower(trim($info['globalId'] ?? '', '{} ')) === strtolower(trim($attachment['global_id'], '{} ')));
+            }
+            if (! $found || ! hash_equals($attachment['sha256'], hash('sha256', $this->download((int) config('reh.units_layer'), (int) $existing['attributes']['objectid'], (int) $found['id'])))) {
+                throw new RehSyncException('لم يتأكد استرجاع المرفقات كاملة؛ يلزم التحقق.', 2001);
+            }
+        }
+
+        return $existing;
+    }
+
+    private function restoreEdits(array $parameters, bool $retry = true): void
+    {
+        try {
+            $response = Http::asForm()->withHeaders(['Referer' => config('reh.referer')])->connectTimeout(10)->timeout(60)
+                ->post($this->base().'/'.config('reh.units_layer').'/applyEdits', [...$parameters, 'f' => 'json', 'token' => $this->token(), 'useGlobalIds' => 'true', 'rollbackOnFailure' => 'true']);
+            $data = $response->json();
+        } catch (Throwable) {
+            throw new RehSyncException('انقطع الاتصال أثناء الاسترجاع؛ تحقق من النتيجة قبل أي محاولة أخرى.', 2001);
+        }
+        if ($retry && in_array($data['error']['code'] ?? null, [498, 499], true)) {
+            Cache::forget($this->tokenKey());
+            $this->restoreEdits($parameters, false);
+
+            return;
+        }
+        $results = isset($parameters['adds']) ? ($data['addResults'] ?? []) : ($data['attachments']['addResults'] ?? []);
+        if ($response->successful() && count($results) === 1 && ($results[0]['success'] ?? false) === true) {
+            return;
+        }
+        if (isset($data['error']) || ($results[0]['success'] ?? null) === false) {
+            throw new RehSyncException('رفضت ArcGIS الاسترجاع. راجع الصلاحيات وقواعد الطبقة.', 2002);
+        }
+
+        throw new RehSyncException('لم تصل نتيجة مؤكدة للاسترجاع.', 2001);
     }
 
     private function token(): string

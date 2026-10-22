@@ -40,8 +40,11 @@ function rehDeletionRemote(RehUnit $unit, string $result = 'success'): object
         if (str_contains($request->url(), 'generateToken')) {
             return Http::response(['token' => 'fake-token']);
         }
+        if (str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/'.config('reh.units_layer'))) {
+            return Http::response(['fields' => array_map(fn (string $field): array => ['name' => $field, 'editable' => true], array_unique(['globalid', 'objectid', 'parentglobalid', ...array_keys($unit->source)])), 'hasAttachments' => false, 'supportsApplyEditsWithGlobalIds' => true]);
+        }
         if (str_contains($request->url(), '/query')) {
-            return Http::response(['features' => $state->absent ? [] : [['attributes' => ['objectid' => $unit->object_id, 'globalid' => $result === 'mismatch' ? '99999999-9999-4999-8999-999999999999' : '{'.$unit->global_id.'}']]]]);
+            return Http::response(['features' => $state->absent ? [] : [['attributes' => [...$unit->source, 'objectid' => $unit->object_id, 'globalid' => $result === 'mismatch' ? '99999999-9999-4999-8999-999999999999' : '{'.$unit->global_id.'}', 'parentglobalid' => $unit->building->global_id]]]]);
         }
         if (str_contains($request->url(), '/deleteFeatures')) {
             if ($result === 'unknown') {

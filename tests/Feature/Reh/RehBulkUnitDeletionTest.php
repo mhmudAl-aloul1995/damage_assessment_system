@@ -138,8 +138,11 @@ it('retains an uncertain ArcGIS result for per-unit verification and never retri
         if (str_contains($request->url(), 'generateToken')) {
             return Http::response(['token' => 'fake']);
         }
+        if (str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/'.config('reh.units_layer'))) {
+            return Http::response(['fields' => array_map(fn (string $name): array => ['name' => $name], ['objectid', 'globalid', 'parentglobalid']), 'supportsApplyEditsWithGlobalIds' => true, 'hasAttachments' => false]);
+        }
         if (str_contains($request->url(), '/query')) {
-            return Http::response(['features' => [['attributes' => ['objectid' => $unit->object_id, 'globalid' => $unit->global_id]]]]);
+            return Http::response(['features' => [['attributes' => ['objectid' => $unit->object_id, 'globalid' => $unit->global_id, 'parentglobalid' => $unit->building->global_id]]]]);
         }
 
         return Http::response([]);

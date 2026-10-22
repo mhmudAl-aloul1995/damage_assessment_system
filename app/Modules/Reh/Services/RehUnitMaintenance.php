@@ -121,7 +121,7 @@ class RehUnitMaintenance
     {
         abort_unless($user->hasRole('Database Officer'), 403);
         $this->audit->ensureReady();
-        $lock = Cache::lock('reh:sync:execution', 600);
+        $lock = Cache::lock('reh:sync:execution', 1900);
         abort_unless($lock->get(), 409, 'هناك مزامنة أو تعديل جارٍ. انتظر انتهاءه قبل الحذف.', ['Retry-After' => '30']);
         $log = null;
         $attempted = false;
@@ -138,7 +138,12 @@ class RehUnitMaintenance
                     'before' => $unit->attributesToArray(), 'reviews' => $unit->reviews()->get()->toArray(), 'cost_estimates' => $estimates,
                     'remote_deleted' => false, 'local_deleted' => false, 'bulk_operation_id' => $data['bulk_operation_id'] ?? null],
             ]);
+            $snapshots = app(RehDeletionSnapshot::class);
+            $snapshot = $snapshots->local($unit);
+            $snapshots->store($log, $snapshot);
             if ($data['destination'] !== 'database') {
+                $snapshot['remote'] = $snapshots->remote($unit, $log);
+                $snapshots->store($log, $snapshot);
                 $attempted = true;
                 $this->client->deleteUnit($unit->object_id, $unit->global_id);
                 $remoteDeleted = true;
@@ -205,6 +210,9 @@ class RehUnitMaintenance
                     $reviews = $unit->reviews()->lockForUpdate()->get()->toArray();
                     $estimates = app(RehPricing::class)->ready() ? RehCostEstimate::query()->where('unit_id', $unit->id)->lockForUpdate()->with('lines')->get()->toArray() : [];
                     $log->update(['values' => [...$log->values, 'before' => $unit->attributesToArray(), 'reviews' => $reviews, 'cost_estimates' => $estimates]]);
+                    if (isset($log->values['snapshot'])) {
+                        app(RehDeletionSnapshot::class)->store($log, [...app(RehDeletionSnapshot::class)->local($unit), ...array_intersect_key($log->values['snapshot'], ['remote' => true])]);
+                    }
                     if (app(RehPricing::class)->ready()) {
                         RehCostEstimate::query()->where('unit_id', $unit->id)->delete();
                     }
@@ -213,6 +221,7 @@ class RehUnitMaintenance
                 } else {
                     $unit->update(['source_missing' => true, 'workflow_status' => 'source_changed', 'engineering_status' => 'pending', 'social_status' => 'pending', 'decision' => 'pending', 'version' => $unit->version + 1]);
                     $unit->reviews()->create(['user_id' => $log->user_id, 'action' => 'source_missing', 'note' => 'حُذفت الوحدة من ArcGIS بواسطة مسؤول قواعد البيانات. '.$log->reason]);
+                    $log->update(['values' => [...$log->values, 'post_delete_revision' => $this->revision($unit->fresh())]]);
                 }
             }
             $log->update(['status' => 'completed', 'message' => match ($log->field) {

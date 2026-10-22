@@ -10,7 +10,7 @@
     @if(session('reh_maintenance_message'))<div class="alert alert-success" role="status">{{ session('reh_maintenance_message') }}</div>@endif
     @if(!$ready)<div class="alert alert-warning" role="alert">{{ \App\Modules\Reh\Services\RehFieldAudit::SETUP_MESSAGE }}</div>@endif
     <div id="reh-maintenance-message" class="alert alert-danger" role="alert" hidden></div>
-    <section class="reh-card reh-bulk-operation" data-bulk-operation data-initial="{{ json_encode($bulkOperation) }}" @if(!$bulkOperation) hidden @endif aria-label="متابعة الحذف الجماعي">
+    <section class="reh-card reh-bulk-operation" data-bulk-operation data-initial="{{ json_encode($bulkOperation) }}" @if(!$bulkOperation) hidden @endif aria-label="متابعة الحذف">
         <div class="reh-maintenance-heading"><strong>متابعة طلب الحذف الجماعي</strong><span data-bulk-state></span></div>
         <progress data-bulk-progress max="100" value="0" aria-label="تقدم الحذف الجماعي"></progress>
         <p data-bulk-summary aria-live="polite"></p><small data-bulk-message></small>
@@ -74,7 +74,7 @@
         @if($units->hasPages())<nav class="reh-maintenance-pagination" aria-label="صفحات الوحدات">@if($units->previousPageUrl())<a class="btn btn-sm btn-light" href="{{ $units->previousPageUrl() }}">السابق</a>@endif<span>صفحة {{ $units->currentPage() }} من {{ $units->lastPage() }}</span>@if($units->nextPageUrl())<a class="btn btn-sm btn-light" href="{{ $units->nextPageUrl() }}">التالي</a>@endif</nav>@endif
     </section>
     <details id="reh-maintenance-history" class="reh-card reh-maintenance-history" @if($logs->whereIn('status', ['pending', 'needs_review'])->isNotEmpty()) open @endif><summary>سجل الحذف <span>العمليات المعلّقة وآخر العمليات</span></summary>
-        @forelse($logs as $log)<article><div><strong>معرّف الحصر {{ $log->values['reference'] ?? 'غير متوفر' }} · معرّف التأهيل {{ $log->object_id }}</strong><small>{{ $log->user?->name ?? 'مستخدم غير متوفر' }} · {{ $log->created_at->format('Y-m-d H:i') }} · {{ ['database' => 'قاعدة البيانات فقط', 'arcgis' => 'ArcGIS فقط', 'both' => 'ArcGIS وقاعدة البيانات'][$log->field] }}</small></div><span class="reh-maintenance-badge {{ $log->status === 'completed' ? '' : 'is-missing' }}">{{ ['completed' => 'مكتمل', 'failed' => 'لم يتم الحذف', 'pending' => 'جارٍ التنفيذ', 'needs_review' => 'يلزم التحقق', 'partial' => 'حذف جزئي'][$log->status] ?? $log->status }}</span><p>{{ $log->reason }}</p><small>{{ $log->message }}</small>@if(in_array($log->status, ['pending', 'needs_review'], true))<button type="button" class="btn btn-sm btn-light-primary" data-verify-deletion="{{ route('reh.maintenance.verify', $log) }}">التحقق من نتيجة الحذف</button>@endif</article>@empty<p class="text-muted mt-5">لا توجد عمليات حذف مسجلة.</p>@endforelse
+        @include('reh::partials.deletion-history')
     </details>
     <dialog id="reh-unit-delete-dialog" aria-labelledby="reh-unit-delete-title" aria-describedby="reh-unit-delete-caption">
         <form method="post" data-unit-delete-form>@csrf @method('DELETE')
@@ -87,9 +87,19 @@
             <fieldset class="reh-delete-destinations"><legend>مكان الحذف</legend><div><label><input type="radio" name="destination" value="database" required><span>قاعدة البيانات فقط</span></label><label><input type="radio" name="destination" value="arcgis" required><span>ArcGIS فقط</span></label><label><input type="radio" name="destination" value="both" required><span>ArcGIS وقاعدة البيانات</span></label></div></fieldset>
             <p class="reh-delete-impact" data-delete-impact aria-live="polite">حدد مكان الحذف لمعرفة أثره.</p>
             <label for="reh-delete-reason">سبب الحذف <span class="text-danger">*</span></label><textarea class="form-control" id="reh-delete-reason" name="reason" required minlength="3" maxlength="2000" rows="3" placeholder="مثال: سجل مكرر تمت مراجعته ومقارنته بالسجل الصحيح."></textarea>
-            <p class="reh-delete-archive">تُحفظ نسخة من بيانات الوحدة وسجل مراجعاتها ونسخ تكلفتها في سجل الحذف قبل إزالة البيانات المحلية.</p>
+            <p class="reh-delete-archive">تُحفظ نسخة كاملة من كل الحقول والمراجعات ونسخ التكلفة قبل الحذف، ومعها سجل ArcGIS ومرفقاته عند حذفه من الطبقة. يمكن طلب الاسترجاع من سجل الحذف.</p>
             <label class="reh-delete-confirm"><input type="checkbox" name="confirm" value="1" required><span data-delete-confirm-label>راجعت معرّف التأهيل ووجهة الحذف وأؤكد حذف هذا السجل.</span></label>
             <footer><button type="button" class="btn btn-light" data-close-delete>إلغاء</button><button type="submit" class="btn btn-danger" data-confirm-delete>تأكيد الحذف</button></footer>
+        </form>
+    </dialog>
+    <dialog id="reh-unit-restore-dialog" aria-labelledby="reh-unit-restore-title">
+        <form data-unit-restore-form>@csrf
+            <header><div><span class="reh-eyebrow">نسخة محفوظة قبل الحذف</span><h3 id="reh-unit-restore-title">استرجاع الوحدة</h3></div><button type="button" class="btn btn-sm btn-light" data-close-restore>إغلاق ✕</button></header>
+            <p data-restore-caption></p><p class="reh-restore-note">تُسترجع الحقول والمراجعات ونسخ التكلفة إلى وجهة الحذف الأصلية. يتحقق النظام من سلامة النسخة ويمنع استبدال أي سجل متعارض. قد يمنح ArcGIS السجل معرّف تأهيل جديدًا.</p>
+            <div class="alert alert-danger" data-restore-error role="alert" hidden></div>
+            <label for="reh-restore-reason">سبب الاسترجاع <span class="text-danger">*</span></label><textarea id="reh-restore-reason" class="form-control" name="reason" required minlength="3" maxlength="2000" rows="3"></textarea>
+            <label class="reh-restore-confirm"><input type="checkbox" name="confirm" value="1" required> راجعت الوحدة والنسخة ووجهة الاسترجاع.</label>
+            <footer><button type="button" class="btn btn-light" data-close-restore>إلغاء</button><button type="submit" class="btn btn-primary">استرجاع النسخة</button></footer>
         </form>
     </dialog>
 </div>

@@ -28,6 +28,7 @@ class RehUnitMaintenanceRequest extends FormRequest
             'per_page' => ['nullable', 'integer', 'in:25,50,100'],
             'q' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
+            'history_page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
