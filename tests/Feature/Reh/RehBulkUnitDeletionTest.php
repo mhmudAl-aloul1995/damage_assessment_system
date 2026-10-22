@@ -65,6 +65,21 @@ it('queues only selected units and reuses the confirmed request without enqueuin
     $this->getJson(route('reh.maintenance.bulk.status', $first))->assertOk()->assertJsonPath('operation.status', 'completed')->assertJsonPath('operation.counts.completed', 2)->assertJsonPath('operation.processed', 2);
 });
 
+it('applies code availability to the frozen bulk scope and rejects selections outside that filter', function (): void {
+    $available = RehUnit::factory()->create(['code' => 'PE2-F0-1']);
+    $missing = RehUnit::factory()->create(['code' => null]);
+    $empty = RehUnit::factory()->create(['code' => '   ']);
+    $filters = ['kind' => 'all', 'code_status' => 'missing'];
+    $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => $filters])->assertOk()->assertJsonPath('total', 2)->json();
+    $snapshot = Cache::get('reh:bulk-preview:'.$preview['selection_token']);
+    expect(array_column($snapshot['units'], 'id'))->toBe([$missing->id, $empty->id])
+        ->and($snapshot['filters']['code_status'])->toBe('missing');
+    $this->postJson(route('reh.maintenance.bulk.preview'), [...rehBulkPreview([$available]), 'filters' => $filters])->assertUnprocessable();
+    $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => ['kind' => 'all', 'code_status' => 'invalid']])->assertUnprocessable()->assertJsonValidationErrors('filters.code_status');
+    Queue::assertNothingPushed();
+    Http::assertNothingSent();
+});
+
 it('deletes the frozen duplicate group even when deleting the first member changes filter membership', function (): void {
     RehUnit::factory()->count(2)->create(['source' => ['OldUnit_objectID' => 10613]]);
     $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => ['kind' => 'duplicate']])->assertOk()->assertJsonPath('total', 2)->json();

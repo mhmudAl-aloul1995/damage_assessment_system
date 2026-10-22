@@ -4,3 +4,4 @@
 .reh-maintenance-badge.is-unavailable{background:var(--bs-gray-100,#f6f8f9);color:var(--reh-muted)}
 .reh-maintenance .reh-field-population{margin-top:8px;white-space:nowrap;font-variant-numeric:tabular-nums}.reh-maintenance .reh-field-population strong{color:var(--reh-ink)}
 .reh-maintenance [data-unit-code]{display:inline-block;white-space:nowrap}
+.reh-maintenance-search>.reh-code-filter{flex:0 1 180px;min-width:150px}

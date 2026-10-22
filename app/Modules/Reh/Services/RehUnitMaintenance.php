@@ -37,6 +37,11 @@ class RehUnitMaintenance
             'missing' => $query->whereRaw("NULLIF(TRIM(reh_units.reference_id), '') IS NULL"),
             default => null,
         };
+        match ($filters['code_status'] ?? 'all') {
+            'available' => $query->whereRaw("NULLIF(TRIM(reh_units.code), '') IS NOT NULL"),
+            'missing' => $query->whereRaw("NULLIF(TRIM(reh_units.code), '') IS NULL"),
+            default => null,
+        };
         if (($filters['q'] ?? '') !== '') {
             $query->where(function (Builder $query) use ($filters): void {
                 $query->where('reh_units.reference_id', trim($filters['q']));

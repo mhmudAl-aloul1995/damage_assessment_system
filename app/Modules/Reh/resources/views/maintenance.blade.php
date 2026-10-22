@@ -4,7 +4,7 @@
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/reh.css') }}?v={{ filemtime(base_path('assets/css/reh.css')) }}">
 <link rel="stylesheet" href="{{ asset('assets/css/reh-maintenance.css') }}?v={{ filemtime(base_path('assets/css/reh-maintenance.css')) }}">
-<div id="reh-workspace" class="reh-maintenance" dir="rtl" data-bulk-preview-url="{{ route('reh.maintenance.bulk.preview') }}" data-bulk-delete-url="{{ route('reh.maintenance.bulk.destroy') }}" data-bulk-status-url="{{ route('reh.maintenance.bulk.status', '__operation__') }}" data-bulk-start-url="{{ route('reh.maintenance.bulk.start', '__operation__') }}" data-bulk-filters="{{ json_encode(['kind' => $filters['kind'] ?? 'duplicate', 'q' => $filters['q'] ?? '']) }}" data-total-units="{{ $units->total() }}">
+<div id="reh-workspace" class="reh-maintenance" dir="rtl" data-bulk-preview-url="{{ route('reh.maintenance.bulk.preview') }}" data-bulk-delete-url="{{ route('reh.maintenance.bulk.destroy') }}" data-bulk-status-url="{{ route('reh.maintenance.bulk.status', '__operation__') }}" data-bulk-start-url="{{ route('reh.maintenance.bulk.start', '__operation__') }}" data-bulk-filters="{{ json_encode(['kind' => $filters['kind'] ?? 'duplicate', 'q' => $filters['q'] ?? '', 'code_status' => $filters['code_status'] ?? 'all']) }}" data-total-units="{{ $units->total() }}">
     <header class="reh-hero"><div><span class="reh-eyebrow">REH / DATABASE</span><h2>مراجعة معرّفات الوحدات</h2><p>قارن السجلات المكررة، وراجع الوحدات التي لا تحمل معرّف حصر.</p></div><span class="badge badge-light">مسؤول قواعد البيانات</span></header>
     <nav class="reh-tabs" aria-label="أقسام مشروع REH"><a href="{{ route('reh.index') }}">مساحة المشروع</a><a href="{{ route('reh.index', ['tab' => 'sync']) }}">المزامنة</a><a class="active" aria-current="page" href="{{ route('reh.maintenance.index') }}">مراجعة معرّفات الوحدات</a></nav>
     @if(session('reh_maintenance_message'))<div class="alert alert-success" role="status">{{ session('reh_maintenance_message') }}</div>@endif
@@ -22,14 +22,15 @@
     @endphp
     <nav class="reh-maintenance-stats" aria-label="تصفية حسب حالة معرّف الحصر">
         @foreach(['duplicate' => ['معرّف حصر مكرر', $statistics['groups'].' معرّفًا مشتركًا بين الوحدات'], 'missing' => ['معرّف حصر فارغ', 'يشمل القيم الفارغة وNULL'], 'all' => ['كل الوحدات', 'يشمل السجلات غير الموجودة في المصدر']] as $key => [$label, $caption])
-        <a href="{{ route('reh.maintenance.index', ['kind' => $key, 'q' => $filters['q'] ?? null]) }}" class="reh-maintenance-stat {{ $kind === $key ? 'is-active' : '' }}" @if($kind === $key) aria-current="true" @endif><span>{{ $label }}</span><strong>{{ number_format($statistics[$key]) }}</strong><small>{{ $caption }}</small></a>
+        <a href="{{ route('reh.maintenance.index', ['kind' => $key, 'q' => $filters['q'] ?? null, 'code_status' => $filters['code_status'] ?? 'all']) }}" class="reh-maintenance-stat {{ $kind === $key ? 'is-active' : '' }}" @if($kind === $key) aria-current="true" @endif><span>{{ $label }}</span><strong>{{ number_format($statistics[$key]) }}</strong><small>{{ $caption }}</small></a>
         @endforeach
     </nav>
     <section class="reh-card" aria-label="الوحدات حسب الفلتر">
         <form method="get" action="{{ route('reh.maintenance.index') }}" class="reh-maintenance-search">
             <input type="hidden" name="kind" value="{{ $kind }}">
             <div><label for="reh-reference-search">البحث بمعرّف حصر الوحدة أو معرّف التأهيل</label><input type="search" id="reh-reference-search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control" maxlength="100" placeholder="اكتب المعرّف…"></div>
-            <button class="btn btn-primary" type="submit">بحث</button><a class="btn btn-light" href="{{ route('reh.maintenance.index', ['kind' => $kind]) }}">مسح البحث</a>
+            <div class="reh-code-filter"><label for="reh-code-status">كود الوحدة</label><select id="reh-code-status" name="code_status" class="form-select">@foreach(['all' => 'الكل', 'available' => 'متوفر', 'missing' => 'غير متوفر'] as $value => $label)<option value="{{ $value }}" @selected(($filters['code_status'] ?? 'all') === $value)>{{ $label }}</option>@endforeach</select></div>
+            <button class="btn btn-primary" type="submit">بحث</button><a class="btn btn-light" href="{{ route('reh.maintenance.index', ['kind' => $kind]) }}">مسح الفلاتر</a>
         </form>
         <div class="reh-maintenance-heading"><strong>{{ number_format($units->total()) }} وحدة مطابقة</strong><span>مرتّبة تصاعديًا حسب معرّف حصر الوحدة · الفارغ في النهاية</span></div>
         <div class="reh-bulk-selection" data-bulk-selection hidden role="region" aria-label="إجراءات الوحدات المحددة"><div><strong data-selection-count></strong><small data-selection-scope></small></div><button type="button" class="btn btn-sm btn-light-primary" data-select-filtered @disabled(!$ready)>تحديد كل نتائج الفلتر ({{ number_format($units->total()) }})</button><button type="button" class="btn btn-sm btn-light" data-clear-selection>إلغاء التحديد</button><button type="button" class="btn btn-sm btn-danger" data-delete-selected @disabled(!$ready)>حذف المحدد</button></div>

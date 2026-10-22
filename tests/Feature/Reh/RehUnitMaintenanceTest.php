@@ -184,6 +184,34 @@ it('shows each unit code and marks null empty or whitespace codes as unavailable
     Http::assertNothingSent();
 });
 
+it('filters unit code availability together with reference filters and search and preserves it in navigation and bulk selection', function (): void {
+    $available = RehUnit::factory()->create(['code' => 'PE2-PR2-F0-1', 'source' => ['OldUnit_objectID' => 10613]]);
+    $missing = collect([null, '', '   '])->map(fn (?string $code): RehUnit => RehUnit::factory()->create(['code' => $code, 'source' => ['OldUnit_objectID' => 10613]]));
+    $zero = RehUnit::factory()->create(['code' => '0', 'source' => ['OldUnit_objectID' => null]]);
+
+    $response = $this->get(route('reh.maintenance.index', ['code_status' => 'available']))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$available->id]);
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    expect($xpath->query('//select[@name="code_status"]/option[@selected]')->item(0)->getAttribute('value'))->toBe('available')
+        ->and(json_decode($xpath->query('//*[@id="reh-workspace"]')->item(0)->getAttribute('data-bulk-filters'), true)['code_status'])->toBe('available');
+    foreach ($xpath->query('//nav[@class="reh-maintenance-stats"]/a') as $link) {
+        expect($link->getAttribute('href'))->toContain('code_status=available');
+    }
+
+    $this->get(route('reh.maintenance.index', ['code_status' => 'missing']))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->sort()->values()->all() === $missing->pluck('id')->sort()->values()->all());
+    $this->get(route('reh.maintenance.index', ['kind' => 'missing', 'code_status' => 'available']))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$zero->id]);
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', 'code_status' => 'available', 'q' => $available->object_id]))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$available->id]);
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', 'code_status' => 'all']))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->total() === 5);
+    $this->getJson(route('reh.maintenance.index', ['code_status' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('code_status');
+    Http::assertNothingSent();
+});
+
 it('archives local reviews and approved cost snapshots before deleting only from the database', function (): void {
     $unit = rehMaintenanceUnit();
     $unit->reviews()->create(['user_id' => $this->officer->id, 'action' => 'engineering_approve', 'note' => 'تدقيق سابق']);
