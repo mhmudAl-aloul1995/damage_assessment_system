@@ -11,12 +11,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class MobilePortalService
 {
-    public const MODULES = ['damage_assessment', 'damage_assessment_borrowers', 'heks', 'hr', 'administration'];
+    public const MODULES = ['damage_assessment', 'damage_assessment_borrowers', 'heks', 'heks-shelter', 'hr', 'administration'];
 
     public function authorize(User $user, string $module): void
     {
         abort_unless(in_array($module, self::MODULES, true), 404);
         abort_unless(collect(Sidebar::forUser($user))->contains('key', $module), 403);
+        if ($module === 'heks-shelter') {
+            abort_unless($user->can('heks3.view'), 403);
+        }
         if ($module === 'heks' || $module === 'administration') {
             abort_unless($user->hasRole('Database Officer'), 403);
         }
@@ -30,7 +33,7 @@ class MobilePortalService
                 'key' => $module['key'], 'title' => __($module['title']),
                 'description' => __($module['description'] ?? ''),
                 'sections' => collect($module['sections'])->map(fn (array $section): string => __($section['title']))->values()->all(),
-                'record_search' => in_array($module['key'], ['damage_assessment_borrowers', 'heks', 'administration'], true),
+                'record_search' => in_array($module['key'], ['damage_assessment_borrowers', 'heks', 'heks-shelter', 'administration'], true),
             ])->values()->all();
     }
 
@@ -41,12 +44,15 @@ class MobilePortalService
     {
         $this->authorize($user, $module);
         $query = $this->query($module);
+        if ($module === 'heks-shelter') {
+            $query->visibleTo($user);
+        }
         $search = trim($filters['search'] ?? '');
         if ($search !== '') {
             $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
             $columns = match ($module) {
                 'damage_assessment_borrowers' => ['borrower_name', 'borrower_id_number', 'phone_primary', 'loan_number'],
-                'heks' => ['name', 'code', 'identity_number', 'phone'],
+                'heks', 'heks-shelter' => ['name', 'code', 'identity_number', 'phone'],
                 default => ['name', 'email'],
             };
             $query->where(function (Builder $query) use ($columns, $pattern): void {
@@ -65,7 +71,7 @@ class MobilePortalService
     {
         $this->authorize($user, $module);
 
-        return $this->query($module)->when($lock, fn (Builder $query): Builder => $query->lockForUpdate())->findOrFail($id);
+        return $this->query($module)->when($module === 'heks-shelter', fn (Builder $query): Builder => $query->visibleTo($user))->when($lock, fn (Builder $query): Builder => $query->lockForUpdate())->findOrFail($id);
     }
 
     /** @return array<string, mixed> */
@@ -73,6 +79,7 @@ class MobilePortalService
     {
         $row = $this->record($user, $module, $id);
         $labels = match ($module) {
+            'heks-shelter' => ['code' => 'الكود', 'name' => 'اسم المستفيد', 'identity_number' => 'الهوية', 'phone' => 'الهاتف', 'area' => 'المنطقة', 'visit_date' => 'تاريخ الزيارة'],
             'damage_assessment_borrowers' => ['borrower_name' => 'اسم المقترض', 'borrower_id_number' => 'الهوية', 'phone_primary' => 'الهاتف', 'current_residence_address' => 'السكن الحالي', 'loan_unit_address' => 'عنوان الوحدة', 'loan_unit_area' => 'المساحة م²', 'loan_unit_damage_status' => 'حالة الضرر', 'risk_level' => 'مستوى المخاطر', 'risk_score' => 'مؤشر المخاطر', 'notes' => 'ملاحظات'],
             'heks' => ['code' => 'الكود', 'name' => 'الاسم', 'identity_number' => 'الهوية', 'phone' => 'الهاتف', 'governorate' => 'المحافظة', 'area' => 'المنطقة', 'address' => 'العنوان', 'damage_status' => 'حالة الضرر', 'selection_status' => 'حالة الاختيار', 'payment_status' => 'حالة الدفعات', 'grant_amount' => 'المنحة', 'engineer_notes' => 'ملاحظات هندسية', 'recommendations' => 'التوصيات'],
             default => ['name' => 'الاسم', 'email' => 'البريد الإلكتروني', 'phone' => 'الهاتف', 'is_active' => 'حالة الحساب'],
@@ -90,6 +97,7 @@ class MobilePortalService
     private function query(string $module): Builder
     {
         return match ($module) {
+            'heks-shelter' => \App\Modules\HeksShelter\Models\ShelterCase::query()->where('phase', 3),
             'damage_assessment_borrowers' => DamageAssessmentBorrower::query(),
             'heks' => HeksBeneficiary::query(),
             'administration' => User::query()->select(['id', 'name', 'email', 'phone', 'is_active', 'updated_at']),
@@ -104,10 +112,11 @@ class MobilePortalService
             'title' => $module === 'damage_assessment_borrowers' ? $row->borrower_name : $row->name,
             'subtitle' => match ($module) {
                 'damage_assessment_borrowers' => $row->loan_unit_address,
-                'heks' => trim(($row->code ?? '').' · '.($row->area ?? '')),
+                'heks', 'heks-shelter' => trim(($row->code ?? '').' · '.($row->area ?? '')),
                 default => $row->email,
             },
             'status' => match ($module) {
+                'heks-shelter' => \App\Modules\HeksShelter\Services\ShelterSurvey::STATUSES[$row->status] ?? $row->status,
                 'damage_assessment_borrowers' => $this->display('risk_level', $row->risk_level),
                 'heks' => $row->selection_status,
                 default => $row->is_active ? 'نشط' : 'غير نشط',

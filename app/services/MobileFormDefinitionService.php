@@ -16,6 +16,7 @@ class MobileFormDefinitionService
         $followup = new UpdateHeksFollowUpRequest;
 
         return [
+            'heks-phase-three' => app(\App\Modules\HeksShelter\Services\ShelterSurvey::class)->definition($this),
             'borrower-survey' => $this->define('damage_assessment_borrowers', 'استبيان المقترض والأسرة والوحدة السكنية', false, $borrower->rules(), [
                 ['title' => 'المقترض والأسرة', 'fields' => [
                     $this->field('borrower_name', 'اسم المقترض', required: true),

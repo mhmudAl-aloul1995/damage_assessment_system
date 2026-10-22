@@ -19,8 +19,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me', [MobileAccessController::class, 'me'])->name('me');
         Route::get('modules', [MobileAccessController::class, 'modules'])->name('modules');
         Route::get('portal/modules', [MobilePortalController::class, 'catalog'])->name('portal.modules');
-        Route::get('portal/{module}/records', [MobilePortalController::class, 'records'])->whereIn('module', ['damage_assessment_borrowers', 'heks', 'administration'])->name('portal.records');
-        Route::get('portal/{module}/records/{record}', [MobilePortalController::class, 'show'])->whereIn('module', ['damage_assessment_borrowers', 'heks', 'administration'])->whereNumber('record')->name('portal.show');
+        Route::get('portal/{module}/records', [MobilePortalController::class, 'records'])->whereIn('module', ['damage_assessment_borrowers', 'heks', 'heks-shelter', 'administration'])->name('portal.records');
+        Route::get('portal/{module}/records/{record}', [MobilePortalController::class, 'show'])->whereIn('module', ['damage_assessment_borrowers', 'heks', 'heks-shelter', 'administration'])->whereNumber('record')->name('portal.show');
         Route::get('forms', [MobilePortalController::class, 'forms'])->name('forms.index');
         Route::get('forms/{form}/schema', [MobilePortalController::class, 'schema'])->where('form', '[a-z-]+')->name('forms.schema');
         Route::get('forms/{form}/records', [MobilePortalController::class, 'formRecords'])->where('form', '[a-z-]+')->name('forms.records');

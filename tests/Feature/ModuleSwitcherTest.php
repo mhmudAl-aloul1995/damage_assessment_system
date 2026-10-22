@@ -20,6 +20,7 @@ it('selects the module from a nested page URL', function (string $path, string $
     'shared decisions' => ['/damage-assessment/committee-decisions?sector=housing-units', 'damage_assessment'],
     'borrower record' => ['/damage-assessment-borrowers/10/edit', 'damage_assessment_borrowers'],
     'heks beneficiary' => ['/heks/beneficiaries/10', 'heks'],
+    'heks phase three' => ['/heks-shelter/cases/10', 'heks-shelter'],
     'reh unit' => ['/reh/units/10', 'reh'],
     'user permissions' => ['/user-management/permissions', 'administration'],
     'administration tool' => ['/admin/dashboard-cards', 'administration'],
@@ -46,7 +47,7 @@ it('offers only enabled modules the user can access', function () {
     $borrowerOfficer->assignRole(Role::findOrCreate('Project Officer - Borrowers', 'web'));
 
     expect(Sidebar::forUser($this->user)->pluck('key')->all())->not->toContain('heks')
-        ->and(Sidebar::forUser($borrowerOfficer)->pluck('key')->all())->toBe(['damage_assessment', 'damage_assessment_borrowers']);
+        ->and(Sidebar::forUser($borrowerOfficer)->pluck('key')->all())->toBe(['damage_assessment_borrowers']);
 });
 
 it('falls back to the first available module on pages without a module', function () {

@@ -72,7 +72,7 @@ class MobileFormService
         abort_if($definition['requires_record'] && $record === null, 422, 'اختر السجل المطلوب أولًا.');
         $row = $record !== null ? $this->target($user, $form, $definition, $record) : null;
         $keys = array_keys(array_filter($definition['rules'], fn (string $key): bool => ! str_contains($key, '.'), ARRAY_FILTER_USE_KEY));
-        $answers = $row ? ($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : array_intersect_key($row->attributesToArray(), array_flip($keys))) : [];
+        $answers = $row ? ($form === 'heks-phase-three' ? $row->answers : ($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : array_intersect_key($row->attributesToArray(), array_flip($keys)))) : [];
         unset($definition['rules']);
 
         return [...$definition, 'key' => $form, 'record_id' => $record,
@@ -129,7 +129,7 @@ class MobileFormService
             if ($row) {
                 abort_unless(filled($input['record_version'] ?? null) && hash_equals($this->version($form, $row), $input['record_version']), 409, 'تغيّر السجل على السيرفر. راجع آخر نسخة قبل الإرسال.');
             }
-            $currentAnswers = $row ? ($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : $row->attributesToArray()) : [];
+            $currentAnswers = $row ? ($form === 'heks-phase-three' ? $row->answers : ($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : $row->attributesToArray())) : [];
             $answers = $this->validateAnswers($definition, $input['answers'], $currentAnswers);
             $attachments = MobileFormAttachment::query()->where('user_id', $user->id)->where('submission_uuid', $input['submission_uuid'])
                 ->where('form_key', $form)->whereNull('mobile_form_submission_id')->whereIn('id', $input['attachments'] ?? [])->lockForUpdate()->get();
@@ -137,7 +137,9 @@ class MobileFormService
                 throw ValidationException::withMessages(['attachments' => 'المرفق غير متاح لهذا الحساب أو لهذا الإرسال.']);
             }
             $before = array_intersect_key($currentAnswers, $answers);
-            if ($definition['module'] === 'damage_assessment') {
+            if ($form === 'heks-phase-three') {
+                $row = app(\App\Modules\HeksShelter\Services\ShelterWorkflow::class)->saveSurvey($user, $row, $answers, $input['location']);
+            } elseif ($definition['module'] === 'damage_assessment') {
                 $this->damage->save($form, $row, $answers, $request);
             } elseif ($form === 'borrower-survey') {
                 $identity = $answers['borrower_id_number'] ?? null;
@@ -173,7 +175,7 @@ class MobileFormService
             $receipt = MobileFormSubmission::query()->create([
                 'user_id' => $user->id, 'submission_uuid' => $input['submission_uuid'], 'module' => $definition['module'], 'form_key' => $form,
                 'form_version' => $definition['version'], 'record_id' => $definition['module'] === 'damage_assessment' ? $input['record_id'] : $row->getKey(), 'record_version' => $this->version($form, $row),
-                'request_hash' => $hash, 'changes' => ['before' => $before, 'after' => array_intersect_key($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : $row->attributesToArray(), $answers)],
+                'request_hash' => $hash, 'changes' => ['before' => $before, 'after' => array_intersect_key($form === 'heks-phase-three' ? $row->answers : ($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : $row->attributesToArray()), $answers)],
                 'location' => $input['location'] ?? null,
             ]);
             foreach ($attachments as $attachment) {
@@ -274,6 +276,9 @@ class MobileFormService
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
             return false;
         }
+        if ($form === 'heks-phase-three') {
+            return $user->can('heks3.submit');
+        }
         if ($module === 'damage_assessment') {
             return $this->damage->allowed($user, $form);
         }
@@ -324,6 +329,13 @@ class MobileFormService
             'max' => 'القيمة تتجاوز الحد المسموح.', 'min' => 'القيمة أقل من الحد المسموح.',
             'array' => 'بيانات المجموعة غير صالحة.', 'boolean' => 'اختر نعم أو لا.',
         ]);
+        if ($definition['module'] === 'heks-shelter') {
+            $validator->after(function (\Illuminate\Validation\Validator $validator) use ($answers): void {
+                if ($validator->errors()->isEmpty()) {
+                    app(\App\Modules\HeksShelter\Services\ShelterSurvey::class)->validateConsistency($validator, $answers);
+                }
+            });
+        }
         if ($validator->fails()) {
             throw ValidationException::withMessages(collect($validator->errors()->messages())->mapWithKeys(fn (array $messages, string $key): array => ['answers.'.$key => $messages])->all());
         }
