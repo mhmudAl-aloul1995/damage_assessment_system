@@ -2,9 +2,15 @@
 
 use App\Modules\Reh\Http\Controllers\RehController;
 use App\Modules\Reh\Http\Controllers\RehPricingController;
+use App\Modules\Reh\Http\Controllers\RehUnitMaintenanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'can:reh.view'])->name('reh.')->group(function (): void {
+    Route::middleware('role:Database Officer')->prefix('unit-maintenance')->name('maintenance.')->group(function (): void {
+        Route::get('/', [RehUnitMaintenanceController::class, 'index'])->name('index');
+        Route::delete('/units/{unit}', [RehUnitMaintenanceController::class, 'destroy'])->name('destroy');
+        Route::post('/logs/{log}/verify', [RehUnitMaintenanceController::class, 'verify'])->name('verify');
+    });
     Route::middleware('can:reh.pricing.view')->prefix('pricing')->name('pricing.')->group(function (): void {
         Route::get('/', [RehPricingController::class, 'index'])->name('index');
         Route::post('/preview', [RehPricingController::class, 'preview'])->name('preview');

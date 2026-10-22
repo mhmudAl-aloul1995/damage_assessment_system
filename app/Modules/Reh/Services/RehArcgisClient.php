@@ -127,6 +127,54 @@ class RehArcgisClient
         throw new RehSyncException('لم تصل نتيجة مؤكدة للحفظ في ArcGIS.', 2001);
     }
 
+    public function unitAbsent(int $objectId, string $globalId): bool
+    {
+        $data = $this->request(config('reh.units_layer').'/query', ['objectIds' => $objectId, 'outFields' => 'objectid,globalid', 'returnGeometry' => 'false']);
+        if (! isset($data['features']) || ! is_array($data['features']) || count($data['features']) > 1 || ($data['exceededTransferLimit'] ?? false)) {
+            throw new RehSyncException('تعذر التحقق من هوية الوحدة في ArcGIS.', 2001);
+        }
+        if ($data['features'] === []) {
+            return true;
+        }
+        $attributes = $data['features'][0]['attributes'] ?? [];
+        if ((int) ($attributes['objectid'] ?? 0) !== $objectId || strtolower(trim((string) ($attributes['globalid'] ?? ''), '{} ')) !== strtolower(trim($globalId, '{} '))) {
+            throw new RehSyncException('هوية السجل في ArcGIS لا تطابق الوحدة المحلية؛ أعد المزامنة قبل الحذف.', 2002);
+        }
+
+        return false;
+    }
+
+    public function deleteUnit(int $objectId, string $globalId, bool $retry = true): void
+    {
+        if ($this->unitAbsent($objectId, $globalId)) {
+            return;
+        }
+        try {
+            $response = Http::asForm()->withHeaders(['Referer' => config('reh.referer')])->connectTimeout(10)->timeout(60)
+                ->post($this->base().'/'.config('reh.units_layer').'/deleteFeatures', [
+                    'f' => 'json', 'token' => $this->token(), 'objectIds' => (string) $objectId, 'rollbackOnFailure' => 'true',
+                ]);
+            $data = $response->json();
+        } catch (Throwable) {
+            throw new RehSyncException('انقطع الاتصال أثناء حذف الوحدة؛ يلزم التحقق من النتيجة.', 2001);
+        }
+        if ($retry && in_array($data['error']['code'] ?? null, [498, 499], true)) {
+            Cache::forget($this->tokenKey());
+            $this->deleteUnit($objectId, $globalId, false);
+
+            return;
+        }
+        $result = $data['deleteResults'][0] ?? null;
+        if ($response->successful() && ($result['success'] ?? false) === true && (int) ($result['objectId'] ?? 0) === $objectId) {
+            return;
+        }
+        if (isset($data['error']) || ($result && ($result['success'] ?? null) === false)) {
+            throw new RehSyncException('رفضت ArcGIS حذف الوحدة.', 2002);
+        }
+
+        throw new RehSyncException('لم تصل نتيجة مؤكدة لحذف الوحدة من ArcGIS.', 2001);
+    }
+
     private function token(): string
     {
         return Cache::remember($this->tokenKey(), 3000, function (): string {

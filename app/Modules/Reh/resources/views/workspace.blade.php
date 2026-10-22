@@ -13,6 +13,7 @@
         <div class="reh-hero-note"><span class="badge badge-light">المرحلة الثانية</span><span>{{ app(\App\Modules\Reh\Services\RehPricing::class)->statusLabel() }}</span></div>
     </header>
     <nav class="reh-tabs" aria-label="أقسام مشروع REH">
+        @role('Database Officer')<a href="{{ route('reh.maintenance.index') }}">مراجعة معرّفات الوحدات</a>@endrole
         @can('reh.pricing.view')<a href="{{ route('reh.pricing.index') }}">مكتبة الأسعار</a><a href="{{ route('reh.index', ['tab'=>'budget']) }}" @if($exportPage) data-workspace-tab="budget" @else data-tab="budget" @endif>الميزانية والاحتياجات</a>@endcan
         @foreach(['overview' => 'نظرة عامة', 'units' => 'الوحدات السكنية', 'buildings' => 'المباني والخريطة', 'reports' => 'التقارير'] as $key => $label)
             <a href="{{ route('reh.index', ['tab' => $key]) }}" @if($exportPage) data-workspace-tab="{{ $key }}" @else data-tab="{{ $key }}" @endif>{{ $label }}</a>
