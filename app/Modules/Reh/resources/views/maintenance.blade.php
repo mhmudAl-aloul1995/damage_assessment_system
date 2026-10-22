@@ -17,7 +17,9 @@
         <details data-bulk-issues hidden><summary data-bulk-issues-title>وحدات تحتاج المراجعة</summary><ul data-bulk-issues-list></ul></details>
         <div class="reh-maintenance-actions"><a href="#reh-maintenance-history" class="btn btn-sm btn-light" data-open-deletion-history>سجل الوحدات</a><button type="button" class="btn btn-sm btn-light-primary" data-start-bulk hidden>بدء المعالجة</button></div>
     </section>
-    @php($kind = $filters['kind'] ?? 'duplicate')
+    @php
+        $kind = $filters['kind'] ?? 'duplicate';
+    @endphp
     <nav class="reh-maintenance-stats" aria-label="تصفية حسب حالة معرّف الحصر">
         @foreach(['duplicate' => ['معرّف حصر مكرر', $statistics['groups'].' معرّفًا مشتركًا بين الوحدات'], 'missing' => ['معرّف حصر فارغ', 'يشمل القيم الفارغة وNULL'], 'all' => ['كل الوحدات', 'يشمل السجلات غير الموجودة في المصدر']] as $key => [$label, $caption])
         <a href="{{ route('reh.maintenance.index', ['kind' => $key, 'q' => $filters['q'] ?? null]) }}" class="reh-maintenance-stat {{ $kind === $key ? 'is-active' : '' }}" @if($kind === $key) aria-current="true" @endif><span>{{ $label }}</span><strong>{{ number_format($statistics[$key]) }}</strong><small>{{ $caption }}</small></a>
@@ -32,9 +34,17 @@
         <div class="reh-maintenance-heading"><strong>{{ number_format($units->total()) }} وحدة مطابقة</strong><span>مرتّبة تصاعديًا حسب معرّف حصر الوحدة · الفارغ في النهاية</span></div>
         <div class="reh-bulk-selection" data-bulk-selection hidden role="region" aria-label="إجراءات الوحدات المحددة"><div><strong data-selection-count></strong><small data-selection-scope></small></div><button type="button" class="btn btn-sm btn-light-primary" data-select-filtered @disabled(!$ready)>تحديد كل نتائج الفلتر ({{ number_format($units->total()) }})</button><button type="button" class="btn btn-sm btn-light" data-clear-selection>إلغاء التحديد</button><button type="button" class="btn btn-sm btn-danger" data-delete-selected @disabled(!$ready)>حذف المحدد</button></div>
         <div class="reh-maintenance-table-wrap"><table class="table reh-table align-middle">
-            <thead><tr><th class="reh-selection-cell"><input type="checkbox" data-select-page aria-label="تحديد كل وحدات هذه الصفحة" @disabled(!$ready || $units->isEmpty())></th><th>معرّف الوحدة</th><th>المبنى</th><th>المالك</th><th>الطابق والشقة</th><th>الفريق ومنشئ السجل</th><th>حالة الملف</th><th>الإجراءات</th></tr></thead>
+            <thead><tr><th class="reh-selection-cell"><input type="checkbox" data-select-page aria-label="تحديد كل وحدات هذه الصفحة" @disabled(!$ready || $units->isEmpty())></th><th>معرّف الوحدة</th><th>المبنى</th><th>المالك</th><th>الطابق والشقة</th><th>الفريق وسجل التعديل</th><th>حالة الملف</th><th>الإجراءات</th></tr></thead>
             <tbody>
             @forelse($units as $unit)
+                @php
+                    $buildingStatus = match (strtolower(trim((string) $unit->building?->field_status))) {
+                        'completed' => ['مكتمل', ''],
+                        'not_completed', 'notcomplete' => ['غير مكتمل', 'is-duplicate'],
+                        default => ['غير متوفر', 'is-unavailable'],
+                    };
+                    $recordEditor = trim((string) ($unit->source['Editor'] ?? $unit->source['editor'] ?? ''));
+                @endphp
                 <tr data-maintenance-unit="{{ $unit->id }}">
                     <td class="reh-selection-cell"><input type="checkbox" data-select-unit data-id="{{ $unit->id }}" data-revision="{{ $maintenance->revision($unit) }}" aria-label="تحديد الوحدة بمعرّف التأهيل {{ $unit->object_id }}" @disabled(!$ready)></td>
                     <td><strong class="reh-maintenance-reference">{{ $unit->old_objectid }}</strong><small>معرّف التأهيل: <bdi>{{ $unit->object_id }}</bdi></small>
@@ -42,10 +52,13 @@
                         @elseif($unit->reference_count > 1)<span class="reh-maintenance-badge is-duplicate">مكرر · {{ $unit->reference_count }} وحدات</span>
                         @else<span class="reh-maintenance-badge">غير مكرر</span>@endif
                     </td>
-                    <td>معرّف الحصر: {{ $unit->building?->old_objectid ?? 'غير متوفر' }}<small>{{ $unit->building?->name ?: 'اسم المبنى غير متوفر' }}</small></td>
+                    <td>معرّف الحصر: {{ $unit->building?->old_objectid ?? 'غير متوفر' }}<small>{{ $unit->building?->name ?: 'اسم المبنى غير متوفر' }}</small>
+                        <small>تاريخ الرفع: @if($unit->building?->submission_date)<time datetime="{{ $unit->building->submission_date->toIso8601String() }}" dir="ltr">{{ $unit->building->submission_date->format('Y-m-d H:i') }}</time>@else غير متوفر @endif</small>
+                        <small>حالة استبيان المبنى: <span class="reh-maintenance-badge {{ $buildingStatus[1] }}">{{ $buildingStatus[0] }}</span></small>
+                    </td>
                     <td>{{ $unit->owner_name ?: 'غير متوفر' }}</td>
                     <td>الطابق {{ $unit->floor_number ?? 'غير متوفر' }}<small>الشقة {{ $unit->apartment_number ?? 'غير متوفر' }}</small></td>
-                    <td>{{ $survey->value('engineer_name', $unit->building?->engineer) }}<small>منشئ السجل: <bdi>{{ $unit->creator ?? $unit->source['Creator'] ?? $unit->source['creator'] ?? 'غير متوفر' }}</bdi></small></td>
+                    <td>{{ $survey->value('engineer_name', $unit->building?->engineer) }}<small>منشئ السجل: <bdi>{{ $unit->creator ?? $unit->source['Creator'] ?? $unit->source['creator'] ?? 'غير متوفر' }}</bdi></small><small>آخر معدّل للسجل: <bdi>{{ $recordEditor !== '' ? $recordEditor : 'غير متوفر' }}</bdi></small></td>
                     <td>{{ $survey::WORKFLOW[$unit->workflow_status] ?? $unit->workflow_status }}<small>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] ?? $unit->decision }}</small>@if($unit->source_missing)<span class="reh-maintenance-badge is-missing">غير موجود في المصدر</span>@endif</td>
                     <td><div class="reh-maintenance-actions"><a href="{{ route('reh.units.show', $unit) }}" class="btn btn-sm btn-light">ملف الوحدة</a><button type="button" class="btn btn-sm btn-light-danger" data-delete-unit data-url="{{ route('reh.maintenance.destroy', $unit) }}" data-reference="{{ $unit->old_objectid }}" data-object-id="{{ $unit->object_id }}" data-revision="{{ $maintenance->revision($unit) }}" @disabled(!$ready)>حذف</button></div></td>
                 </tr>

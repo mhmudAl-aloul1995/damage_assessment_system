@@ -95,6 +95,52 @@ it('groups repeated canonical references separately from null and empty values a
     $this->getJson(route('reh.maintenance.index', ['kind' => 'invalid']))->assertUnprocessable();
 });
 
+it('shows the linked building submission date and status from survey columns alongside the unit editor', function (): void {
+    $unit = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => '10613', 'Creator' => 'survey.creator', 'Editor' => 'survey.editor']]);
+    $unit->building->update(['source' => ['submission_date' => 1792310400000, 'Field_status' => 'Not_Completed']]);
+    $unit->building->update(['submission_date' => '2026-10-22 09:35:00', 'field_status' => 'COMPLETED']);
+
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk();
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $row = '//tr[@data-maintenance-unit="'.$unit->id.'"]';
+    $buildingCell = $xpath->query($row.'/td[3]')->item(0);
+    $teamCell = $xpath->query($row.'/td[6]')->item(0);
+
+    expect($buildingCell->textContent)->toContain('تاريخ الرفع:', '2026-10-22 09:35', 'حالة استبيان المبنى:', 'مكتمل')->not->toContain('غير مكتمل')
+        ->and($xpath->query($row.'/td[3]//time')->item(0)->getAttribute('datetime'))->toStartWith('2026-10-22T09:35:00')
+        ->and($teamCell->textContent)->toContain('منشئ السجل:', 'survey.creator', 'آخر معدّل للسجل:', 'survey.editor');
+    Http::assertNothingSent();
+});
+
+it('distinguishes incomplete and unavailable building statuses and handles missing dates and editor values', function (?string $status, string $expectedStatus, ?string $editorField, ?string $editor): void {
+    $source = ['OldUnit_objectID' => '10613'];
+    if ($editorField !== null) {
+        $source[$editorField] = $editor;
+    }
+    $unit = RehUnit::factory()->create(['source' => $source]);
+    $unit->building->update(['source' => ['Field_status' => $status]]);
+
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk();
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $row = '//tr[@data-maintenance-unit="'.$unit->id.'"]';
+    $buildingCell = $xpath->query($row.'/td[3]')->item(0);
+
+    expect($xpath->query($row.'/td[3]//time')->length)->toBe(0)
+        ->and($buildingCell->textContent)->toMatch('/تاريخ الرفع:\s*غير متوفر/')
+        ->and(trim($xpath->query($row.'/td[3]//span')->item(0)->textContent))->toBe($expectedStatus)
+        ->and($xpath->query($row.'/td[6]//small[2]/bdi')->item(0)->textContent)->toBe(trim((string) $editor) ?: 'غير متوفر');
+})->with([
+    ['Not_Completed', 'غير مكتمل', 'editor', 'lowercase.editor'],
+    ['notcomplete', 'غير مكتمل', 'Editor', '   '],
+    [null, 'غير متوفر', null, null],
+    ['', 'غير متوفر', 'Editor', null],
+    ['unknown', 'غير متوفر', 'Editor', 'survey.editor'],
+]);
+
 it('archives local reviews and approved cost snapshots before deleting only from the database', function (): void {
     $unit = rehMaintenanceUnit();
     $unit->reviews()->create(['user_id' => $this->officer->id, 'action' => 'engineering_approve', 'note' => 'تدقيق سابق']);
