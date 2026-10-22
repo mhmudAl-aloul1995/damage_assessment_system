@@ -14,6 +14,8 @@ use Throwable;
 
 class RehUnitMaintenance
 {
+    private ?string $creatorSql = null;
+
     public function __construct(private RehArcgisClient $client, private RehFieldAudit $audit) {}
 
     private function groups(): Builder
@@ -42,6 +44,9 @@ class RehUnitMaintenance
             'missing' => $query->whereRaw("NULLIF(TRIM(reh_units.code), '') IS NULL"),
             default => null,
         };
+        if (filled($filters['creator'] ?? null)) {
+            $query->whereRaw($this->creatorExpression().' = ?', [trim($filters['creator'])]);
+        }
         if (($filters['q'] ?? '') !== '') {
             $query->where(function (Builder $query) use ($filters): void {
                 $query->where('reh_units.reference_id', trim($filters['q']));
@@ -58,7 +63,43 @@ class RehUnitMaintenance
     {
         return $this->filtered($filters)->orderByRaw("CASE WHEN NULLIF(TRIM(reh_units.reference_id), '') IS NULL THEN 1 ELSE 0 END")
             ->orderByRaw('CAST(TRIM(reh_units.reference_id) AS DECIMAL(30, 0))')->orderByRaw('TRIM(reh_units.reference_id)')
-            ->orderBy('reh_units.object_id')->paginate(50)->withQueryString();
+            ->orderBy('reh_units.object_id')->paginate((int) ($filters['per_page'] ?? 50))->withQueryString();
+    }
+
+    public function creators(): array
+    {
+        return RehUnit::query()->selectRaw($this->creatorExpression().' AS record_creator')
+            ->whereRaw($this->creatorExpression().' IS NOT NULL')->distinct()->orderBy('record_creator')->pluck('record_creator')->all();
+    }
+
+    public function creatorName(RehUnit $unit): string
+    {
+        foreach ([$unit->creator, $unit->source['Creator'] ?? null, $unit->source['creator'] ?? null] as $creator) {
+            if (filled($creator)) {
+                return trim((string) $creator);
+            }
+        }
+
+        return 'غير متوفر';
+    }
+
+    private function creatorExpression(): string
+    {
+        if ($this->creatorSql !== null) {
+            return $this->creatorSql;
+        }
+        $connection = (new RehUnit)->getConnection();
+        $grammar = $connection->getQueryGrammar();
+        $columns = [];
+        if ($connection->getSchemaBuilder()->hasColumn('reh_units', 'creator')) {
+            $columns[] = "NULLIF(TRIM(reh_units.creator), '')";
+        }
+        foreach (['Creator', 'creator'] as $key) {
+            $selector = $grammar->wrap('reh_units.source->'.$key);
+            $columns[] = "NULLIF(NULLIF(TRIM($selector), ''), 'null')";
+        }
+
+        return $this->creatorSql = 'COALESCE('.implode(', ', $columns).')';
     }
 
     public function statistics(): array

@@ -34,7 +34,7 @@ class RehUnitMaintenanceController extends Controller
         }
 
         return view('reh::maintenance', ['filters' => $filters, 'units' => $maintenance->rows($filters), 'statistics' => $maintenance->statistics(),
-            'maintenance' => $maintenance, 'survey' => app(RehSurvey::class), 'ready' => $ready,
+            'maintenance' => $maintenance, 'creators' => $maintenance->creators(), 'survey' => app(RehSurvey::class), 'ready' => $ready,
             'logs' => $logs, 'bulkOperation' => $operation ? app(RehBulkUnitDeletion::class)->progress($operation) : null]);
     }
 

@@ -23,15 +23,16 @@ class RehBulkSelectionRequest extends FormRequest
     {
         return [
             'scope' => ['required', 'in:selected,filtered'],
-            'filters' => ['required', 'array:kind,q,code_status'],
+            'filters' => ['required', 'array:kind,q,code_status,creator'],
             'filters.kind' => ['required', 'in:all,duplicate,missing'],
             'filters.code_status' => ['nullable', 'string', 'in:all,available,missing'],
             'filters.q' => ['nullable', 'string', 'max:100'],
-            'units' => ['required_if:scope,selected', 'array', 'max:50'],
+            'filters.creator' => ['nullable', 'string', 'max:255'],
+            'units' => ['required_if:scope,selected', 'array', 'max:100'],
             'units.*' => ['array:id,revision'],
             'units.*.id' => ['required', 'integer', 'min:1', 'distinct'],
             'units.*.revision' => ['required', 'string', 'size:64'],
-            'excluded' => ['sometimes', 'array', 'max:50'],
+            'excluded' => ['sometimes', 'array', 'max:100'],
             'excluded.*' => ['integer', 'min:1', 'distinct'],
         ];
     }
@@ -41,7 +42,8 @@ class RehBulkSelectionRequest extends FormRequest
         return ['scope.required' => 'اختر نطاق التحديد.', 'scope.in' => 'نطاق التحديد غير صالح.',
             'filters.required' => 'حدّث الصفحة للحصول على الفلاتر الحالية.', 'filters.kind.required' => 'اختر فلتر المعرّفات.',
             'filters.code_status.in' => 'اختر حالة كود الوحدة: الكل أو متوفر أو غير متوفر.',
-            'units.required_if' => 'حدد وحدة واحدة على الأقل.', 'units.max' => 'اختيار الصفحة يقتصر على 50 وحدة. استخدم تحديد كل النتائج للنطاق الكامل.',
+            'filters.creator.max' => 'اسم منشئ السجل لا يتجاوز 255 حرفًا.',
+            'units.required_if' => 'حدد وحدة واحدة على الأقل.', 'units.max' => 'اختيار الصفحة يقتصر على 100 وحدة. استخدم تحديد كل النتائج للنطاق الكامل.',
             'units.*.id.distinct' => 'تكررت وحدة في التحديد.', 'units.*.revision.size' => 'حدّث الصفحة قبل تأكيد التحديد.'];
     }
 }

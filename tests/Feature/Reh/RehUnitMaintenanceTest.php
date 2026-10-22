@@ -212,6 +212,44 @@ it('filters unit code availability together with reference filters and search an
     Http::assertNothingSent();
 });
 
+it('lists and filters effective unit creators including archived spellings and canonical values', function (): void {
+    $upper = RehUnit::factory()->create(['creator' => null, 'code' => 'CODE-A', 'source' => ['Creator' => 'alice', 'OldUnit_objectID' => 10613]]);
+    $lower = RehUnit::factory()->create(['creator' => null, 'source' => ['creator' => 'bob', 'OldUnit_objectID' => 10613]]);
+    $canonical = RehUnit::factory()->create(['creator' => 'carol', 'source' => ['Creator' => 'obsolete']]);
+    $trimmed = RehUnit::factory()->create(['creator' => '   ', 'source' => ['Creator' => '  alice  ']]);
+    RehUnit::factory()->create(['creator' => null, 'source' => ['Creator' => null, 'creator' => '']]);
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all', 'creator' => 'alice']))->assertOk()
+        ->assertViewHas('creators', ['alice', 'bob', 'carol'])
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->sort()->values()->all() === [$upper->id, $trimmed->id]);
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    expect($xpath->query('//select[@name="creator"]/option[@selected]')->item(0)->getAttribute('value'))->toBe('alice')
+        ->and(json_decode($xpath->query('//*[@id="reh-workspace"]')->item(0)->getAttribute('data-bulk-filters'), true)['creator'])->toBe('alice');
+    foreach ($xpath->query('//nav[@class="reh-maintenance-stats"]/a') as $link) {
+        expect($link->getAttribute('href'))->toContain('creator=alice');
+    }
+    $this->get(route('reh.maintenance.index', ['creator' => 'bob']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$lower->id]);
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', 'creator' => 'carol']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$canonical->id]);
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', 'creator' => 'alice', 'code_status' => 'available', 'q' => $upper->object_id]))->assertOk()->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$upper->id]);
+    $this->getJson(route('reh.maintenance.index', ['creator' => str_repeat('a', 256)]))->assertUnprocessable()->assertJsonValidationErrors('creator');
+    Http::assertNothingSent();
+});
+
+it('paginates matching creators at the requested row count while preserving all filters', function (): void {
+    $building = \App\Modules\Reh\Models\RehBuilding::factory()->create();
+    RehUnit::factory()->count(101)->create(['building_id' => $building->id, 'creator' => 'alice', 'code' => 'CODE-A']);
+    RehUnit::factory()->create(['building_id' => $building->id, 'creator' => 'bob', 'code' => 'CODE-B']);
+    foreach ([25, 50, 100] as $size) {
+        $this->get(route('reh.maintenance.index', ['kind' => 'all', 'creator' => 'alice', 'code_status' => 'available', 'per_page' => $size]))->assertOk()
+            ->assertViewHas('units', fn ($units): bool => $units->count() === $size && $units->total() === 101 && $units->perPage() === $size
+                && str_contains($units->nextPageUrl(), 'creator=alice') && str_contains($units->nextPageUrl(), 'code_status=available') && str_contains($units->nextPageUrl(), 'per_page='.$size));
+    }
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', 'creator' => 'alice', 'per_page' => 100, 'page' => 2]))->assertOk()->assertViewHas('units', fn ($units): bool => $units->count() === 1);
+    $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->perPage() === 50);
+    $this->getJson(route('reh.maintenance.index', ['per_page' => 1000]))->assertUnprocessable()->assertJsonValidationErrors('per_page');
+});
+
 it('archives local reviews and approved cost snapshots before deleting only from the database', function (): void {
     $unit = rehMaintenanceUnit();
     $unit->reviews()->create(['user_id' => $this->officer->id, 'action' => 'engineering_approve', 'note' => 'تدقيق سابق']);

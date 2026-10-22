@@ -80,6 +80,22 @@ it('applies code availability to the frozen bulk scope and rejects selections ou
     Http::assertNothingSent();
 });
 
+it('respects creator filters across pages and supports selecting or excluding a full hundred row page', function (): void {
+    $building = RehBuilding::factory()->create();
+    $units = RehUnit::factory()->count(101)->create(['building_id' => $building->id, 'creator' => null, 'source' => ['Creator' => 'alice']]);
+    $other = RehUnit::factory()->create(['building_id' => $building->id, 'creator' => 'bob']);
+    $filters = ['kind' => 'all', 'creator' => 'alice'];
+    $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => $filters])->assertOk()->assertJsonPath('total', 101)->json();
+    $snapshot = Cache::get('reh:bulk-preview:'.$preview['selection_token']);
+    expect(array_column($snapshot['units'], 'id'))->not->toContain($other->id)->and($snapshot['filters']['creator'])->toBe('alice');
+    $this->postJson(route('reh.maintenance.bulk.preview'), [...rehBulkPreview($units->take(100)->all()), 'filters' => $filters])->assertOk()->assertJsonPath('total', 100);
+    $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => $filters, 'excluded' => $units->take(100)->pluck('id')->all()])->assertOk()->assertJsonPath('total', 1);
+    $this->postJson(route('reh.maintenance.bulk.preview'), [...rehBulkPreview([$other]), 'filters' => $filters])->assertUnprocessable();
+    $this->postJson(route('reh.maintenance.bulk.preview'), rehBulkPreview($units->all()))->assertUnprocessable()->assertJsonValidationErrors('units');
+    Queue::assertNothingPushed();
+    Http::assertNothingSent();
+});
+
 it('deletes the frozen duplicate group even when deleting the first member changes filter membership', function (): void {
     RehUnit::factory()->count(2)->create(['source' => ['OldUnit_objectID' => 10613]]);
     $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => ['kind' => 'duplicate']])->assertOk()->assertJsonPath('total', 2)->json();

@@ -5,3 +5,4 @@
 .reh-maintenance .reh-field-population{margin-top:8px;white-space:nowrap;font-variant-numeric:tabular-nums}.reh-maintenance .reh-field-population strong{color:var(--reh-ink)}
 .reh-maintenance [data-unit-code]{display:inline-block;white-space:nowrap}
 .reh-maintenance-search>.reh-code-filter{flex:0 1 180px;min-width:150px}
+.reh-maintenance-search>.reh-creator-filter{flex:1 1 190px;min-width:160px;max-width:240px}.reh-maintenance-search>.reh-rows-filter{flex:0 1 130px;min-width:130px}.reh-maintenance-search>.reh-maintenance-filter-actions{flex:0 0 auto;min-width:0;display:flex;gap:10px}.reh-maintenance-search>.reh-creator-filter .select2-container{max-width:100%}@media(max-width:680px){.reh-maintenance-search>.reh-creator-filter{max-width:none}}

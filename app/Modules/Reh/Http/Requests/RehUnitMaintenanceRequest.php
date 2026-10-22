@@ -24,6 +24,8 @@ class RehUnitMaintenanceRequest extends FormRequest
         return [
             'kind' => ['nullable', 'string', 'in:all,duplicate,missing'],
             'code_status' => ['nullable', 'string', 'in:all,available,missing'],
+            'creator' => ['nullable', 'string', 'max:255'],
+            'per_page' => ['nullable', 'integer', 'in:25,50,100'],
             'q' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
@@ -31,6 +33,6 @@ class RehUnitMaintenanceRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['kind.in' => 'اختر نوع المعرف: الكل أو المكرر أو الفارغ.', 'code_status.in' => 'اختر حالة كود الوحدة: الكل أو متوفر أو غير متوفر.', 'q.max' => 'البحث لا يتجاوز 100 حرف.', 'page.min' => 'رقم الصفحة غير صالح.'];
+        return ['kind.in' => 'اختر نوع المعرف: الكل أو المكرر أو الفارغ.', 'code_status.in' => 'اختر حالة كود الوحدة: الكل أو متوفر أو غير متوفر.', 'creator.max' => 'اسم منشئ السجل لا يتجاوز 255 حرفًا.', 'per_page.in' => 'اختر عدد الصفوف: 25 أو 50 أو 100.', 'q.max' => 'البحث لا يتجاوز 100 حرف.', 'page.min' => 'رقم الصفحة غير صالح.'];
     }
 }
