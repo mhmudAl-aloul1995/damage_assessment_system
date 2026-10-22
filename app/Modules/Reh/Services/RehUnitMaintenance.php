@@ -29,7 +29,7 @@ class RehUnitMaintenance
         })->select('reh_units.*')->addSelect('reference_groups.reference_count');
     }
 
-    public function rows(array $filters): LengthAwarePaginator
+    public function filtered(array $filters): Builder
     {
         $query = $this->query()->with('building');
         match ($filters['kind'] ?? 'duplicate') {
@@ -46,7 +46,12 @@ class RehUnitMaintenance
             });
         }
 
-        return $query->orderByRaw("CASE WHEN NULLIF(TRIM(reh_units.reference_id), '') IS NULL THEN 1 ELSE 0 END")
+        return $query;
+    }
+
+    public function rows(array $filters): LengthAwarePaginator
+    {
+        return $this->filtered($filters)->orderByRaw("CASE WHEN NULLIF(TRIM(reh_units.reference_id), '') IS NULL THEN 1 ELSE 0 END")
             ->orderByRaw('CAST(TRIM(reh_units.reference_id) AS DECIMAL(30, 0))')->orderByRaw('TRIM(reh_units.reference_id)')
             ->orderBy('reh_units.object_id')->paginate(50)->withQueryString();
     }
@@ -60,7 +65,7 @@ class RehUnitMaintenance
 
     public function revision(RehUnit $unit): string
     {
-        $attributes = $unit->attributesToArray();
+        $attributes = $unit->getAttributes();
         unset($attributes['reference_count']);
 
         return hash('sha256', json_encode($attributes, JSON_THROW_ON_ERROR));
@@ -71,7 +76,7 @@ class RehUnitMaintenance
         abort_unless($user->hasRole('Database Officer'), 403);
         $this->audit->ensureReady();
         $lock = Cache::lock('reh:sync:execution', 600);
-        abort_unless($lock->get(), 409, 'هناك مزامنة أو تعديل جارٍ. انتظر انتهاءه قبل الحذف.');
+        abort_unless($lock->get(), 409, 'هناك مزامنة أو تعديل جارٍ. انتظر انتهاءه قبل الحذف.', ['Retry-After' => '30']);
         $log = null;
         $attempted = false;
         $remoteDeleted = false;
@@ -85,7 +90,7 @@ class RehUnitMaintenance
                 'layer_id' => (int) config('reh.units_layer'), 'user_id' => $user->id, 'field' => $data['destination'], 'sensitive' => true,
                 'reason' => $data['reason'], 'values' => ['revision' => $data['revision'], 'reference' => $unit->old_objectid,
                     'before' => $unit->attributesToArray(), 'reviews' => $unit->reviews()->get()->toArray(), 'cost_estimates' => $estimates,
-                    'remote_deleted' => false, 'local_deleted' => false],
+                    'remote_deleted' => false, 'local_deleted' => false, 'bulk_operation_id' => $data['bulk_operation_id'] ?? null],
             ]);
             if ($data['destination'] !== 'database') {
                 $attempted = true;
