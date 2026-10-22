@@ -195,6 +195,45 @@
     renderSelection();
     schedulePoll();
 
+    const fieldsDialog = document.getElementById('reh-filled-fields-dialog');
+    const fieldsContent = fieldsDialog.querySelector('[data-filled-fields-content]');
+    const fieldsSearch = fieldsDialog.querySelector('input');
+    let fieldsRequest;
+    function filterPopulatedFields() {
+        const query = fieldsSearch.value.trim().toLocaleLowerCase();
+        let matches = 0;
+        fieldsContent.querySelectorAll('[data-populated-group]').forEach(group => {
+            let groupMatches = 0;
+            group.querySelectorAll('[data-populated-field]').forEach(field => {
+                field.hidden = !field.textContent.toLocaleLowerCase().includes(query);
+                if (!field.hidden) groupMatches++;
+            });
+            group.hidden = groupMatches === 0;
+            matches += groupMatches;
+        });
+        fieldsDialog.querySelector('[data-filled-fields-no-results]').hidden = query === '' || matches > 0;
+    }
+    fieldsSearch.addEventListener('input', filterPopulatedFields);
+    fieldsDialog.addEventListener('close', () => { fieldsRequest?.abort(); });
+    page.addEventListener('click', async event => {
+        if (event.target.closest('[data-close-fields]')) { fieldsDialog.close(); return; }
+        const button = event.target.closest('[data-filled-fields]');
+        if (!button) return;
+        fieldsRequest?.abort(); const activeRequest = new AbortController(); fieldsRequest = activeRequest;
+        fieldsSearch.value = ''; fieldsSearch.disabled = true;
+        fieldsContent.textContent = 'جارٍ قراءة الحقول المعبّأة…';
+        fieldsDialog.querySelector('[data-filled-fields-no-results]').hidden = true;
+        fieldsDialog.showModal(); fieldsContent.setAttribute('aria-busy','true');
+        try {
+            const response = await fetch(button.dataset.filledFields, {signal:activeRequest.signal, credentials:'same-origin', headers:{Accept:'text/html', 'X-Requested-With':'XMLHttpRequest'}});
+            if (!response.ok || response.redirected) throw new Error('تعذر عرض الحقول. حدّث الصفحة وأعد المحاولة.');
+            const html = await response.text();
+            if (!fieldsDialog.open || activeRequest.signal.aborted || fieldsRequest !== activeRequest) return;
+            fieldsContent.innerHTML = html; fieldsSearch.disabled = false; filterPopulatedFields();
+        } catch (error) { if (error.name !== 'AbortError' && fieldsRequest === activeRequest) fieldsContent.textContent = error.message; }
+        finally { if (fieldsRequest === activeRequest) fieldsContent.removeAttribute('aria-busy'); }
+    });
+
     const restoreDialog = document.getElementById('reh-unit-restore-dialog');
     const restoreForm = restoreDialog.querySelector('form');
     let restoring = false;

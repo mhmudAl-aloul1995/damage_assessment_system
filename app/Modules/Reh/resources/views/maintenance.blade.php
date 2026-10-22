@@ -27,7 +27,7 @@
     </nav>
     <section class="reh-card" aria-label="الوحدات حسب الفلتر">
         <form method="get" action="{{ route('reh.maintenance.index') }}" class="reh-maintenance-search">
-            <input type="hidden" name="kind" value="{{ $kind }}">
+            <div class="reh-code-filter"><label for="reh-reference-status">معرّف حصر الوحدة</label><select id="reh-reference-status" name="kind" class="form-select">@foreach(['all' => 'الكل', 'available' => 'متوفر', 'missing' => 'غير متوفر', 'duplicate' => 'المكرر فقط'] as $value => $label)<option value="{{ $value }}" @selected($kind === $value)>{{ $label }}</option>@endforeach</select></div>
             <div><label for="reh-reference-search">البحث بمعرّف حصر الوحدة أو معرّف التأهيل</label><input type="search" id="reh-reference-search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control" maxlength="100" placeholder="اكتب المعرّف…"></div>
             <div class="reh-code-filter"><label for="reh-code-status">كود الوحدة</label><select id="reh-code-status" name="code_status" class="form-select">@foreach(['all' => 'الكل', 'available' => 'متوفر', 'missing' => 'غير متوفر'] as $value => $label)<option value="{{ $value }}" @selected(($filters['code_status'] ?? 'all') === $value)>{{ $label }}</option>@endforeach</select></div>
             <div class="reh-creator-filter"><label for="reh-record-creator">منشئ السجل</label><select id="reh-record-creator" name="creator" class="form-select" data-control="select2"><option value="">الكل</option>@foreach($creators as $creator)<option value="{{ $creator }}" @selected(($filters['creator'] ?? '') === $creator)>{{ $creator }}</option>@endforeach</select></div>
@@ -48,6 +48,7 @@
                     };
                     $recordEditor = trim((string) ($unit->source['Editor'] ?? $unit->source['editor'] ?? ''));
                     $fieldPopulation = $survey->unitFieldPopulation($unit->surveyData());
+                    $sourceUpdatedAt = $maintenance->sourceUpdatedAt($unit);
                 @endphp
                 <tr data-maintenance-unit="{{ $unit->id }}">
                     <td class="reh-selection-cell"><input type="checkbox" data-select-unit data-id="{{ $unit->id }}" data-revision="{{ $maintenance->revision($unit) }}" aria-label="تحديد الوحدة بمعرّف التأهيل {{ $unit->object_id }}" @disabled(!$ready)></td>
@@ -56,7 +57,7 @@
                         @if(trim((string) $unit->reference_id) === '')<span class="reh-maintenance-badge is-missing">معرّف حصر فارغ</span>
                         @elseif($unit->reference_count > 1)<span class="reh-maintenance-badge is-duplicate">مكرر · {{ $unit->reference_count }} وحدات</span>
                         @else<span class="reh-maintenance-badge">غير مكرر</span>@endif
-                        <small class="reh-field-population" title="يشمل أسئلة الوحدة والكميات والصور، بما فيها الأسئلة الشرطية. العدد لا يحدد حالة اكتمال الاستبيان.">الحقول المعبّأة: <strong>{{ $fieldPopulation['filled'] }}</strong> من {{ $fieldPopulation['total'] }}</small>
+                        <button type="button" class="reh-field-population" data-filled-fields="{{ route('reh.maintenance.filled-fields', $unit) }}" aria-label="عرض الحقول المعبّأة للوحدة {{ $unit->old_objectid }} بمعرّف التأهيل {{ $unit->object_id }}" title="يشمل أسئلة الوحدة والكميات والصور، بما فيها الأسئلة الشرطية. العدد لا يحدد حالة اكتمال الاستبيان.">الحقول المعبّأة: <strong>{{ $fieldPopulation['filled'] }}</strong> من {{ $fieldPopulation['total'] }}</button>
                     </td>
                     <td>معرّف الحصر: {{ $unit->building?->old_objectid ?? 'غير متوفر' }}<small>{{ $unit->building?->name ?: 'اسم المبنى غير متوفر' }}</small>
                         <small>تاريخ الرفع: @if($unit->building?->submission_date)<time datetime="{{ $unit->building->submission_date->toIso8601String() }}" dir="ltr">{{ $unit->building->submission_date->format('Y-m-d H:i') }}</time>@else غير متوفر @endif</small>
@@ -64,7 +65,7 @@
                     </td>
                     <td>{{ $unit->owner_name ?: 'غير متوفر' }}</td>
                     <td>الطابق {{ $unit->floor_number ?? 'غير متوفر' }}<small>الشقة {{ $unit->apartment_number ?? 'غير متوفر' }}</small></td>
-                    <td>{{ $survey->value('engineer_name', $unit->building?->engineer) }}<small>منشئ السجل: <bdi>{{ $maintenance->creatorName($unit) }}</bdi></small><small>آخر معدّل للسجل: <bdi>{{ $recordEditor !== '' ? $recordEditor : 'غير متوفر' }}</bdi></small></td>
+                    <td>{{ $survey->value('engineer_name', $unit->building?->engineer) }}<small>منشئ السجل: <bdi>{{ $maintenance->creatorName($unit) }}</bdi></small><small>آخر معدّل للسجل: <bdi>{{ $recordEditor !== '' ? $recordEditor : 'غير متوفر' }}</bdi></small><small>آخر تحديث في الطبقة: @if($sourceUpdatedAt)<time datetime="{{ $sourceUpdatedAt->toIso8601String() }}" dir="ltr">{{ $sourceUpdatedAt->format('Y-m-d H:i') }}</time>@else غير متوفر @endif</small></td>
                     <td>{{ $survey::WORKFLOW[$unit->workflow_status] ?? $unit->workflow_status }}<small>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] ?? $unit->decision }}</small>@if($unit->source_missing)<span class="reh-maintenance-badge is-missing">غير موجود في المصدر</span>@endif</td>
                     <td><div class="reh-maintenance-actions"><a href="{{ route('reh.units.show', $unit) }}" class="btn btn-sm btn-light">ملف الوحدة</a><button type="button" class="btn btn-sm btn-light-danger" data-delete-unit data-url="{{ route('reh.maintenance.destroy', $unit) }}" data-reference="{{ $unit->old_objectid }}" data-object-id="{{ $unit->object_id }}" data-revision="{{ $maintenance->revision($unit) }}" @disabled(!$ready)>حذف</button></div></td>
                 </tr>
@@ -91,6 +92,12 @@
             <label class="reh-delete-confirm"><input type="checkbox" name="confirm" value="1" required><span data-delete-confirm-label>راجعت معرّف التأهيل ووجهة الحذف وأؤكد حذف هذا السجل.</span></label>
             <footer><button type="button" class="btn btn-light" data-close-delete>إلغاء</button><button type="submit" class="btn btn-danger" data-confirm-delete>تأكيد الحذف</button></footer>
         </form>
+    </dialog>
+    <dialog id="reh-filled-fields-dialog" aria-labelledby="reh-filled-fields-title">
+        <header><div><span class="reh-eyebrow">بيانات الوحدة</span><h3 id="reh-filled-fields-title">الحقول المعبّأة</h3></div><button type="button" class="btn btn-sm btn-light" data-close-fields aria-label="إغلاق الحقول المعبّأة">إغلاق ✕</button></header>
+        <label for="reh-filled-fields-search" class="visually-hidden">البحث في الحقول المعبّأة</label><input type="search" id="reh-filled-fields-search" class="form-control" placeholder="ابحث في أسماء الحقول أو الإجابات…" autocomplete="off">
+        <div data-filled-fields-content aria-live="polite"></div>
+        <p data-filled-fields-no-results class="reh-empty" hidden>لا توجد حقول مطابقة للبحث.</p>
     </dialog>
     <dialog id="reh-unit-restore-dialog" aria-labelledby="reh-unit-restore-title">
         <form data-unit-restore-form>@csrf

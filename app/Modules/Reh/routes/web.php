@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth', 'can:reh.view'])->name('reh.')->group(function (): void {
     Route::middleware('role:Database Officer')->prefix('unit-maintenance')->name('maintenance.')->group(function (): void {
         Route::get('/', [RehUnitMaintenanceController::class, 'index'])->name('index');
+        Route::get('/units/{unit}/filled-fields', [RehUnitMaintenanceController::class, 'filledFields'])->name('filled-fields');
         Route::post('/logs/{log}/restore', [RehUnitMaintenanceController::class, 'restore'])->name('restore');
         Route::get('/logs/{log}/snapshot', [RehUnitMaintenanceController::class, 'snapshot'])->name('snapshot');
         Route::post('/restores/{log}/resume', [RehUnitMaintenanceController::class, 'resumeRestore'])->name('restore.resume');

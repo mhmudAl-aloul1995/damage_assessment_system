@@ -167,7 +167,7 @@ it('counts populated unit survey answers including zero no and photos without co
     $document = new DOMDocument;
     $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
     $xpath = new DOMXPath($document);
-    $counter = $xpath->query('//tr[@data-maintenance-unit="'.$unit->id.'"]//small[contains(@class,"reh-field-population")]')->item(0);
+    $counter = $xpath->query('//tr[@data-maintenance-unit="'.$unit->id.'"]//button[contains(@class,"reh-field-population")]')->item(0);
     expect($counter->textContent)->toBe('الحقول المعبّأة: 8 من '.$population['total'])
         ->and($counter->getAttribute('title'))->toContain('العدد لا يحدد حالة اكتمال الاستبيان');
     Http::assertNothingSent();
@@ -252,6 +252,66 @@ it('paginates matching creators at the requested row count while preserving all 
     $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->perPage() === 50);
     $this->getJson(route('reh.maintenance.index', ['per_page' => 1000]))->assertUnprocessable()->assertJsonValidationErrors('per_page');
 });
+
+it('filters available survey unit references independently of duplicate membership and combines existing filters', function (): void {
+    $available = RehUnit::factory()->create(['creator' => 'alice', 'code' => 'CODE-A', 'source' => ['OldUnit_objectID' => 10613]]);
+    $zero = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => 0]]);
+    RehUnit::factory()->create(['source' => ['OldUnit_objectID' => null]]);
+    RehUnit::factory()->create(['source' => ['OldUnit_objectID' => '']]);
+    $blank = RehUnit::factory()->create(['source' => []]);
+    $blank->update(['reference_id' => '   ']);
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'available', 'creator' => 'alice', 'code_status' => 'available']))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$available->id]);
+    $document = new DOMDocument;
+    $document->loadHTML($response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    expect((new DOMXPath($document))->query('//select[@name="kind"]/option[@selected]')->item(0)->getAttribute('value'))->toBe('available');
+    $this->get(route('reh.maintenance.index', ['kind' => 'available']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$zero->id, $available->id]);
+    $this->get(route('reh.maintenance.index', ['kind' => 'missing']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->total() === 3);
+});
+
+it('shows only populated canonical survey fields with translated values and escaped content in the small field viewer', function (): void {
+    $unit = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => 10613, 'household_size' => 5, 'consent_given' => 'no', 'owner_full_name' => '<script>alert(1)</script>',
+        'boq_1_1_water_tank_repair_qty' => 0, 'unit_overview_photo' => 'photo.jpg', 'engineer_technical_notes' => '   ', 'Creator' => 'metadata only', 'unknown_field' => 'not a survey field']]);
+    $unit->update(['household_size' => 9]);
+    $response = $this->get(route('reh.maintenance.filled-fields', $unit))->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+        ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertDontSee('<script>alert(1)</script>', false)->assertDontSee('metadata only')->assertDontSee('not a survey field');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    expect($xpath->query('//*[@data-populated-field]')->length)->toBe(7)
+        ->and($xpath->query('//*[@data-field="household_size"]/dd')->item(0)->textContent)->toBe('9')
+        ->and($xpath->query('//*[@data-field="consent_given"]/dd')->item(0)->textContent)->toBe('لا')
+        ->and($xpath->query('//*[@data-field="boq_1_1_water_tank_repair_qty"]/dd')->item(0)->textContent)->toBe('0')
+        ->and($xpath->query('//*[@data-field="unit_overview_photo"]/dd')->item(0)->textContent)->toBe('photo.jpg')
+        ->and($xpath->query('//*[@data-field="engineer_technical_notes"]')->length)->toBe(0);
+    $user = User::factory()->create();
+    $user->givePermissionTo('reh.view');
+    $this->actingAs($user)->get(route('reh.maintenance.filled-fields', $unit))->assertForbidden();
+    Http::assertNothingSent();
+});
+
+it('shows the source edit timestamp without substituting database modification dates', function (?string $field, mixed $value, ?string $expected): void {
+    config(['app.timezone' => 'UTC']);
+    $source = ['OldUnit_objectID' => 10613];
+    if ($field !== null) {
+        $source[$field] = $value;
+    }
+    $unit = RehUnit::factory()->create(['source' => $source, 'updated_at' => '2020-01-01 01:00:00']);
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk();
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $cell = '//tr[@data-maintenance-unit="'.$unit->id.'"]/td[6]';
+    $time = $xpath->query($cell.'//time')->item(0);
+    expect($time?->textContent)->toBe($expected);
+    if ($expected === null) {
+        expect($xpath->query($cell)->item(0)->textContent)->toMatch('/آخر تحديث في الطبقة:\s*غير متوفر/');
+    }
+})->with([
+    ['EditDate', 1792660200000, '2026-10-22 09:10'],
+    ['editdate', '2026-10-22T09:10:00+00:00', '2026-10-22 09:10'],
+    ['EditDate', null, null], ['EditDate', '', null], ['EditDate', 'not-a-date', null], [null, null, null],
+]);
 
 it('archives local reviews and approved cost snapshots before deleting only from the database', function (): void {
     $unit = rehMaintenanceUnit();

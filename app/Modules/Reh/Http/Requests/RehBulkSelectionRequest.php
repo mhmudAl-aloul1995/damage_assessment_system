@@ -24,7 +24,7 @@ class RehBulkSelectionRequest extends FormRequest
         return [
             'scope' => ['required', 'in:selected,filtered'],
             'filters' => ['required', 'array:kind,q,code_status,creator'],
-            'filters.kind' => ['required', 'in:all,duplicate,missing'],
+            'filters.kind' => ['required', 'in:all,duplicate,available,missing'],
             'filters.code_status' => ['nullable', 'string', 'in:all,available,missing'],
             'filters.q' => ['nullable', 'string', 'max:100'],
             'filters.creator' => ['nullable', 'string', 'max:255'],

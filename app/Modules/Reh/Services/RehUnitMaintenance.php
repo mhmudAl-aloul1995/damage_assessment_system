@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Reh\Models\RehAuditLog;
 use App\Modules\Reh\Models\RehCostEstimate;
 use App\Modules\Reh\Models\RehUnit;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
@@ -37,6 +38,7 @@ class RehUnitMaintenance
         match ($filters['kind'] ?? 'duplicate') {
             'duplicate' => $query->where('reference_groups.reference_count', '>', 1),
             'missing' => $query->whereRaw("NULLIF(TRIM(reh_units.reference_id), '') IS NULL"),
+            'available' => $query->whereRaw("NULLIF(TRIM(reh_units.reference_id), '') IS NOT NULL"),
             default => null,
         };
         match ($filters['code_status'] ?? 'all') {
@@ -81,6 +83,26 @@ class RehUnitMaintenance
         }
 
         return 'غير متوفر';
+    }
+
+    public function sourceUpdatedAt(RehUnit $unit): ?CarbonImmutable
+    {
+        $value = $unit->source['EditDate'] ?? $unit->source['editdate'] ?? null;
+        if (! filled($value) || ! is_scalar($value)) {
+            return null;
+        }
+        try {
+            if (is_numeric($value)) {
+                return CarbonImmutable::createFromTimestampMs((int) $value)->timezone(config('app.timezone'));
+            }
+            if (! preg_match('/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/', (string) $value)) {
+                return null;
+            }
+
+            return CarbonImmutable::parse($value, config('app.timezone'))->timezone(config('app.timezone'));
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function creatorExpression(): string

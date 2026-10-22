@@ -49,6 +49,14 @@ class RehUnitMaintenanceController extends Controller
         return response()->json($bulk->preview($request->user(), $request->validated()))->header('Cache-Control', 'private, no-store');
     }
 
+    public function filledFields(RehUnit $unit, RehSurvey $survey): \Illuminate\Http\Response
+    {
+        $source = $unit->surveyData();
+
+        return response()->view('reh::partials.maintenance-filled-fields', ['unit' => $unit, 'groups' => $survey->populatedUnitFields($source), 'population' => $survey->unitFieldPopulation($source)])
+            ->header('Cache-Control', 'private, no-store');
+    }
+
     public function destroyBulk(RehBulkDeletionRequest $request, RehBulkUnitDeletion $bulk, RehSyncWorker $worker): JsonResponse
     {
         $log = $bulk->start($request->user(), $request->validated());

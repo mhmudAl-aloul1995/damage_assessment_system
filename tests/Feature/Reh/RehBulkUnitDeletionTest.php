@@ -96,6 +96,16 @@ it('respects creator filters across pages and supports selecting or excluding a 
     Http::assertNothingSent();
 });
 
+it('freezes only units with available survey references when that filter is selected', function (): void {
+    $available = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => 10613]]);
+    $zero = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => 0]]);
+    $missing = RehUnit::factory()->create(['source' => ['OldUnit_objectID' => null]]);
+    $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => ['kind' => 'available']])->assertOk()->assertJsonPath('total', 2)->json();
+    expect(array_column(Cache::get('reh:bulk-preview:'.$preview['selection_token'])['units'], 'id'))->toBe([$available->id, $zero->id]);
+    $this->postJson(route('reh.maintenance.bulk.preview'), [...rehBulkPreview([$missing]), 'filters' => ['kind' => 'available']])->assertUnprocessable();
+    Queue::assertNothingPushed();
+});
+
 it('deletes the frozen duplicate group even when deleting the first member changes filter membership', function (): void {
     RehUnit::factory()->count(2)->create(['source' => ['OldUnit_objectID' => 10613]]);
     $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => ['kind' => 'duplicate']])->assertOk()->assertJsonPath('total', 2)->json();

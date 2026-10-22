@@ -41,15 +41,35 @@ class RehSurvey
     /** @return array{filled: int, total: int} */
     public function unitFieldPopulation(array $source): array
     {
-        $fields = collect($this->dictionary()['fields'])->filter(function (array $definition, string $field): bool {
+        $fields = collect($this->unitPopulationFields());
+
+        return ['filled' => $fields->filter(fn (array $definition, string $field): bool => filled($source[$field] ?? null))->count(), 'total' => $fields->count()];
+    }
+
+    public function populatedUnitFields(array $source): array
+    {
+        $groups = [];
+        foreach ($this->unitPopulationFields() as $field => $definition) {
+            if (! filled($source[$field] ?? null)) {
+                continue;
+            }
+            $group = $definition['group']['name'] ?? 'general';
+            $groups[$group]['label'] = $definition['group']['label'] ?? 'بيانات عامة';
+            $groups[$group]['fields'][] = ['field' => $field, 'label' => $this->label($field), 'value' => $this->value($field, $source[$field])];
+        }
+
+        return $groups;
+    }
+
+    private function unitPopulationFields(): array
+    {
+        return collect($this->dictionary()['fields'])->filter(function (array $definition, string $field): bool {
             $type = explode(' ', $definition['type'])[0];
 
             return $definition['scope'] === 'unit'
                 && in_array($type, ['text', 'integer', 'decimal', 'date', 'image', 'select_one', 'select_multiple'], true)
                 && ! in_array($field, [...self::REFERENCE_FIELDS, 'objectid', 'globalid', 'parentglobalid'], true);
-        });
-
-        return ['filled' => $fields->filter(fn (array $definition, string $field): bool => filled($source[$field] ?? null))->count(), 'total' => $fields->count()];
+        })->all();
     }
 
     public function value(string $field, mixed $value): string
