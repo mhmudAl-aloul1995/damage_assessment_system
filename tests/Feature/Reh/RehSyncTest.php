@@ -29,6 +29,29 @@ it('normalizes global ids and imports buildings and related units idempotently',
         ->and($building->global_id)->toBe('11111111-1111-4111-8111-111111111111');
 });
 
+it('stores the layer creator in dedicated columns without resetting approvals for metadata changes', function (string $field): void {
+    $this->buildingFeature['attributes'][$field] = 'building-collector';
+    $this->unitFeature['attributes'][$field] = 'unit-collector';
+    $building = $this->importer->building($this->buildingFeature);
+    $unit = $this->importer->unit($this->unitFeature);
+    expect($building->fresh()->creator)->toBe('building-collector')
+        ->and($unit->fresh()->creator)->toBe('unit-collector')
+        ->and($unit->fresh()->source[$field])->toBe('unit-collector');
+    $unit->update(['engineering_status' => 'approved', 'social_status' => 'approved', 'decision' => 'selected', 'source_hash' => 'legacy-metadata-hash']);
+    $building->update(['source_hash' => 'legacy-metadata-hash']);
+    $this->buildingFeature['attributes'][$field] = 'updated-building-collector';
+    $this->unitFeature['attributes'][$field] = 'updated-unit-collector';
+    $this->importer->building($this->buildingFeature);
+    $this->importer->unit($this->unitFeature);
+    expect($building->fresh()->creator)->toBe('updated-building-collector')
+        ->and($unit->fresh()->creator)->toBe('updated-unit-collector')
+        ->and($unit->fresh()->version)->toBe(1)
+        ->and($unit->fresh()->engineering_status)->toBe('approved')
+        ->and($unit->fresh()->social_status)->toBe('approved')
+        ->and($unit->fresh()->decision)->toBe('selected')
+        ->and($unit->reviews()->count())->toBe(0);
+})->with(['Creator', 'creator']);
+
 it('invalidates approvals on source changes but preserves quantity overrides and history', function (): void {
     $this->importer->building($this->buildingFeature);
     $unit = $this->importer->unit($this->unitFeature);

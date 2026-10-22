@@ -18,11 +18,13 @@ class RehImporter
 
         return (new RehBuilding)->getConnection()->transaction(function () use ($source, $id, $hash, $feature): RehBuilding {
             $building = RehBuilding::query()->where('global_id', $id)->lockForUpdate()->first() ?? new RehBuilding(['global_id' => $id]);
-            $changed = $building->exists && ($building->source_hash !== $hash || $building->source_missing);
+            $changed = $building->exists && ($building->source_missing || ($building->source_hash !== $hash
+                && $this->hash([...($building->source ?? []), '_geometry' => $building->geometry]) !== $hash));
             $building->fill([
                 'object_id' => $source['objectid'], 'name' => $source['building_name'] ?? $source['building_code'] ?? null,
                 'governorate' => $source['governorate'] ?? null, 'neighborhood' => $source['neighborhood'] ?? null,
                 'engineer' => $source['engineer_name'] ?? null, 'social_worker' => $source['social_worker_name'] ?? null,
+                'creator' => $source['Creator'] ?? $source['creator'] ?? null,
                 'source' => $source, 'geometry' => $feature['geometry'] ?? null, 'source_hash' => $hash,
                 'source_missing' => false, 'synced_at' => now(),
             ])->save();
@@ -50,7 +52,7 @@ class RehImporter
             $unit = RehUnit::query()->where('global_id', $id)->lockForUpdate()->first() ?? new RehUnit(['global_id' => $id]);
             $scoreBefore = null;
             $review = null;
-            if ($unit->exists && ($unit->source_hash !== $hash || $unit->source_missing)) {
+            if ($unit->exists && ($unit->source_missing || ($unit->source_hash !== $hash && $this->hash($unit->source ?? []) !== $hash))) {
                 $scoreBefore = $this->scoring->snapshot($unit);
                 $review = $this->invalidate($unit, 'تغيّرت بيانات الوحدة في المصدر؛ راجع البيانات والكميات قبل إعادة الاعتماد.');
             }
@@ -58,6 +60,7 @@ class RehImporter
                 'building_id' => $building->id, 'object_id' => $source['objectid'], 'code' => $source['unit_code'] ?? $source['unit_selection'] ?? null,
                 'owner_name' => $source['owner_full_name'] ?? null, 'owner_identity' => $source['owner_identity_number'] ?? null,
                 'floor_number' => $source['floor_number'] ?? null, 'apartment_number' => $source['apartment_number'] ?? null,
+                'creator' => $source['Creator'] ?? $source['creator'] ?? null,
                 'source' => $source, 'source_hash' => $hash, 'source_missing' => false, 'synced_at' => now(),
             ])->save();
 
@@ -100,8 +103,10 @@ class RehImporter
 
     private function hash(array $source): string
     {
-        foreach (['CreationDate', 'Creator', 'EditDate', 'Editor', 'objectid'] as $field) {
-            unset($source[$field]);
+        foreach (array_keys($source) as $field) {
+            if (in_array(strtolower($field), ['creationdate', 'creator', 'editdate', 'editor', 'objectid'], true)) {
+                unset($source[$field]);
+            }
         }
         ksort($source);
 

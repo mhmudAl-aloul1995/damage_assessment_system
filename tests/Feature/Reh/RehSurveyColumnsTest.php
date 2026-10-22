@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Reh\Models\RehBuilding;
 use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehSurveyColumns;
 use Database\Seeders\RehPermissionsSeeder;
@@ -38,6 +39,33 @@ it('backfills old records without changing their snapshots reviews versions or w
     $fresh->update(['household_size' => 8]);
     $migration->up();
     expect($fresh->fresh()->household_size)->toBe(8);
+});
+
+it('backfills creator columns from both layer spellings without rewriting archived data or decisions', function (): void {
+    $building = RehBuilding::factory()->create(['source' => ['Creator' => 'building-author']]);
+    $unit = RehUnit::factory()->create(['building_id' => $building->id, 'source' => ['creator' => 'unit-author'], 'engineering_status' => 'approved', 'decision' => 'selected']);
+    $existing = RehUnit::factory()->create(['creator' => 'preserved-author', 'source' => ['Creator' => 'archived-author']]);
+    $absent = RehUnit::factory()->create(['source' => []]);
+    $snapshot = $unit->getRawOriginal('source');
+    $updatedAt = $unit->updated_at;
+    $migration = require glob(app_path('Modules/Reh/database/migrations/*add_creator_to_reh_tables.php'))[0];
+    $migration->up();
+    $migration->up();
+    expect($building->fresh()->creator)->toBe('building-author')
+        ->and($unit->fresh()->creator)->toBe('unit-author')
+        ->and($existing->fresh()->creator)->toBe('preserved-author')
+        ->and($absent->fresh()->creator)->toBeNull()
+        ->and($unit->fresh()->getRawOriginal('source'))->toBe($snapshot)
+        ->and($unit->fresh()->updated_at->equalTo($updatedAt))->toBeTrue()
+        ->and($unit->fresh()->engineering_status)->toBe('approved')
+        ->and($unit->fresh()->decision)->toBe('selected')
+        ->and($unit->fresh()->version)->toBe(1)
+        ->and($unit->reviews()->count())->toBe(0);
+    $migration->down();
+    expect(Schema::hasColumn('reh_units', 'creator'))->toBeFalse()
+        ->and(Schema::hasColumn('reh_buildings', 'creator'))->toBeFalse();
+    $migration->up();
+    expect($unit->fresh()->creator)->toBe('unit-author');
 });
 
 it('reads canonical columns in filters and field displays even when the archive has older values', function (): void {
