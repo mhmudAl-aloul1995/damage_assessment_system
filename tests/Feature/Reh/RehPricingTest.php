@@ -192,7 +192,7 @@ it('keeps future editions out of live budgets and rejects financial approval by 
 });
 
 it('exports exact item codes and literal text while keeping amounts numeric', function (): void {
-    $export = new \App\Modules\Reh\Services\RehBudgetExport([], []);
+    $export = new \App\Modules\Reh\Services\RehBudgetSheet('اختبار', [], []);
     $sheet = (new Spreadsheet)->getActiveSheet();
     foreach (['A1' => '3.10', 'A2' => '0010613', 'A3' => '=SUM(1,2)', 'A4' => 42.5] as $address => $value) {
         $export->bindValue($sheet->getCell($address), $value);
@@ -201,6 +201,68 @@ it('exports exact item codes and literal text while keeping amounts numeric', fu
         ->and($sheet->getCell('A2')->getValue())->toBe('0010613')
         ->and($sheet->getCell('A3')->getDataType())->toBe(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING)
         ->and($sheet->getCell('A4')->getDataType())->toBe(\PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+});
+
+it('exports a readable budget workbook with separate schedules and honest missing costs', function (): void {
+    $book = rehPricingBook($this->user);
+    $book->update(['status' => 'approved', 'approved_at' => now()]);
+    $complete = rehPricedUnit();
+    $partial = rehPricedUnit();
+    $unpriced = rehPricedUnit();
+    $zero = rehPricedUnit();
+    $complete->update(['source' => [...$complete->source, 'OldUnit_objectID' => '0010613']]);
+    $partial->update(['source' => [...$partial->source, 'boq_3_3_wood_door_frame_qty' => 1]]);
+    $unpriced->update(['source' => []]);
+    $zero->update(['source' => [...$zero->source, 'unit_needs_intervention' => 'no', 'boq_1_1_water_tank_repair_qty' => 0]]);
+    $budget = app(RehPricing::class)->budget(RehUnit::query());
+    $export = new \App\Modules\Reh\Services\RehBudgetExport($budget, ['حالة الاستبيان' => ['مكتمل ميدانيًا']]);
+    $path = tempnam(sys_get_temp_dir(), 'reh-budget-');
+    try {
+        file_put_contents($path, \Maatwebsite\Excel\Facades\Excel::raw($export, \Maatwebsite\Excel\Excel::XLSX));
+        \PhpOffice\PhpSpreadsheet\Cell\Cell::setValueBinder(new \PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder);
+        $workbook = (new \PhpOffice\PhpSpreadsheet\Reader\Xlsx)->load($path);
+        expect($workbook->getSheetNames())->toBe(['ملخص الميزانية', 'تكاليف الوحدات', 'كشف الاحتياجات']);
+        $summary = $workbook->getSheet(0);
+        expect($summary->getCell('C6')->getValue())->toEqual($budget['usd'])
+            ->and($summary->getCell('C7')->getValue())->toEqual($budget['partialUsd'])
+            ->and($summary->getCell('B16')->getValue())->toBe('مكتمل ميدانيًا')
+            ->and($summary->getCell('B12')->getDataType())->toBe('n');
+        $units = $workbook->getSheet(1);
+        expect($units->getRightToLeft())->toBeTrue()
+            ->and($units->getFreezePane())->toBe('C6')
+            ->and($units->getAutoFilter()->getRange())->toBe('A5:G9')
+            ->and($units->getCell('A6')->getValue())->toBe('0010613')
+            ->and($units->getCell('A6')->getDataType())->toBe('s')
+            ->and($units->getCell('D6')->getDataType())->toBe('n')
+            ->and($units->getStyle('D6')->getNumberFormat()->getFormatCode())->toBe('#,##0.00')
+            ->and($units->getCell('C7')->getValue())->toBe('مبلغ جزئي')
+            ->and($units->getCell('G7')->getValue())->toContain('غير متوفر بالسوق')
+            ->and($units->getCell('C8')->getValue())->toBe('لم تُحسب تكلفة')
+            ->and($units->getCell('D8')->getValue())->toBeNull()
+            ->and($units->getCell('E8')->getValue())->toBeNull()
+            ->and($units->getCell('F8')->getValue())->toBe(75)
+            ->and($units->getCell('C9')->getValue())->toBe('مكتملة التسعير')
+            ->and($units->getCell('D9')->getValue())->toEqual(0);
+        $items = $workbook->getSheet(2);
+        expect($items->getCell('A6')->getDataType())->toBe('s')
+            ->and($items->getCell('E7')->getValue())->toBeNull()
+            ->and($items->getCell('G7')->getValue())->toBe('بانتظار السعر')
+            ->and($items->getStyle('G7')->getConditionalStyles())->not->toBeEmpty();
+        $empty = app(RehPricing::class)->budget(RehUnit::query()->whereRaw('1 = 0'));
+        expect(\Maatwebsite\Excel\Facades\Excel::raw(new \App\Modules\Reh\Services\RehBudgetExport($empty, []), \Maatwebsite\Excel\Excel::XLSX))->toStartWith('PK');
+        $large = $budget;
+        $large['units'] = array_map(fn (int $index): array => [...$budget['units'][0], 'reference' => 'unit-'.$index], range(1, 1006));
+        file_put_contents($path, \Maatwebsite\Excel\Facades\Excel::raw(new \App\Modules\Reh\Services\RehBudgetExport($large, []), \Maatwebsite\Excel\Excel::XLSX));
+        \PhpOffice\PhpSpreadsheet\Cell\Cell::setValueBinder(new \PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder);
+        $largeSheet = (new \PhpOffice\PhpSpreadsheet\Reader\Xlsx)->load($path)->getSheet(1);
+        expect($largeSheet->getCell('A2')->getValue())->toBe('تكاليف الوحدات')
+            ->and($largeSheet->getCell('A5')->getValue())->toBe('معرّف حصر الوحدة')
+            ->and($largeSheet->getCell('A6')->getValue())->toBe('unit-1')
+            ->and($largeSheet->getCell('A1005')->getValue())->toBe('unit-1000')
+            ->and($largeSheet->getCell('A1011')->getValue())->toBe('unit-1006');
+    } finally {
+        @unlink($path);
+    }
 });
 
 it('converts original prices without rounding dollar unit rates before multiplication', function (): void {
@@ -237,9 +299,10 @@ it('reconciles dollar budget totals to converted units and separates partial cos
     expect($html)->toContain('0.66 USD', 'القيمة المحسوبة USD');
     $pdf = view('reh::pricing.pdf', ['budget' => $budget, 'filters' => []])->render();
     expect($pdf)->toContain('0.66 USD', 'القيمة USD', 'المقابل ₪');
-    $rows = (new \App\Modules\Reh\Services\RehBudgetExport($budget, []))->array();
-    expect(collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'تكلفة الوحدات مكتملة التسعير USD')[1])->toEqual(0.66);
-    expect(collect($rows)->first(fn (array $row): bool => ($row[0] ?? null) === 'معرّف حصر الوحدة')[2])->toBe('التكلفة المحسوبة USD');
+    $sheets = (new \App\Modules\Reh\Services\RehBudgetExport($budget, []))->sheets();
+    expect($sheets[0]->array()[5][2])->toEqual(0.66)
+        ->and($sheets[1]->array()[4][3])->toBe('المبلغ المحسوب USD')
+        ->and($budget['units'][2]['issues'])->toContain('3.3 · غير متوفر بالسوق');
     $unpriced = app(RehPricing::class)->budget(RehUnit::query()->whereKey($partial->id));
     expect($unpriced['items'][1]['usd'])->toBeNull();
     $book->update(['status' => 'draft']);

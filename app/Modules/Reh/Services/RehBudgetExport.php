@@ -2,66 +2,60 @@
 
 namespace App\Modules\Reh\Services;
 
-use Maatwebsite\Excel\Concerns\FromArray;
-use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
-use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Cell\Cell;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class RehBudgetExport extends DefaultValueBinder implements FromArray, WithCustomValueBinder, WithEvents, WithStrictNullComparison
+class RehBudgetExport implements WithMultipleSheets
 {
     public function __construct(private array $budget, private array $filters) {}
 
-    public function array(): array
+    public function sheets(): array
     {
-        $rows = [['ميزانية التأهيل حسب الفلاتر'], ['عملة الميزانية', 'USD'], ['إصدار الأسعار', $this->budget['book']?->name ?? 'غير متوفر'], ['تاريخ الإصدار', now()->format('Y-m-d H:i')], ['شيكل لكل دولار', $this->budget['book']?->exchange_rate], ['الأسعار دون إضافة ضريبة']];
+        $summary = [
+            [],
+            ['ملخص ميزانية التأهيل'],
+            ['التكلفة محسوبة حسب الفلاتر؛ اكتمال التسعير لا يعني اعتماد التكلفة.'],
+            [],
+            ['نطاق الحساب', 'عدد الوحدات', 'القيمة USD', 'المقابل بالشيكل', 'معنى المبلغ'],
+            ['مكتملة التسعير', $this->budget['complete'], $this->budget['usd'], $this->budget['book'] ? $this->budget['total'] : null, 'تكلفة الوحدات التي اكتملت أسعارها وكمياتها.'],
+            ['غير مكتملة التسعير', $this->budget['partial'], $this->budget['partialUsd'], $this->budget['book'] ? $this->budget['partialTotal'] : null, 'مبالغ البنود المسعّرة فقط؛ لا تمثل التكلفة النهائية لهذه الوحدات.'],
+            ['إجمالي الوحدات في الكشف', count($this->budget['units'])],
+            [],
+            ['إصدار الأسعار', $this->budget['book']?->name ?? 'غير متوفر'],
+            ['تاريخ استخراج الكشف', now()->format('Y-m-d H:i')],
+            ['شيكل لكل دولار', $this->budget['book'] ? (float) $this->budget['book']->exchange_rate : null],
+            ['الضريبة', 'لم تُضف أي ضريبة'],
+            [],
+            ['الفلاتر المطبقة'],
+        ];
         foreach ($this->filters as $name => $value) {
-            $rows[] = [$name, is_array($value) ? implode('، ', $value) : $value];
+            $summary[] = [$name, is_array($value) ? implode('، ', $value) : $value];
         }
-        $rows[] = ['تكلفة الوحدات مكتملة التسعير USD', $this->budget['usd']];
-        $rows[] = ['مبالغ جزئية لوحدات غير مكتملة USD', $this->budget['partialUsd']];
-        $rows[] = ['تكلفة الوحدات مكتملة التسعير ₪', $this->budget['total']];
-        $rows[] = ['مبالغ جزئية لوحدات غير مكتملة ₪', $this->budget['partialTotal']];
-        $rows[] = [];
-        $rows[] = ['معرّف حصر الوحدة', 'معرّف حصر المبنى', 'التكلفة المحسوبة USD', 'المقابل ₪', 'الحالة', 'ملاحظات الاستكمال'];
+        if ($this->filters === []) {
+            $summary[] = ['النطاق', 'كل الوحدات المتاحة ضمن صلاحيات المستخدم'];
+        }
+
+        $units = [[], ['تكاليف الوحدات'], ['المبلغ الجزئي يشمل البنود المسعّرة فقط. «لم تُحسب تكلفة» تعني نقص بيانات أو أسعار، ولا تعني تكلفة صفرية.'], [],
+            ['معرّف حصر الوحدة', 'معرّف حصر المبنى', 'حالة التسعير', 'المبلغ المحسوب USD', 'المقابل بالشيكل', 'عدد نواقص التسعير', 'المطلوب للاستكمال']];
         foreach ($this->budget['units'] as $unit) {
-            $rows[] = [$unit['reference'], $unit['building'], $unit['usd'], $unit['total'], $unit['complete'] ? 'مكتملة التسعير' : 'جزئية', $unit['missing']];
+            $hasAmount = $unit['complete'] || ($unit['priced'] ?? $unit['total'] > 0);
+            $issues = collect($unit['issues'] ?? [])->countBy(fn (string $issue): string => explode(' · ', $issue, 2)[1] ?? $issue)
+                ->map(fn (int $count, string $issue): string => $issue.' ('.$count.')')->implode('؛ ');
+            $units[] = [(string) $unit['reference'], (string) $unit['building'],
+                $unit['complete'] ? 'مكتملة التسعير' : ($hasAmount ? 'مبلغ جزئي' : 'لم تُحسب تكلفة'),
+                $hasAmount ? $unit['usd'] : null, $hasAmount ? $unit['total'] : null, $unit['missing'],
+                $unit['complete'] ? 'لا توجد نواقص تسعير' : ($issues ?: 'راجع تفاصيل التكلفة في ملف الوحدة')];
         }
-        $rows[] = [];
-        $rows[] = ['كود البند', 'وصف البند', 'الكمية', 'الوحدة', 'القيمة USD', 'المقابل ₪'];
+        $items = [[], ['كشف احتياجات الأعمال'], ['يشمل كل الوحدات المطابقة، بما فيها غير المكتملة؛ لذلك يختلف نطاقه عن إجمالي الوحدات مكتملة التسعير.'], [],
+            ['كود البند', 'وصف البند', 'الكمية المطلوبة', 'الوحدة', 'القيمة USD', 'المقابل بالشيكل', 'حالة سعر البند']];
         foreach ($this->budget['items'] as $item) {
-            $rows[] = [$item['code'], $item['label'], $item['quantity'], $item['unit'], $item['usd'] ?? 'بانتظار السعر', $item['missing'] ? 'بانتظار السعر' : $item['total']];
+            $items[] = [(string) $item['code'], $item['label'], $item['quantity'], $item['unit'], $item['usd'],
+                $item['missing'] ? null : $item['total'], $item['missing'] ? 'بانتظار السعر' : 'مسعّر'];
         }
 
-        return $rows;
-    }
-
-    public function bindValue(Cell $cell, mixed $value): bool
-    {
-        if (is_string($value)) {
-            $cell->setValueExplicit($value, DataType::TYPE_STRING);
-
-            return true;
-        }
-
-        return parent::bindValue($cell, $value);
-    }
-
-    public function registerEvents(): array
-    {
-        return [AfterSheet::class => function (AfterSheet $event): void {
-            $sheet = $event->sheet->getDelegate();
-            $sheet->setRightToLeft(true);
-            $sheet->getColumnDimension('A')->setWidth(28);
-            $sheet->getColumnDimension('B')->setWidth(65);
-            foreach (['C', 'D', 'E', 'F'] as $column) {
-                $sheet->getColumnDimension($column)->setWidth(22);
-            }
-            $sheet->getStyle($sheet->calculateWorksheetDimension())->getAlignment()->setWrapText(true);
-            $sheet->getStyle('A1:F1')->getFont()->setBold(true);
-        }];
+        return [
+            new RehBudgetSheet('ملخص الميزانية', $summary, [36, 32, 23, 23, 65], ['C' => '#,##0.00', 'D' => '#,##0.00'], false),
+            new RehBudgetSheet('تكاليف الوحدات', $units, [23, 23, 24, 26, 26, 23, 65], ['D' => '#,##0.00', 'E' => '#,##0.00', 'F' => '#,##0'], true, 'C'),
+            new RehBudgetSheet('كشف الاحتياجات', $items, [16, 75, 24, 16, 26, 26, 24], ['C' => '#,##0.###', 'E' => '#,##0.00', 'F' => '#,##0.00'], true, 'G'),
+        ];
     }
 }

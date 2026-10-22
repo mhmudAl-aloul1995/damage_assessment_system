@@ -250,7 +250,9 @@ class RehPricing
                     $regions[$region]['total'] += (int) round($cost['total'] * 100);
                     $regions[$region]['usd'] += (int) round(($cost['usd'] ?? 0) * 100);
                 }
-                $units[] = ['id' => $unit->id, 'reference' => $unit->old_objectid, 'building' => $unit->building?->old_objectid ?? 'غير متوفر', 'total' => $cost['total'], 'usd' => $cost['usd'], 'complete' => $cost['complete'], 'missing' => count($cost['missing'])];
+                $units[] = ['id' => $unit->id, 'reference' => $unit->old_objectid, 'building' => $unit->building?->old_objectid ?? 'غير متوفر',
+                    'total' => $cost['total'], 'usd' => $cost['usd'], 'complete' => $cost['complete'], 'missing' => count($cost['missing']),
+                    'priced' => collect($cost['lines'])->contains(fn (array $line): bool => $line['amount'] !== null), 'issues' => $cost['missing']];
                 foreach ($cost['lines'] as $line) {
                     $items[$line['code']] ??= ['code' => $line['code'], 'label' => $line['label'], 'category' => $line['category'], 'unit' => $line['unit'], 'quantity' => 0, 'total' => 0, 'missing' => false];
                     $items[$line['code']]['quantity'] += (float) $line['quantity'];
