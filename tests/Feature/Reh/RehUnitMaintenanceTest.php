@@ -5,6 +5,7 @@ use App\Modules\Reh\Models\RehAuditLog;
 use App\Modules\Reh\Models\RehCostEstimate;
 use App\Modules\Reh\Models\RehPriceBook;
 use App\Modules\Reh\Models\RehUnit;
+use App\Modules\Reh\Services\RehSurvey;
 use App\Modules\Reh\Services\RehUnitMaintenance;
 use Database\Seeders\RehPermissionsSeeder;
 use Illuminate\Support\Facades\Cache;
@@ -140,6 +141,48 @@ it('distinguishes incomplete and unavailable building statuses and handles missi
     ['', 'غير متوفر', 'Editor', null],
     ['unknown', 'غير متوفر', 'Editor', 'survey.editor'],
 ]);
+
+it('counts populated unit survey answers including zero no and photos without counting metadata or building answers', function (): void {
+    $source = [
+        'OldUnit_objectID' => '10613', 'Creator' => 'creator', 'Editor' => 'editor', 'globalid' => fake()->uuid(),
+        'building_name' => 'لا يدخل في عدّ الوحدة', 'unknown_field' => 'غير معروف', 'breadwinner_child_age' => 12,
+        'household_size' => 0, 'consent_given' => 'no', 'unit_overview_photo' => 'photo.jpg',
+        'owner_full_name' => 'اسم المالك', 'engineer_technical_notes' => '   ', 'owner_identity_number' => '',
+        'household_chronic_count' => null, 'boq_1_1_water_tank_repair_qty' => 0,
+    ];
+    $survey = app(RehSurvey::class);
+    expect($survey->unitFieldPopulation($source)['filled'])->toBe(5)
+        ->and($survey->unitFieldPopulation([])['filled'])->toBe(0)
+        ->and($survey->unitFieldPopulation($source)['total'])->toBeGreaterThan(200)
+        ->and($survey->unitFieldPopulation($source)['total'])->toBe($survey->unitFieldPopulation([])['total']);
+
+    $unit = RehUnit::factory()->create(['source' => $source]);
+    $unit->update(['household_chronic_count' => 2]);
+    $population = $survey->unitFieldPopulation($unit->fresh()->surveyData());
+    expect($population['filled'])->toBe(8);
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk();
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $counter = $xpath->query('//tr[@data-maintenance-unit="'.$unit->id.'"]//small[contains(@class,"reh-field-population")]')->item(0);
+    expect($counter->textContent)->toBe('الحقول المعبّأة: 8 من '.$population['total'])
+        ->and($counter->getAttribute('title'))->toContain('العدد لا يحدد حالة اكتمال الاستبيان');
+    Http::assertNothingSent();
+});
+
+it('shows each unit code and marks null empty or whitespace codes as unavailable', function (): void {
+    $units = collect(['PE2 - PR2--F0-1', null, '', '   '])->map(fn (?string $code): RehUnit => RehUnit::factory()->create(['code' => $code]));
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk()->assertSee('كود الوحدة:');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+
+    foreach ($units as $unit) {
+        $code = $xpath->query('//tr[@data-maintenance-unit="'.$unit->id.'"]//bdi[@data-unit-code]')->item(0);
+        expect($code->textContent)->toBe(trim((string) $unit->code) !== '' ? $unit->code : 'غير متوفر');
+    }
+    Http::assertNothingSent();
+});
 
 it('archives local reviews and approved cost snapshots before deleting only from the database', function (): void {
     $unit = rehMaintenanceUnit();

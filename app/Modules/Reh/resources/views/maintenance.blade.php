@@ -44,13 +44,16 @@
                         default => ['غير متوفر', 'is-unavailable'],
                     };
                     $recordEditor = trim((string) ($unit->source['Editor'] ?? $unit->source['editor'] ?? ''));
+                    $fieldPopulation = $survey->unitFieldPopulation($unit->surveyData());
                 @endphp
                 <tr data-maintenance-unit="{{ $unit->id }}">
                     <td class="reh-selection-cell"><input type="checkbox" data-select-unit data-id="{{ $unit->id }}" data-revision="{{ $maintenance->revision($unit) }}" aria-label="تحديد الوحدة بمعرّف التأهيل {{ $unit->object_id }}" @disabled(!$ready)></td>
                     <td><strong class="reh-maintenance-reference">{{ $unit->old_objectid }}</strong><small>معرّف التأهيل: <bdi>{{ $unit->object_id }}</bdi></small>
+                        <small>كود الوحدة: <bdi data-unit-code>{{ trim((string) $unit->code) !== '' ? $unit->code : 'غير متوفر' }}</bdi></small>
                         @if(trim((string) $unit->reference_id) === '')<span class="reh-maintenance-badge is-missing">معرّف حصر فارغ</span>
                         @elseif($unit->reference_count > 1)<span class="reh-maintenance-badge is-duplicate">مكرر · {{ $unit->reference_count }} وحدات</span>
                         @else<span class="reh-maintenance-badge">غير مكرر</span>@endif
+                        <small class="reh-field-population" title="يشمل أسئلة الوحدة والكميات والصور، بما فيها الأسئلة الشرطية. العدد لا يحدد حالة اكتمال الاستبيان.">الحقول المعبّأة: <strong>{{ $fieldPopulation['filled'] }}</strong> من {{ $fieldPopulation['total'] }}</small>
                     </td>
                     <td>معرّف الحصر: {{ $unit->building?->old_objectid ?? 'غير متوفر' }}<small>{{ $unit->building?->name ?: 'اسم المبنى غير متوفر' }}</small>
                         <small>تاريخ الرفع: @if($unit->building?->submission_date)<time datetime="{{ $unit->building->submission_date->toIso8601String() }}" dir="ltr">{{ $unit->building->submission_date->format('Y-m-d H:i') }}</time>@else غير متوفر @endif</small>
