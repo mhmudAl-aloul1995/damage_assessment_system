@@ -384,13 +384,13 @@ it('filters pricing across the full result set and preserves it in pagination na
     $quantities = collect(app(RehSurvey::class)->dictionary()['fields'])->keys()->filter(fn (string $field): bool => str_starts_with($field, 'boq_'))->mapWithKeys(fn (string $field): array => [$field => 0])->all();
     $building = \App\Modules\Reh\Models\RehBuilding::factory()->create();
     $attributes = ['building_id' => $building->id, 'creator' => 'alice', 'code' => 'CODE-A'];
-    $missing = RehUnit::factory()->count(26)->create([...$attributes, 'source' => ['OldUnit_objectID' => 10613]]);
+    $missing = RehUnit::factory()->count(26)->sequence(fn ($sequence): array => ['object_id' => 10000 + $sequence->index])->create([...$attributes, 'source' => ['OldUnit_objectID' => 10613]]);
     $source = [...$quantities, 'OldUnit_objectID' => 10613, 'unit_needs_intervention' => 'no'];
-    $zero = RehUnit::factory()->create([...$attributes, 'source' => $source]);
-    $overridden = RehUnit::factory()->create([...$attributes, 'source' => $source, 'quantity_overrides' => ['boq_1_1_water_tank_repair_qty' => 2]]);
-    $partial = RehUnit::factory()->create([...$attributes, 'source' => [...$source, 'boq_1_1_water_tank_repair_qty' => 1, 'boq_2_1_pallet_wall_qty' => 1]]);
-    $absent = RehUnit::factory()->create([...$attributes, 'source' => $source, 'source_missing' => true]);
-    $otherCreator = RehUnit::factory()->create([...$attributes, 'creator' => 'bob', 'source' => $source]);
+    $zero = RehUnit::factory()->create([...$attributes, 'object_id' => 20000, 'source' => $source]);
+    $overridden = RehUnit::factory()->create([...$attributes, 'object_id' => 20001, 'source' => $source, 'quantity_overrides' => ['boq_1_1_water_tank_repair_qty' => 2]]);
+    $partial = RehUnit::factory()->create([...$attributes, 'object_id' => 20002, 'source' => [...$source, 'boq_1_1_water_tank_repair_qty' => 1, 'boq_2_1_pallet_wall_qty' => 1]]);
+    $absent = RehUnit::factory()->create([...$attributes, 'object_id' => 20003, 'source' => $source, 'source_missing' => true]);
+    RehUnit::factory()->create([...$attributes, 'object_id' => 20004, 'creator' => 'bob', 'source' => $source]);
     RehPriceBook::factory()->create(['status' => 'approved', 'effective_date' => now()->addMonth(), 'approved_at' => now()->addMinute()]);
     $filters = ['kind' => 'duplicate', 'code_status' => 'available', 'creator' => 'alice', 'pricing_status' => 'complete'];
     $response = $this->get(route('reh.maintenance.index', [...$filters, 'per_page' => 25]))->assertOk()
