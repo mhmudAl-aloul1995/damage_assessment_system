@@ -58,6 +58,24 @@ class RehUnitMaintenance
             });
         }
 
+        if (in_array($filters['pricing_status'] ?? 'all', ['complete', 'incomplete'], true)) {
+            $pricing = app(RehPricing::class);
+            $book = $pricing->latest()?->load('items');
+            $completeIds = [];
+            if ($book) {
+                foreach ((clone $query)->lazyById(200, 'reh_units.id', 'id') as $unit) {
+                    if ($pricing->calculate($unit, $book)['complete']) {
+                        $completeIds[] = $unit->id;
+                    }
+                }
+            }
+            if ($filters['pricing_status'] === 'complete') {
+                $query->whereIntegerInRaw('reh_units.id', $completeIds);
+            } else {
+                $query->whereIntegerNotInRaw('reh_units.id', $completeIds);
+            }
+        }
+
         return $query;
     }
 

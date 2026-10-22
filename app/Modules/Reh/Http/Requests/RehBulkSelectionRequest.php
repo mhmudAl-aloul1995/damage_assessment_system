@@ -23,9 +23,10 @@ class RehBulkSelectionRequest extends FormRequest
     {
         return [
             'scope' => ['required', 'in:selected,filtered'],
-            'filters' => ['required', 'array:kind,q,code_status,creator'],
+            'filters' => ['required', 'array:kind,q,code_status,creator,pricing_status'],
             'filters.kind' => ['required', 'in:all,duplicate,available,missing'],
             'filters.code_status' => ['nullable', 'string', 'in:all,available,missing'],
+            'filters.pricing_status' => ['nullable', 'string', 'in:all,complete,incomplete'],
             'filters.q' => ['nullable', 'string', 'max:100'],
             'filters.creator' => ['nullable', 'string', 'max:255'],
             'units' => ['required_if:scope,selected', 'array', 'max:100'],
@@ -42,6 +43,7 @@ class RehBulkSelectionRequest extends FormRequest
         return ['scope.required' => 'اختر نطاق التحديد.', 'scope.in' => 'نطاق التحديد غير صالح.',
             'filters.required' => 'حدّث الصفحة للحصول على الفلاتر الحالية.', 'filters.kind.required' => 'اختر فلتر المعرّفات.',
             'filters.code_status.in' => 'اختر حالة كود الوحدة: الكل أو متوفر أو غير متوفر.',
+            'filters.pricing_status.in' => 'اختر حالة التسعير: الكل أو مكتمل أو غير مكتمل.',
             'filters.creator.max' => 'اسم منشئ السجل لا يتجاوز 255 حرفًا.',
             'units.required_if' => 'حدد وحدة واحدة على الأقل.', 'units.max' => 'اختيار الصفحة يقتصر على 100 وحدة. استخدم تحديد كل النتائج للنطاق الكامل.',
             'units.*.id.distinct' => 'تكررت وحدة في التحديد.', 'units.*.revision.size' => 'حدّث الصفحة قبل تأكيد التحديد.'];

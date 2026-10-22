@@ -3,8 +3,9 @@
 @section('pageName', 'أدوات مسؤول قواعد البيانات')
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/reh.css') }}?v={{ filemtime(base_path('assets/css/reh.css')) }}">
+<link rel="stylesheet" href="{{ asset('assets/css/reh-pricing.css') }}?v={{ filemtime(base_path('assets/css/reh-pricing.css')) }}">
 <link rel="stylesheet" href="{{ asset('assets/css/reh-maintenance.css') }}?v={{ filemtime(base_path('assets/css/reh-maintenance.css')) }}">
-<div id="reh-workspace" class="reh-maintenance" dir="rtl" data-bulk-preview-url="{{ route('reh.maintenance.bulk.preview') }}" data-bulk-delete-url="{{ route('reh.maintenance.bulk.destroy') }}" data-bulk-status-url="{{ route('reh.maintenance.bulk.status', '__operation__') }}" data-bulk-start-url="{{ route('reh.maintenance.bulk.start', '__operation__') }}" data-bulk-filters="{{ json_encode(['kind' => $filters['kind'] ?? 'duplicate', 'q' => $filters['q'] ?? '', 'code_status' => $filters['code_status'] ?? 'all', 'creator' => $filters['creator'] ?? '']) }}" data-total-units="{{ $units->total() }}">
+<div id="reh-workspace" class="reh-maintenance" dir="rtl" data-bulk-preview-url="{{ route('reh.maintenance.bulk.preview') }}" data-bulk-delete-url="{{ route('reh.maintenance.bulk.destroy') }}" data-bulk-status-url="{{ route('reh.maintenance.bulk.status', '__operation__') }}" data-bulk-start-url="{{ route('reh.maintenance.bulk.start', '__operation__') }}" data-bulk-filters="{{ json_encode(['kind' => $filters['kind'] ?? 'duplicate', 'q' => $filters['q'] ?? '', 'code_status' => $filters['code_status'] ?? 'all', 'pricing_status' => $filters['pricing_status'] ?? 'all', 'creator' => $filters['creator'] ?? '']) }}" data-total-units="{{ $units->total() }}">
     <header class="reh-hero"><div><span class="reh-eyebrow">REH / DATABASE</span><h2>مراجعة معرّفات الوحدات</h2><p>قارن السجلات المكررة، وراجع الوحدات التي لا تحمل معرّف حصر.</p></div><span class="badge badge-light">مسؤول قواعد البيانات</span></header>
     <nav class="reh-tabs" aria-label="أقسام مشروع REH"><a href="{{ route('reh.index') }}">مساحة المشروع</a><a href="{{ route('reh.index', ['tab' => 'sync']) }}">المزامنة</a><a class="active" aria-current="page" href="{{ route('reh.maintenance.index') }}">مراجعة معرّفات الوحدات</a></nav>
     @if(session('reh_maintenance_message'))<div class="alert alert-success" role="status">{{ session('reh_maintenance_message') }}</div>@endif
@@ -22,7 +23,7 @@
     @endphp
     <nav class="reh-maintenance-stats" aria-label="تصفية حسب حالة معرّف الحصر">
         @foreach(['duplicate' => ['معرّف حصر مكرر', $statistics['groups'].' معرّفًا مشتركًا بين الوحدات'], 'missing' => ['معرّف حصر فارغ', 'يشمل القيم الفارغة وNULL'], 'all' => ['كل الوحدات', 'يشمل السجلات غير الموجودة في المصدر']] as $key => [$label, $caption])
-        <a href="{{ route('reh.maintenance.index', ['kind' => $key, 'q' => $filters['q'] ?? null, 'code_status' => $filters['code_status'] ?? 'all', 'creator' => $filters['creator'] ?? null, 'per_page' => $filters['per_page'] ?? 50]) }}" class="reh-maintenance-stat {{ $kind === $key ? 'is-active' : '' }}" @if($kind === $key) aria-current="true" @endif><span>{{ $label }}</span><strong>{{ number_format($statistics[$key]) }}</strong><small>{{ $caption }}</small></a>
+        <a href="{{ route('reh.maintenance.index', ['kind' => $key, 'q' => $filters['q'] ?? null, 'code_status' => $filters['code_status'] ?? 'all', 'pricing_status' => $filters['pricing_status'] ?? 'all', 'creator' => $filters['creator'] ?? null, 'per_page' => $filters['per_page'] ?? 50]) }}" class="reh-maintenance-stat {{ $kind === $key ? 'is-active' : '' }}" @if($kind === $key) aria-current="true" @endif><span>{{ $label }}</span><strong>{{ number_format($statistics[$key]) }}</strong><small>{{ $caption }}</small></a>
         @endforeach
     </nav>
     <section class="reh-card" aria-label="الوحدات حسب الفلتر">
@@ -30,6 +31,7 @@
             <div class="reh-code-filter"><label for="reh-reference-status">معرّف حصر الوحدة</label><select id="reh-reference-status" name="kind" class="form-select">@foreach(['all' => 'الكل', 'available' => 'متوفر', 'missing' => 'غير متوفر', 'duplicate' => 'المكرر فقط'] as $value => $label)<option value="{{ $value }}" @selected($kind === $value)>{{ $label }}</option>@endforeach</select></div>
             <div><label for="reh-reference-search">البحث بمعرّف حصر الوحدة أو معرّف التأهيل</label><input type="search" id="reh-reference-search" name="q" value="{{ $filters['q'] ?? '' }}" class="form-control" maxlength="100" placeholder="اكتب المعرّف…"></div>
             <div class="reh-code-filter"><label for="reh-code-status">كود الوحدة</label><select id="reh-code-status" name="code_status" class="form-select">@foreach(['all' => 'الكل', 'available' => 'متوفر', 'missing' => 'غير متوفر'] as $value => $label)<option value="{{ $value }}" @selected(($filters['code_status'] ?? 'all') === $value)>{{ $label }}</option>@endforeach</select></div>
+            @if($canViewPricing)<div class="reh-code-filter"><label for="reh-pricing-status">حالة التسعير</label><select id="reh-pricing-status" name="pricing_status" class="form-select">@foreach(['all' => 'الكل', 'complete' => 'مكتمل', 'incomplete' => 'غير مكتمل'] as $value => $label)<option value="{{ $value }}" @selected(($filters['pricing_status'] ?? 'all') === $value)>{{ $label }}</option>@endforeach</select></div>@endif
             <div class="reh-creator-filter"><label for="reh-record-creator">منشئ السجل</label><select id="reh-record-creator" name="creator" class="form-select" data-control="select2"><option value="">الكل</option>@foreach($creators as $creator)<option value="{{ $creator }}" @selected(($filters['creator'] ?? '') === $creator)>{{ $creator }}</option>@endforeach</select></div>
             <div class="reh-rows-filter"><label for="reh-per-page">عدد الصفوف</label><select id="reh-per-page" name="per_page" class="form-select">@foreach([25, 50, 100] as $size)<option value="{{ $size }}" @selected((int) ($filters['per_page'] ?? 50) === $size)>{{ $size }}</option>@endforeach</select></div>
             <div class="reh-maintenance-filter-actions"><button class="btn btn-primary" type="submit">بحث</button><a class="btn btn-light" href="{{ route('reh.maintenance.index', ['kind' => $kind, 'per_page' => $filters['per_page'] ?? 50]) }}">مسح الفلاتر</a></div>
@@ -37,7 +39,7 @@
         <div class="reh-maintenance-heading"><strong>{{ number_format($units->total()) }} وحدة مطابقة</strong><span>مرتّبة تصاعديًا حسب معرّف حصر الوحدة · الفارغ في النهاية</span></div>
         <div class="reh-bulk-selection" data-bulk-selection hidden role="region" aria-label="إجراءات الوحدات المحددة"><div><strong data-selection-count></strong><small data-selection-scope></small></div><button type="button" class="btn btn-sm btn-light-primary" data-select-filtered @disabled(!$ready)>تحديد كل نتائج الفلتر ({{ number_format($units->total()) }})</button><button type="button" class="btn btn-sm btn-light" data-clear-selection>إلغاء التحديد</button><button type="button" class="btn btn-sm btn-danger" data-delete-selected @disabled(!$ready)>حذف المحدد</button></div>
         <div class="reh-maintenance-table-wrap"><table class="table reh-table align-middle">
-            <thead><tr><th class="reh-selection-cell"><input type="checkbox" data-select-page aria-label="تحديد كل وحدات هذه الصفحة" @disabled(!$ready || $units->isEmpty())></th><th>معرّف الوحدة</th><th>المبنى</th><th>المالك</th><th>الطابق والشقة</th><th>الفريق وسجل التعديل</th><th>حالة الملف</th><th>الإجراءات</th></tr></thead>
+            <thead><tr><th class="reh-selection-cell"><input type="checkbox" data-select-page aria-label="تحديد كل وحدات هذه الصفحة" @disabled(!$ready || $units->isEmpty())></th><th>معرّف الوحدة</th><th>المبنى</th><th>المالك</th><th>الطابق والشقة</th><th>الفريق وسجل التعديل</th><th>حالة الملف</th>@if($canViewPricing)<th>التسعير</th>@endif<th>الإجراءات</th></tr></thead>
             <tbody>
             @forelse($units as $unit)
                 @php
@@ -67,9 +69,10 @@
                     <td>الطابق {{ $unit->floor_number ?? 'غير متوفر' }}<small>الشقة {{ $unit->apartment_number ?? 'غير متوفر' }}</small></td>
                     <td>{{ $survey->value('engineer_name', $unit->building?->engineer) }}<small>منشئ السجل: <bdi>{{ $maintenance->creatorName($unit) }}</bdi></small><small>آخر معدّل للسجل: <bdi>{{ $recordEditor !== '' ? $recordEditor : 'غير متوفر' }}</bdi></small><small>آخر تحديث في الطبقة: @if($sourceUpdatedAt)<time datetime="{{ $sourceUpdatedAt->toIso8601String() }}" dir="ltr">{{ $sourceUpdatedAt->format('Y-m-d H:i') }}</time>@else غير متوفر @endif</small></td>
                     <td>{{ $survey::WORKFLOW[$unit->workflow_status] ?? $unit->workflow_status }}<small>{{ ['pending' => 'بانتظار القرار', 'selected' => 'مقبول مبدئيًا', 'excluded' => 'مستبعد'][$unit->decision] ?? $unit->decision }}</small>@if($unit->source_missing)<span class="reh-maintenance-badge is-missing">غير موجود في المصدر</span>@endif</td>
+                    @if($canViewPricing)<td class="reh-maintenance-cost">@include('reh::partials.maintenance-pricing', ['cost' => $unitPricing->get($unit->id)])</td>@endif
                     <td><div class="reh-maintenance-actions"><a href="{{ route('reh.units.show', $unit) }}" class="btn btn-sm btn-light">ملف الوحدة</a><button type="button" class="btn btn-sm btn-light-danger" data-delete-unit data-url="{{ route('reh.maintenance.destroy', $unit) }}" data-reference="{{ $unit->old_objectid }}" data-object-id="{{ $unit->object_id }}" data-revision="{{ $maintenance->revision($unit) }}" @disabled(!$ready)>حذف</button></div></td>
                 </tr>
-            @empty<tr><td colspan="8"><div class="reh-empty"><strong>لا توجد وحدات مطابقة</strong><p>جرّب فلترًا آخر أو امسح البحث.</p></div></td></tr>@endforelse
+            @empty<tr><td colspan="{{ $canViewPricing ? 9 : 8 }}"><div class="reh-empty"><strong>لا توجد وحدات مطابقة</strong><p>جرّب فلترًا آخر أو امسح البحث.</p></div></td></tr>@endforelse
             </tbody>
         </table></div>
         @if($units->hasPages())<nav class="reh-maintenance-pagination" aria-label="صفحات الوحدات">@if($units->previousPageUrl())<a class="btn btn-sm btn-light" href="{{ $units->previousPageUrl() }}">السابق</a>@endif<span>صفحة {{ $units->currentPage() }} من {{ $units->lastPage() }}</span>@if($units->nextPageUrl())<a class="btn btn-sm btn-light" href="{{ $units->nextPageUrl() }}">التالي</a>@endif</nav>@endif
@@ -110,5 +113,9 @@
         </form>
     </dialog>
 </div>
+@if($canViewPricing)@include('reh::pricing.dialog')@endif
 @endsection
-@section('script')<script src="{{ asset('assets/js/custom/reh/maintenance.js') }}?v={{ filemtime(base_path('assets/js/custom/reh/maintenance.js')) }}" defer></script>@endsection
+@section('script')
+@if($canViewPricing)<script src="{{ asset('assets/js/custom/reh/pricing.js') }}?v={{ filemtime(base_path('assets/js/custom/reh/pricing.js')) }}" defer></script>@endif
+<script src="{{ asset('assets/js/custom/reh/maintenance.js') }}?v={{ filemtime(base_path('assets/js/custom/reh/maintenance.js')) }}" defer></script>
+@endsection

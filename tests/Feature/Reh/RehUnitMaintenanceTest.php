@@ -313,6 +313,51 @@ it('shows the source edit timestamp without substituting database modification d
     ['EditDate', null, null], ['EditDate', '', null], ['EditDate', 'not-a-date', null], [null, null, null],
 ]);
 
+it('shows current dollar pricing with distinct complete partial zero and unpriced amounts in the maintenance table', function (string $scenario, string $amount, string $status): void {
+    $book = RehPriceBook::factory()->create(['status' => 'approved', 'effective_date' => now()->subDay(), 'approved_at' => now(), 'exchange_rate' => 3]);
+    $book->items()->create(['code' => '1.1', 'field' => 'boq_1_1_water_tank_repair_qty', 'category' => 'مياه', 'label' => 'صيانة خزان', 'description' => 'صيانة خزان المياه', 'unit' => 'عدد', 'rate' => 90]);
+    $quantities = collect(app(RehSurvey::class)->dictionary()['fields'])->keys()->filter(fn (string $field): bool => str_starts_with($field, 'boq_'))->mapWithKeys(fn (string $field): array => [$field => $scenario === 'zero' ? 0 : null])->all();
+    $source = $scenario === 'missing' ? [] : [...$quantities, 'OldUnit_objectID' => 10613, 'unit_needs_intervention' => $scenario === 'zero' ? 'no' : 'yes'];
+    if (in_array($scenario, ['complete', 'partial', 'overrides'], true)) {
+        $source['boq_1_1_water_tank_repair_qty'] = 2;
+    }
+    if ($scenario === 'partial') {
+        $source['boq_2_1_pallet_wall_qty'] = 1;
+    }
+    $unit = RehUnit::factory()->create(['source' => $source, 'quantity_overrides' => $scenario === 'overrides' ? ['boq_1_1_water_tank_repair_qty' => 3] : null]);
+    RehPriceBook::factory()->create(['status' => 'approved', 'effective_date' => now()->addMonth(), 'approved_at' => now()->addMinute(), 'exchange_rate' => 100]);
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk()->assertSee('التسعير');
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $cell = $xpath->query('//*[@data-unit-pricing="'.$unit->id.'"]')->item(0);
+    expect(trim($xpath->query('//*[@data-unit-pricing="'.$unit->id.'"]/strong')->item(0)->textContent))->toBe($amount)
+        ->and($cell->textContent)->toContain($status)
+        ->and($xpath->query('//*[@data-unit-pricing="'.$unit->id.'"]//button')->item(0)->getAttribute('data-price-unit'))->toBe(route('reh.pricing.unit', $unit));
+    if ($scenario === 'partial') {
+        expect($cell->textContent)->toContain('مبلغ جزئي', 'بانتظار السعر');
+    }
+    $this->getJson(route('reh.pricing.unit', $unit))->assertOk()->assertJsonStructure(['html']);
+    Http::assertNothingSent();
+})->with([
+    ['complete', '60.00 USD', 'مكتمل التسعير'],
+    ['overrides', '90.00 USD', 'مكتمل التسعير'],
+    ['partial', '60.00 USD', 'تسعير غير مكتمل'],
+    ['zero', '0.00 USD', 'مكتمل التسعير'],
+    ['missing', '—', 'تسعير غير مكتمل'],
+]);
+
+it('shows awaiting prices rather than a false zero when only draft prices exist', function (): void {
+    RehPriceBook::factory()->create(['status' => 'draft']);
+    $unit = rehMaintenanceUnit();
+    $response = $this->get(route('reh.maintenance.index', ['kind' => 'all']))->assertOk();
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    expect($xpath->query('//*[@data-unit-pricing="'.$unit->id.'"]')->item(0)->textContent)->toContain('بانتظار الأسعار')->not->toContain('0.00');
+    expect($xpath->query('//*[@id="reh-price-dialog"]')->length)->toBe(1);
+});
+
 it('archives local reviews and approved cost snapshots before deleting only from the database', function (): void {
     $unit = rehMaintenanceUnit();
     $unit->reviews()->create(['user_id' => $this->officer->id, 'action' => 'engineering_approve', 'note' => 'تدقيق سابق']);
@@ -330,6 +375,55 @@ it('archives local reviews and approved cost snapshots before deleting only from
         ->and(RehCostEstimate::query()->whereKey($estimate->id)->exists())->toBeFalse()
         ->and($log->values['local_deleted'])->toBeTrue()->and($log->values['remote_deleted'])->toBeFalse();
     $this->get(route('reh.maintenance.index'))->assertOk()->assertSee('10613')->assertSee('حذف سجل مكرر');
+    Http::assertNothingSent();
+});
+
+it('filters pricing across the full result set and preserves it in pagination navigation and bulk previews', function (): void {
+    $book = RehPriceBook::factory()->create(['status' => 'approved', 'effective_date' => now()->subDay(), 'approved_at' => now(), 'exchange_rate' => 3]);
+    $book->items()->create(['code' => '1.1', 'field' => 'boq_1_1_water_tank_repair_qty', 'category' => 'مياه', 'label' => 'صيانة خزان', 'description' => 'صيانة خزان المياه', 'unit' => 'عدد', 'rate' => 90]);
+    $quantities = collect(app(RehSurvey::class)->dictionary()['fields'])->keys()->filter(fn (string $field): bool => str_starts_with($field, 'boq_'))->mapWithKeys(fn (string $field): array => [$field => 0])->all();
+    $building = \App\Modules\Reh\Models\RehBuilding::factory()->create();
+    $attributes = ['building_id' => $building->id, 'creator' => 'alice', 'code' => 'CODE-A'];
+    $missing = RehUnit::factory()->count(26)->create([...$attributes, 'source' => ['OldUnit_objectID' => 10613]]);
+    $source = [...$quantities, 'OldUnit_objectID' => 10613, 'unit_needs_intervention' => 'no'];
+    $zero = RehUnit::factory()->create([...$attributes, 'source' => $source]);
+    $overridden = RehUnit::factory()->create([...$attributes, 'source' => $source, 'quantity_overrides' => ['boq_1_1_water_tank_repair_qty' => 2]]);
+    $partial = RehUnit::factory()->create([...$attributes, 'source' => [...$source, 'boq_1_1_water_tank_repair_qty' => 1, 'boq_2_1_pallet_wall_qty' => 1]]);
+    $absent = RehUnit::factory()->create([...$attributes, 'source' => $source, 'source_missing' => true]);
+    $otherCreator = RehUnit::factory()->create([...$attributes, 'creator' => 'bob', 'source' => $source]);
+    RehPriceBook::factory()->create(['status' => 'approved', 'effective_date' => now()->addMonth(), 'approved_at' => now()->addMinute()]);
+    $filters = ['kind' => 'duplicate', 'code_status' => 'available', 'creator' => 'alice', 'pricing_status' => 'complete'];
+    $response = $this->get(route('reh.maintenance.index', [...$filters, 'per_page' => 25]))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->total() === 2 && $units->pluck('id')->all() === [$zero->id, $overridden->id]);
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    expect($xpath->query('//select[@name="pricing_status"]/option[@selected]')->item(0)->getAttribute('value'))->toBe('complete')
+        ->and(json_decode($xpath->query('//*[@id="reh-workspace"]')->item(0)->getAttribute('data-bulk-filters'), true)['pricing_status'])->toBe('complete');
+    foreach ($xpath->query('//nav[@class="reh-maintenance-stats"]/a') as $link) {
+        expect($link->getAttribute('href'))->toContain('pricing_status=complete');
+    }
+    $this->get(route('reh.maintenance.index', [...$filters, 'pricing_status' => 'incomplete', 'per_page' => 25]))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->total() === 28 && $units->count() === 25 && str_contains($units->nextPageUrl(), 'pricing_status=incomplete'));
+    $this->get(route('reh.maintenance.index', [...$filters, 'pricing_status' => 'incomplete', 'per_page' => 25, 'page' => 2]))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$missing->last()->id, $partial->id, $absent->id]);
+    $this->get(route('reh.maintenance.index', [...$filters, 'q' => $partial->object_id]))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->total() === 0);
+    $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => $filters])->assertOk()->assertJsonPath('total', 2)->json();
+    expect(array_column(Cache::get('reh:bulk-preview:'.$preview['selection_token'])['units'], 'id'))->toBe([$zero->id, $overridden->id]);
+    $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'selected', 'filters' => $filters, 'units' => [['id' => $partial->id, 'revision' => app(RehUnitMaintenance::class)->revision($partial)]]])->assertUnprocessable();
+    $this->getJson(route('reh.maintenance.index', ['pricing_status' => 'invalid']))->assertUnprocessable()->assertJsonValidationErrors('pricing_status');
+    $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => [...$filters, 'pricing_status' => 'invalid']])->assertUnprocessable()->assertJsonValidationErrors('filters.pricing_status');
+    Http::assertNothingSent();
+});
+
+it('treats awaiting approved prices as incomplete pricing and allows resetting the pricing filter', function (): void {
+    RehPriceBook::factory()->create(['status' => 'draft']);
+    $unit = rehMaintenanceUnit();
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', 'pricing_status' => 'complete']))->assertOk()->assertViewHas('units', fn ($units): bool => $units->total() === 0);
+    foreach (['incomplete', 'all'] as $status) {
+        $this->get(route('reh.maintenance.index', ['kind' => 'all', 'pricing_status' => $status]))->assertOk()->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$unit->id]);
+    }
     Http::assertNothingSent();
 });
 

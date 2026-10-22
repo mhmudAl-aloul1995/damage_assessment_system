@@ -13,6 +13,7 @@ use App\Modules\Reh\Models\RehUnit;
 use App\Modules\Reh\Services\RehBulkUnitDeletion;
 use App\Modules\Reh\Services\RehDeletionSnapshot;
 use App\Modules\Reh\Services\RehFieldAudit;
+use App\Modules\Reh\Services\RehPricing;
 use App\Modules\Reh\Services\RehSurvey;
 use App\Modules\Reh\Services\RehSyncWorker;
 use App\Modules\Reh\Services\RehUnitMaintenance;
@@ -38,8 +39,18 @@ class RehUnitMaintenanceController extends Controller
             $operation = RehAuditLog::query()->where('record_kind', 'unit_bulk')->where('user_id', $request->user()->id)->latest('id')->first();
         }
         $restorations = $logs->isEmpty() ? collect() : RehAuditLog::query()->where('record_kind', 'unit_restore')->whereIn('values->deletion_log_id', $logs->pluck('id'))->with('user:id,name')->get()->keyBy(fn ($log): int => (int) $log->values['deletion_log_id']);
+        $units = $maintenance->rows($filters);
+        $canViewPricing = $request->user()->can('reh.pricing.view');
+        $unitPricing = collect();
+        if ($canViewPricing) {
+            $pricing = app(RehPricing::class);
+            $book = $pricing->latest()?->load('items');
+            if ($book) {
+                $unitPricing = $units->getCollection()->mapWithKeys(fn (RehUnit $unit): array => [$unit->id => $pricing->calculate($unit, $book)]);
+            }
+        }
 
-        return view('reh::maintenance', ['filters' => $filters, 'units' => $maintenance->rows($filters), 'statistics' => $maintenance->statistics(),
+        return view('reh::maintenance', ['filters' => $filters, 'units' => $units, 'statistics' => $maintenance->statistics(), 'canViewPricing' => $canViewPricing, 'unitPricing' => $unitPricing,
             'maintenance' => $maintenance, 'creators' => $maintenance->creators(), 'survey' => app(RehSurvey::class), 'ready' => $ready,
             'logs' => $logs, 'history' => $history, 'restorations' => $restorations, 'bulkOperation' => $operation ? app(RehBulkUnitDeletion::class)->progress($operation) : null]);
     }
