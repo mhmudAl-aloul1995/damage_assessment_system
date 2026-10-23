@@ -175,7 +175,7 @@ class MobileFormService
             $receipt = MobileFormSubmission::query()->create([
                 'user_id' => $user->id, 'submission_uuid' => $input['submission_uuid'], 'module' => $definition['module'], 'form_key' => $form,
                 'form_version' => $definition['version'], 'record_id' => $definition['module'] === 'damage_assessment' ? $input['record_id'] : $row->getKey(), 'record_version' => $this->version($form, $row),
-                'request_hash' => $hash, 'changes' => ['before' => $before, 'after' => array_intersect_key($form === 'heks-phase-three' ? $row->answers : ($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : $row->attributesToArray()), $answers)],
+                'request_hash' => $hash, 'changes' => $form === 'heks-phase-three' ? ['before' => [], 'after' => ['survey_revision_id' => $row->survey_revision_id]] : ['before' => $before, 'after' => array_intersect_key($definition['module'] === 'damage_assessment' ? $this->damage->answers($form, $row, $definition) : $row->attributesToArray(), $answers)],
                 'location' => $input['location'] ?? null,
             ]);
             foreach ($attachments as $attachment) {
@@ -323,11 +323,22 @@ class MobileFormService
                 }
             }
         }
-        $validator = Validator::make($answers, $rules, [
+        $customMessages = [];
+        if ($definition['module'] === 'heks-shelter') {
+            foreach (app(\App\Modules\HeksShelter\Services\ShelterSurvey::class)->fields() as $key => $field) {
+                if (! empty($field['error_message'])) {
+                    foreach (['required', 'required_if', 'regex', 'min', 'max', 'in', 'numeric', 'integer'] as $rule) {
+                        $customMessages[$key.'.'.$rule] = $field['error_message'];
+                    }
+                }
+            }
+        }
+        $validator = Validator::make($answers, $rules, [...$customMessages,
             'required' => 'هذا الحقل مطلوب.', 'in' => 'اختر قيمة من الخيارات المسموحة.', 'numeric' => 'أدخل رقمًا صحيحًا.',
             'integer' => 'أدخل عددًا صحيحًا.', 'date' => 'أدخل تاريخًا صالحًا مثل 2026-10-11.',
             'max' => 'القيمة تتجاوز الحد المسموح.', 'min' => 'القيمة أقل من الحد المسموح.',
             'array' => 'بيانات المجموعة غير صالحة.', 'boolean' => 'اختر نعم أو لا.',
+            'regex' => 'صيغة الحقل غير صحيحة.',
         ]);
         if ($definition['module'] === 'heks-shelter') {
             $validator->after(function (\Illuminate\Validation\Validator $validator) use ($answers): void {

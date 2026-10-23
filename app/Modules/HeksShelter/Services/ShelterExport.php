@@ -25,13 +25,17 @@ class ShelterExport
             $book = new Spreadsheet;
             $sheet = $book->getActiveSheet()->setTitle('HEKS المرحلة الثالثة');
             $sheet->setRightToLeft(true);
-            $fields = $this->survey->fields();
-            $headers = ['الكود', 'المرحلة', 'الحالة', 'المهندس', 'المنحة / شيكل', 'المصروف / شيكل', ...array_column(array_values($fields), 'label')];
+            $fields = app(SurveyDesigner::class)->filterCatalog();
+            $headers = ['الكود', 'المرحلة', 'الحالة', 'المهندس', 'المنحة / شيكل', 'المصروف / شيكل', ...array_map(fn ($field): string => $field->label, array_values($fields))];
             $sheet->fromArray($headers);
             foreach ($cases->values() as $index => $case) {
                 $values = [$case->code, '3', ShelterSurvey::STATUSES[$case->status], $case->engineer?->name ?? '', $case->grant_amount, $case->payments_sum_amount ?? 0];
                 foreach ($fields as $key => $field) {
-                    $values[] = $this->survey->value($key, $case->answers[$key] ?? null);
+                    if ($field->parent_key) {
+                        $values[] = implode(' | ', array_map(fn (array $row): string => $this->survey->value($key, $row[$field->key] ?? null, $case->survey_revision_id), $case->answers[$field->parent_key] ?? []));
+                    } else {
+                        $values[] = $this->survey->value($key, $case->answers[$key] ?? null, $case->survey_revision_id);
+                    }
                 }
                 foreach ($values as $column => $value) {
                     $sheet->setCellValueExplicit([$column + 1, $index + 2], (string) $value, DataType::TYPE_STRING);

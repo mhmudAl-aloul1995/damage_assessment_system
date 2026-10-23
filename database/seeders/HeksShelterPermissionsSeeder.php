@@ -17,7 +17,7 @@ class HeksShelterPermissionsSeeder extends Seeder
             'HEKS Project Officer' => ['view', 'view-all', 'review', 'approve', 'pricing', 'followup', 'export'],
             'HEKS Finance Officer' => ['view', 'view-all', 'finance', 'export'],
         ];
-        foreach (['view', 'view-all', 'submit', 'review', 'approve', 'pricing', 'finance', 'followup', 'export'] as $permission) {
+        foreach (['view', 'view-all', 'submit', 'review', 'approve', 'pricing', 'finance', 'followup', 'export', 'settings'] as $permission) {
             Permission::findOrCreate('heks3.'.$permission, 'web');
         }
         foreach ($profiles as $name => $permissions) {

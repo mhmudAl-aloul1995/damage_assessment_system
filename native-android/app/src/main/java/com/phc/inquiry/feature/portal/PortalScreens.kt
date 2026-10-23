@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -31,10 +34,11 @@ fun moduleTitle(key: String): String = when(key) {
     "damage_assessment" -> "حصر الأضرار"
     "damage_assessment_borrowers" -> "المقترضون"
     "heks" -> "إصلاح المأوى · HEKS"
+    "heks-shelter" -> "HEKS · المرحلة الثالثة"
     "administration" -> "الإدارة"
     else -> key
 }
-private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Default.CheckCircle; "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks" -> Icons.Default.Favorite; else -> Icons.Default.AccountCircle }
+private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Default.CheckCircle; "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks", "heks-shelter" -> Icons.Default.Favorite; else -> Icons.Default.AccountCircle }
 @Composable private fun PortalCard(title: String, subtitle: String, action: () -> Unit, modifier: Modifier = Modifier, tag: String = "", icon: ImageVector = Icons.Default.List) {
     Card(onClick = action, modifier = modifier.fillMaxWidth().testTag(tag), shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -232,6 +236,18 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
     val schema = draft.schema
     val editable = draft.pending == null && draft.receipt == null && !state.submitting
     val reviewing = state.section >= schema.sections.size || draft.pending != null || draft.receipt != null
+    val listState = rememberLazyListState()
+    val fieldFocus = remember(state.errorNavigation) { FocusRequester() }
+    val visibleFields = schema.sections.getOrNull(state.section)?.fields.orEmpty().filter { FormRules.visible(it, draft.answers) }
+    LaunchedEffect(state.errorNavigation) {
+        val target = state.errorTarget?.substringBefore('.')
+        val index = visibleFields.indexOfFirst { it.key == target }
+        if(index >= 0 && !reviewing) {
+            val errorItems = if(state.errors.isNotEmpty()) state.errors.size else if(state.error != null) 1 else 0
+            val noticeItems = if(state.notice != null) 1 else 0
+            listState.scrollToItem(errorItems + noticeItems + 1 + index)
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp)) {
             Text(schema.title, style = MaterialTheme.typography.titleLarge)
@@ -239,13 +255,22 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
                 color = if(state.saved || draft.receipt != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("draft-status"))
             if(!reviewing) { LinearProgressIndicator(progress = { (state.section + 1f) / (schema.sections.size + 1f) }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)); Text("الخطوة ${state.section + 1} من ${schema.sections.size + 1}", style = MaterialTheme.typography.labelMedium) }
         }
-        LazyColumn(Modifier.weight(1f).imePadding(), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            state.error?.let { item { Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp)) { Text(it, color = MaterialTheme.colorScheme.onErrorContainer); if(editable) TextButton(onClick = viewModel::refreshSchema, enabled = !busy) { Text("تحديث النموذج والسجل للمراجعة") } } } } }
+        LazyColumn(Modifier.weight(1f).imePadding(), state = listState, contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            if(state.errors.isNotEmpty()) {
+                items(state.errors.entries.toList(), key = { "error-${it.key}" }) { entry ->
+                    val field = schema.sections.flatMap { it.fields }.firstOrNull { it.key == entry.key.substringBefore('.') }
+                    Card(onClick = { viewModel.goToError(entry.key) }, enabled = editable && field != null,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer), modifier = Modifier.fillMaxWidth().testTag("error-${entry.key}")) {
+                        Column(Modifier.padding(16.dp)) { Text(field?.label ?: entry.key, style = MaterialTheme.typography.titleSmall); Text(entry.value); if(editable && field != null) Text("اضغط للانتقال إلى الحقل وتعديله", style = MaterialTheme.typography.labelMedium) }
+                    }
+                }
+            } else state.error?.let { item { Surface(color = MaterialTheme.colorScheme.errorContainer, shape = RoundedCornerShape(16.dp)) { Column(Modifier.padding(16.dp)) { Text(it, color = MaterialTheme.colorScheme.onErrorContainer); if(editable) TextButton(onClick = viewModel::refreshSchema, enabled = !busy) { Text("تحديث النموذج والسجل للمراجعة") } } } } }
             state.notice?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
             if(reviewing) {
                 item { Text(if(draft.receipt != null) "تم حفظ البيانات على السيرفر" else "راجع إجاباتك", style = MaterialTheme.typography.headlineSmall) }
                 if(draft.needsReview) {
                     item { Text("السجل الحالي على السيرفر مقابل إجابات مسودتك", style = MaterialTheme.typography.titleMedium) }
+                    item { Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(false, { viewModel.acceptReview() }, enabled = editable); Text("راجعت التغييرات وأريد إرسال إجابات هذه المسودة", modifier = Modifier.weight(1f)) } }
                     items(schema.sections.flatMap { it.fields }.filter { draft.answers[it.key] != schema.answers[it.key] }, key = { "conflict-${it.key}" }) { field ->
                         OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) {
                             Text(field.label, style = MaterialTheme.typography.titleSmall)
@@ -253,7 +278,6 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
                             Text("المسودة: ${reviewValue(field, draft.answers[field.key])}")
                         } }
                     }
-                    item { Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(false, { viewModel.acceptReview() }, enabled = editable); Text("راجعت التغييرات وأريد إرسال إجابات هذه المسودة", modifier = Modifier.weight(1f)) } }
                 }
                 if(draft.pending != null && draft.receipt == null) item { Text("لم يتأكد الاستلام بعد. إعادة المحاولة ترسل الطلب نفسه بمعرّفه نفسه لمنع التكرار.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 schema.sections.forEachIndexed { index, section ->
@@ -285,7 +309,7 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
                 val section = schema.sections[state.section]
                 item { Text(section.title, style = MaterialTheme.typography.headlineSmall) }
                 items(section.fields.filter { FormRules.visible(it, draft.answers) }, key = { it.key }) { field ->
-                    NativeFormField(field, draft.answers[field.key], state.errors, field.key, editable, { viewModel.answer(field.key, it) })
+                    NativeFormField(field, draft.answers[field.key], state.errors, field.key, editable, focusRequester = if(state.errorTarget == field.key) fieldFocus else null, onValue = { viewModel.answer(field.key, it) })
                 }
             }
         }
@@ -293,7 +317,7 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
             if(draft.receipt != null) { Button(onClick = close, modifier = Modifier.fillMaxWidth()) { Text("العودة للاستبيانات") } }
             else if(reviewing) {
                 if(editable) OutlinedButton(onClick = viewModel::previous, enabled = !busy, modifier = Modifier.weight(1f)) { Text("السابق") }
-                Button(onClick = { if(draft.pending != null) viewModel.submit() else confirmSend = true }, enabled = !busy, modifier = Modifier.weight(1f).testTag("submit-form")) {
+                Button(onClick = { if(draft.pending != null) viewModel.submit() else confirmSend = true }, enabled = !busy && !draft.needsReview, modifier = Modifier.weight(1f).testTag("submit-form")) {
                     Text(if(state.submitting) "جارٍ الإرسال…" else if(draft.pending != null) "تأكيد الاستلام / إعادة المحاولة" else "إرسال الاستبيان")
                 }
             } else {
@@ -321,9 +345,16 @@ private fun reviewValue(field: FormField, value: JsonElement?): String = when {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun NativeFormField(field: FormField, value: JsonElement?, errors: Map<String, String>, path: String, enabled: Boolean, onValue: (JsonElement) -> Unit) {
+@Composable private fun NativeFormField(field: FormField, value: JsonElement?, errors: Map<String, String>, path: String, enabled: Boolean, focusRequester: FocusRequester? = null, onValue: (JsonElement) -> Unit) {
     val label = field.label + if(field.required) " *" else ""
     val error = errors[path]
+    val inputModifier = Modifier.fillMaxWidth().then(if(focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier).testTag("field-$path")
+    LaunchedEffect(focusRequester) {
+        if(focusRequester != null && field.type !in setOf("repeat", "multiselect")) {
+            withFrameNanos { }
+            focusRequester.requestFocus()
+        }
+    }
     when(field.type) {
         "boolean", "select" -> {
             var expanded by remember { mutableStateOf(false) }
@@ -332,7 +363,7 @@ private fun reviewValue(field: FormField, value: JsonElement?): String = when {
             ExposedDropdownMenuBox(expanded, { if(enabled) expanded = !expanded }) {
                 OutlinedTextField(choices.firstOrNull { it.value == selected }?.label ?: selected, {}, readOnly = true, enabled = enabled,
                     label = { Text(label) }, isError = error != null, supportingText = { error?.let { Text(it) } },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, modifier = Modifier.fillMaxWidth().menuAnchor().testTag("field-$path"))
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }, modifier = inputModifier.menuAnchor())
                 ExposedDropdownMenu(expanded, { expanded = false }) {
                     if(!field.required) DropdownMenuItem(text = { Text("غير مسجل") }, onClick = { onValue(JsonNull); expanded = false })
                     choices.forEach { choice -> DropdownMenuItem(text = { Text(choice.label) }, onClick = { onValue(if(field.type == "boolean") JsonPrimitive(choice.value == "true") else JsonPrimitive(choice.value)); expanded = false }) }
@@ -376,7 +407,7 @@ private fun reviewValue(field: FormField, value: JsonElement?): String = when {
                     IconButton(onClick = { showDate = true }, enabled = enabled) { Icon(Icons.Default.DateRange, "اختيار التاريخ") }
                     if(dateTime) TextButton(onClick = { showTime = true }, enabled = enabled) { Text("وقت") }
                 } },
-                singleLine = true, modifier = Modifier.fillMaxWidth().testTag("field-$path"))
+                singleLine = true, modifier = inputModifier)
             if(showDate) {
                 val picker = rememberDatePickerState(initialSelectedDateMillis = time?.toLocalDate()?.toEpochDay()?.times(86400000))
                 DatePickerDialog(onDismissRequest = { showDate = false }, confirmButton = { TextButton(onClick = {
@@ -396,7 +427,7 @@ private fun reviewValue(field: FormField, value: JsonElement?): String = when {
                     }) { Text("اختيار") } }, dismissButton = { TextButton(onClick = { showTime = false }) { Text("إلغاء") } })
             }
         }
-        else -> OutlinedTextField(FormRules.text(value), { onValue(JsonPrimitive(it)) }, modifier = Modifier.fillMaxWidth().testTag("field-$path"), enabled = enabled,
+        else -> OutlinedTextField(FormRules.text(value), { onValue(JsonPrimitive(it)) }, modifier = inputModifier, enabled = enabled,
             label = { Text(label) }, isError = error != null, supportingText = { error?.let { Text(it) } }, singleLine = field.type != "multiline", minLines = if(field.type == "multiline") 3 else 1,
             keyboardOptions = KeyboardOptions(keyboardType = when(field.type) { "integer" -> KeyboardType.Number; "decimal" -> KeyboardType.Decimal; "phone" -> KeyboardType.Phone; else -> KeyboardType.Text }))
     }

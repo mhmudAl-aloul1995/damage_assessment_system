@@ -121,7 +121,25 @@ data class PortalDetailState(val loading: Boolean = true, val row: PortalRecord?
 }
 
 data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, val section: Int = 0, val errors: Map<String, String> = emptyMap(),
-    val saving: Boolean = false, val submitting: Boolean = false, val error: String? = null, val notice: String? = null, val saved: Boolean = false)
+    val saving: Boolean = false, val submitting: Boolean = false, val error: String? = null, val notice: String? = null, val saved: Boolean = false,
+    val errorTarget: String? = null, val errorNavigation: Int = 0) {
+    fun navigateToError(path: String): FormState {
+        val current = draft ?: return this
+        if(current.pending != null || current.receipt != null || submitting) return this
+        val field = path.removePrefix("answers.").substringBefore('.')
+        val index = current.schema.sections.indexOfFirst { section -> section.fields.any { it.key == field && FormRules.visible(it, current.answers) } }
+        if(index < 0) return this
+        return copy(section = index, errorTarget = path.removePrefix("answers."), errorNavigation = errorNavigation + 1)
+    }
+    fun withRefreshedSchema(schema: FormSchema): FormState {
+        val current = requireNotNull(draft)
+        require(current.pending == null && current.receipt == null)
+        val keys = schema.sections.flatMap { it.fields }.map { it.key }.toSet()
+        val updated = current.copy(schema = schema, answers = JsonObject(current.answers.filterKeys { it in keys }), updatedAt = java.time.Instant.now().toString(), needsReview = true)
+        return copy(loading = false, draft = updated, section = schema.sections.size, errors = emptyMap(), error = null,
+            notice = "حُدّث النموذج وحُفظت إجاباتك. راجعها ثم فعّل تأكيد المراجعة أعلى الصفحة للإرسال.")
+    }
+}
 @HiltViewModel class FormViewModel @Inject constructor(saved: SavedStateHandle, private val repository: PortalRepository, private val vault: DraftVault, session: SessionState): ViewModel() {
     private val owner = session.session.value?.user?.id ?: 0
     private val form = saved.get<String>("form").orEmpty()
@@ -150,7 +168,7 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
     fun answer(key: String, value: JsonElement) {
         val draft = editable() ?: return
         val updated = draft.copy(answers = JsonObject(draft.answers + (key to value)), updatedAt = java.time.Instant.now().toString())
-        mutable.update { it.copy(draft = updated, errors = it.errors.filterKeys { field -> field != key && !field.startsWith("$key.") }, notice = null) }
+        mutable.update { it.copy(draft = updated, errors = it.errors.filterKeys { field -> field != key && !field.startsWith("$key.") }, error = if(it.errors.isNotEmpty()) null else it.error, notice = null) }
         persist(updated)
     }
     private fun persist(draft: FormDraft, removed: DraftAttachment? = null) {
@@ -182,6 +200,7 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
     }
     fun previous() { mutable.update { it.copy(section = (it.section - 1).coerceAtLeast(0)) } }
     fun section(index: Int) { val draft = mutable.value.draft ?: return; mutable.update { it.copy(section = index.coerceIn(0, draft.schema.sections.size)) } }
+    fun goToError(path: String) { mutable.update { it.navigateToError(path) } }
     fun addAttachment(uri: android.net.Uri) {
         val draft = editable() ?: return
         if (draft.attachments.size >= 5) { mutable.update { it.copy(error = "الحد خمسة مرفقات.") }; return }
@@ -225,7 +244,7 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
     fun acceptReview() {
         val draft = editable() ?: return
         val updated = draft.copy(needsReview = false)
-        mutable.update { it.copy(draft = updated) }; persist(updated)
+        mutable.update { it.copy(draft = updated, error = null, notice = "تم تأكيد المراجعة. يمكنك إرسال الاستبيان الآن.") }; persist(updated)
     }
     fun submit() {
         val original = mutable.value.draft ?: return
@@ -276,10 +295,9 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
             mutable.update { it.copy(loading = true, error = null) }
             try {
                 val schema = repository.schema(draft.schema.key, draft.schema.recordId)
-                // Existing answers stay intact for explicit user review; new schema/version is never silently submitted.
-                val keys = schema.sections.flatMap { it.fields }.map { it.key }.toSet()
-                val updated = draft.copy(schema = schema, answers = JsonObject(draft.answers.filterKeys { it in keys }), updatedAt = java.time.Instant.now().toString(), needsReview = true)
-                mutable.update { it.copy(loading = false, draft = updated, section = 0, notice = "حُدّث النموذج وإصدار السجل. راجع إجاباتك قبل الإرسال.") }; persist(updated)
+                val refreshed = mutable.value.withRefreshedSchema(schema)
+                mutable.value = refreshed
+                persist(requireNotNull(refreshed.draft))
             } catch(cancelled: CancellationException) { throw cancelled }
             catch(error: Exception) { mutable.update { it.copy(loading = false, error = error.message) } }
         }

@@ -43,6 +43,8 @@ class ShelterController extends Controller
             });
         }
 
+        app(\App\Modules\HeksShelter\Services\SurveyDesigner::class)->applyFilters($query, $filters['survey_filters'] ?? []);
+
         return $query;
     }
 

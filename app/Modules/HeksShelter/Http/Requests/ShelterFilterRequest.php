@@ -15,7 +15,10 @@ class ShelterFilterRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['search' => ['nullable', 'string', 'max:150'], 'status' => ['nullable', Rule::in(array_keys(ShelterSurvey::STATUSES))], 'governorate' => ['nullable', Rule::in(array_keys(app(ShelterSurvey::class)->fields()['governorate']['choices']))], 'engineer' => ['nullable', 'integer', 'min:1'], 'page' => ['nullable', 'integer', 'min:1'], 'tab' => ['nullable', Rule::in(['overview', 'cases', 'map', 'budget', 'payments', 'visits', 'reports', 'mobile'])]];
+        return ['search' => ['nullable', 'string', 'max:150'], 'status' => ['nullable', Rule::in(array_keys(ShelterSurvey::STATUSES))], 'governorate' => ['nullable', Rule::in(array_keys(app(ShelterSurvey::class)->fields()['governorate']['choices']))], 'engineer' => ['nullable', 'integer', 'min:1'], 'page' => ['nullable', 'integer', 'min:1'], 'tab' => ['nullable', Rule::in(['overview', 'cases', 'map', 'budget', 'payments', 'visits', 'reports', 'mobile'])],
+            'survey_filters' => ['nullable', 'array', 'max:20'], 'survey_filters.*' => ['array:field,operator,value'],
+            'survey_filters.*.field' => ['required', 'string', 'max:100'], 'survey_filters.*.operator' => ['required', Rule::in(['eq', 'ne', 'contains', 'gt', 'gte', 'lt', 'lte', 'empty', 'filled'])],
+            'survey_filters.*.value' => ['nullable', 'string', 'max:255']];
     }
 
     public function messages(): array

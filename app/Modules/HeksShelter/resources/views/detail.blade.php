@@ -29,7 +29,7 @@
         </form>
     </section>
     <section data-detail-panel="survey" hidden>
-        @foreach($survey->sections() as $section)<details class="hs-section" @if($loop->first) open @endif><summary>{{ $section['title'] }}</summary><dl class="hs-fields">@foreach($section['fields'] as $field)<div><dt>{{ $field['label'] }}</dt><dd>{{ $survey->value($field['key'],$case->answers[$field['key']]??null) }}</dd></div>@endforeach</dl></details>@endforeach
+        @foreach($survey->sectionsFor($case) as $section)<details class="hs-section" @if($loop->first) open @endif><summary>{{ $section['title'] }}</summary><dl class="hs-fields">@foreach($section['fields'] as $field)<div><dt>{{ $field['label'] }}</dt><dd>{{ $survey->value($field['key'],$case->answers[$field['key']]??null,$case->survey_revision_id) }}</dd></div>@endforeach</dl></details>@endforeach
     </section>
     <section data-detail-panel="boq" hidden>
         <div class="hs-panel-title"><h3>كشف الكميات</h3><strong>{{ number_format($case->grant_amount,2) }} شيكل</strong></div><p>تُحسب المنحة من مجموع الكميات × أسعار الوحدات. يتجمد الكشف عند اعتماد المنحة.</p>

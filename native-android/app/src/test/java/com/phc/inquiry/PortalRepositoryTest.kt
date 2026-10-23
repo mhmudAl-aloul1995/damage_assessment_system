@@ -47,6 +47,27 @@ class PortalRepositoryTest {
         override suspend fun discard(authorization: String, form: String, id: Long, request: DiscardFileRequest): JsonObject { check(authorization); return JsonObject(mapOf("discarded" to JsonPrimitive(true))) }
     }
     private fun state() = SessionState().apply { set(Session("fixture-owner-token", "2099-01-01T00:00:00Z", User(1, "fixture", "fixture@example.test"))) }
+    @Test fun phaseThreeCanBeDiscoveredOpenedSubmittedAndFoundInReceipts() = runTest {
+        val api = FakeApi()
+        api.permittedModules = listOf(PortalModule("heks-shelter", "HEKS الثالثة"), PortalModule("unexpected", "hidden"))
+        api.publishedForms = listOf(
+            PublishedForm("heks-phase-three", "heks-shelter", "HEKS الثالثة", "v", canSubmit = true),
+            PublishedForm("unpublished", "heks-shelter", "hidden", "v"),
+        )
+        val repository = PortalRepository(api, state(), MemoryStore())
+        assertEquals(listOf("heks-shelter"), repository.modules().map { it.key })
+        assertEquals(listOf("heks-phase-three"), repository.forms().map { it.key })
+        assertTrue(repository.forms().single().canSubmit)
+        assertEquals("heks-phase-three", repository.schema("heks-phase-three", null).key)
+        val request = SubmissionRequest("phase-three-uuid", "v", answers = JsonObject(mapOf("name" to JsonPrimitive("Fixture"))))
+        val receipt = repository.submit("heks-phase-three", request)
+        assertEquals(request, api.submitted)
+        assertEquals("heks-phase-three", receipt.formKey)
+        api.received = ReceiptPage(listOf(receipt))
+        assertEquals(listOf(receipt), repository.receipts().data)
+        api.publishedForms = emptyList()
+        assertTrue(repository.forms().isEmpty())
+    }
     @Test fun attendanceModuleSurvivesCatalogFilteringOnlyWhenReturnedByTheServer() = runTest {
         val api = FakeApi()
         api.permittedModules = listOf(PortalModule("hr", "الموارد البشرية", recordSearch = false), PortalModule("heks", "HEKS"), PortalModule("unexpected", "hidden"))

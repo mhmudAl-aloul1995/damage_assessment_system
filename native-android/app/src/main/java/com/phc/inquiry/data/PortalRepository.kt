@@ -85,6 +85,6 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
         api.upload(it, form, uuid.toRequestBody("text/plain".toMediaType()), MultipartBody.Part.createFormData("file", name.replace("\"", "_").replace("\r", "").replace("\n", ""), bytes.toRequestBody(mime.toMediaType()))).data
     }
 }
-val MODULE_KEYS = setOf("damage_assessment", "damage_assessment_borrowers", "heks", "hr", "administration")
-val PUBLISHED_FORM_KEYS = setOf("borrower-survey", "heks-beneficiary", "heks-followup")
+val MODULE_KEYS = setOf("damage_assessment", "damage_assessment_borrowers", "heks", "heks-shelter", "hr", "administration")
+val PUBLISHED_FORM_KEYS = setOf("borrower-survey", "heks-beneficiary", "heks-followup", "heks-phase-three")
 

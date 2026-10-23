@@ -139,6 +139,11 @@ class MobileFormDefinitionService
         $path = $prefix.$field['key'];
         $fieldRules = $rules[$path] ?? [];
         $field['required'] = in_array('required', $fieldRules, true);
+        foreach ($fieldRules as $rule) {
+            if (is_string($rule) && str_starts_with($rule, 'required_if:')) {
+                $field['required'] = true;
+            }
+        }
         $field['max_length'] = in_array($field['type'], ['date', 'datetime'], true) ? 100 : (in_array($field['type'], ['text', 'phone', 'multiline'], true) ? 10000 : null);
         $field['min'] = null;
         $field['max'] = null;

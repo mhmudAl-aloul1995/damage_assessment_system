@@ -59,7 +59,7 @@ class ShelterWorkflow
         $case->fill([
             'code' => $answers['code'], 'name' => $answers['name'], 'identity_number' => $answers['identity_number'],
             'phone' => $answers['phone'], 'governorate' => $answers['governorate'], 'area' => $answers['area'] ?? null,
-            'visit_date' => $answers['visit_date'], 'answers' => $answers,
+            'visit_date' => $answers['visit_date'], 'answers' => $answers, 'survey_revision_id' => app(SurveyDesigner::class)->published()->id,
             'status' => $answers['eligibility'] === 'blocked' ? 'blocked' : 'received',
             'engineering_status' => 'pending', 'social_status' => 'pending', 'version' => ($case->version ?? 0) + 1,
         ]);
@@ -72,7 +72,8 @@ class ShelterWorkflow
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['answers.identity_number' => 'تم تسجيل الهوية بالفعل. افتح الملف الموجود.']);
         }
-        $case->events()->create(['user_id' => $user->id, 'action' => 'survey', 'note' => $before === null ? 'استلام استبيان الموبايل' : 'تحديث الاستبيان وإعادة التدقيق', 'details' => ['before' => $before, 'after' => $answers]]);
+        $event = $case->events()->create(['user_id' => $user->id, 'action' => 'survey', 'note' => $before === null ? 'استلام استبيان الموبايل' : 'تحديث الاستبيان وإعادة التدقيق', 'details' => ['survey_revision_id' => $case->survey_revision_id]]);
+        app(SurveyAnswerStorage::class)->recordChanges($case->id, $event->id, $before ?? [], $answers);
 
         return $case;
     }

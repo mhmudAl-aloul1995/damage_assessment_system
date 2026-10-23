@@ -66,7 +66,8 @@ it('receives the complete mobile survey once with private attachments coordinate
     $case = ShelterCase::query()->sole();
     expect($case->phase)->toBe(3)->and($case->identity_number)->toBe('400123456')->and((float) $case->latitude)->toBe(31.5)->and($case->events()->count())->toBe(1);
     expect($case->submissions()->with('attachments')->first()->attachments)->toHaveCount(1);
-    expect(MobileFormSubmission::query()->sole()->changes['after']['unit_area'])->toBe(90);
+    expect(MobileFormSubmission::query()->sole()->changes['after']['survey_revision_id'])->toBe($case->survey_revision_id);
+    $this->assertDatabaseHas('heks_survey_answer_changes', ['case_id' => $case->id, 'field_path' => 'unit_area', 'new_value' => '90']);
     $this->getJson('/api/v1/forms/heks-phase-three/schema?record='.$case->id)->assertOk()->assertJsonPath('data.answers.unit_area', 90);
     $this->getJson('/api/v1/portal/heks-shelter/records')->assertOk()->assertJsonPath('total', 1);
     $this->getJson('/api/v1/portal/heks-shelter/records/'.$case->id)->assertOk()->assertJsonPath('data.title', $case->name);

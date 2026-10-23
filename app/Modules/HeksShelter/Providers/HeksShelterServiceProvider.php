@@ -10,6 +10,12 @@ class HeksShelterServiceProvider extends ModuleServiceProvider
 {
     protected string $module = 'heks-shelter';
 
+    public function register(): void
+    {
+        parent::register();
+        $this->app->scoped(\App\Modules\HeksShelter\Services\SurveyDesigner::class);
+    }
+
     public function modulePath(string $path = ''): string
     {
         return dirname(__DIR__).($path === '' ? '' : DIRECTORY_SEPARATOR.$path);

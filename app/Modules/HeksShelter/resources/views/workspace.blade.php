@@ -10,6 +10,7 @@
         <div class="hs-hero-meta"><span>المرحلة الثالثة</span><small>من الزيارة الميدانية إلى اكتمال الإصلاح</small></div>
     </header>
     <nav class="hs-tabs" aria-label="أقسام HEKS">
+        @can('heks3.settings')<a href="{{ route('heks3.settings') }}">إعدادات الاستبيان</a>@endcan
         @foreach(['overview'=>'نظرة عامة','cases'=>'المستفيدون والتقييمات','map'=>'الخريطة','budget'=>'الكميات والمنح','payments'=>'الدفعات','visits'=>'المتابعة الميدانية','reports'=>'التقارير','mobile'=>'استبيانات الموبايل'] as $key=>$label)
             <a href="{{ route('heks3.index', [...$filters, 'tab'=>$key, 'page'=>1]) }}" @class(['active'=>$tab===$key]) @if($tab===$key) aria-current="page" @endif>{{ $label }}</a>
         @endforeach
@@ -30,6 +31,8 @@
             <article class="hs-metric"><span>{{ $label }}</span><strong dir="ltr">{{ $value }}</strong><small>{{ $unit }}</small></article>
         @endforeach
     </section>
+    <details class="hs-panel" @if(!empty($filters['survey_filters'])) open @endif><summary>فلترة حسب أسئلة الاستبيان</summary><form method="get" action="{{ route('heks3.index') }}"><input type="hidden" name="tab" value="{{ $tab }}">@foreach(['search','status','governorate','engineer'] as $base)@if(!empty($filters[$base]))<input type="hidden" name="{{ $base }}" value="{{ $filters[$base] }}">@endif @endforeach
+    <div data-survey-filter-rows>@foreach($filters['survey_filters']??[[]] as $row)<div class="hs-form-grid mb-4"><label>السؤال<select class="form-select" name="survey_filters[{{ $loop->index }}][field]">@foreach(app(\App\Modules\HeksShelter\Services\SurveyDesigner::class)->filterCatalog() as $key=>$question)<option value="{{ $key }}" @selected(($row['field']??'')===$key)>{{ $question->section }} — {{ $question->label }}</option>@endforeach</select></label><label>المقارنة<select class="form-select" name="survey_filters[{{ $loop->index }}][operator]">@foreach(['eq'=>'يساوي','ne'=>'لا يساوي','contains'=>'يحتوي','gt'=>'أكبر من','gte'=>'أكبر أو يساوي','lt'=>'أقل من','lte'=>'أقل أو يساوي','empty'=>'فارغ','filled'=>'غير فارغ'] as $key=>$label)<option value="{{ $key }}" @selected(($row['operator']??'')===$key)>{{ $label }}</option>@endforeach</select></label><label>القيمة<input class="form-control" name="survey_filters[{{ $loop->index }}][value]" value="{{ $row['value']??'' }}" placeholder="قيمة الخيار / رقم / نص / تاريخ"></label></div>@endforeach</div><p>تُطبّق الشروط معاً. نعم/لا: استخدم 1 أو 0. الاختيارات تستخدم القيمة الثابتة للخيار.</p><button type="button" class="btn hs-soft" onclick="const box=this.form.querySelector('[data-survey-filter-rows]');if(box.children.length<20){const row=box.firstElementChild.cloneNode(true);row.querySelectorAll('[name]').forEach(input=>{input.name=input.name.replace(/\[\d+\]/,'['+box.children.length+']');if(input.tagName==='INPUT')input.value='';});box.appendChild(row);}">إضافة شرط</button><button class="btn hs-primary">تطبيق فلاتر الاستبيان</button><a href="{{ route('heks3.index',['tab'=>$tab]) }}" class="btn btn-light">مسح الفلاتر</a></form></details>
     @if($tab==='overview')
         <section class="hs-overview">
             <div class="hs-panel"><div class="hs-panel-title"><h3>مسار ملفات المرحلة الثالثة</h3><span>{{ $totals['cases'] }} ملف</span></div>
