@@ -5,7 +5,7 @@ import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.Response
 
-class InquiryFailure(message: String, val statusCode: Int? = null) : IOException(message)
+class InquiryFailure(message: String, val statusCode: Int? = null, cause: Throwable? = null) : IOException(message, cause)
 
 class TransportPolicy(val baseUrl: HttpUrl, private val allowHttp: Boolean) {
     val usesHttp: Boolean get() = baseUrl.scheme == "http"
@@ -22,12 +22,13 @@ class TransportPolicy(val baseUrl: HttpUrl, private val allowHttp: Boolean) {
         url.encodedPath.startsWith(baseUrl.encodedPath + "api/v1/")
 }
 
-class InquiryInterceptor(private val policy: TransportPolicy, private val token: () -> String?) : Interceptor {
+class InquiryInterceptor(private val policy: TransportPolicy, private val localOnly: () -> Boolean = { false }, private val token: () -> String?) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         policy.checkTransport()
         val request = chain.request()
         if (!policy.sameApi(request.url)) throw InquiryFailure("تم منع الاتصال بعنوان خارج API المنظومة.")
         val relative = request.url.encodedPath.removePrefix(policy.baseUrl.encodedPath)
+        if (localOnly() && relative != "api/v1/auth/login") throw InquiryFailure("هذا فتح محلي فقط. سجّل الدخول مع وجود نت لاستخدام السيرفر.")
         val authentication = request.method == "POST" && relative in setOf("api/v1/auth/login", "api/v1/auth/logout")
         val formWrite = request.method == "POST" && Regex("api/v1/forms/[a-z-]+/(submissions|attachments|attachments/[1-9][0-9]*/discard)").matches(relative)
         if (request.method != "GET" && !authentication && !formWrite) throw InquiryFailure("هذه العملية غير مسموحة في التطبيق.")

@@ -9,6 +9,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TransportPolicyTest {
+    @Test fun localIdentityIsBlockedBeforeTheNetworkEvenIfAServiceIsCalledDirectly() {
+        var reachedNetwork = false
+        val base = "https://example.test/system/".toHttpUrl()
+        val client = OkHttpClient.Builder().addInterceptor(InquiryInterceptor(TransportPolicy(base, false), { true }) { null })
+            .addInterceptor { chain -> reachedNetwork = true; Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK").body("{}".toResponseBody()).build() }.build()
+        assertThrows(InquiryFailure::class.java) { client.newCall(Request.Builder().url(base.toString() + "api/v1/me").build()).execute() }
+        assertFalse(reachedNetwork)
+    }
     @Test fun formWritesAreNarrowlyScopedAndCannotSwitchAccountTokens() {
         val base = "https://example.test/system/".toHttpUrl()
         val client = OkHttpClient.Builder().addInterceptor(InquiryInterceptor(TransportPolicy(base, false)) { "owner-token" })

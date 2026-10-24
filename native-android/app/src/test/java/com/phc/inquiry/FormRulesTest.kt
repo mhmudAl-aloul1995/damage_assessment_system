@@ -8,6 +8,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FormRulesTest {
+    @Test fun retriedOfflineRequestUnlocksForConfirmedValidationOrSchemaRejectionWithoutChangingItsIdentity() {
+        val original = FormDraft(owner = 1, origin = "https://fixture/", schema = schema(listOf(FormField("name", "الاسم"))), answers = JsonObject(mapOf("name" to JsonPrimitive("محفوظ"))))
+        val pending = original.copy(pending = original.request())
+        for (failure in listOf(FormFailure(422, message = "راجع الإجابات"), FormFailure(409, message = "تغيّر إصدار النموذج. حدّث النموذج قبل الإرسال."))) {
+            val rejected = pending.afterRejection(failure)
+            assertNull(rejected.pending); assertEquals(original.uuid, rejected.uuid); assertEquals(original.answers, rejected.answers)
+        }
+        for (failure in listOf(FormFailure(null, message = "NET-CONNECT"), FormFailure(500, message = "server"), FormFailure(409, message = "استُخدم معرّف الإرسال لبيانات مختلفة."))) {
+            assertEquals(pending, pending.afterRejection(failure))
+        }
+    }
     @Test fun errorNavigationFindsTheFieldAcrossSectionsWithoutLosingDraftAnswers() {
         val form = schema(listOf(FormField("visit_date", "التاريخ"))).copy(sections = listOf(
             FormSection("تعريف", listOf(FormField("visit_date", "التاريخ"))),
@@ -48,7 +59,8 @@ class FormRulesTest {
         assertEquals(original.location, draft.location)
         assertEquals(original.attachments, draft.attachments)
         assertEquals("Local value", draft.answers["name"]?.jsonPrimitive?.content)
-        assertFalse(draft.answers.containsKey("removed"))
+        assertEquals("old", draft.answers["removed"]?.jsonPrimitive?.content)
+        assertFalse(draft.request().answers.containsKey("removed"))
         assertEquals("new-version", draft.request().formVersion)
         assertEquals("new-record-version", draft.request().recordVersion)
     }

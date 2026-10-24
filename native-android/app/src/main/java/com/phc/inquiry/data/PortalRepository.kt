@@ -14,15 +14,62 @@ import java.io.IOException
 
 class FormFailure(val code: Int?, val errors: Map<String, List<String>> = emptyMap(), message: String) : IOException(message) {
     val definitelyRejected: Boolean get() = code in setOf(400, 401, 403, 404, 409, 413, 415, 422, 429)
+    val canCorrectAnswers: Boolean get() = code == 422 || (code == 409 && message in setOf("تغيّر إصدار النموذج. حدّث النموذج قبل الإرسال.", "تغيّر السجل على السيرفر. راجع آخر نسخة قبل الإرسال."))
 }
 
 @Singleton
-class PortalRepository @Inject constructor(private val api: PortalApi, private val session: SessionState, private val store: SessionStore) {
+class PortalRepository @Inject constructor(private val api: PortalApi, private val session: SessionState, private val store: SessionStore, private val offline: OfflineFormStore) {
+    private val catalogWrites = kotlinx.coroutines.sync.Mutex()
+    private fun owner(): Long = session.access.value?.user?.id ?: throw FormFailure(401, message = "سجّل الدخول أو افتح العمل المحلي بقفل الجهاز.")
+    private fun checkOwner(id: Long) { if (owner() != id) throw FormFailure(null, message = "تغيّر الحساب. افتح النماذج بالحساب الذي نزّلها.") }
+    suspend fun cachedCatalog(): OfflineCatalog? = withContext(Dispatchers.IO) {
+        val id = owner()
+        offline.readCatalog(id)?.also { checkOwner(id) }
+    }
+    suspend fun refreshCatalog(): OfflineCatalog = withContext(Dispatchers.IO) {
+        val id = owner()
+        try {
+            val modules = modules()
+            val forms = forms()
+            catalogWrites.lock()
+            try {
+                checkOwner(id)
+                val old = runCatching { offline.readCatalog(id) }.getOrNull()
+                val retained = old?.schemas.orEmpty().filterKeys { key -> forms.any { it.key == key && it.canSubmit && !it.requiresRecord } }
+                val catalog = OfflineCatalog(modules, forms, retained, old?.updatedAt.orEmpty())
+                try { offline.saveCatalog(id, catalog); catalog }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) {
+                    runCatching { offline.clearCatalog(id) }
+                    catalog.copy(schemas = emptyMap(), storageWarning = "تعمل النماذج عبر الاتصال، لكن تعذّر حفظها للميدان على هذا الجهاز. أعد التنزيل وتأكد من مساحة التخزين؛ المسودات لها حفظ مستقل.")
+                }
+            } finally { catalogWrites.unlock() }
+        } catch (error: FormFailure) {
+            if (error.code in setOf(401, 403)) offline.clearCatalog(id)
+            throw error
+        }
+    }
+    suspend fun downloadForm(form: String): OfflineCatalog = withContext(Dispatchers.IO) {
+        val id = owner()
+        val schema = try { schema(form, null, refresh = true) }
+        catch (error: FormFailure) {
+            if (error.code in setOf(401, 403, 404)) offline.clearCatalog(id)
+            throw error
+        }
+        require(!schema.requiresRecord && schema.recordId == null && schema.recordVersion == null && schema.answers.isEmpty()) { "هذا النموذج يحتاج سجلًا متصلاً بالسيرفر. افتحه مسبقًا واحفظه كمسودة." }
+        catalogWrites.lock()
+        try {
+            checkOwner(id)
+            val catalog = offline.readCatalog(id) ?: throw FormFailure(null, message = "حدّث قائمة النماذج قبل التنزيل.")
+            require(catalog.forms.any { it.key == form && it.canSubmit && !it.requiresRecord }) { "النموذج غير متاح للتنزيل لحسابك." }
+            catalog.copy(schemas = catalog.schemas + (form to schema), updatedAt = java.time.Instant.now().toString()).also { offline.saveCatalog(id, it) }
+        } finally { catalogWrites.unlock() }
+    }
     private fun requirePublishedForm(form: String) {
         if (form !in PUBLISHED_FORM_KEYS) throw FormFailure(404, message = "هذا الاستبيان غير متاح في تطبيق الموبايل.")
     }
     private suspend fun <T> request(mutation: Boolean = false, action: suspend (String) -> T): T = withContext(Dispatchers.IO) {
-        val owner = session.session.value ?: throw FormFailure(401, message = "سجّل الدخول للمتابعة.")
+        val owner = session.session.value ?: throw FormFailure(401, message = "هذا فتح محلي فقط. سجّل الدخول مع وجود نت للإرسال أو تحديث بيانات السيرفر؛ مسودتك محفوظة.")
         try {
             val result = action("Bearer ${owner.token}")
             if (session.session.value?.user?.id != owner.user.id) throw FormFailure(null, message = "تغيّر الحساب. افتح المسودة بالحساب الذي أنشأها.")
@@ -56,7 +103,20 @@ class PortalRepository @Inject constructor(private val api: PortalApi, private v
     suspend fun records(module: String, query: String, page: Int): PortalPage = request { api.records(it, module, query, page) }
     suspend fun record(module: String, id: Long): PortalRecord = request { api.record(it, module, id).data }
     suspend fun formRecords(form: String, query: String, page: Int): PortalPage = request { requirePublishedForm(form); api.formRecords(it, form, query, page) }
-    suspend fun schema(form: String, id: Long?): FormSchema = request { requirePublishedForm(form); api.schema(it, form, id).data }
+    suspend fun schema(form: String, id: Long?, refresh: Boolean = false): FormSchema {
+        requirePublishedForm(form)
+        if (id == null && !refresh) {
+            val catalog = try { cachedCatalog() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+            if (form in catalog?.readyKeys.orEmpty()) return requireNotNull(catalog?.schemas?.get(form))
+        }
+        return request {
+            api.schema(it, form, id).data.also { schema ->
+                require(schema.key == form && schema.recordId == id && schema.sections.isNotEmpty() && schema.sections.flatMap { it.fields }.size <= 500) { "تعذّرت قراءة النموذج. حدّث خدمة الاستبيانات." }
+            }
+        }
+    }
     suspend fun submit(form: String, body: SubmissionRequest): SubmissionReceipt = request(mutation = true) { requirePublishedForm(form); api.submit(it, form, body).data }
     suspend fun receipts(page: Int = 1): ReceiptPage = request { api.receipts(it, page).let { rows -> rows.copy(data = rows.data.filter { receipt -> receipt.formKey in PUBLISHED_FORM_KEYS }) } }
     suspend fun receipt(uuid: String): SubmissionReceipt = request { api.receipt(it, uuid).data.also { receipt -> requirePublishedForm(receipt.formKey) } }

@@ -44,7 +44,7 @@ private fun Modifier.phcAutofill(type: AutofillType, onFill: (String) -> Unit): 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun LoginScreen(state: AuthenticationState, usesHttp: Boolean, httpReady: Boolean, onLogin: (String, String) -> Unit) {
+fun LoginScreen(state: AuthenticationState, usesHttp: Boolean, httpReady: Boolean, onOfflineOpen: () -> Unit = {}, onLogin: (String, String) -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visible by remember { mutableStateOf(false) }
@@ -110,6 +110,10 @@ fun LoginScreen(state: AuthenticationState, usesHttp: Boolean, httpReady: Boolea
                         Button(onClick = submit, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("login"), enabled = enabled && email.isNotBlank() && password.isNotBlank(), shape = RoundedCornerShape(12.dp)) {
                             if (state.busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                             else Text(stringResource(R.string.login_title))
+                        }
+                        if (state.offlineAvailable) {
+                            OutlinedButton(onClick = onOfflineOpen, enabled = !state.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("offline-unlock")) { Text("فتح العمل دون إنترنت بقفل الجهاز") }
+                            Text("يفتح النماذج المنزّلة والمسودات فقط. إرسال البيانات يحتاج تسجيل الدخول مع وجود نت.", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

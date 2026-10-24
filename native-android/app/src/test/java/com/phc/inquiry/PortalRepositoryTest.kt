@@ -29,12 +29,14 @@ class PortalRepositoryTest {
         var onModules: () -> Unit = {}
         var body: ResponseBody = "fixture".toResponseBody()
         var permittedModules = listOf(PortalModule("heks", "HEKS"), PortalModule("unexpected", "hidden"))
+        var schemaCalls = 0
+        var schemaOverride: FormSchema? = null
         private fun check(auth: String) { authorization = auth; failure?.let { throw it } }
         override suspend fun modules(authorization: String): DataResponse<List<PortalModule>> { check(authorization); onModules(); return DataResponse(permittedModules) }
         override suspend fun forms(authorization: String): DataResponse<List<PublishedForm>> { check(authorization); return DataResponse(publishedForms) }
         override suspend fun records(authorization: String, module: String, search: String, page: Int) = PortalPage(emptyList())
         override suspend fun record(authorization: String, module: String, id: Long) = DataResponse(PortalRecord(id, module))
-        override suspend fun schema(authorization: String, form: String, id: Long?): DataResponse<FormSchema> { check(authorization); return DataResponse(FormSchema(form, "heks", "Test", "v", listOf(FormSection("s", emptyList())), false)) }
+        override suspend fun schema(authorization: String, form: String, id: Long?): DataResponse<FormSchema> { check(authorization); schemaCalls++; return DataResponse(schemaOverride ?: FormSchema(form, "heks", "Test", "v", listOf(FormSection("s", listOf(FormField("name", "الاسم")))), false, recordId = id)) }
         override suspend fun formRecords(authorization: String, form: String, search: String, page: Int): PortalPage { check(authorization); return PortalPage(emptyList()) }
         override suspend fun submit(authorization: String, form: String, request: SubmissionRequest): SubmissionResponse {
             check(authorization); submitted = request
@@ -47,6 +49,62 @@ class PortalRepositoryTest {
         override suspend fun discard(authorization: String, form: String, id: Long, request: DiscardFileRequest): JsonObject { check(authorization); return JsonObject(mapOf("discarded" to JsonPrimitive(true))) }
     }
     private fun state() = SessionState().apply { set(Session("fixture-owner-token", "2099-01-01T00:00:00Z", User(1, "fixture", "fixture@example.test"))) }
+    @Test fun deviceUnlockedIdentityOpensOnlyItsCachedFormsAndCannotSubmitWithoutOnlineLogin() = runTest {
+        val api = FakeApi(); val session = state(); val offline = MemoryOfflineForms()
+        val repository = PortalRepository(api, session, MemoryStore(), offline)
+        api.publishedForms = listOf(PublishedForm("heks-phase-three", "heks-shelter", "HEKS", "v", canSubmit = true))
+        repository.refreshCatalog(); repository.downloadForm("heks-phase-three")
+        val user = session.session.value!!.user
+        session.enterOffline(user)
+        api.authorization = null
+        assertEquals("heks-phase-three", repository.schema("heks-phase-three", null).key)
+        val request = SubmissionRequest("offline-uuid", "v", answers = JsonObject(emptyMap()))
+        try { repository.submit("heks-phase-three", request); fail("Local identity submitted to server") } catch (error: FormFailure) { assertEquals(401, error.code) }
+        assertNull(api.authorization); assertNull(api.submitted); assertNull(session.token())
+        assertTrue(session.access.value!!.localOnly)
+    }
+    @Test fun downloadedFormSurvivesRestartAndCreatesIndependentOfflineSurveysWithoutNetwork() = runTest {
+        val api = FakeApi().apply { publishedForms = listOf(PublishedForm("heks-phase-three", "heks-shelter", "HEKS الثالثة", "v", canSubmit = true)) }
+        val offline = MemoryOfflineForms(); val session = state()
+        val repository = PortalRepository(api, session, MemoryStore(), offline)
+        repository.refreshCatalog()
+        assertEquals(setOf("heks-phase-three"), repository.downloadForm("heks-phase-three").readyKeys)
+        api.failure = java.net.ConnectException("offline")
+        val restarted = PortalRepository(api, session, MemoryStore(), offline)
+        assertEquals("heks-phase-three", restarted.cachedCatalog()!!.forms.single().key)
+        val cached = restarted.schema("heks-phase-three", null)
+        val first = com.phc.inquiry.feature.portal.FormDraft(owner = 1, origin = "fixture", schema = cached)
+        val second = com.phc.inquiry.feature.portal.FormDraft(owner = 1, origin = "fixture", schema = restarted.schema("heks-phase-three", null))
+        assertNotEquals(first.uuid, second.uuid); assertTrue(first.answers.isEmpty()); assertEquals(1, api.schemaCalls)
+        try { restarted.schema("heks-phase-three", null, refresh = true); fail("Refresh must contact server") } catch (_: FormFailure) {}
+        assertEquals(cached, restarted.schema("heks-phase-three", null))
+        try { restarted.schema("heks-phase-three", 99); fail("Existing records must not use a blank offline schema") } catch (_: FormFailure) {}
+    }
+    @Test fun cachedFormsAreAccountIsolatedAndRevokedCatalogsCannotBeReused() = runTest {
+        val api = FakeApi().apply { publishedForms = listOf(PublishedForm("heks-phase-three", "heks-shelter", "HEKS", "v", canSubmit = true)) }
+        val offline = MemoryOfflineForms(); val session = state()
+        val repository = PortalRepository(api, session, MemoryStore(), offline)
+        repository.refreshCatalog(); repository.downloadForm("heks-phase-three")
+        val original = session.session.value!!
+        session.set(original.copy(user = original.user.copy(id = 2)))
+        assertNull(repository.cachedCatalog())
+        session.set(original)
+        api.failure = HttpException(Response.error<Any>(403, "{}".toResponseBody()))
+        try { repository.refreshCatalog(); fail("Revoked access accepted") } catch (_: FormFailure) {}
+        assertNull(repository.cachedCatalog())
+    }
+    @Test fun catalogRefreshPrunesRemovedFormsAndNeverDownloadsRecordAnswersAsATemplate() = runTest {
+        val api = FakeApi().apply { publishedForms = listOf(PublishedForm("heks-phase-three", "heks-shelter", "HEKS", "v", canSubmit = true)) }
+        val offline = MemoryOfflineForms(); val repository = PortalRepository(api, state(), MemoryStore(), offline)
+        repository.refreshCatalog(); repository.downloadForm("heks-phase-three")
+        api.publishedForms = emptyList()
+        assertTrue(repository.refreshCatalog().schemas.isEmpty())
+        api.publishedForms = listOf(PublishedForm("heks-phase-three", "heks-shelter", "HEKS", "v", canSubmit = true))
+        repository.refreshCatalog()
+        api.schemaOverride = FormSchema("heks-phase-three", "heks-shelter", "HEKS", "v", listOf(FormSection("s", listOf(FormField("name", "الاسم")))), false, answers = JsonObject(mapOf("name" to JsonPrimitive("private"))))
+        try { repository.downloadForm("heks-phase-three"); fail("Respondent answers cached as a blank template") } catch (_: IllegalArgumentException) {}
+        assertTrue(repository.cachedCatalog()!!.schemas.isEmpty())
+    }
     @Test fun phaseThreeCanBeDiscoveredOpenedSubmittedAndFoundInReceipts() = runTest {
         val api = FakeApi()
         api.permittedModules = listOf(PortalModule("heks-shelter", "HEKS الثالثة"), PortalModule("unexpected", "hidden"))
@@ -54,7 +112,7 @@ class PortalRepositoryTest {
             PublishedForm("heks-phase-three", "heks-shelter", "HEKS الثالثة", "v", canSubmit = true),
             PublishedForm("unpublished", "heks-shelter", "hidden", "v"),
         )
-        val repository = PortalRepository(api, state(), MemoryStore())
+        val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         assertEquals(listOf("heks-shelter"), repository.modules().map { it.key })
         assertEquals(listOf("heks-phase-three"), repository.forms().map { it.key })
         assertTrue(repository.forms().single().canSubmit)
@@ -71,7 +129,7 @@ class PortalRepositoryTest {
     @Test fun attendanceModuleSurvivesCatalogFilteringOnlyWhenReturnedByTheServer() = runTest {
         val api = FakeApi()
         api.permittedModules = listOf(PortalModule("hr", "الموارد البشرية", recordSearch = false), PortalModule("heks", "HEKS"), PortalModule("unexpected", "hidden"))
-        val repository = PortalRepository(api, state(), MemoryStore())
+        val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         assertEquals(listOf("hr", "heks"), repository.modules().map { it.key })
         assertFalse(repository.modules().first().recordSearch)
         api.permittedModules = listOf(PortalModule("heks", "HEKS"))
@@ -80,7 +138,7 @@ class PortalRepositoryTest {
     @Test fun connectionFailuresIdentifyTheCategoryWithoutLeakingDetailsOrLosingSession() = runTest {
         val api = FakeApi(); val state = state(); val store = MemoryStore()
         store.save(state.session.value!!)
-        val repository = PortalRepository(api, state, store)
+        val repository = PortalRepository(api, state, store, MemoryOfflineForms())
         val cases = listOf(
             java.net.SocketTimeoutException("private") to "NET-TIMEOUT",
             java.io.InterruptedIOException("private") to "NET-TIMEOUT",
@@ -104,7 +162,7 @@ class PortalRepositoryTest {
         assertEquals(listOf("heks"), repository.modules().map { it.key })
     }
     @Test fun timedOutSubmissionKeepsAmbiguousReceiptAndTransportPolicyIsNotReportedAsOffline() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         val request = SubmissionRequest("same-uuid", "version", answers = JsonObject(emptyMap()))
         api.failure = java.net.SocketTimeoutException("private")
         try { repository.submit("heks-beneficiary", request); fail("Expected timeout") } catch (error: FormFailure) {
@@ -118,14 +176,14 @@ class PortalRepositoryTest {
     }
     @Test fun catalogIsBoundToCapturedAccountAndFiltersUnknownModules() = runTest {
         val api = FakeApi(); val state = state()
-        val repository = PortalRepository(api, state, MemoryStore())
+        val repository = PortalRepository(api, state, MemoryStore(), MemoryOfflineForms())
         assertEquals(listOf("heks"), repository.modules().map { it.key })
         assertEquals("Bearer fixture-owner-token", api.authorization)
         api.onModules = { state.set(Session("other-token", "2099-01-01T00:00:00Z", User(2, "other", "other@example.test"))) }
         try { repository.modules(); fail("Cross-account response accepted") } catch(error: FormFailure) { assertNull(error.code) }
     }
     @Test fun retriesPreserveSubmissionIdentityAndFrozenAnswers() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         val request = SubmissionRequest("fixture-uuid", "form-version", answers = JsonObject(mapOf("name" to JsonPrimitive("same"))))
         api.failure = java.io.IOException("offline")
         try { repository.submit("heks-beneficiary", request); fail("Expected network failure") } catch(error: FormFailure) { assertFalse(error.definitelyRejected) }
@@ -136,7 +194,7 @@ class PortalRepositoryTest {
     @Test fun serverValidationIsStructuredAndRevokedSessionIsCleared() = runTest {
         val api = FakeApi(); val state = state(); val store = MemoryStore()
         store.save(state.session.value!!)
-        val repository = PortalRepository(api, state, store)
+        val repository = PortalRepository(api, state, store, MemoryOfflineForms())
         api.failure = HttpException(Response.error<Any>(422, """{"errors":{"answers.name":["fixture validation"]},"trace":"private"}""".toResponseBody()))
         try { repository.modules(); fail("Expected validation") } catch(error: FormFailure) {
             assertEquals(listOf("fixture validation"), error.errors["answers.name"]); assertFalse(error.message!!.contains("private"))
@@ -146,12 +204,12 @@ class PortalRepositoryTest {
         assertNull(state.session.value); assertNull(store.read())
     }
     @Test fun boundsReceiptAttachmentDownloads() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         api.body = ByteArray(15 * 1024 * 1024 + 1).toResponseBody()
         try { repository.attachment(1); fail("Oversized file accepted") } catch(error: FormFailure) { assertEquals(413, error.code) }
     }
     @Test fun failedReceiptReadsDoNotSuggestThatASurveyWasSent() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         for (failure in listOf(HttpException(Response.error<Any>(500, "{}".toResponseBody())), java.io.IOException("offline"))) {
             api.failure = failure
             try { repository.receipts(); fail("Expected read failure") } catch(error: FormFailure) {
@@ -162,7 +220,7 @@ class PortalRepositoryTest {
         }
     }
     @Test fun ambiguousWriteFailuresStillRequireRetryingTheSameDraft() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         api.failure = HttpException(Response.error<Any>(500, "{}".toResponseBody()))
         val request = SubmissionRequest("same-uuid", "version", answers = JsonObject(mapOf("name" to JsonPrimitive("same"))))
         try { repository.submit("heks-beneficiary", request); fail("Expected write failure") } catch(error: FormFailure) {
@@ -170,19 +228,19 @@ class PortalRepositoryTest {
         }
     }
     @Test fun uninitializedStorageHasAnActionableMessageWithoutExposingServerDetails() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         api.failure = HttpException(Response.error<Any>(503, """{"code":"mobile_form_storage_not_ready","message":"SQL private details","trace":"private"}""".toResponseBody()))
         try { repository.receipts(); fail("Expected readiness failure") } catch(error: FormFailure) {
             assertEquals(503, error.code); assertTrue(error.message!!.contains("مسؤول السيرفر")); assertFalse(error.message!!.contains("private"))
         }
     }
     @Test fun ignoresAuditFormsEvenWhenAnOlderServerStillPublishesThem() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         api.publishedForms = listOf(PublishedForm("borrower-survey", "damage_assessment_borrowers", "Borrower", "v"), PublishedForm("building-audit", "damage_assessment", "Audit", "v"))
         assertEquals(listOf("borrower-survey"), repository.forms().map { it.key })
     }
     @Test fun blocksAllRetiredAuditRequestsBeforeTheyReachTheServer() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         for (form in listOf("building-audit", "housing-audit", "public-building-audit", "public-building-unit-audit", "road-audit", "road-item-audit", "cso-audit", "cso-organization-audit", "cso-unit-audit")) {
             val request = SubmissionRequest("old-uuid", "v", answers = JsonObject(mapOf("name" to JsonPrimitive("test"))))
             val actions: List<suspend () -> Any> = listOf(
@@ -196,7 +254,7 @@ class PortalRepositoryTest {
         assertNull(api.authorization); assertNull(api.submitted)
     }
     @Test fun hidesRetiredAuditReceiptsWithoutChangingServerPagination() = runTest {
-        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore())
+        val api = FakeApi(); val repository = PortalRepository(api, state(), MemoryStore(), MemoryOfflineForms())
         api.received = ReceiptPage(listOf(SubmissionReceipt(1, "uuid", "building-audit", "damage_assessment", 1, "v", "received", "2026-10-11")), 2, 3)
         val page = repository.receipts(2)
         assertTrue(page.data.isEmpty()); assertEquals(2, page.currentPage); assertEquals(3, page.lastPage)

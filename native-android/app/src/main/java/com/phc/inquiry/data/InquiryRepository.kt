@@ -3,7 +3,6 @@ package com.phc.inquiry.data
 import com.phc.inquiry.core.security.*
 import com.phc.inquiry.core.network.connectionFailureMessage
 import java.io.IOException
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -18,12 +17,16 @@ import retrofit2.HttpException
 class SessionState @Inject constructor() {
     private val current = MutableStateFlow<Session?>(null)
     private val notices = MutableStateFlow<String?>(null)
+    private val currentAccess = MutableStateFlow<UserAccess?>(null)
+    val access = currentAccess.asStateFlow()
     val session = current.asStateFlow()
     val notice = notices.asStateFlow()
-    fun set(session: Session?) { current.value = session; if (session != null) notices.value = null }
-    fun expire() { current.value = null; notices.value = "انتهت الجلسة. سجّل الدخول مجددًا." }
+    fun set(session: Session?) { current.value = session; currentAccess.value = session?.let { UserAccess(it.user, false) }; if (session != null) notices.value = null }
+    fun enterOffline(user: User) { current.value = null; currentAccess.value = UserAccess(user, true); notices.value = null }
+    fun expire() { set(null); notices.value = "انتهت الجلسة. سجّل الدخول مجددًا أو افتح العمل المحلي بقفل الجهاز." }
     fun token(): String? = current.value?.token
 }
+data class UserAccess(val user: User, val localOnly: Boolean)
 
 interface InquiryRepository {
     suspend fun map(sector: String, filters: Map<String, String>): MapPage
@@ -48,8 +51,10 @@ class LaravelInquiryRepository @Inject constructor(
     private val store: SessionStore,
     private val state: SessionState,
     private val policy: TransportPolicy,
+    private val offlineIdentities: OfflineIdentityStore,
 ) : InquiryRepository {
     private suspend fun <T> request(action: suspend () -> T): T = withContext(Dispatchers.IO) {
+        if (state.access.value?.localOnly == true) throw InquiryFailure("هذا فتح محلي فقط. سجّل الدخول مع وجود نت لاستخدام خدمات السيرفر.")
         try { action() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (error: HttpException) {
@@ -78,29 +83,35 @@ class LaravelInquiryRepository @Inject constructor(
         val saved = store.read() ?: return@withContext
         try {
             policy.checkTransport()
-            if (!Instant.parse(saved.expiresAt).isAfter(Instant.now())) { store.clear(); return@withContext }
+            if (!saved.isUnexpiredAt()) { store.clear(); return@withContext }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { state.set(null); store.clear(); return@withContext }
         state.set(saved)
         try {
             val user = request { api.me().data }
-            if(user.id != saved.user.id) { state.set(null); store.clear(); return@withContext }
+            if(user.id != saved.user.id) { state.set(null); store.clear(); offlineIdentities.forget(); return@withContext }
             state.set(saved.copy(user = user))
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: InquiryFailure) { if(error.statusCode in setOf(401, 403)) { state.set(null); store.clear() } }
+        catch (error: InquiryFailure) { if(error.statusCode in setOf(401, 403)) { state.set(null); store.clear(); if (error.statusCode == 403) offlineIdentities.forget() } }
     }
 
     override suspend fun login(email: String, password: String) {
         policy.checkTransport()
-        request {
-            val result = api.login(LoginRequest(email, password, "PHC Native Android"))
-            val session = Session(result.token, result.expiresAt, result.user)
-            store.save(session)
-            state.set(session)
+        try {
+            request {
+                val result = api.login(LoginRequest(email, password, "PHC Native Android"))
+                val session = Session(result.token, result.expiresAt, result.user)
+                store.save(session)
+                state.set(session)
+            }
+        } catch (error: InquiryFailure) {
+            if (error.statusCode == 403) offlineIdentities.forget()
+            throw error
         }
     }
 
     override suspend fun logout() {
+        if (state.access.value?.localOnly == true) { state.set(null); store.clear(); return }
         try { request { api.logout() } }
         finally { withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { state.set(null); store.clear() } }
     }

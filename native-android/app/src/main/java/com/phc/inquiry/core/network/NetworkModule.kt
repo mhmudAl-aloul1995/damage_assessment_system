@@ -25,6 +25,8 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun store(store: KeystoreSessionStore): SessionStore
     @Binds @Singleton abstract fun repository(repository: LaravelInquiryRepository): InquiryRepository
     @Binds @Singleton abstract fun drafts(vault: DraftVault): DraftSummaryStore
+    @Binds @Singleton abstract fun offlineForms(vault: DraftVault): OfflineFormStore
+    @Binds @Singleton abstract fun offlineIdentity(store: DeviceOfflineIdentityStore): OfflineIdentityStore
 }
 
 @Module
@@ -36,7 +38,7 @@ object NetworkModule {
         val client = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).callTimeout(30, TimeUnit.SECONDS)
             .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
-            .addInterceptor(InquiryInterceptor(policy, session::token)).build()
+            .addInterceptor(InquiryInterceptor(policy, { session.access.value?.localOnly == true }, session::token)).build()
         val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
         return Retrofit.Builder().baseUrl(policy.baseUrl).client(client)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build()

@@ -14,11 +14,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,17 +54,20 @@ class MainActivity : ComponentActivity() {
 private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
     val authenticationState by authentication.state.collectAsStateWithLifecycle()
     val session by authentication.session.collectAsStateWithLifecycle()
+    val access by authentication.access.collectAsStateWithLifecycle()
+    OfflineDevicePrompt(authenticationState.offlineRequest, authentication::completeOffline, authentication::cancelOffline)
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when {
             authenticationState.restoring -> Box(Modifier.safeDrawingPadding()) { LoadingState() }
-            session == null -> LoginScreen(authenticationState, authentication.policy.usesHttp, authentication.policy.httpReady, authentication::signIn)
+            access?.localOnly == true -> key(access!!.user.id, "offline") { OfflineWorkspace(access!!.user, authentication) }
+            session == null -> LoginScreen(authenticationState, authentication.policy.usesHttp, authentication.policy.httpReady, onOfflineOpen = authentication::beginOfflineUnlock, onLogin = authentication::signIn)
             else -> key(session!!.user.id) {
                 val navigation = rememberNavController()
                 val portal: PortalViewModel = hiltViewModel()
                 val portalState by portal.state.collectAsStateWithLifecycle()
                 val backStack by navigation.currentBackStackEntryAsState()
                 val route = backStack?.destination?.route.orEmpty()
-                val root = route in setOf("portal-home", "portal-inquiry", "portal-tasks", "portal-account") || (route == "explore/{mode}" && backStack?.arguments?.getString("mode") == "map")
+                val root = route in setOf("portal-home", "portal-inquiry", "portal-tasks", "portal-account")
                 val editingForm = route.startsWith("form-screen/")
                 val atHome = route == "portal-home"
                 val atSearch = backStack?.destination?.route == "search/{sector}"
@@ -89,17 +87,14 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                 Scaffold(
                     topBar = {
                         if (!editingForm) {
-                        TopAppBar(title = { Text(if(route == "attendance") "الحضور والانصراف" else if(route == "dashboard") "حصر الأضرار" else if(route.startsWith("form-file/")) stringResource(R.string.attachments_title) else if(route.startsWith("portal-") || route.startsWith("module/") || route.startsWith("form-start/")) "بوابة المنظومة" else stringResource(title), style = MaterialTheme.typography.titleMedium) },
+                        TopAppBar(title = { Text(if(route == "attendance") "الحضور والانصراف" else if(route == "dashboard") "حصر الأضرار" else if(route.startsWith("form-file/")) stringResource(R.string.attachments_title) else if(route == "portal-inquiry") "مساحات العمل" else if(route == "portal-tasks") "أعمالي" else if(route == "portal-account") "المزيد" else if(route == "portal-offline") "العمل دون إنترنت" else if(route.startsWith("module/")) portalState.modules.firstOrNull { it.key == backStack?.arguments?.getString("module") }?.title ?: "مساحة العمل" else if(route.startsWith("portal-") || route.startsWith("form-start/")) "بوابة المنظومة" else stringResource(title), style = MaterialTheme.typography.titleMedium) },
                             colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                             navigationIcon = { if (!root) IconButton(onClick = { navigation.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
                             actions = { IconButton(onClick = { navigation.navigate("portal-account") { launchSingleTop = true } }, enabled = !authenticationState.busy) { Icon(Icons.Default.AccountCircle, stringResource(R.string.account)) } })
                         }
                     },
-                    bottomBar = { if(!editingForm) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                        val tabs = listOf(Triple("portal-home", "الرئيسية", Icons.Default.Home), Triple("portal-inquiry", "الموديولات", Icons.Default.List), Triple("portal-tasks", "مهامي", Icons.Default.Edit), Triple("explore/map", "الخريطة", Icons.Default.Place), Triple("portal-account", "حسابي", Icons.Default.AccountCircle))
-                        tabs.forEach { (target, label, icon) -> NavigationBarItem(selected = route == target || (target == "portal-tasks" && route in setOf("portal-surveys", "portal-drafts", "portal-sent")) || (target == "portal-inquiry" && (route == "dashboard" || route.startsWith("module/") || (route == "explore/{mode}" && backStack?.arguments?.getString("mode") == "stats"))) || (target == "explore/map" && route == "explore/{mode}" && backStack?.arguments?.getString("mode") == "map"),
-                            onClick = { navigation.navigate(target) { popUpTo("portal-home") { saveState = true }; launchSingleTop = true; restoreState = true } }, icon = { Icon(icon, label) }, label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                            colors = NavigationBarItemDefaults.colors(selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary, indicatorColor = MaterialTheme.colorScheme.primaryContainer, unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant)) }
+                    bottomBar = { if (!editingForm) WorkspaceNavigationBar(route) { target ->
+                        navigation.navigate(target) { popUpTo("portal-home") { saveState = true }; launchSingleTop = true; restoreState = true }
                     } },
                 ) { padding ->
                     NavHost(navigation, startDestination = "portal-home", modifier = Modifier.padding(padding)) {
@@ -109,24 +104,34 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                             NativeAttendanceScreen(session!!.user.id, session!!.user.email, attendance, attendanceState)
                         }
                         composable("portal-home") {
-                            PortalHome(session?.user?.name.orEmpty(), portalState, openModule, { navigation.navigate("portal-surveys") }, { navigation.navigate("portal-drafts") }, { navigation.navigate("dashboard") }, portal::refresh, { navigation.navigate("portal-inquiry") },
-                                onTasks = { navigation.navigate("portal-tasks") }, summaryContent = {
-                                    if(portalState.modules.any { it.key == "damage_assessment" }) {
-                                        val summary: WorkspaceStatisticsViewModel = hiltViewModel()
-                                        val summaryState by summary.state.collectAsStateWithLifecycle()
-                                        WorkspaceStatisticsCard(summaryState, { navigation.navigate("explore/stats") }, summary::refresh)
-                                    }
-                                })
+                            PortalHome(session?.user?.name.orEmpty(), portalState, openModule,
+                                onSurveys = { navigation.navigate("portal-surveys") },
+                                onDrafts = { navigation.navigate("portal-drafts") },
+                                onWorkspaces = { navigation.navigate("portal-inquiry") }, retry = portal::refresh,
+                                onTasks = { navigation.navigate("portal-tasks") },
+                                onDraft = { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") })
                         }
                         composable("portal-tasks") { WorkspaceTasksScreen(portalState, { navigation.navigate("portal-drafts") }, { navigation.navigate("portal-sent") }, { navigation.navigate("portal-surveys") }, portal::localDrafts) { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") } }
-                        composable("portal-sent") { SurveysScreen(portalState, 2, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
+                        composable("portal-sent") { SurveysScreen(portalState, 2, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts, downloadOffline = portal::downloadOffline) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
                         composable("portal-inquiry") { PortalInquiry(portalState, openModule, portal::refresh) }
-                        composable("portal-surveys") { SurveysScreen(portalState, 0, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
-                        composable("portal-drafts") { SurveysScreen(portalState, 1, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
-                        composable("portal-account") { AccountScreen(session?.user?.name.orEmpty(), session?.user?.email.orEmpty(), portalState.modules.size) { confirmLogout = true } }
+                        composable("portal-surveys") { SurveysScreen(portalState, 0, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts, downloadOffline = portal::downloadOffline) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
+                        composable("portal-drafts") { SurveysScreen(portalState, 1, openForm, { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, portal::deleteDraft, portal::refresh, portal::moreReceipts, portal::refreshReceipts, portal::localDrafts, downloadOffline = portal::downloadOffline) { uuid, id -> navigation.navigate("form-file/server/$uuid/$id") } }
+                        composable("portal-account") {
+                            AccountScreen(session?.user?.name.orEmpty(), session?.user?.email.orEmpty(), portalState.modules.size,
+                                onOffline = { navigation.navigate("portal-offline") }) { confirmLogout = true }
+                        }
+                        composable("portal-offline") {
+                            OfflinePreparationScreen(portalState, portal::downloadOffline, { navigation.navigate("portal-surveys") }) {
+                                OfflineAccessSettings(authenticationState, authentication::enableOffline, authentication::forgetOffline)
+                            }
+                        }
                         composable("module/{module}") { entry ->
                             val module = entry.arguments?.getString("module").orEmpty()
-                            ModuleScreen(portalState.modules.firstOrNull { it.key == module }, portalState.forms.filter { it.module == module }, { navigation.navigate("portal-records/$module/-") }, openForm)
+                            val workspace = portalState.modules.firstOrNull { it.key == module }
+                            if (workspace?.key == SHELTER_WORKSPACE) {
+                                ShelterWorkspaceScreen(workspace, portalState, { navigation.navigate("portal-records/$module/-") }, openForm,
+                                    { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") }, { navigation.navigate("portal-offline") })
+                            } else ModuleScreen(workspace, portalState.forms.filter { it.module == module }, { navigation.navigate("portal-records/$module/-") }, openForm)
                         }
                         composable("form-start/{form}") { entry ->
                             val key = entry.arguments?.getString("form").orEmpty()
@@ -142,12 +147,18 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                         composable("portal-records/{module}/{form}") {
                             val vm: PortalRecordsViewModel = hiltViewModel()
                             val state by vm.state.collectAsStateWithLifecycle()
-                            PortalRecordsScreen(state, vm.form != null, vm::search, vm::more, vm::retry) { id -> navigation.navigate(if(vm.form != null) "form-screen/${vm.form}/$id/-" else "portal-detail/${vm.module}/$id") }
+                            val openRecord: (Long) -> Unit = { id -> navigation.navigate(if(vm.form != null) "form-screen/${vm.form}/$id/-" else "portal-detail/${vm.module}/$id") }
+                            if (vm.module == SHELTER_WORKSPACE) ShelterRecordsScreen(state, vm.form != null, vm::search, vm::more, vm::retry, openRecord)
+                            else PortalRecordsScreen(state, vm.form != null, vm::search, vm::more, vm::retry, openRecord)
                         }
                         composable("portal-detail/{module}/{record}", arguments = listOf(navArgument("record") { type = NavType.LongType })) {
                             val vm: PortalDetailViewModel = hiltViewModel()
                             val state by vm.state.collectAsStateWithLifecycle()
-                            PortalDetailScreen(state, portalState.forms, vm::refresh) { form, id -> navigation.navigate("form-screen/${form.key}/$id/-") }
+                            if (vm.module == SHELTER_WORKSPACE) {
+                                ShelterRecordScreen(state, portalState.forms, portalState.drafts, vm::refresh,
+                                    { form, id -> navigation.navigate("form-screen/${form.key}/$id/-") },
+                                    { navigation.navigate("form-screen/${it.formKey}/${it.recordId ?: 0}/${it.uuid}") })
+                            } else PortalDetailScreen(state, portalState.forms, vm::refresh) { form, id -> navigation.navigate("form-screen/${form.key}/$id/-") }
                         }
                         composable("form-screen/{form}/{record}/{draft}", arguments = listOf(navArgument("record") { type = NavType.LongType })) {
                             val vm: FormViewModel = hiltViewModel()
@@ -163,7 +174,10 @@ private fun InquiryApp(authentication: SessionViewModel = hiltViewModel()) {
                         composable("dashboard") {
                             val viewModel: DashboardViewModel = hiltViewModel()
                             val state by viewModel.state.collectAsStateWithLifecycle()
-                            DashboardScreen(session?.user?.name.orEmpty(), state, { navigation.navigate("search/$it") }, viewModel::refresh, { navigation.navigate("citizens") }, { navigation.navigate("explore/$it") })
+                            val summary: WorkspaceStatisticsViewModel = hiltViewModel()
+                            val summaryState by summary.state.collectAsStateWithLifecycle()
+                            DashboardScreen(session?.user?.name.orEmpty(), state, { navigation.navigate("search/$it") }, viewModel::refresh, { navigation.navigate("citizens") }, { navigation.navigate("explore/$it") },
+                                summaryContent = { WorkspaceStatisticsCard(summaryState, { navigation.navigate("explore/stats") }, summary::refresh) })
                         }
                         composable("search/{sector}", arguments = listOf(navArgument("sector") { type = NavType.StringType })) {
                             val viewModel: SearchViewModel = hiltViewModel()

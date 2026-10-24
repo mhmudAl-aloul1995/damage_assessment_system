@@ -21,7 +21,7 @@ import com.phc.inquiry.data.InquiryRecord
 
 @Composable
 fun BrandMark(size: Int = 72) {
-    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, Color(0xFFE4E8EF))) {
+    Surface(color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Image(painterResource(R.drawable.phc_council_logo), stringResource(R.string.logo_description), Modifier.width(size.dp).height((size * 0.69f).dp).padding(6.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
     }
 }

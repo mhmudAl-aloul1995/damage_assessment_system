@@ -35,12 +35,13 @@ fun moduleTitle(key: String): String = when(key) {
     "damage_assessment_borrowers" -> "المقترضون"
     "heks" -> "إصلاح المأوى · HEKS"
     "heks-shelter" -> "HEKS · المرحلة الثالثة"
+    "reh" -> "REH · التأهيل"
     "administration" -> "الإدارة"
     else -> key
 }
-private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Default.CheckCircle; "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks", "heks-shelter" -> Icons.Default.Favorite; else -> Icons.Default.AccountCircle }
-@Composable private fun PortalCard(title: String, subtitle: String, action: () -> Unit, modifier: Modifier = Modifier, tag: String = "", icon: ImageVector = Icons.Default.List) {
-    Card(onClick = action, modifier = modifier.fillMaxWidth().testTag(tag), shape = RoundedCornerShape(12.dp),
+internal fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Default.CheckCircle; "damage_assessment" -> Icons.Default.Place; "damage_assessment_borrowers" -> Icons.Default.Home; "heks", "heks-shelter" -> Icons.Default.Favorite; "reh" -> Icons.Default.Home; "administration" -> Icons.Default.Settings; else -> Icons.Default.AccountCircle }
+@Composable internal fun PortalCard(title: String, subtitle: String, action: () -> Unit, modifier: Modifier = Modifier, tag: String = "", icon: ImageVector = Icons.Default.List) {
+    Card(onClick = action, modifier = modifier.fillMaxWidth().testTag(tag), shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -53,62 +54,22 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
         }
     }
 }
-@Composable fun PortalHome(name: String, state: PortalState, onModule: (String) -> Unit, onSurveys: () -> Unit, onDrafts: () -> Unit, onDamage: () -> Unit, retry: () -> Unit, onInquiry: () -> Unit = onDamage,
-    onTasks: () -> Unit = onDrafts, summaryContent: @Composable () -> Unit = {}) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Column(Modifier.weight(1f)) { Text("أهلًا، $name", style = MaterialTheme.typography.titleMedium); Text("المجلس الفلسطيني للإسكان", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            BrandMark(92)
-        } }
-        item { PortalCard("البحث في المنظومة", "المباني، الوحدات، المستفيدون والسجلات", onInquiry, tag = "home-inquiry", icon = Icons.Default.Search) }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onSurveys, modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("home-surveys"), shape = RoundedCornerShape(10.dp)) { Icon(Icons.Default.Edit, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("تعبئة استبيان") }
-            OutlinedButton(onClick = onTasks, modifier = Modifier.weight(1f).heightIn(min = 52.dp).testTag("home-tasks"), shape = RoundedCornerShape(10.dp)) { Text("متابعة أعمالي") }
-        } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            PortalMetric(if(state.draftsError != null && state.drafts.isEmpty()) "—" else "${state.drafts.count { it.receiptId == null }}", if(state.draftsError != null) "مسودات يمكن فتحها" else "مسودات على الجهاز", Icons.Default.Edit, onDrafts, Modifier.weight(1f))
-            PortalMetric(if(state.loading || (state.error != null && state.forms.isEmpty())) "—" else "${state.forms.size}", "نماذج متاحة", Icons.Default.List, onSurveys, Modifier.weight(1f))
-        } }
-        item { summaryContent() }
-        if(state.drafts.any { it.receiptId == null }) item {
-            PortalCard("تابع من حيث توقفت", "${state.drafts.count { it.receiptId == null }} مسودات محفوظة؛ افتحها للاستكمال أو متابعة تأكيد الإرسال.", onDrafts, tag = "home-continue-drafts", icon = Icons.Default.Edit)
-        }
-        state.draftsError?.let { item { OutlinedCard(onClick = onDrafts, modifier = Modifier.fillMaxWidth().testTag("home-drafts-warning")) { Column(Modifier.padding(18.dp)) {
-            Text("تنبيه المسودات المحفوظة", style = MaterialTheme.typography.titleSmall)
-            Text("تعذّر فتح بعض المسودات على الجهاز. يمكنك متابعة الاستعلام وفتح المسودات لإعادة المحاولة.", style = MaterialTheme.typography.bodySmall)
-        } } } }
-        item { Text("مساحات العمل المتاحة لحسابك", style = MaterialTheme.typography.titleMedium) }
-        if(state.loading) item { LoadingState() }
-        state.error?.let { item { ErrorState(it, retry) } }
-        items(state.modules, key = { it.key }) { module -> PortalCard(module.title, module.description, { onModule(module.key) }, tag = "module-${module.key}", icon = moduleIcon(module.key)) }
-        if(!state.loading && state.modules.isEmpty() && state.error == null) item { EmptyState("لا توجد خدمات متاحة", "تظهر الموديولات وفق صلاحيات حسابك.", Icons.Default.Lock) }
-        if(state.error != null) item { OutlinedButton(onClick = onDamage, modifier = Modifier.fillMaxWidth()) { Text("فتح خدمات حصر الأضرار الحالية") } }
-    }
-}
-@Composable private fun PortalMetric(value: String, label: String, icon: ImageVector, action: () -> Unit, modifier: Modifier) {
-    Card(onClick = action, modifier = modifier, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+@Composable internal fun PortalMetric(value: String, label: String, icon: ImageVector, action: () -> Unit, modifier: Modifier) {
+    Card(onClick = action, modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { IconTile(icon); Text(value, style = MaterialTheme.typography.headlineMedium) }
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
-@Composable fun PortalInquiry(state: PortalState, onModule: (String) -> Unit, retry: () -> Unit) {
-    LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text("الموديولات", style = MaterialTheme.typography.headlineSmall); Text("اختر مساحة العمل للوصول إلى السجلات والخدمات المتاحة.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        if(state.loading) item { LoadingState() }
-        state.error?.let { item { ErrorState(it, retry) } }
-        items(state.modules, key = { it.key }) { module -> PortalCard(module.title, module.description, { onModule(module.key) }, icon = moduleIcon(module.key)) }
-    }
-}
 @Composable fun ModuleScreen(module: PortalModule?, forms: List<PublishedForm>, onRecords: () -> Unit, onForm: (PublishedForm) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        item { Text(module?.title ?: "الموديول", style = MaterialTheme.typography.headlineSmall); Text(module?.description.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        item { PortalCard("الاستعلام عن السجلات", "ابحث واعرض التفاصيل الحالية من المنظومة", onRecords) }
+        item { Text(module?.title ?: "مساحة العمل", style = MaterialTheme.typography.headlineSmall); Text(module?.description.orEmpty(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (module?.recordSearch == true) item { PortalCard("الاستعلام عن السجلات", "ابحث واعرض التفاصيل الحالية من المنظومة", onRecords, tag = "module-records", icon = Icons.Default.Search) }
         if(forms.isNotEmpty()) item { Text("النماذج المتاحة", style = MaterialTheme.typography.titleLarge) }
         items(forms, key = { it.key }) { form -> PortalCard(form.title, if(form.requiresRecord) "تحديث استبيان سجل موجود" else "استبيان جديد أو تحديث سجل", { onForm(form) }) }
         if(module?.sections?.isNotEmpty() == true) item {
-            Text("أقسام الموديول في المنظومة", style = MaterialTheme.typography.titleMedium)
+            Text("أقسام المساحة في لوحة الويب", style = MaterialTheme.typography.titleMedium)
             module.sections.forEach { Text("• $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
@@ -145,20 +106,21 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
         }
     }
 }
-@Composable fun SurveysScreen(state: PortalState, initialTab: Int, onForm: (PublishedForm) -> Unit, onDraft: (DraftSummary) -> Unit, deleteDraft: (String) -> Unit, retry: () -> Unit, moreReceipts: () -> Unit, refreshReceipts: () -> Unit = {}, retryDrafts: () -> Unit = {}, onAttachment: (String, Long) -> Unit = { _, _ -> }) {
+@Composable fun SurveysScreen(state: PortalState, initialTab: Int, onForm: (PublishedForm) -> Unit, onDraft: (DraftSummary) -> Unit, deleteDraft: (String) -> Unit, retry: () -> Unit, moreReceipts: () -> Unit, refreshReceipts: () -> Unit = {}, retryDrafts: () -> Unit = {}, downloadOffline: () -> Unit = retry, onAttachment: (String, Long) -> Unit = { _, _ -> }) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab) }
     var toDelete by remember { mutableStateOf<DraftSummary?>(null) }
     LaunchedEffect(tab) { if (tab == 2) refreshReceipts() }
     Column {
-        TabRow(tab) { listOf("النماذج", "المسودات", "المرسلة").forEachIndexed { index, title -> Tab(tab == index, { tab = index }, text = { Text(title) }) } }
+        TabRow(tab) { (if (state.localOnly) listOf("النماذج", "المسودات") else listOf("النماذج", "المسودات", "المرسلة")).forEachIndexed { index, title -> Tab(tab == index, { tab = index }, text = { Text(title) }) } }
         LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (if (tab == 2) state.receiptsLoading else tab == 0 && state.loading) item { LoadingState() }
             if (tab == 2) state.receiptsError?.let { item { ErrorState(it, refreshReceipts) } }
-            else if (tab == 0) state.error?.let { item { ErrorState(it, retry) } }
+            else if (tab == 0 && state.forms.isEmpty()) state.error?.let { item { ErrorState(it, retry) } }
             when(tab) {
                 0 -> {
                     item { Text("ابدأ استبيانًا", style = MaterialTheme.typography.headlineSmall); Text("النماذج المنشورة والمسموحة لحسابك فقط.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    items(state.forms, key = { it.key }) { form -> PortalCard(form.title, moduleTitle(form.module), { onForm(form) }, tag = "form-${form.key}") }
+                    item { OfflinePreparationCard(state, downloadOffline) }
+                    items(state.forms, key = { it.key }) { form -> PortalCard(form.title, moduleTitle(form.module) + when { form.key in state.offlineReadyKeys -> " · جاهز دون نت"; form.requiresRecord -> " · افتح السجل مع اتصال ثم احفظ المسودة"; else -> " · يحتاج تنزيلًا مع وجود نت" }, { onForm(form) }, tag = "form-${form.key}") }
                     if(!state.loading && state.forms.isEmpty()) item { EmptyState("لا توجد نماذج متاحة", "تحتاج النماذج إلى صلاحية الحفظ وتحديث API.", Icons.Default.Lock) }
                     if(state.forms.any { !it.canSubmit }) item { Text("لإرسال الاستبيانات، سجّل الخروج ثم ادخل مجددًا بعد نشر تحديث الخادم.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
@@ -195,7 +157,7 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
 }
 @Composable fun WorkspaceTasksScreen(state: PortalState, onDrafts: () -> Unit, onSent: () -> Unit, onSurveys: () -> Unit, retryDrafts: () -> Unit, onDraft: (DraftSummary) -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text("مهامي", style = MaterialTheme.typography.headlineSmall); Text("استكمل المسودات وتابع تأكيد استلام ما أرسلته.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { Text("أعمالي", style = MaterialTheme.typography.headlineSmall); Text("استكمل المسودات وتابع تأكيد استلام ما أرسلته.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { PortalCard("سجل الإرساليات", "عرض إيصالات الاستلام والمرفقات المرسلة", onSent, tag = "tasks-sent", icon = Icons.Default.CheckCircle) }
         state.draftsError?.let { message -> item { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) {
             Text("تعذّر فتح بعض المسودات", style = MaterialTheme.typography.titleMedium)
@@ -214,17 +176,22 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
     }
 }
 
-@Composable fun AccountScreen(name: String, email: String, moduleCount: Int, logout: () -> Unit) {
+@Composable fun AccountScreen(name: String, email: String, moduleCount: Int, onOffline: () -> Unit = {}, offlineContent: @Composable () -> Unit = {}, logout: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        item { BrandMark(64); Text(name, style = MaterialTheme.typography.headlineSmall); Text(email, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        item { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("صلاحيات الحساب", style = MaterialTheme.typography.titleMedium); Text("$moduleCount موديولات متاحة"); Text("تُراجع الصلاحيات من السيرفر عند كل عملية.") } } }
+        item { Text("المزيد", style = MaterialTheme.typography.headlineSmall) }
+        item { BrandMark(88); Text(name, style = MaterialTheme.typography.headlineSmall); Text(email, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("صلاحيات الحساب", style = MaterialTheme.typography.titleMedium); Text("$moduleCount مساحات عمل متاحة"); Text("تُراجع الصلاحيات من السيرفر عند كل عملية.") } } }
         item { Text("المسودات المحلية مشفرة وتبقى مرتبطة بهذا الحساب على هذا الجهاز.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { PortalCard("تجهيز العمل دون إنترنت", "تنزيل النماذج وإعداد الفتح بقفل الجهاز", onOffline, tag = "more-offline", icon = Icons.Default.Settings) }
+        item { Text("تحتاج مساعدة؟ تواصل مع مسؤول المنظومة بشأن حسابك وصلاحياتك.", style = MaterialTheme.typography.bodyMedium) }
+        item { Text("المظهر الفاتح والداكن يتبع إعدادات جهازك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { offlineContent() }
         item { OutlinedButton(onClick = logout, modifier = Modifier.fillMaxWidth()) { Text("تسجيل الخروج") } }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun FormScreen(state: FormState, viewModel: FormViewModel, close: () -> Unit, onLocation: () -> Unit = {}, onAttachment: (String, String) -> Unit = { _, _ -> }) {
+@Composable fun FormScreen(state: FormState, viewModel: FormViewModel, close: () -> Unit, onLocation: () -> Unit = {}, onOnlineLogin: () -> Unit = {}, onAttachment: (String, String) -> Unit = { _, _ -> }) {
     var confirmSend by remember { mutableStateOf(false) }
     var confirmLeave by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::addAttachment) }
@@ -251,6 +218,7 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp)) {
             Text(schema.title, style = MaterialTheme.typography.titleLarge)
+            if (state.localOnly) Text("فتح محلي · التعبئة والحفظ دون نت", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             Text(when { draft.receipt != null -> "تم الاستلام · إيصال #${draft.receipt.id}"; draft.pending != null -> "بانتظار تأكيد السيرفر · الإجابات محفوظة"; state.saving -> "جارٍ الحفظ على الجهاز…"; state.saved -> "محفوظ على الجهاز"; else -> "لم يكتمل الحفظ المحلي" },
                 color = if(state.saved || draft.receipt != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("draft-status"))
             if(!reviewing) { LinearProgressIndicator(progress = { (state.section + 1f) / (schema.sections.size + 1f) }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp)); Text("الخطوة ${state.section + 1} من ${schema.sections.size + 1}", style = MaterialTheme.typography.labelMedium) }
@@ -304,7 +272,8 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
                     OutlinedButton(onClick = onLocation, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.Place, null); Text(if(draft.location == null) "إضافة موقعي الحالي (اختياري)" else "تحديث الموقع") }
                 }
                 draft.location?.let { location -> item { Text("الموقع: ${"%.5f".format(location.latitude)}، ${"%.5f".format(location.longitude)} · دقة ${location.accuracy?.toInt() ?: 0} م", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
-                if(editable) item { Text("بعد الإرسال سيصدر إيصال استلام. تُطبَّق إجراءات المراجعة المعتمدة في الموديول.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if(state.localOnly) item { Text("العمل محفوظ محليًا. لإرساله، سجّل الدخول مع وجود نت ثم افتح المسودة بالحساب نفسه."); TextButton(onClick = onOnlineLogin, enabled = !busy) { Text("تسجيل الدخول للإرسال") } }
+                else if(editable) item { Text("بعد الإرسال سيصدر إيصال استلام. تُطبَّق إجراءات المراجعة المعتمدة في الموديول.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
                 val section = schema.sections[state.section]
                 item { Text(section.title, style = MaterialTheme.typography.headlineSmall) }
@@ -317,7 +286,8 @@ private fun moduleIcon(key: String): ImageVector = when(key) { "hr" -> Icons.Def
             if(draft.receipt != null) { Button(onClick = close, modifier = Modifier.fillMaxWidth()) { Text("العودة للاستبيانات") } }
             else if(reviewing) {
                 if(editable) OutlinedButton(onClick = viewModel::previous, enabled = !busy, modifier = Modifier.weight(1f)) { Text("السابق") }
-                Button(onClick = { if(draft.pending != null) viewModel.submit() else confirmSend = true }, enabled = !busy && !draft.needsReview, modifier = Modifier.weight(1f).testTag("submit-form")) {
+                if (state.localOnly) Button(onClick = close, enabled = !busy && state.saved, modifier = Modifier.weight(1f)) { Text("حفظ وإغلاق") }
+                else Button(onClick = { if(draft.pending != null) viewModel.submit() else confirmSend = true }, enabled = !busy && !draft.needsReview, modifier = Modifier.weight(1f).testTag("submit-form")) {
                     Text(if(state.submitting) "جارٍ الإرسال…" else if(draft.pending != null) "تأكيد الاستلام / إعادة المحاولة" else "إرسال الاستبيان")
                 }
             } else {
@@ -437,5 +407,5 @@ private fun localDateTime(value: String): java.time.LocalDateTime? = runCatching
     ?: runCatching { java.time.LocalDateTime.parse(value) }.getOrNull()
     ?: runCatching { LocalDate.parse(value.take(10)).atStartOfDay() }.getOrNull()
 
-private fun displayTime(value: String): String = localDateTime(value)?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) ?: value
+internal fun displayTime(value: String): String = localDateTime(value)?.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) ?: value
 

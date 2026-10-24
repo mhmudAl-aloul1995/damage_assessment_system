@@ -14,7 +14,9 @@ import kotlinx.serialization.json.*
 
 data class PortalState(val loading: Boolean = true, val modules: List<PortalModule> = emptyList(), val forms: List<PublishedForm> = emptyList(),
     val drafts: List<DraftSummary> = emptyList(), val receipts: List<SubmissionReceipt> = emptyList(), val receiptsPage: Int = 0, val receiptsLast: Int = 1, val error: String? = null,
-    val receiptsLoading: Boolean = false, val receiptsError: String? = null, val draftsError: String? = null)
+    val receiptsLoading: Boolean = false, val receiptsError: String? = null, val draftsError: String? = null,
+    val offlineReadyKeys: Set<String> = emptySet(), val usingSavedCatalog: Boolean = false, val offlineUpdatedAt: String = "",
+    val preparingOffline: Boolean = false, val offlineNotice: String? = null, val localOnly: Boolean = false)
 @HiltViewModel class PortalViewModel @Inject constructor(private val repository: PortalRepository, private val vault: DraftSummaryStore, private val session: SessionState): ViewModel() {
     private val mutable = MutableStateFlow(PortalState())
     val state = mutable.asStateFlow()
@@ -22,20 +24,49 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
     private var receiptsJob: Job? = null
     private var draftsJob: Job? = null
     private var owner: Long? = null
-    init { viewModelScope.launch { session.session.map { it?.user?.id }.distinctUntilChanged().collect { id -> job?.cancel(); receiptsJob?.cancel(); draftsJob?.cancel(); owner = id; mutable.value = PortalState(); if (id != null) refresh() } } }
-    fun refresh() {
+    init { viewModelScope.launch { session.access.collect { access -> val id = access?.user?.id; job?.cancel(); receiptsJob?.cancel(); draftsJob?.cancel(); owner = id; mutable.value = PortalState(localOnly = access?.localOnly == true); if (id != null) refresh() } } }
+    fun refresh() = refreshCatalog(false)
+    fun downloadOffline() = refreshCatalog(true)
+    private fun refreshCatalog(forceDownload: Boolean) {
         val id = owner ?: return
         job?.cancel()
         job = viewModelScope.launch {
-            mutable.update { it.copy(loading = true, error = null) }
+            mutable.update { it.copy(loading = true, error = null, offlineNotice = null) }
             try {
-                val modules = repository.modules()
-                mutable.update { it.copy(modules = modules) }
-                val forms = repository.forms()
-                mutable.update { it.copy(forms = forms) }
-                mutable.update { it.copy(loading = false) }
+                try {
+                    val local = repository.cachedCatalog()
+                    if (local != null && owner == id) mutable.update { it.copy(loading = false, modules = local.modules, forms = if (it.localOnly) local.forms.filter { form -> form.key in local.readyKeys } else local.forms, offlineReadyKeys = local.readyKeys, offlineUpdatedAt = local.updatedAt, usingSavedCatalog = true) }
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { if (owner == id) mutable.update { it.copy(offlineNotice = "تعذّرت قراءة النماذج المنزّلة. أعد تنزيلها مع وجود اتصال؛ مسوداتك محفوظة بشكل مستقل.") } }
+                if (session.access.value?.localOnly == true) {
+                    if (owner == id) mutable.update { it.copy(loading = false, usingSavedCatalog = true, offlineNotice = "فتح محلي بقفل الجهاز. يمكنك التعبئة والحفظ؛ الإرسال وتحديث النماذج يحتاجان تسجيل الدخول مع وجود نت.") }
+                    return@launch
+                }
+                var catalog = repository.refreshCatalog()
+                if (owner != id) return@launch
+                mutable.update { it.copy(loading = false, modules = catalog.modules, forms = catalog.forms, offlineReadyKeys = catalog.readyKeys, offlineUpdatedAt = catalog.updatedAt, usingSavedCatalog = false, preparingOffline = catalog.storageWarning == null, offlineNotice = catalog.storageWarning) }
+                if (catalog.storageWarning != null) return@launch
+                var failed = 0
+                for (form in catalog.forms.filter { it.canSubmit && !it.requiresRecord }) {
+                    if (!forceDownload && catalog.schemas[form.key]?.version == form.version) continue
+                    try {
+                        catalog = repository.downloadForm(form.key)
+                        if (owner != id) return@launch
+                        mutable.update { it.copy(offlineReadyKeys = catalog.readyKeys, offlineUpdatedAt = catalog.updatedAt) }
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (error: Exception) {
+                        if (error is FormFailure && error.code in setOf(401, 403, 404)) throw error
+                        failed++
+                    }
+                }
+                if (owner == id) mutable.update { it.copy(preparingOffline = false, offlineNotice = if (failed > 0) "تعذّر تحديث $failed نماذج. النماذج المعلّمة «جاهز دون نت» تبقى قابلة للتعبئة؛ أعد التنزيل عند توفر اتصال." else if (catalog.readyKeys.isNotEmpty()) "النماذج جاهزة للميدان. افتح استبيانات جديدة واحفظ الإجابات والصور دون نت، ثم أرسلها عند رجوع الاتصال." else null) }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) { mutable.update { it.copy(loading = false, error = error.message ?: "تعذّر تحديث البوابة.") } }
+            catch (error: Exception) {
+                if (owner == id) mutable.update {
+                    if (error is FormFailure && error.code in setOf(401, 403, 404)) it.copy(loading = false, preparingOffline = false, modules = emptyList(), forms = emptyList(), offlineReadyKeys = emptySet(), usingSavedCatalog = false, error = error.message)
+                    else it.copy(loading = false, preparingOffline = false, error = error.message ?: "تعذّر تحديث البوابة.", usingSavedCatalog = it.forms.isNotEmpty())
+                }
+            }
         }
         localDrafts()
     }
@@ -57,6 +88,7 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
     }
     fun refreshReceipts() = loadReceipts(reset = true)
     private fun loadReceipts(reset: Boolean) {
+        if (session.access.value?.localOnly == true) return
         val id = owner ?: return
         receiptsJob?.cancel()
         receiptsJob = viewModelScope.launch {
@@ -79,7 +111,8 @@ data class PortalState(val loading: Boolean = true, val modules: List<PortalModu
         }
     }
 }
-data class PortalRecordsState(val loading: Boolean = false, val rows: List<PortalRecord> = emptyList(), val total: Long = 0, val page: Int = 0, val last: Int = 1, val error: String? = null, val searched: Boolean = false)
+data class PortalRecordsState(val loading: Boolean = false, val rows: List<PortalRecord> = emptyList(), val total: Long = 0, val page: Int = 0, val last: Int = 1, val error: String? = null, val searched: Boolean = false,
+    val query: String = "", val appendFailed: Boolean = false)
 @HiltViewModel class PortalRecordsViewModel @Inject constructor(saved: SavedStateHandle, private val repository: PortalRepository): ViewModel() {
     val module = saved.get<String>("module").orEmpty()
     val form = saved.get<String>("form")?.takeUnless { it == "-" }
@@ -90,18 +123,18 @@ data class PortalRecordsState(val loading: Boolean = false, val rows: List<Porta
     init { search("") }
     fun search(value: String) { query = value.trim(); load(false) }
     fun more() { if (!mutable.value.loading && mutable.value.page < mutable.value.last) load(true) }
-    fun retry() = load(false)
+    fun retry() = load(mutable.value.appendFailed)
     private fun load(append: Boolean) {
         if(query.length > 150) { mutable.update { it.copy(error = "الحد الأقصى للبحث 150 حرفًا.") }; return }
         job?.cancel()
         job = viewModelScope.launch {
-            mutable.update { it.copy(loading = true, error = null) }
+            mutable.update { if (append) it.copy(loading = true, error = null, appendFailed = false) else PortalRecordsState(loading = true, query = query) }
             try {
                 val page = if(append) mutable.value.page + 1 else 1
                 val result = if(form != null) repository.formRecords(form, query, page) else repository.records(module, query, page)
-                mutable.value = PortalRecordsState(false, if(append) (mutable.value.rows + result.data).distinctBy { it.id } else result.data, result.total, result.currentPage, result.lastPage, searched = true)
+                mutable.value = PortalRecordsState(false, if(append) (mutable.value.rows + result.data).distinctBy { it.id } else result.data, result.total, result.currentPage, result.lastPage, searched = true, query = query)
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch(error: Exception) { mutable.update { it.copy(loading = false, error = error.message) } }
+            catch(error: Exception) { mutable.update { it.copy(loading = false, error = error.message ?: "تعذّر تحميل السجلات. أعد المحاولة.", appendFailed = append) } }
         }
     }
 }
@@ -122,7 +155,7 @@ data class PortalDetailState(val loading: Boolean = true, val row: PortalRecord?
 
 data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, val section: Int = 0, val errors: Map<String, String> = emptyMap(),
     val saving: Boolean = false, val submitting: Boolean = false, val error: String? = null, val notice: String? = null, val saved: Boolean = false,
-    val errorTarget: String? = null, val errorNavigation: Int = 0) {
+    val errorTarget: String? = null, val errorNavigation: Int = 0, val localOnly: Boolean = false) {
     fun navigateToError(path: String): FormState {
         val current = draft ?: return this
         if(current.pending != null || current.receipt != null || submitting) return this
@@ -134,14 +167,14 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
     fun withRefreshedSchema(schema: FormSchema): FormState {
         val current = requireNotNull(draft)
         require(current.pending == null && current.receipt == null)
-        val keys = schema.sections.flatMap { it.fields }.map { it.key }.toSet()
-        val updated = current.copy(schema = schema, answers = JsonObject(current.answers.filterKeys { it in keys }), updatedAt = java.time.Instant.now().toString(), needsReview = true)
+        val updated = current.copy(schema = schema, updatedAt = java.time.Instant.now().toString(), needsReview = true)
         return copy(loading = false, draft = updated, section = schema.sections.size, errors = emptyMap(), error = null,
-            notice = "حُدّث النموذج وحُفظت إجاباتك. راجعها ثم فعّل تأكيد المراجعة أعلى الصفحة للإرسال.")
+            notice = "حُدّث النموذج وحُفظت إجاباتك. راجعها ثم فعّل تأكيد المراجعة أعلى الصفحة للإرسال. إجابات الأسئلة التي لم تعد ضمن الإصدار تبقى على الجهاز ولا تُرسل.")
     }
 }
 @HiltViewModel class FormViewModel @Inject constructor(saved: SavedStateHandle, private val repository: PortalRepository, private val vault: DraftVault, session: SessionState): ViewModel() {
-    private val owner = session.session.value?.user?.id ?: 0
+    private val owner = session.access.value?.user?.id ?: 0
+    private val localOnly = session.access.value?.localOnly == true
     private val form = saved.get<String>("form").orEmpty()
     private val record = saved.get<Long>("record")?.takeIf { it > 0 }
     private val uuid = saved.get<String>("draft")?.takeUnless { it == "-" }
@@ -159,7 +192,7 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
             val draft = if(uuid != null) withContext(Dispatchers.IO) { vault.load(owner, uuid) } else FormDraft(owner = owner, origin = vault.origin, schema = repository.schema(form, record))
             require(draft.schema.key in PUBLISHED_FORM_KEYS) { "هذا الاستبيان غير متاح في تطبيق الموبايل." }
             require(draft.schema.sections.isNotEmpty() && draft.schema.sections.flatMap { it.fields }.size <= 500)
-            mutable.value = FormState(false, draft, saved = uuid != null)
+            mutable.value = FormState(false, draft, saved = uuid != null, localOnly = localOnly)
             persist(draft)
         } catch(cancelled: CancellationException) { throw cancelled }
         catch(error: Exception) { mutable.value = FormState(false, error = error.message ?: "تعذّر فتح النموذج.") }
@@ -248,6 +281,7 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
     }
     fun submit() {
         val original = mutable.value.draft ?: return
+        if (localOnly) { mutable.update { it.copy(error = "الفتح المحلي يحفظ على الجهاز فقط. سجّل الدخول مع وجود نت لإرسال المسودة.") }; return }
         if(mutable.value.submitting || mutable.value.saving || original.receipt != null) return
         if(original.needsReview) { mutable.update { it.copy(error = "راجع قيم السيرفر الحالية وأكّد المراجعة قبل الإرسال.", section = original.schema.sections.size) }; return }
         val errors = FormRules.validate(original.schema, original.answers)
@@ -280,8 +314,8 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
                 }
             } catch(cancelled: CancellationException) { throw cancelled }
             catch(error: Exception) {
-                if(error is FormFailure && error.definitelyRejected && draft.pending != null && original.pending == null) {
-                    draft = draft.copy(pending = null)
+                if(error is FormFailure && error.canCorrectAnswers && draft.pending != null) {
+                    draft = draft.afterRejection(error)
                     try { withContext(Dispatchers.IO) { vault.save(draft) } } catch (_: Exception) { /* Keep in-memory state; next resume retries persisted request. */ }
                 }
                 val fields = (error as? FormFailure)?.errors.orEmpty().mapKeys { it.key.removePrefix("answers.") }.mapValues { it.value.firstOrNull().orEmpty() }
@@ -294,7 +328,7 @@ data class FormState(val loading: Boolean = true, val draft: FormDraft? = null, 
         viewModelScope.launch {
             mutable.update { it.copy(loading = true, error = null) }
             try {
-                val schema = repository.schema(draft.schema.key, draft.schema.recordId)
+                val schema = repository.schema(draft.schema.key, draft.schema.recordId, refresh = true)
                 val refreshed = mutable.value.withRefreshedSchema(schema)
                 mutable.value = refreshed
                 persist(requireNotNull(refreshed.draft))

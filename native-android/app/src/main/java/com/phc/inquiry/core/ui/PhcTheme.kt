@@ -12,7 +12,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.phc.inquiry.R
 
-private val ArabicFont = FontFamily(Font(R.font.noto_sans_arabic))
+val ArabicFont = FontFamily(
+    Font(R.font.droid_arabic_kufi_regular, FontWeight.Normal),
+)
 private fun arabicStyle(size: Int, height: Int, weight: FontWeight = FontWeight.Normal) =
     TextStyle(fontFamily = ArabicFont, fontWeight = weight, fontSize = size.sp, lineHeight = height.sp)
 private val ArabicTypography = Typography(
@@ -25,24 +27,26 @@ private val ArabicTypography = Typography(
 
 @Composable
 fun PhcTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val palette = if (darkTheme) MetronicDarkColors else MetronicLightColors
+    val palette = if (darkTheme) PhcDarkColors else PhcLightColors
     MaterialTheme(colorScheme = palette, typography = ArabicTypography,
         shapes = Shapes(small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(12.dp), large = RoundedCornerShape(16.dp)), content = content)
 }
 
-val MetronicLightColors = lightColorScheme(
-    primary = Color(0xFF2563EB), onPrimary = Color.White, primaryContainer = Color(0xFFEFF6FF), onPrimaryContainer = Color(0xFF1D4ED8),
-    secondary = Color(0xFF5E35B1), onSecondary = Color.White, secondaryContainer = Color(0xFFF3EFFF), onSecondaryContainer = Color(0xFF5E35B1),
-    background = Color(0xFFF5F7FA), onBackground = Color(0xFF071437), surface = Color.White, onSurface = Color(0xFF071437),
-    surfaceVariant = Color(0xFFF1F3F8), onSurfaceVariant = Color(0xFF56627C), outline = Color(0xFF78829D), outlineVariant = Color(0xFFE4E8EF),
-    surfaceContainer = Color.White, surfaceContainerLow = Color.White, surfaceContainerLowest = Color.White, surfaceContainerHigh = Color(0xFFF1F3F8), surfaceContainerHighest = Color(0xFFE9EDF5), surfaceTint = Color.Transparent,
+val PhcLightColors = lightColorScheme(
+    primary = Color(0xFF176447), onPrimary = Color.White, primaryContainer = Color(0xFFE9F2EC), onPrimaryContainer = Color(0xFF125337),
+    secondary = Color(0xFF705B35), onSecondary = Color.White, secondaryContainer = Color(0xFFE9E3D8), onSecondaryContainer = Color(0xFF524326),
+    background = Color(0xFFF7F8F5), onBackground = Color(0xFF202824), surface = Color.White, onSurface = Color(0xFF202824),
+    surfaceVariant = Color(0xFFEEF2EC), onSurfaceVariant = Color(0xFF5E6B62), outline = Color(0xFF738078), outlineVariant = Color(0xFFE2E7DF),
+    error = Color(0xFFB4232D), onError = Color.White, errorContainer = Color(0xFFFFDAD9), onErrorContainer = Color(0xFF68000D),
+    surfaceContainer = Color.White, surfaceContainerLow = Color.White, surfaceContainerLowest = Color.White, surfaceContainerHigh = Color(0xFFEEF2EC), surfaceContainerHighest = Color(0xFFE9E3D8), surfaceTint = Color.Transparent,
 )
-val MetronicDarkColors = darkColorScheme(
-    primary = Color(0xFF93C5FD), onPrimary = Color(0xFF102B50), primaryContainer = Color(0xFF1D3555), onPrimaryContainer = Color(0xFFBFDBFE),
-    secondary = Color(0xFFC4B5FD), onSecondary = Color(0xFF30204F), secondaryContainer = Color(0xFF33264D), onSecondaryContainer = Color(0xFFE5DEFF),
-    background = Color(0xFF111827), onBackground = Color(0xFFF1F5F9), surface = Color(0xFF1C2536), onSurface = Color(0xFFF1F5F9),
-    surfaceVariant = Color(0xFF273247), onSurfaceVariant = Color(0xFFB4BFD2), outline = Color(0xFF8492AB), outlineVariant = Color(0xFF354157),
-    surfaceContainer = Color(0xFF1C2536), surfaceContainerLow = Color(0xFF1C2536), surfaceContainerLowest = Color(0xFF111827), surfaceContainerHigh = Color(0xFF273247), surfaceContainerHighest = Color(0xFF2E3A50), surfaceTint = Color.Transparent,
+val PhcDarkColors = darkColorScheme(
+    primary = Color(0xFFA4D7B8), onPrimary = Color(0xFF073823), primaryContainer = Color(0xFF273F31), onPrimaryContainer = Color(0xFFC6EFD3),
+    secondary = Color(0xFFE9D3A6), onSecondary = Color(0xFF3D2E14), secondaryContainer = Color(0xFF403A2B), onSecondaryContainer = Color(0xFFF2E3C8),
+    background = Color(0xFF151E1A), onBackground = Color(0xFFEDF3ED), surface = Color(0xFF202C25), onSurface = Color(0xFFEDF3ED),
+    surfaceVariant = Color(0xFF2B3930), onSurfaceVariant = Color(0xFFBAC7BC), outline = Color(0xFF8A9A8E), outlineVariant = Color(0xFF3B4A40),
+    error = Color(0xFFFFB3B5), onError = Color(0xFF68000D), errorContainer = Color(0xFF8E1520), onErrorContainer = Color(0xFFFFDAD9),
+    surfaceContainer = Color(0xFF202C25), surfaceContainerLow = Color(0xFF202C25), surfaceContainerLowest = Color(0xFF151E1A), surfaceContainerHigh = Color(0xFF2B3930), surfaceContainerHighest = Color(0xFF354339), surfaceTint = Color.Transparent,
 )
 
 @Composable

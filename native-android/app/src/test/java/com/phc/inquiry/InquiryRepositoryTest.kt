@@ -54,7 +54,7 @@ class InquiryRepositoryTest {
         override suspend fun attachment(sector: String, record: Long, attachment: Long) = attachmentBody
         override suspend fun citizens(search: String, page: Int) = search("housing-units", search, page)
     }
-    private fun repository(api: FakeApi, store: MemoryStore, state: SessionState) = LaravelInquiryRepository(api, store, state, TransportPolicy("https://example.test/".toHttpUrl(), false))
+    private fun repository(api: FakeApi, store: MemoryStore, state: SessionState, identities: MemoryOfflineIdentityStore = MemoryOfflineIdentityStore()) = LaravelInquiryRepository(api, store, state, TransportPolicy("https://example.test/".toHttpUrl(), false), identities)
 
     @Test fun statisticsDistinguishesConnectionFailureFromTimeoutAndPreservesSession() = runTest {
         val api = FakeApi(); val store = MemoryStore(); val state = SessionState()
@@ -109,7 +109,7 @@ class InquiryRepositoryTest {
 
     @Test fun enabledHttpAcceptsAccountWithoutAnEmailAllowlist() = runTest {
         val api = FakeApi()
-        val repository = LaravelInquiryRepository(api, MemoryStore(), SessionState(), TransportPolicy("http://213.6.135.115/damage_assessment_system/".toHttpUrl(), true))
+        val repository = LaravelInquiryRepository(api, MemoryStore(), SessionState(), TransportPolicy("http://213.6.135.115/damage_assessment_system/".toHttpUrl(), true), MemoryOfflineIdentityStore())
         repository.login("account@example.test", "fixture-password")
         assertEquals(1, api.loginCalls)
     }
@@ -136,6 +136,31 @@ class InquiryRepositoryTest {
             api.meFailure = HttpException(Response.error<Any>(status, "{}".toResponseBody()))
             repository(api, store, state).restore()
             assertNull(store.read()); assertNull(state.session.value)
+        }
+    }
+    @Test fun inactiveAccountRevokesOfflineEnrollmentButExpiredTokenKeepsItForDeviceUnlock() = runTest {
+        for (status in listOf(401, 403)) {
+            val api = FakeApi(); val store = MemoryStore(); val state = SessionState()
+            val identities = MemoryOfflineIdentityStore().apply { identity = OfflineIdentity(api.user, "fixture", "now") }
+            store.save(Session("stored", "2099-01-01T00:00:00Z", api.user))
+            api.meFailure = HttpException(Response.error<Any>(status, "{}".toResponseBody()))
+            repository(api, store, state, identities).restore()
+            assertEquals(status == 403, identities.forgotten)
+        }
+    }
+    @Test fun offlineIdentityNeverAuthenticatesServerReads() = runTest {
+        val api = FakeApi(); val state = SessionState().apply { enterOffline(api.user) }
+        try { repository(api, MemoryStore(), state).sectors(); fail("Local access reached server") }
+        catch (error: InquiryFailure) { assertTrue(error.message!!.contains("محلي")) }
+        assertNull(state.token()); assertTrue(state.access.value!!.localOnly)
+    }
+    @Test fun disabledLoginRevokesLocalAccessButAnIncorrectPasswordDoesNot() = runTest {
+        for (status in listOf(403, 422)) {
+            val api = FakeApi().apply { loginFailure = HttpException(Response.error<Any>(status, "{}".toResponseBody())) }
+            val identities = MemoryOfflineIdentityStore().apply { identity = OfflineIdentity(api.user, "fixture", "now") }
+            try { repository(api, MemoryStore(), SessionState(), identities).login("fixture@example.test", "fixture"); fail("Expected rejection") }
+            catch (_: InquiryFailure) {}
+            assertEquals(status == 403, identities.forgotten)
         }
     }
 

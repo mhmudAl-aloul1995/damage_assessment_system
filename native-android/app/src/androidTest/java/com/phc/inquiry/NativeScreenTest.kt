@@ -24,6 +24,15 @@ import java.io.File
 
 class NativeScreenTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun offlineUnlockDoesNotRequireEmailPasswordOrAnAllowedNetworkTransport() {
+        var opened = false
+        compose.setContent { DesignPreviewFrame {
+            LoginScreen(AuthenticationState(restoring = false, offlineAvailable = true), true, false, onOfflineOpen = { opened = true }) { _, _ -> error("Must not log in") }
+        } }
+        compose.onNodeWithTag("login").assertIsNotEnabled()
+        compose.onNodeWithTag("offline-unlock").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertTrue(opened) }
+    }
 
     private fun snapshot(name: String) {
         compose.waitForIdle()
@@ -66,7 +75,8 @@ class NativeScreenTest {
         var selected: String? = null
         compose.setContent { DesignPreviewFrame { DashboardScreen("مستخدم تجريبي", DashboardState(false, listOf(Sector("buildings", ""), Sector("housing-units", ""))), { selected = it }, {}) } }
         snapshot("dashboard")
-        compose.onNodeWithTag("sector-housing-units").performScrollTo().performClick()
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag("sector-housing-units"))
+        compose.onNodeWithTag("sector-housing-units").performClick()
         compose.runOnIdle { assertEquals("housing-units", selected) }
     }
 
@@ -80,7 +90,7 @@ class NativeScreenTest {
         compose.runOnIdle { assertNull(query) }
         compose.onNodeWithTag("submit-search").performClick()
         compose.runOnIdle { assertEquals("الأمل", query) }
-        compose.waitUntil(10000) { compose.onAllNodesWithTag("record-17").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag("record-17"))
         snapshot("search")
         compose.onNodeWithTag("record-17").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(17L, selected) }

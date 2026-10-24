@@ -15,7 +15,7 @@ fun WorkspaceStatisticsCard(state: WorkspaceStatisticsState, open: () -> Unit, r
     OutlinedCard(Modifier.fillMaxWidth().testTag("home-statistics"), shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("المنظومة بالأرقام", style = MaterialTheme.typography.titleMedium)
+            Text("حصر الأضرار بالأرقام", style = MaterialTheme.typography.titleMedium)
             Text("حصر الأضرار · السجلات المسموحة لحسابك", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (state.counts.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

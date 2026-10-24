@@ -15,7 +15,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 @HiltViewModel class PortalFileViewModel @Inject constructor(saved: SavedStateHandle, private val repository: PortalRepository, private val vault: DraftVault, session: SessionState, @ApplicationContext private val context: Context): ViewModel() {
-    private val owner = session.session.value?.user?.id ?: 0
+    private val owner = session.access.value?.user?.id ?: 0
     private val mode = saved.get<String>("mode").orEmpty()
     private val uuid = saved.get<String>("uuid").orEmpty()
     private val file = saved.get<String>("file").orEmpty()

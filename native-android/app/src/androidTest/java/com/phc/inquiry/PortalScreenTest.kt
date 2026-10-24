@@ -17,6 +17,28 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PortalScreenTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun locallyUnlockedCatalogHidesServerDownloadActions() {
+        val form = PublishedForm("heks-phase-three", "heks-shelter", "HEKS الثالثة", "v1", canSubmit = true)
+        compose.setContent { PhcTheme {
+            SurveysScreen(PortalState(loading = false, forms = listOf(form), offlineReadyKeys = setOf(form.key), usingSavedCatalog = true, localOnly = true), 0, {}, {}, {}, {}, {})
+        } }
+        compose.onNodeWithTag("download-offline-forms").assertDoesNotExist()
+        compose.onNodeWithText("المرسلة").assertDoesNotExist()
+        compose.onNodeWithTag("form-${form.key}").assertExists()
+    }
+    @Test fun offlineCatalogOffersNewSurveysInsteadOfBlockingTheScreenWithANetworkError() {
+        var opened = false
+        var downloaded = false
+        val form = PublishedForm("heks-phase-three", "heks-shelter", "HEKS الثالثة", "v1", canSubmit = true)
+        compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
+            SurveysScreen(PortalState(loading = false, forms = listOf(form), error = "NET-CONNECT", offlineReadyKeys = setOf(form.key), usingSavedCatalog = true), 0,
+                { opened = true }, {}, {}, {}, {}, downloadOffline = { downloaded = true })
+        } } }
+        compose.onNodeWithText("تعمل بنسخة النماذج المحفوظة على الجهاز").assertExists()
+        compose.onNodeWithTag("form-${form.key}").performScrollTo().performClick()
+        compose.onNodeWithTag("download-offline-forms").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(true, opened); assertEquals(true, downloaded) }
+    }
     @Test fun homeShowsThePermittedHrCardAndOpensAttendanceModule() {
         var opened: String? = null
         compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
@@ -55,12 +77,12 @@ class PortalScreenTest {
     @Test fun homeShowsOnlyProvidedModulesAndOpensPublishedSurveys() {
         var opened = false
         compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
-            PortalHome("حساب اختبار", PortalState(loading = false, modules = listOf(PortalModule("damage_assessment", "حصر الأضرار"))),
+            PortalHome("حساب اختبار", PortalState(loading = false, modules = listOf(PortalModule("damage_assessment", "حصر الأضرار")), forms = listOf(PublishedForm("fixture", "damage_assessment", "استبيان", "v1"))),
                 {}, { opened = true }, {}, {}, {})
         } } }
-        compose.onNodeWithTag("module-damage_assessment").assertExists()
+        compose.onNodeWithTag("module-damage_assessment").performScrollTo().assertExists()
         compose.onNodeWithTag("module-heks").assertDoesNotExist()
-        compose.onNodeWithTag("home-surveys").performClick()
+        compose.onNodeWithTag("home-surveys").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(true, opened) }
     }
     @Test fun localDraftsDistinguishUnconfirmedSubmissionsAndPreventTheirDeletion() {
@@ -100,6 +122,7 @@ class PortalScreenTest {
             PortalHome("اختبار", PortalState(loading = false, modules = listOf(PortalModule("heks", "HEKS")), forms = listOf(PublishedForm("heks-beneficiary", "heks", "HEKS", "v")), draftsError = DRAFT_STORAGE_MESSAGE),
                 { opened = it }, {}, {}, {}, {})
         } }
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("—"))
         compose.onNodeWithText("—").assertExists()
         compose.onNodeWithText("تعذّر تحميل البيانات").assertDoesNotExist()
         compose.onNodeWithTag("module-heks").performScrollTo().performClick()
@@ -117,7 +140,7 @@ class PortalScreenTest {
     @Test fun homeInquiryShortcutOpensUnifiedInquiryInTheUpdatedDashboard() {
         var opened = false
         compose.setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { PhcTheme {
-            PortalHome("حساب اختبار", PortalState(loading = false), {}, {}, {}, {}, {}, { opened = true })
+            PortalHome("حساب اختبار", PortalState(loading = false), {}, {}, {}, { opened = true }, {})
         } } }
         compose.onNodeWithTag("home-inquiry").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(true, opened) }

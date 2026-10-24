@@ -17,10 +17,29 @@ import java.util.UUID
 @RunWith(AndroidJUnit4::class)
 class DraftVaultTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val policy = TransportPolicy("https://fixture.example/portal-test/".toHttpUrl(), false)
+    private val policy = TransportPolicy("https://fixture.example/portal-test/${UUID.randomUUID()}/".toHttpUrl(), false)
     private fun draft(owner: Long, origin: String = policy.baseUrl.toString()) = FormDraft(owner = owner, origin = origin,
         schema = FormSchema("fixture-form", "heks", "Fixture", "v1", listOf(FormSection("Section", listOf(FormField("name", "Name")))), false),
         answers = JsonObject(mapOf("name" to JsonPrimitive("fixture-sensitive-answer-123"))))
+    @Test fun offlineTemplatesSurviveReopeningAreEncryptedAndNeverBecomeRespondentDrafts() {
+        val owner = 900000006L
+        val vault = DraftVault(context, policy)
+        val template = FormSchema("heks-phase-three", "heks-shelter", "fixture-offline-template", "v1", listOf(FormSection("Section", listOf(FormField("name", "Name")))), false)
+        val catalog = OfflineCatalog(listOf(PortalModule("heks-shelter", "HEKS")), listOf(PublishedForm(template.key, template.module, template.title, template.version, canSubmit = true)), mapOf(template.key to template), "2026-10-23T07:00:00Z")
+        try {
+            vault.saveCatalog(owner, catalog)
+            assertEquals(catalog, DraftVault(context, policy).readCatalog(owner))
+            assertEquals(setOf(template.key), vault.readCatalog(owner)!!.readyKeys)
+            assertNull(vault.readCatalog(owner + 1))
+            assertNull(DraftVault(context, TransportPolicy("https://other.example/".toHttpUrl(), false)).readCatalog(owner))
+            assertTrue(vault.listing(owner).drafts.isEmpty())
+            val bytes = File(context.noBackupFilesDir, "form-vault").walkTopDown().filter { it.name == "offline-catalog.cache" }.map { it.readBytes().toString(Charsets.UTF_8) }.toList()
+            assertTrue(bytes.none { it.contains("fixture-offline-template") })
+            val privateSchema = template.copy(answers = JsonObject(mapOf("name" to JsonPrimitive("private"))))
+            assertThrows(IllegalArgumentException::class.java) { vault.saveCatalog(owner, catalog.copy(schemas = mapOf(template.key to privateSchema))) }
+            assertEquals(catalog, vault.readCatalog(owner))
+        } finally { vault.clearCatalog(owner) }
+    }
     @Test fun encryptedDraftRoundTripContainsNoPlaintextAndIsIsolatedByAccount() {
         val vault = DraftVault(context, policy)
         val draft = draft(900000001)

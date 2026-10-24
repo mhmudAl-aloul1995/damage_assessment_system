@@ -19,7 +19,7 @@ import com.phc.inquiry.core.ui.*
 import com.phc.inquiry.data.Sector
 
 @Composable
-fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> Unit, retry: () -> Unit, onCitizens: () -> Unit = {}, onExplore: (String) -> Unit = {}) {
+fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> Unit, retry: () -> Unit, onCitizens: () -> Unit = {}, onExplore: (String) -> Unit = {}, summaryContent: @Composable () -> Unit = {}) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(Modifier.widthIn(max = 880.dp).fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -52,6 +52,7 @@ fun DashboardScreen(name: String, state: DashboardState, onSector: (String) -> U
                 }
             }
             if (!state.loading && state.error == null && state.sectors.isEmpty()) item { EmptyState(stringResource(R.string.no_services), stringResource(R.string.no_services_hint), Icons.Default.Lock) }
+            if (state.sectors.isNotEmpty()) item { summaryContent() }
             items(state.sectors, key = { it.key }) { sector -> SectorCard(sector) { onSector(sector.key) } }
             if (state.sectors.any { it.citizenInquiry }) item {
                 Card(onClick = onCitizens, modifier = Modifier.fillMaxWidth()) {

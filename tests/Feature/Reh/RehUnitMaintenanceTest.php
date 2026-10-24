@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\Reh\Models\RehAuditLog;
+use App\Modules\Reh\Models\RehBuilding;
 use App\Modules\Reh\Models\RehCostEstimate;
 use App\Modules\Reh\Models\RehPriceBook;
 use App\Modules\Reh\Models\RehUnit;
@@ -27,6 +28,78 @@ function rehMaintenanceUnit(?string $reference = '10613'): RehUnit
 {
     return RehUnit::factory()->create(['source' => ['OldUnit_objectID' => $reference]]);
 }
+
+it('filters each building and unit identifier independently using exact canonical identifiers', function (string $key, string $value, array $expected): void {
+    $building = RehBuilding::factory()->create(['object_id' => 80001, 'source' => ['Old_objectID' => 999]]);
+    $building->update(['reference_id' => '1337']);
+    $otherBuilding = RehBuilding::factory()->create(['object_id' => 1337, 'source' => ['Old_objectID' => 9000]]);
+    $nearBuilding = RehBuilding::factory()->create(['object_id' => 800010, 'source' => ['Old_objectID' => 13370]]);
+    $first = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 48400, 'source' => ['OldUnit_objectID' => 999]]);
+    $first->update(['reference_id' => '10613']);
+    $second = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 48402, 'source' => ['OldUnit_objectID' => 10614]]);
+    $other = RehUnit::factory()->create(['building_id' => $otherBuilding->id, 'object_id' => 48401, 'source' => ['OldUnit_objectID' => 10613]]);
+    $near = RehUnit::factory()->create(['building_id' => $nearBuilding->id, 'object_id' => 484003, 'source' => ['OldUnit_objectID' => 106130]]);
+    $records = compact('first', 'second', 'other', 'near');
+    $ids = collect($expected)->map(fn (string $name): int => $records[$name]->id)->sort()->values()->all();
+    $this->get(route('reh.maintenance.index', ['kind' => 'all', $key => $value]))->assertOk()
+        ->assertViewHas('units', fn ($units): bool => $units->pluck('id')->sort()->values()->all() === $ids);
+    Http::assertNothingSent();
+})->with([
+    ['building_reference', '1337', ['first', 'second']],
+    ['building_object_id', '80001', ['first', 'second']],
+    ['unit_reference', '10613', ['first', 'other']],
+    ['unit_object_id', '48400', ['first']],
+]);
+
+it('combines all identifier filters with existing filters and keeps their values in navigation and bulk selection', function (): void {
+    $building = RehBuilding::factory()->create(['object_id' => 80001, 'source' => ['Old_objectID' => 1337]]);
+    $unit = RehUnit::factory()->create(['building_id' => $building->id, 'object_id' => 48400, 'creator' => 'alice', 'code' => 'CODE-A', 'source' => ['OldUnit_objectID' => 10613]]);
+    $otherBuilding = RehBuilding::factory()->create(['object_id' => 80002, 'source' => ['Old_objectID' => 1338]]);
+    $outside = RehUnit::factory()->create(['building_id' => $otherBuilding->id, 'source' => ['OldUnit_objectID' => 10613]]);
+    $identifiers = ['building_reference' => '1337', 'building_object_id' => '80001', 'unit_reference' => '10613', 'unit_object_id' => '48400'];
+    $filters = ['kind' => 'duplicate', 'creator' => 'alice', 'code_status' => 'available', 'pricing_status' => 'incomplete', ...$identifiers];
+    $response = $this->get(route('reh.maintenance.index', $filters))->assertOk()->assertViewHas('units', fn ($units): bool => $units->pluck('id')->all() === [$unit->id]);
+    $document = new DOMDocument;
+    $document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent(), LIBXML_NOERROR | LIBXML_NOWARNING);
+    $xpath = new DOMXPath($document);
+    $bulkFilters = json_decode($xpath->query('//*[@id="reh-workspace"]')->item(0)->getAttribute('data-bulk-filters'), true);
+    foreach ($identifiers as $key => $value) {
+        expect($xpath->query('//fieldset[@class="reh-maintenance-identifiers"]//input[@name="'.$key.'"]')->item(0)->getAttribute('value'))->toBe($value)
+            ->and($bulkFilters[$key])->toBe($value);
+        foreach ($xpath->query('//nav[@class="reh-maintenance-stats"]/a') as $link) {
+            expect($link->getAttribute('href'))->toContain($key.'='.$value);
+        }
+        expect($xpath->query('//a[text()="مسح الفلاتر"]')->item(0)->getAttribute('href'))->not->toContain($key.'=');
+    }
+    foreach (['building_object_id' => 80002, 'unit_reference' => 106130, 'creator' => 'bob', 'code_status' => 'missing', 'pricing_status' => 'complete'] as $key => $value) {
+        $this->get(route('reh.maintenance.index', [...$filters, $key => $value]))->assertOk()->assertViewHas('units', fn ($units): bool => $units->total() === 0);
+    }
+    $preview = $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => $filters])->assertOk()->assertJsonPath('total', 1)->json();
+    $snapshot = Cache::get('reh:bulk-preview:'.$preview['selection_token']);
+    expect(array_column($snapshot['units'], 'id'))->toBe([$unit->id])
+        ->and(array_intersect_key($snapshot['filters'], $identifiers))->toBe($identifiers);
+    $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'selected', 'filters' => $filters, 'units' => [['id' => $outside->id, 'revision' => app(RehUnitMaintenance::class)->revision($outside)]]])->assertUnprocessable();
+    Http::assertNothingSent();
+});
+
+it('preserves identifier filters across pages and accepts zero identifiers without matching missing values', function (): void {
+    $building = RehBuilding::factory()->create(['object_id' => 0, 'source' => ['Old_objectID' => 0]]);
+    $units = RehUnit::factory()->count(26)->sequence(fn (\Illuminate\Database\Eloquent\Factories\Sequence $sequence): array => ['object_id' => $sequence->index])->create(['building_id' => $building->id, 'source' => ['OldUnit_objectID' => 0]]);
+    RehUnit::factory()->create(['source' => ['OldUnit_objectID' => null]]);
+    $filters = ['kind' => 'all', 'building_reference' => '0', 'building_object_id' => '0', 'unit_reference' => '0', 'per_page' => 25];
+    $this->get(route('reh.maintenance.index', $filters))->assertOk()->assertViewHas('units', fn ($rows): bool => $rows->total() === 26 && $rows->count() === 25
+        && str_contains($rows->nextPageUrl(), 'building_reference=0') && str_contains($rows->nextPageUrl(), 'building_object_id=0') && str_contains($rows->nextPageUrl(), 'unit_reference=0'));
+    $this->get(route('reh.maintenance.index', [...$filters, 'page' => 2]))->assertOk()->assertViewHas('units', fn ($rows): bool => $rows->pluck('id')->all() === [$units->last()->id]);
+    $this->get(route('reh.maintenance.index', [...$filters, 'unit_object_id' => '0']))->assertOk()->assertViewHas('units', fn ($rows): bool => $rows->pluck('id')->all() === [$units->first()->id]);
+    Http::assertNothingSent();
+});
+
+it('validates identifier filters on the maintenance page and bulk preview', function (): void {
+    $invalid = ['building_reference' => str_repeat('a', 101), 'unit_reference' => ['10613'], 'building_object_id' => '1337 OR 1=1', 'unit_object_id' => -1];
+    $this->getJson(route('reh.maintenance.index', $invalid))->assertUnprocessable()->assertJsonValidationErrors(array_keys($invalid));
+    $this->postJson(route('reh.maintenance.bulk.preview'), ['scope' => 'filtered', 'filters' => ['kind' => 'all', ...$invalid]])->assertUnprocessable()->assertJsonValidationErrors(array_map(fn (string $key): string => 'filters.'.$key, array_keys($invalid)));
+    Http::assertNothingSent();
+});
 
 function rehDeletionPayload(RehUnit $unit, string $destination = 'database'): array
 {

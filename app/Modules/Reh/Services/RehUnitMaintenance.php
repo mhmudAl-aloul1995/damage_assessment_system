@@ -58,6 +58,23 @@ class RehUnitMaintenance
             });
         }
 
+        if (filled($filters['unit_reference'] ?? null)) {
+            $query->whereRaw('TRIM(reh_units.reference_id) = ?', [trim($filters['unit_reference'])]);
+        }
+        if (filled($filters['unit_object_id'] ?? null)) {
+            $query->where('reh_units.object_id', $filters['unit_object_id']);
+        }
+        if (filled($filters['building_reference'] ?? null) || filled($filters['building_object_id'] ?? null)) {
+            $query->whereHas('building', function (Builder $building) use ($filters): void {
+                if (filled($filters['building_reference'] ?? null)) {
+                    $building->whereRaw('TRIM(reh_buildings.reference_id) = ?', [trim($filters['building_reference'])]);
+                }
+                if (filled($filters['building_object_id'] ?? null)) {
+                    $building->where('reh_buildings.object_id', $filters['building_object_id']);
+                }
+            });
+        }
+
         if (in_array($filters['pricing_status'] ?? 'all', ['complete', 'incomplete'], true)) {
             $pricing = app(RehPricing::class);
             $book = $pricing->latest()?->load('items');
