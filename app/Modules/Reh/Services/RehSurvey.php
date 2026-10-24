@@ -38,6 +38,14 @@ class RehSurvey
         return self::IDENTIFIER_LABELS[$field] ?? $this->dictionary()['fields'][$field]['label'] ?? $field;
     }
 
+    public function isSensitiveField(string $name): bool
+    {
+        $field = $this->dictionary()['fields'][$name] ?? null;
+
+        return ! $field || ($field['scope'] === 'unit' && ! str_starts_with($name, 'boq_')
+            && ! in_array($field['group']['name'] ?? '', ['group_unit_identification', 'group_unit_characteristics', 'group_unit_safety', 'group_additional_work_items', 'group_photo_documentation'], true));
+    }
+
     /** @return array{filled: int, total: int} */
     public function unitFieldPopulation(array $source): array
     {

@@ -135,7 +135,7 @@ it('saves a correction in the base source and ArcGIS without assignment and keep
         ->and($state->source['boq_1_1_water_tank_repair_qty'])->toBe(3);
     $log = RehAuditLog::query()->sole();
     expect($log->status)->toBe('completed')->and($log->user_id)->toBe($this->auditor->id)
-        ->and($log->object_id)->toBe($unit->object_id)->and($log->values)->toBe(['before' => 2, 'after' => 3, 'previous_override' => 9]);
+        ->and($log->object_id)->toBe($unit->object_id)->and($log->values)->toBe(['origin' => 'manual', 'before' => 2, 'after' => 3, 'previous_override' => 9]);
     expect($response->json('html'))->toContain('حُفظ في المصدرين', 'data-audit-log="'.$log->id.'"');
     Http::assertSent(fn ($request): bool => str_contains($request->url(), '/1/updateFeatures') && array_keys(json_decode($request['features'], true)[0]['attributes']) === ['objectid', 'boq_1_1_water_tank_repair_qty']);
     $this->postJson(route('reh.audit.save', ['unit', $unit->id]), $payload)->assertConflict();

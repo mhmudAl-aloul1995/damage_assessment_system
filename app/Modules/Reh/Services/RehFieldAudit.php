@@ -47,7 +47,7 @@ class RehFieldAudit
                 || in_array(strtolower($name), ['objectid', 'globalid', 'parentglobalid', 'instanceid', 'deviceid', 'username', 'start', 'end', 'unit_selection'], true)) {
                 continue;
             }
-            $sensitive = $this->sensitive($field, $name);
+            $sensitive = $this->survey->isSensitiveField($name);
             if (! $user->can('reh.view') || ! $user->can($sensitive ? 'reh.review.social' : 'reh.review.engineering') || ($sensitive && ! $user->can('reh.sensitive'))) {
                 continue;
             }
@@ -56,11 +56,6 @@ class RehFieldAudit
         }
 
         return $fields;
-    }
-
-    private function sensitive(array $field, string $name): bool
-    {
-        return $field['scope'] === 'unit' && ! str_starts_with($name, 'boq_') && ! in_array($field['group']['name'] ?? '', ['group_unit_identification', 'group_unit_characteristics', 'group_unit_safety', 'group_additional_work_items', 'group_photo_documentation'], true);
     }
 
     public function history(RehUnit|RehBuilding $record, User $user): Collection
@@ -122,7 +117,7 @@ class RehFieldAudit
             $log = RehAuditLog::query()->create([
                 'record_kind' => $kind, 'record_id' => $record->id, 'object_id' => $record->object_id, 'global_id' => $record->global_id,
                 'layer_id' => $layer, 'user_id' => $user->id, 'field' => $field, 'sensitive' => $definition['sensitive'],
-                'values' => ['before' => $before, 'after' => $value, 'previous_override' => $hasOverride ? $record->quantity_overrides[$field] : null], 'reason' => $data['reason'],
+                'values' => ['origin' => 'manual', 'before' => $before, 'after' => $value, 'previous_override' => $hasOverride ? $record->quantity_overrides[$field] : null], 'reason' => $data['reason'],
             ]);
             $record->getConnection()->transaction(function () use ($record, $data, $log, &$attempted): void {
                 $current = $record->newQuery()->lockForUpdate()->findOrFail($record->id);

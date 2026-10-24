@@ -235,20 +235,45 @@
     let auditOrigin = null;
     let auditHistoryOrigin = null;
 
+    function filterAuditHistory(scope, origin = 'all') {
+        const groups = [...scope.querySelectorAll('[data-audit-history-group]')];
+        groups.forEach(group => { group.hidden = origin !== 'all' && group.dataset.auditOrigin !== origin; });
+        scope.querySelectorAll('[data-audit-origin-filter]').forEach(control => { control.setAttribute('aria-pressed', String(control.dataset.auditOriginFilter === origin)); });
+        const empty = scope.querySelector('[data-audit-empty-filter]');
+        if (empty) empty.hidden = groups.some(group => !group.hidden);
+    }
+
     function openAuditHistory(button) {
         const field = button.dataset.auditFieldHistory;
-        const entries = [...detailBody.querySelectorAll('[data-audit-log-field]')].filter(entry => entry.dataset.auditLogField === field);
+        const run = button.dataset.auditRunHistory;
         const body = auditHistoryDialog.querySelector('[data-audit-history-body]');
         body.replaceChildren();
-        auditHistoryDialog.querySelector('#reh-audit-history-title').textContent = entries[0]?.querySelector('summary strong')?.textContent || 'سجل الحقل';
-        auditHistoryDialog.querySelector('#reh-audit-history-caption').textContent = `${entries.length} تعديل · الأحدث أولًا · ضمن أحدث 100 تعديل متاح في الملف حسب صلاحيتك`;
-        for (const entry of entries) {
-            const copy = entry.cloneNode(true);
+        for (const group of detailBody.querySelectorAll('[data-audit-history-group]')) {
+            if (run && group.dataset.auditRun !== run) continue;
+            const copy = group.cloneNode(true);
+            if (copy.matches('[data-audit-log-field]')) {
+                if (field && copy.dataset.auditLogField !== field) continue;
+            } else {
+                copy.querySelectorAll('[data-audit-log-field]').forEach(entry => {
+                    if (field && entry.dataset.auditLogField !== field) entry.remove();
+                    else entry.open = true;
+                });
+                const count = copy.querySelectorAll('[data-audit-log-field]').length;
+                if (!count) continue;
+                copy.querySelector('[data-audit-group-count]').textContent = `${count} سجل`;
+            }
             copy.open = true;
             copy.querySelectorAll('[data-audit-verify]').forEach(control => control.remove());
             body.append(copy);
         }
-        if (!entries.length) body.textContent = 'لا توجد تعديلات متاحة لهذا الحقل.';
+        const entries = [...body.querySelectorAll('[data-audit-log-field]')];
+        auditHistoryDialog.querySelector('#reh-audit-history-title').textContent = field ? entries[0]?.querySelector('summary strong')?.textContent || 'سجل الحقل' : run ? `تغييرات المزامنة #${run}` : 'سجل التعديلات';
+        auditHistoryDialog.querySelector('#reh-audit-history-caption').textContent = `${entries.length} سجل · الأحدث أولًا · ضمن أحدث 100 سجل متاح حسب صلاحيتك`;
+        const empty = document.createElement('div');
+        empty.className = 'reh-empty'; empty.dataset.auditEmptyFilter = '';
+        empty.textContent = 'لا توجد تعديلات متاحة ضمن هذا الفلتر.';
+        body.append(empty);
+        filterAuditHistory(auditHistoryDialog);
         auditHistoryOrigin = button;
         auditHistoryDialog.showModal();
     }
@@ -747,9 +772,10 @@
         }
         else if (button.matches('[data-export-pdf], [data-pdf-download]')) { await downloadFile(button, button.dataset.pdfDownload || root.dataset.pdfUrl + '?' + query()); }
         else if (button.matches('[data-audit-field]')) { openAudit(button); }
-        else if (button.matches('[data-audit-field-history]')) {
+        else if (button.matches('[data-audit-field-history], [data-audit-all-history], [data-audit-run-history]')) {
             openAuditHistory(button);
         }
+        else if (button.matches('[data-audit-origin-filter]')) { filterAuditHistory(button.closest('[data-audit-history-scope]'), button.dataset.auditOriginFilter); }
         else if (button.matches('[data-close-audit-history]')) { auditHistoryDialog.close(); }
         else if (button.matches('[data-audit-cancel]')) { cancelAudit(); }
         else if (button.matches('[data-audit-verify]')) {

@@ -28,9 +28,10 @@
     <noscript><div class="alert alert-warning">يلزم تفعيل JavaScript لاستخدام البحث والمراجعات في هذه المساحة.</div></noscript>
     <dialog id="reh-detail" class="reh-drawer" aria-label="ملف التقييم"><div class="reh-drawer-toolbar"><span>ملف التقييم</span><button type="button" data-close-detail class="btn btn-sm btn-light" aria-label="إغلاق ملف التقييم">إغلاق ✕</button></div><div id="reh-detail-message" role="alert" hidden></div><div id="reh-detail-body">{!! $initialDetail !!}</div>
     </dialog>
-    <dialog id="reh-audit-history-dialog" class="reh-audit-log-modal" aria-labelledby="reh-audit-history-title" aria-describedby="reh-audit-history-caption">
+    <dialog id="reh-audit-history-dialog" class="reh-audit-log-modal" data-audit-history-scope aria-labelledby="reh-audit-history-title" aria-describedby="reh-audit-history-caption">
         <header class="reh-audit-log-toolbar"><div><span class="reh-eyebrow">سجل التعديلات</span><h3 id="reh-audit-history-title"></h3></div><button type="button" class="btn btn-sm btn-light" data-close-audit-history aria-label="إغلاق سجل التعديلات">إغلاق ✕</button></header>
         <p id="reh-audit-history-caption" class="reh-audit-log-caption"></p>
+        @include('reh::partials.audit-origin-filters')
         <div data-audit-history-body class="reh-audit-log-body"></div>
     </dialog>
 </div>

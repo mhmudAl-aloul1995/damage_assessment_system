@@ -3,21 +3,23 @@
 namespace App\Modules\Reh\Services;
 
 use App\Modules\Reh\Models\RehBuilding;
+use App\Modules\Reh\Models\RehSyncRun;
 use App\Modules\Reh\Models\RehUnit;
 use Illuminate\Support\Str;
 
 class RehImporter
 {
-    public function __construct(private RehScoring $scoring) {}
+    public function __construct(private RehScoring $scoring, private RehSyncAudit $syncAudit) {}
 
-    public function building(array $feature): RehBuilding
+    public function building(array $feature, ?RehSyncRun $run = null): RehBuilding
     {
         $source = $feature['attributes'];
         $id = $this->identifier($source['globalid'] ?? null);
         $hash = $this->hash([...$source, '_geometry' => $feature['geometry'] ?? null]);
 
-        return (new RehBuilding)->getConnection()->transaction(function () use ($source, $id, $hash, $feature): RehBuilding {
+        return (new RehBuilding)->getConnection()->transaction(function () use ($source, $id, $hash, $feature, $run): RehBuilding {
             $building = RehBuilding::query()->where('global_id', $id)->lockForUpdate()->first() ?? new RehBuilding(['global_id' => $id]);
+            $before = $building->exists ? $building->surveyData() : null;
             $changed = $building->exists && ($building->source_missing || ($building->source_hash !== $hash
                 && $this->hash([...($building->source ?? []), '_geometry' => $building->geometry]) !== $hash));
             $building->fill([
@@ -28,9 +30,13 @@ class RehImporter
                 'source' => $source, 'geometry' => $feature['geometry'] ?? null, 'source_hash' => $hash,
                 'source_missing' => false, 'synced_at' => now(),
             ])->save();
+            $auditIds = $run ? $this->syncAudit->record($building, $before, $run) : [];
             if ($changed) {
                 foreach ($building->units()->lockForUpdate()->get() as $unit) {
-                    $this->invalidate($unit, 'تغيّرت بيانات المبنى في المصدر.');
+                    $review = $this->invalidate($unit, 'تغيّرت بيانات المبنى في المصدر.');
+                    if ($auditIds !== []) {
+                        $review->update(['user_id' => $run->user_id, 'changes' => ['sync_run_id' => $run->id, 'audit_record_kind' => 'building', 'audit_record_id' => $building->id, 'audit_log_ids' => $auditIds]]);
+                    }
                 }
             }
 
@@ -38,7 +44,7 @@ class RehImporter
         });
     }
 
-    public function unit(array $feature): RehUnit
+    public function unit(array $feature, ?RehSyncRun $run = null): RehUnit
     {
         $source = $feature['attributes'];
         $id = $this->identifier($source['globalid'] ?? null);
@@ -48,8 +54,9 @@ class RehImporter
         }
         $hash = $this->hash($source);
 
-        return (new RehUnit)->getConnection()->transaction(function () use ($source, $id, $building, $hash): RehUnit {
+        return (new RehUnit)->getConnection()->transaction(function () use ($source, $id, $building, $hash, $run): RehUnit {
             $unit = RehUnit::query()->where('global_id', $id)->lockForUpdate()->first() ?? new RehUnit(['global_id' => $id]);
+            $before = $unit->exists ? $unit->surveyData() : null;
             $scoreBefore = null;
             $review = null;
             if ($unit->exists && ($unit->source_missing || ($unit->source_hash !== $hash && $this->hash($unit->source ?? []) !== $hash))) {
@@ -64,7 +71,9 @@ class RehImporter
                 'source' => $source, 'source_hash' => $hash, 'source_missing' => false, 'synced_at' => now(),
             ])->save();
 
-            $review?->update(['changes' => ['scoring' => ['before' => $scoreBefore, 'after' => $this->scoring->snapshot($unit)]]]);
+            $auditIds = $run ? $this->syncAudit->record($unit, $before, $run) : [];
+            $review?->update(['user_id' => $run?->user_id, 'changes' => ['scoring' => ['before' => $scoreBefore, 'after' => $this->scoring->snapshot($unit)],
+                ...($auditIds === [] ? [] : ['sync_run_id' => $run->id, 'audit_record_kind' => 'unit', 'audit_record_id' => $unit->id, 'audit_log_ids' => $auditIds])]]);
 
             return $unit;
         });

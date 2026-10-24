@@ -48,7 +48,7 @@ class SyncRehSurvey implements ShouldQueue
             $units = [];
             $issueIds = [];
             foreach ($client->records((int) config('reh.buildings_layer')) as $feature) {
-                $buildings[] = $importer->building($feature)->id;
+                $buildings[] = $importer->building($feature, $run)->id;
                 if (count($buildings) % 100 === 0) {
                     $run->update(['buildings_count' => count($buildings)]);
                 }
@@ -56,7 +56,7 @@ class SyncRehSurvey implements ShouldQueue
             $run->update(['buildings_count' => count($buildings)]);
             foreach ($client->records((int) config('reh.units_layer')) as $feature) {
                 try {
-                    $units[] = $importer->unit($feature)->id;
+                    $units[] = $importer->unit($feature, $run)->id;
                     RehSyncIssue::query()->where('object_id', $feature['attributes']['objectid'])->whereNull('resolved_at')->update(['resolved_at' => now()]);
                 } catch (RehSyncException $exception) {
                     if (! in_array($exception->getCode(), [1001, 1002], true)) {
